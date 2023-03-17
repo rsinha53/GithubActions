@@ -1,0 +1,286 @@
+<aura:component implements="flexipage:availableForAllPageTypes" access="global" controller="ACET_WorkQueueController">
+    <aura:attribute name="data" type="Object" />
+    <aura:attribute name="fullData" type="Object" default=""/>
+    <aura:attribute name="isShow" type="Boolean" default="false" />
+    <aura:attribute name="isShowSend" type="Boolean" default="false" />
+    
+    <aura:attribute name="disabledRadio" type="Boolean" default="false" />
+    <aura:attribute name="selectedExtId" type="String" default="" />
+    <!--aura:attribute name="disableRoleField" type="Boolean" default="false" /-->
+    <!--aura:attribute name="disableOfficeField" type="Boolean" default="false" /-->
+    <!--aura:attribute name="disableDepartmentField" type="Boolean" default="false" /-->
+    <!--aura:attribute name="disableTeamField" type="Boolean" default="false" /-->
+    <!--aura:attribute name="disableIndividualField" type="Boolean" default="false" /-->
+    <aura:attribute name="showPicklistPopup" type="Boolean" default="false" />
+    <!-- picklist values start-->
+    <aura:attribute name="wqTopic" type="String" default="" />
+     <aura:attribute name="topicOptions" type="String[]" default="" />
+    
+    <aura:attribute name="typeOptions" type="String[]" default="" />
+    <aura:attribute name="wqType" type="String" default="" />
+    
+    <aura:attribute name="wqSubtype" type="String" default="" />
+    <aura:attribute name="subtypeOptions" type="String[]" default="" />
+    <!-- picklist values end-->
+    <!-- added for send to-->
+    <aura:attribute name="whereTTSTopic" type="String" default=""/>
+    <aura:attribute name="whereConditionForAdvocate" type="String" default=""/>
+    <aura:attribute name="objSendToHeader" type="object" default="{}"/>
+    <aura:attribute name="orsMap" type="Map"/>
+    <aura:attribute name="sendToListInputs" type="Object"/>
+    <aura:attribute name="individualOptions" type="List" default="[{'label': '--None--', 'value': ''}]"/>
+    <aura:attribute name="individualRadioValue" type="String" default=""/>
+    <aura:attribute name="officeFieldsRequiredSymbol" type="Boolean" default="true"/>
+    <aura:attribute name="disableQuickListField" type="Boolean" default="true"/>
+    <aura:attribute name="disableRoleField" type="Boolean" default="true"/>
+    <aura:attribute name="isRoleFieldSelected" type="Boolean" default="false"/>
+    <aura:attribute name="TeamQuickListReload" type="Boolean" default="false"/>
+    <aura:attribute name="disableOfficeField" type="Boolean" default="true"/>
+    <aura:attribute name="isOfficeSelected" type="Boolean" default="false"/>
+    <aura:attribute name="disableDepartmentField" type="Boolean" default="true"/>
+    <aura:attribute name="isDepartmentSelected" type="Boolean" default="false"/>
+    <aura:attribute name="disableTeamField" type="Boolean" default="true"/>
+    <aura:attribute name="isTeamSelected" type="Boolean" default="false"/>
+    <aura:attribute name="teamReload" type="Boolean" default="false"/>
+    <aura:attribute name="disableIndividualField" type="Boolean" default="true"/>
+    <aura:attribute name="showSpinner" type="Boolean" default="false"/>
+    <aura:attribute name="IsDelegatedSpeciality" type="Boolean" default="false"/>
+    <aura:attribute name="selectedSendValue" type="String" default="teamList"/>
+    <aura:attribute name="isFromWorkQueue" type="Boolean" default="true"/>
+    <aura:attribute name="routeOrCloseCase" type="String" default="" />
+    
+    <aura:attribute name="isShowTypeError" type="Boolean" default="false" />
+	<aura:attribute name="isShowSubTypeError" type="Boolean" default="false" />
+    <aura:attribute name="isShowTopicError" type="Boolean" default="false" />
+
+    <aura:handler name="change" value="{!v.selectedSendValue}" action="{!c.selectedSendValueChanged}"/>
+    <lightning:workspaceAPI aura:id="workspace"/>
+
+    <aura:handler event="c:ACET_SRICloseTabEvent" action="{!c.handleSRITabClosed}"/>
+    <aura:attribute name="cmpUniqueId" type="string" default="ACET_WorkQueue"/>
+    <aura:attribute name="searchParam" type="String" default=""/>
+    <!--end for send to-->
+    <aura:handler name="init" value="{!this}" action="{!c.init}" />
+    <aura:handler name="closePreviewModalBox" event="c:SAE_TtsModalCloseEvent" action="{!c.switchToClose}"/>
+    <article style="padding-left: 14px; padding-right: 14px; padding-bottom: 14px; padding-top: 14px;" class="slds-card">
+        <div class="slds-card__header slds-grid slds-m-bottom_large">
+            <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                <div class="slds-media__body slds-col slds-size_9-of-12">
+                    <h2 class="slds-card__header-title">
+                        <span>Work Queue</span>
+                    </h2>
+                </div>
+                <aura:if isTrue="{!not(empty(v.fullData))}">
+                    <div class="slds-size_3-of-12">
+                        <lightning:input value="{!v.searchParam}" name="input1" label="" placeholder="Search" variant="label-hidden"
+                                            onchange="{!c.searchText}" class=""/>
+                    </div>
+            </aura:if>
+            </header>
+        </div>
+            <lightning:spinner variant="brand" size="medium" class="" aura:id="srncspinner" alternativeText="Loading"/>
+        
+        <aura:if isTrue="{!v.isShow}">
+            <section role="dialog" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <div class="slds-modal__content slds-is-relative centerTexts card_padding" style="padding-top: 4%;padding-bottom: 4%;border-top-right-radius: 0.25rem; border-top-left-radius: 0.25rem;">
+                        <span style="font-size: 18px;">Do you want to route or close the case?</span><lightning:button variant="neutral" label="X" class="closeCross" onclick="{!c.closePopup}"/>&nbsp;&nbsp;
+                    </div>
+                    <footer class="slds-modal__footer noTopBorder centerTexts">
+                        <lightning:button aura:id="routeId" variant="neutral" label="Route" class="noUnderline" onclick="{!c.closeNOpenSend2}"/>
+                        <lightning:button aura:id="closeCase" variant="neutral" label="Close" class="noUnderline" onclick="{!c.closeNOpenSend2}"/>
+                    </footer>
+                </div>
+            </section>
+            
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </aura:if>
+        
+        <!-- picklist popup Start-->
+        <aura:if isTrue="{!v.showPicklistPopup}">
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header card_padding"> 
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">ORS Route</h2>
+                    </header> 
+                    <div class="slds-modal__content card_right_padding card_left_padding card_bottom_padding slds-is-relative"
+                         id="modal-content-id-1" style="padding-right: 14px;padding-left: 14px;">
+                        <lightning:spinner class="slds-hide" aura:id="subtypeSpinnerId" alternativeText="Loading.." title="Loading.."
+                        variant="brand" size="medium" />
+                        <div class="slds-form-element card_element_bottom_margin">
+                            <div>
+                                <lightning:select name="topic" label="Topic" aura:id="wqTopic" value="{!v.wqTopic}" onchange="{!c.onTopicChange}">
+                                    <aura:iteration items="{!v.topicOptions}" var="option">
+                                        <option text="{!option}" value="{!option}"/>
+                                    </aura:iteration>
+                                </lightning:select>
+                                <div class="{! 'slds-text-color_error ' + (v.isShowTopicError ? 'slds-show' : 'slds-hide') }" >Error: You must select a Topic</div>
+                            </div>
+                        </div>
+                        <div class="slds-form-element card_element_bottom_margin">
+                            <div >
+                                <lightning:select name="type" label="Type" aura:id="wqtype" value="{!v.wqType}" onchange="{!c.onTypeChange}">
+                                    <aura:iteration items="{!v.typeOptions}" var="option">
+                                        <option text="{!option}" value="{!option}" />
+                                    </aura:iteration>
+                                </lightning:select>
+                                <div class="{! 'slds-text-color_error ' + (v.isShowTypeError ? 'slds-show' : 'slds-hide') }" >Error: You must select a Type</div>
+                            </div>
+                        </div>
+                        <div class="slds-form-element card_element_bottom_margin">
+                            <div>
+                                <lightning:select name="subtype" label="Subtype" aura:id="wqSubtype" value="{!v.wqSubtype}" onchange="{!c.onsubtypeChange}" >
+                                    <aura:iteration items="{!v.subtypeOptions}" var="option">
+                                        <option text="{!option}" value="{!option}" />
+                                    </aura:iteration>
+                                </lightning:select>                                
+                                <div class="{! 'slds-text-color_error ' + (v.isShowSubTypeError ? 'slds-show' : 'slds-hide') }" >Error: You must select a Subtype</div>
+                            </div>
+                        </div>                        
+                        <div class="slds-form-element card_element_bottom_margin">
+                            <div>
+                                <lightning:input type="checkbox" label="Migration issue" name="chk-migration-issue"/>
+                            </div>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer card_padding"> 
+                        <lightning:button variant="neutral"
+                                          label="Cancel"
+                                          title="Cancel"
+                                          onclick="{! c.closeModal }"/>
+                        <lightning:button variant="brand"
+                                          label="Submit"
+                                          aura:id="SubmitId"
+                                          title="Submit case"
+                                          onclick="{!c.callSendTo}"/> 
+                    </footer>
+                </div>
+            </section>
+            
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </aura:if>
+        <aura:if isTrue="{!v.isShowSend}">
+            <section role="dialog" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container" style="width: 70% !important;max-width: 60rem !important;">
+                    <!-- US3367980 -->
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <lightning:spinner class="slds-hide sendToSpinner" aura:id="sendToSpinner" alternativeText="Loading.." variant="brand" size="medium" />
+
+                        <c:ACET_SendToReqNonClaims objSendToHeader="{!v.objSendToHeader}" 
+                        selectedSendValue = "{!v.selectedSendValue}"
+                        individualRadioValue = "{v.individualRadioValue}"
+                        whereConditionForAdvocate = "{!v.whereConditionForAdvocate}"
+                        officeFieldsRequiredSymbol = "{!v.officeFieldsRequiredSymbol}"
+                        sendToListInputs = "{!v.sendToListInputs}"
+                        disableQuickListField = "{!v.disableQuickListField}"
+                        disableRoleField = "{!v.disableRoleField}"
+                        isRoleFieldSelected = "{!v.isRoleFieldSelected}"
+                        TeamQuickListReload = "{!v.TeamQuickListReload}"
+                        disableOfficeField = "{!v.disableOfficeField}"
+                        isOfficeSelected = "{!v.isOfficeSelected}"
+                        disableDepartmentField = "{!v.disableDepartmentField}"
+                        isDepartmentSelected = "{!v.isDepartmentSelected}"
+                        disableTeamField = "{!v.disableTeamField}"
+                        isTeamSelected = "{!v.isTeamSelected}"
+                        teamReload = "{!v.teamReload}"
+                        individualOptions = "{!v.individualOptions}"
+                        disableIndividualField = "{!v.disableIndividualField}"
+                        orsMap="{!v.orsMap}"
+                        aura:id="idSendToNonClaims"
+                        showSpinner = "{!v.showSpinner}"
+                        IsDelegatedSpeciality = "{!v.IsDelegatedSpeciality}"
+                        isFromWorkQueue = "{!v.isFromWorkQueue}"
+						whereTTSTopic="{!v.whereTTSTopic}"
+                        wqTopic="{!v.wqTopic}"
+						wqType="{!v.wqType}"
+						wqSubtype="{!v.wqSubtype}"/>
+                        <!--c:ACET_SendToSample disabledRadio="{!v.disabledRadio}" disableRoleField="{!v.disableRoleField}"
+                                    disableQuickListField="{!v.disableQuickListField}" disableOfficeField="{!v.disableOfficeField}"
+                                    disableDepartmentField="{!v.disableDepartmentField}" disableTeamField="{!v.disableTeamField}" 
+                                    disableIndividualField="{!v.disableIndividualField}"/-->
+                        <!--c:ACET_ServiceRequestRouting/-->
+                        <div class="slds-card" >
+                            <div class="slds-m-around_small slds-clearfix">
+                                <lightning:textarea 
+                                    aura:id="commentsId" 
+                                    name="Comments" 
+                                    label="Comments" 
+                                    value="{! v.sendToListInputs.comments }"
+                                    maxlength="2000" 
+                                    required="true"/>
+
+                                  
+                                <span class="slds-form-element__static slds-text-body_small"> Characters remaining:
+                                    <lightning:formattedNumber value="{!2000-v.sendToListInputs.comments.length}" /> 
+                                </span>
+                                
+                                <div class="slds-float_right" >
+                                    <lightning:button label="Cancel" class="slds-button slds-button_brand slds-m-right_medium slds-m-top_large"
+                                        onclick="{! c. closeSendTo }"/>
+                                    <lightning:button label="Submit" class="slds-button slds-button_brand slds-m-top_large"
+                                        onclick="{!c.fireValidations}" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </aura:if>
+        
+        <div class="FixedHeader">
+            <table
+                class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered slds-table_fixed-layout"
+                 style="" role="grid">
+                <thead>
+                    <tr class="slds-line-height_reset">
+                        <th class="" scope="col">
+                            <div class="slds-truncate" title="Type">Type</div>
+                        </th>
+                        <th class="" scope="col">
+                            <div class="slds-truncate" title="External Id">External ID</div>
+                        </th>
+                        <th class="" scope="col">
+                            <div class="slds-truncate" title="Created">Created</div>
+                        </th>
+                        <th class="" scope="col">
+                            <div Style="padding-left: 16px;" class="slds-truncate" title="Email">Action</div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <aura:If isTrue="{! lessthanorequal(v.data.length, 0) }">
+                        <tr>
+                            <td colspan="4">
+                                <center>No records found</center>
+                            </td>
+                        </tr>
+                        <aura:set attribute="else">
+                            <aura:iteration items="{!v.data}" var="i" indexVar="index">
+                                <tr class="slds-hint-parent" id="{!i.type}">
+                                    <th scope="row">
+                                        <div class="slds-truncate" title="{!i.type}">{!i.type}</div>
+                                    </th>
+                                    <td role="gridcell">
+                                        <div class="slds-truncate" title="{!i.extId}" >
+                                            <a href="javascript:void(0);" class="" aura:id="clickORSID" id="clickORSID" data-extId="{!i.extId}" tabindex="-1" onclick="{!c.openServiceRequestDetail}">
+                                                {!i.extId}</a>
+                                        </div>
+                                    </td>
+                                    <td role="gridcell">
+                                        <div class="slds-truncate" title="{!i.created}">{!i.created}</div>
+                                    </td>
+                                    <td role="gridcell">
+                                        <div class="slds-truncate"  onclick="{! c.handleClick }" id="{!i.extId}" >
+                                            <lightning:button aura:id="{!i.extId}ids" label="Resolve" title="Resolve"/>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </aura:iteration>
+                        </aura:set>
+                    </aura:If>
+                </tbody>
+            </table>
+        </div>
+    </article>
+</aura:component>

@@ -1,0 +1,809 @@
+<apex:page showHeader="false" controller="ACETMemberSearchController" standardStylesheets="false" sidebar="false" title="Member Detail" action="{!init}" id="thePage" 
+applyHtmlTag="false" applyBodyTag="false" docType="html-5.0">
+<script
+type="text/javascript" src="{!$Label.ACETDynatraceJSURL}"
+data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1"
+crossorigin="anonymous"></script>
+<html xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" lang="en">
+<head>
+    <apex:includeScript value="{!URLFOR($Resource.ACETUIResources, '/JS/jquery.min.js')}"/> 
+    <apex:includeScript value="{!URLFOR($Resource.ACETUIResources, '/JS/moment.js')}"/>
+    <apex:includeScript value="{!URLFOR($Resource.ACETUIResources, '/JS/jquery-ui.js')}"/> 
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.css"/>
+    <Script src="/soap/ajax/38.0/connection.js" ></Script>
+    <apex:includeScript value="/support/console/38.0/integration.js" />
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}"/>
+    <Script>
+      
+    $(function() {
+  var b = $("#adsearch");
+  var w = $("#wrapper");
+  var l = $("#list");
+  
+  $('#dateOfBirth').datepicker();
+  
+  w.height(l.outerHeight(true));
+  w.removeClass('open');
+  w.height(0);
+  b.click(function() {
+  
+    if(w.hasClass('open')) {
+      w.removeClass('open');
+      $("#adsearch").html("Show Advanced Search");
+      w.height(0);
+      
+    } else {
+      w.addClass('open');
+     // w.height(l.outerHeight(true));
+     w.height("20pc");
+     $("#adsearch").html("Hide Advanced Search");
+    }
+  
+  });
+});
+        
+
+</Script>
+<style>
+    
+html, body {
+    margin: 0;
+    height: 100%;
+}
+        
+.header {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.07);
+  z-index: 1;
+}
+.stage-left {
+  width: 4rem;
+  transition: width 0.2s ease-in-out 0.05s;
+}
+@media (min-width: 1024px) {
+  .stage-left.open {
+    width: 15rem;
+    transition: width 0.1s ease-in-out;
+  }
+  .stage-left.open .stage-left__text {
+    opacity: 1;
+    width: auto;
+    transition-delay: 0.2s;
+  }
+}
+.stage-left li + li {
+  margin-top: 0.02rem;
+}
+.stage-left a:not(.button) {
+  display: block;
+  text-decoration: none;
+  white-space: nowrap;
+  border-radius: 0.25rem;
+  background: transparent;
+  padding: 0.25rem;
+  transition: background 0.05s linear;
+}
+
+
+.stage-left .stage-left__text {
+  opacity: 0;
+  width: 0;
+  transition: all 0.05s linear;
+}
+.stage-left .slds-icon {
+  max-width: initial;
+}
+.stage-container {
+  max-height: 100%;
+  overflow: hidden;
+}
+.slds-grid--frame {
+  min-width: 767px;
+  min-height: 767px;
+  overflow-y: auto;
+}
+    
+li{
+    margin: 10px 0;
+}
+    
+#wrapper {
+  background: #f7f9fb;
+  overflow: hidden;
+  transition: height 200ms;
+}
+
+.pbError {
+    font-weight: bold;
+    color: #c00 !important;
+    text-align: center;
+}
+
+.errorMsg {
+    color: #c00 !important;
+    
+}
+
+.error
+{
+    border-color: #c00 !important;
+    box-shadow: 0px 0px 3px #c00;
+}
+.slds-scope .slds-size--1-of-2, .slds-scope .slds-size_1-of-2
+    {
+        width: 15rem;
+    }
+    
+    table.no-footer.dataTable
+    {
+        margin-left: 1px !important;
+    }
+    #datatable_wrapper
+    {    
+        max-width: 136%;
+        overflow: auto;
+    }
+    #datatable
+    {
+        width: 99.9% !important;
+    }
+    .slds-scope .slds-box
+    {
+        padding: 0.5rem;
+    }
+    
+    .slds-scope input[type=search]::-webkit-search-cancel-button,
+    .slds-scope input[type=search]::-webkit-search-decoration {
+    -webkit-appearance: searchfield !important;
+    }
+</style>
+</head>
+<apex:form id="myform">
+  <div class="slds-scope">
+      <apex:slds />
+   <div class="slds-grid slds-grid--frame slds-grid--vertical">
+  <!-- Stage Container -->
+  <div class="stage-container slds-grid slds-nowrap slds-size--1-of-1" style="height:92vh;">
+    <apex:outputPanel rendered="{!isMember}">
+        <!--  <script type="text/javascript" src="{!ACETDynatraceDetails.srcURL}" data-dtconfig="{!ACETDynatraceDetails.dtConfig}|reportUrl={!ACETDynatraceDetails.reportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>-->    
+    </apex:outputPanel>    
+        
+    <!-- Stage Left - Navigation -->
+    <nav class="stage-left slds-size--1-of-2 slds-shrink-none slds-scrollable--y slds-page-header slds-p-around--small open" style="display:block;overflow:scroll;">
+        <ul role="navigation" class="slds-has-block-links" style="">
+            <li>
+                <div class="slds-form-element__row">  
+                <div class="slds-col slds-has-flexi-truncate">
+                         <h1 class="slds-page-header__title slds-m-right--small slds-align-middle slds-truncate" >Find a Member</h1>
+                </div>
+                </div>
+                <div id="pbSearch"></div>
+
+           </li>
+       <li>     
+        <c:ValidateData typeVal="Member Search"/> <!-- Added the component for US922641 -->
+       <div class="slds-form-element__row">  
+                 <div class="slds-form-element">  
+                   <apex:outputLabel styleClass="slds-form-element__label">Interaction Type</apex:outputLabel>
+                   <apex:selectList id="sourceOriginator" value="{!SourceOriginator}"  styleClass="slds-form-element__control slds-select slds-select_container" size="1">  
+                        <apex:selectOptions value="{!SourceOriginators}"></apex:selectOptions>  
+                   </apex:selectList>  
+                 </div> 
+        </div>
+       </li>
+         <li>     
+       <div class="slds-form-element__row">  
+                 <div class="slds-form-element">  
+                    <apex:outputLabel value="ID"></apex:outputLabel>
+                     <apex:input type="search" styleClass="slds-input" id="memberId" html-autocomplete="off" value="{!MemberId}" />
+                 </div> 
+        </div>
+       </li>
+       <li>
+                <a href="#" id="adsearch">Show Advanced Search</a>  
+                <div id="wrapper" class="open" style="" >
+                  <ul id="list" style="margin-bottom:0;">
+                    <li>
+                      
+                      <div class="slds-form-element">  
+                        <apex:outputLabel value="First Name"></apex:outputLabel>
+                         <apex:input type="search" styleClass="slds-input" id="firstName" html-autocomplete="off" value="{!FirstName}" />
+                     </div> 
+                    
+                    </li>
+                    <li>
+                        
+                     <div class="slds-form-element">  
+                        <apex:outputLabel value="Last Name"></apex:outputLabel>
+                         <apex:input type="search" styleClass="slds-input" id="lastName" html-autocomplete="off" value="{!LastName}" />
+                     </div> 
+                    
+                    </li>
+                    <li>
+                       <div class="slds-form-element">
+                            <label class="slds-form-element__label" for="date">DOB</label>
+                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                               <!-- <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true">
+                                     <use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#omni_channel"></use>
+                                </svg>-->
+                                <input id="dateOfBirth" class="slds-input" type="text" placeholder="MM/DD/YYYY" label="DOB" onblur="document.getElementById('{!$Component.hiddenDOBVar}').value = this.value;"/>
+                                <apex:inputHidden value="{!CaseStub.Member_Date_of_Birth__c}" id="hiddenDOBVar" />
+                            </div>
+                      </div>
+                    
+                    </li>
+                   <li>
+                       <div class="slds-form-element">
+                         <label class="slds-form-element__label" for="state">State</label>
+                           <c:ACETState ></c:ACETState>
+                            <!-- to pass value back when the input is disabled in form -->
+                           <apex:inputHidden id="stateHidden" value="{!State}" />
+                       
+                       </div>
+                    </li>
+                    <li>
+                          <div class="slds-form-element__row">  
+                             <div class="slds-form-element">  
+                                <apex:outputLabel value="Zip Code"></apex:outputLabel>
+                                 <apex:input type="search" styleClass="slds-input" id="zipcode" html-autocomplete="off" value="{!ZipCode}" />
+                                 <apex:inputHidden id="zipcodeHidden" value="{!ZipCode}" />
+                             </div> 
+                          </div>
+                    </li>
+                  </ul>
+                </div>    
+            
+        </li>
+        <li>
+             <div class="slds-form-element__row">  
+                     <div class="slds-form-element" style="float:right;"> 
+                         <apex:actionFunction name="subValAction" id="subValAction" action="{!search}" oncomplete="initDatatable();" rerender="pbSearchResult,buttons" />
+                         <apex:commandLink id="btnSearch" rerender="pbSearchResult,buttons"  styleClass="btn slds-button slds-button--brand slds-not-selected"
+                         style="text-decoration:white;padding:4px;height:2.5pc;width:5.5pc;margin-right: 18px;background:#0070d2;float:left;" 
+                                onclick="return validate();" value="Search"/>
+                         <apex:commandButton id="btnClear" value="Clear" action="{!clear}" style="height:2.5pc;width:5.5pc; float:right;" styleClass="slds-button slds-button--brand slds-not-selected"
+                         onclick="return clearForm(); return false;"/>
+                     </div>
+                  
+            </div>
+        </li>
+
+        <li>
+              <apex:outputPanel id="hlPanel"  style="display:block;margin-top:5rem">
+                   <hr style="margin:1rem;"/>
+                   <apex:inputHidden id="highlightPanelInfo" value="{!hpAdditionInfoStr}" />    
+                   <c:ACETInteractionHighlightsPanel_LDS InteractionAtt="{!Interaction}" rendered="{!NOT(isMember)}" AdditionalInfoAtt="{!AdditionalInfo}"></c:ACETInteractionHighlightsPanel_LDS>
+              </apex:outputPanel>
+         </li>
+        
+       </ul>
+    </nav>
+
+    <!-- Stage -->
+    <section class="stage slds-grid slds-grid--vertical slds-nowrap" style="overflow:hidden">
+      
+      <div class="slds-box slds-theme--inverse">
+        <div class="">Results</div>
+     </div>
+      
+      <!-- Stage Main -->
+      <div id="pbsId" class="stage-main slds-grid slds-wrap slds-grow slds-scrollable--y" style="display:block;height:80vh;width:100%;" role="main">
+        <apex:outputPanel id="pbSearchResult" title="Member Search Results"> 
+           
+                 <c:ACETDataTable attrDatatableWrapper="{!DTWrapper}" />
+           
+        </apex:outputPanel>
+        </div>
+         <apex:outputPanel id="buttons"  style="float:right" >
+               <div class="slds-docked-form-footer "  style="justify-content: flex-end;margin-left:-5c;">
+                  <div class="slds-button-group" role="group" style="margin-left:-8pc;">
+                 
+                      <input type="button" class="slds-button slds-button-small slds-button--neutral"   onclick="return MemberNotFound();"
+                        value="{!$Label.ACETMemberSearchMemberNotFoundButtonLabel}" style="margin-left:1pc;display:{!IF(!NOT(ISNULL(DTWrapper)),'none','block')}" id="btnMisdirectCase" />
+                    
+                      <c:ACETCaseActions attrSourceOriginator="{!SourceOriginator}" attrShowMisdirectButtonlds="true" attrRefreshNavigationTab="true"/>
+                  </div>
+               </div>
+                  
+       </apex:outputPanel>
+    </section>
+  </div>
+</div>
+</div>
+   <style> 
+        .flash {
+            width: 100px;height: 100px;background-color: red;-webkit-animation-name: from {background-color: red;} to {background-color: white;};-webkit-animation-duration: 1s;animation-name: from {background-color: red;} to {background-color: white;};animation-duration: 1s;animation-iteration-count: 10;
+            
+            
+             /* Safari 4.0 - 8.0 */
+             /* Safari 4.0 - 8.0 */
+            
+        }
+        
+        /* Safari 4.0 - 8.0 */
+        @-webkit-keyframes example {
+            from {background-color: red;}
+            to {background-color: white;}
+        }
+        
+        /* Standard syntax */
+         example {
+            from {background-color: red;}
+            to {background-color: white;}
+        }
+   </style> 
+   <script>
+        var URL;
+        var subjectTabArray = new Array();
+        function setPriTabStyle(result) { 
+            if (result.success) {
+                sforce.console.setTabStyle('background: ;', result.id);
+            } 
+        }
+        function onloadSetTabTitle() {
+            //Set the current tabs title
+            sforce.console.getEnclosingPrimaryTabId(setPriTabStyle);
+            sforce.console.setTabTitle('Member Search');            
+        }
+        
+        function validate(){
+            console.log('#####Inside Validate####');
+            var $memberId = $("[id$='memberId']");
+            var $firstName = $("[id$='firstName']");
+            var $lastName = $("[id$='lastName']");
+            var $dateOfBirth = $("[id$='dateOfBirth']");
+            var $state = $("[id$='state']");
+            var $zipcode = $("[id$='zipcode']");
+
+            $firstName.removeClass("error").parent().find(".errorMsg").remove();
+            $lastName.removeClass("error").parent().find(".errorMsg").remove();
+            $dateOfBirth.removeClass("error").parent().find(".errorMsg").remove();
+            $state.removeClass("error").parent().find(".errorMsg").remove();
+            $zipcode.removeClass("error").parent().find(".errorMsg").remove();
+
+            $("[id$='pbSearch']").find(".pbError").remove();
+
+            var result = true;
+            //Added the below If statement for US922641 
+            if(validateNew('',true) == false){
+               result = false;
+            }
+            if($firstName.val() && $firstName.val().indexOf('*') > -1 && $firstName.val().trim().length < 4){
+                var errorMsg = "You must enter at least 3 characters with a wildcard search";
+                $firstName.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>');
+                result = false;
+            }
+
+            if($lastName.val() && $lastName.val().indexOf('*') > -1 && $lastName.val().trim().length < 4){
+                var errorMsg = "You must enter at least 3 characters with a wildcard search";
+                $lastName.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>');
+                result = false;
+            }
+            if(!$memberId.val()){
+                 if($zipcode.val() && ($zipcode.val().length != 5)){
+                    var errorMsg = "You must enter 5 digits";
+                    $zipcode.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>');
+                    result = false;
+                }
+
+                if(!$firstName.val() && !$lastName.val() && !$dateOfBirth.val() && !$state.val() && !$zipcode.val()){
+                    var errorMsg = 'ID or Name Search is Required.';
+                    $("[id$='pbSearch']").prepend('<div class="pbError">Error: Invalid Data. <br/>' + errorMsg + '</div>');
+                    result = false;
+                }else{
+                    if(!$firstName.val() || !$lastName.val() || (!$dateOfBirth.val() && !$state.val() && !$zipcode.val())){
+                        var errorMsg = 'Name search requires Last Name, First Name and at least one additional field.';
+                        $("[id$='pbSearch']").prepend('<div class="pbError">Error: Invalid Data. <br/>' + errorMsg + '</div>');
+
+                        if(!$firstName.val()) $firstName.addClass("error");
+                        if(!$lastName.val())  $lastName.addClass("error");
+
+                        if(!$dateOfBirth.val() && !$state.val() && !$zipcode.val()){
+                            if(!$dateOfBirth.val()) $dateOfBirth.addClass("error");
+                            if(!$state.val()) $state.addClass("error");
+                            if(!$zipcode.val()) $zipcode.addClass("error");
+                        }
+                        result = false;
+                    }
+                }
+            }
+         
+            $("[id$='zipcodeHidden']").val($("[id$='zipcode']").val());
+            $("[id$='stateHidden']").val($("[id$='searchstate']").val());
+            console.log('Value of Result--->'+result+'--ErrorMSG--'+errorMsg);
+           if(result){
+               subValAction();
+               return false;
+           }else{
+                console.log('Error is there - set height');
+                //w.height("24pc");
+                $("#wrapper").height("23pc");
+           }
+           
+           return result;
+        }
+
+        function clearForm(){
+            $("[id$='btnClear']").closest('form').find("input[type=text], select, input[type=hidden]").val("");
+
+            return true;
+        }
+        
+        var pushSubjectToArray = function pushSubjectToArray(result) {
+            if (result.success == true) {
+                subjectTabArray.push(result.id);
+                subjectTabArrayStr = JSON.stringify(subjectTabArray);
+                localStorage.setItem('subjectTabArray', subjectTabArrayStr);
+            }
+        };
+        
+        function openSuccess(){
+                //
+            }
+        var vccdParamsglobal;
+
+        function init(){
+       vccdParamsglobal = JSON.parse('{!JSENCODE($CurrentPage.parameters.vccdParams)}');
+
+            if($("[id$='memberId']").val()){
+                disableStateAndZip(true);
+            }
+
+            $("[id$='state']").on('keypress',function(e){
+                var p = e.which;
+                if(p==13){
+                    validate();
+                }
+            });
+
+            $("[id$='state']").val($("[id$='stateHidden']").val());
+
+            $("[id$='memberId']").keypress(function (e) {
+                var regex = new RegExp("^[a-zA-Z0-9]+$");
+                var str = String.fromCharCode(!e.charCode ? e.which : e.charCode);
+                if (regex.test(str) || (/^(8|9|13|27)$/.test("" + e.keyCode))) {
+                    return true;
+                }
+
+                e.preventDefault();
+                return false;
+            });
+
+            $("[id$='memberId']").on('input propertychange', function() {
+                if ($(this).val() == "") {
+                    disableStateAndZip(false);
+                }
+            });
+
+            $("[id$='memberId']").on('paste', function() {
+                var element = this;
+                setTimeout(function () {
+                    if($(element).val()) {
+                        disableStateAndZip(true);
+                    }
+                  }, 100);
+            });
+
+            $("[id$='memberId']").keyup(function (e) {
+                if(this.value){
+                    disableStateAndZip(true);
+                }else{
+                    disableStateAndZip(false);
+                }
+            });
+
+
+            $("[id$='zipcode']").keypress(function (e) {
+                // Allow delete, tab, enter and escape keys through
+                if (/^(8|9|13|27)$/.test("" + e.keyCode)) {
+                    return true;
+                }
+
+                var regex = new RegExp("^[0-9]+$");
+                var str = String.fromCharCode(!e.charCode ? e.which : e.charCode);
+                if (regex.test(str)) {
+                    return true;
+                }
+
+                e.preventDefault();
+                return false;
+            });
+
+        }
+
+        function disableStateAndZip(flag){
+            if(flag){
+                $("[id$='zipcode']").attr("disabled","true");
+                $("[id$='searchstate']").attr("disabled","true");
+            }else{
+                $("[id$='zipcode']").removeAttr("disabled");
+                $("[id$='searchstate']").removeAttr("disabled");
+            }
+        }
+             function isValidDate(dateStr) {
+            var datePat = /^(\d{1,2})(\/|-)(\d{1,2})\2(\d{2}|\d{4})$/;
+            var matchArray = dateStr.match(datePat);
+            if (matchArray == null) {
+                return false;
+            }
+            month = matchArray[1]; // parse date into variables
+            day = matchArray[3];
+            year = matchArray[4];
+            if (month < 1 || month > 12) { // check month range
+                return false;
+            }
+            if (day < 1 || day > 31) {
+                return false;
+            }
+            if ((month==4 || month==6 || month==9 || month==11) && day==31) {
+                return false
+            }
+            if (month == 2) { // check for february 29th
+            var isleap = (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+            if (day>29 || (day==29 && !isleap)) {
+                return false;
+               }
+            }
+            return true;  // date is valid
+        }
+
+        $(document).ready(function() {
+            init();            
+        });
+        var recLength ;
+        var searchresults;
+        function initDatatableComplete(){
+            var noAutoSearch2 = '{!JSENCODE($CurrentPage.parameters.noAutoSearch)}';
+            if(recLength > 0 && noAutoSearch2 == 'true'){ 
+               $("[id$='lastNameLinkid']").click();
+            }
+                        var autodocsearch= '{!JSENCODE($CurrentPage.parameters.autodocsearch)}';
+           if(autodocsearch && searchresults){
+                $('.'+vccdParamsglobal.memberId+' a').click();
+                searchresults ='';
+            }
+            
+            var isMemListing =  '{!JSENCODE(isMemberListing)}';
+            
+            if(isMemListing == 'true')
+            {
+                $("[id$='lastNameLinkid']").click();
+            }
+        } 
+                
+        function processDatatable(row, data, dataIndex){
+            $(row).children().first().html("<a id='lastNameLinkid' href='#'>" + data.LastName + "</a>").addClass(data.Id);                      
+            var sourceOriginator = $("[id$='sourceOriginator']").val();
+            var interactionId = "{!JSENCODE(Interaction.Id)}";
+            recLength = dataIndex ; 
+            searchresults = data.Id; 
+            console.log('row @@ ' + row + ' >>>data>>> ' + JSON.stringify(data) + ' ###dataIndex## ' + dataIndex);   
+            console.log(' >>>dataServ.SourceCode>>> ' + data.SourceCode);             
+            
+            if(data.SourceCode != ''){
+                var strToAppend = '';
+                
+                var strArr = data.SourceCode.split(',');                
+                for(var ii=0;ii<strArr.length;ii++){
+                    
+                    if(strArr[ii] === 'CR'){
+                        if(ii==0)
+                            strToAppend += '<b>'+strArr[ii]+'</b>';     //strToAppend += '<b>'+strArr[ii]+'</b>';
+                        else
+                            strToAppend +=','+ '<b>'+strArr[ii]+'</b>';     //strToAppend +=','+ '<b>'+strArr[ii]+'</b>';
+                        console.log('strToAppend@@@ ' + strToAppend);
+                    }else{
+                        if(ii==0)
+                            strToAppend+=strArr[ii];
+                        else
+                            strToAppend+=','+strArr[ii];
+                    }
+                }                           
+
+                data.SourceCode =   strToAppend;    
+            }
+            
+            $(row).children().last().html(strToAppend); 
+            
+            $(row).children().first().on('click', function(e){ 
+                if(!interactionId){                             
+                    Visualforce.remoting.Manager.invokeAction(
+                       '{!$RemoteAction.ACETMemberSearchController.createInteraction}',
+                       sourceOriginator,
+                       interactionId,                   
+                       function(result, event){
+                          navigateToDetail(result,data);                                 
+                       }, 
+                       {escape: true}
+                   );
+               }else{
+                    navigateToDetail(interactionId,data); 
+               }
+               return false;
+            }); 
+                     
+        }
+        
+        function navigateToDetail(interactionId, memberResult){                        
+             var OriginatorType = '{!JSENCODE(Interaction.Originator_Type__c)}';
+             hightlightPanelInfo = $("[id$='highlightPanelInfo']").val();
+             var decodeVal = decodeEntities(decodeEntities(memberResult.LastName));
+             var decodeValFN = decodeEntities(decodeEntities(memberResult.FirstName));
+             var tabName = 'Detail' + ' - ' + decodeVal;
+             var ProvTypeCode =   '{!JSENCODE($CurrentPage.parameters.ProvTypeCode)}';
+             var sourceApp = $("[id$='sourceApplicationId']").val();  
+             var vccdParams = '{!$CurrentPage.parameters.vccdParams}';
+             var isFromProducer = '{!isFromProducer}';
+             var primTabId = '{!primTabId}';
+             console.log('@@@'+isFromProducer);
+             var url = '/apex/ACETMemberDetail?lastName=' + decodeVal +'&fromGroupDetail='+'{!IsGroupDetail}'+ '&firstName=' + decodeValFN +'&isFromProducer='+isFromProducer + '&Id=' + memberResult.Id +'&ssn=' + memberResult.SSNum +'&scr=' + memberResult.SCRId + '&SRK=' + (memberResult.SurrogateKey ? memberResult.SurrogateKey : '') + '&subjectdob=' + memberResult.DOB + '&sourceOriginator=' + $("[id$='sourceOriginator']").val()+ '&InteractionId=' + interactionId + '&IsMember = {!IsMember}'+ '&ProviderId = {!$CurrentPage.parameters.Id}'+ '&groupId = {!groupId}&additionalInfo='+hightlightPanelInfo + '&ProvTypeCode = ' + ProvTypeCode + '&vccdParams='+ vccdParams + '&individualIdentifier='+memberResult.individualIdentifier+'&providerTINStatusCode={!JSENCODE(providerTINStatusCode)}'+'&addressId={!JSENCODE(addressId)}'+'&ProviderId={!JSENCODE(Interaction.Originator__r.EID__c)}'+'&ProvideraddressTypeCode={!JSENCODE(ProvideraddressTypeCode)}'+'&ProviderTypeCode={!JSENCODE(ProviderTypeCode)}'+'&providerTINTypeCode={!JSENCODE(providerTINTypeCode)}'+'&TaxId={!JSENCODE(Interaction.Originator__r.Tax_ID__c)}';
+                 
+             console.log('Firstname : '+memberResult.FirstName);
+           if(memberResult.FirstName == 'Praveena'){
+                url = '/apex/ACETMemberDetailOptimizedV1?lastName=' + memberResult.LastName + '&firstName=' + decodeValFN + '&Id=' + memberResult.Id +'&ssn=' + memberResult.SSNum +'&scr=' + memberResult.SCRId + '&SRK=' + (memberResult.SurrogateKey ? memberResult.SurrogateKey : '') + '&subjectdob=' + memberResult.DOB + '&sourceOriginator=' + $("[id$='sourceOriginator']").val()+ '&InteractionId=' + interactionId + '&IsMember = {!IsMember}'+ '&ProviderId = {!$CurrentPage.parameters.Id}'+ '&groupId = {!groupId}&additionalInfo='+hightlightPanelInfo + '&ProvTypeCode = ' + ProvTypeCode + '&vccdParams='+ vccdParams + '&individualIdentifier='+memberResult.individualIdentifier;
+             } 
+             var tabIdUsngClntId = memberResult.Id ? memberResult.Id : memberResult.SurrogateKey;
+             if(vccdParams != ''){
+                    setGetParameter('vccdParams','');
+             }
+             if (OriginatorType == 'Provider' || OriginatorType == 'Producer' || OriginatorType == 'Other' || OriginatorType == 'Broker' || OriginatorType == 'Group/Employer' || OriginatorType == 'General Agent' || OriginatorType == 'UHG' || OriginatorType == 'Third Party') {
+                 if(primTabId != null && primTabId != ''){
+                    sforce.console.openSubtab(primTabId, url, true, tabName,null , pushSubjectToArray);
+                 } else {
+                     sforce.console.getFocusedPrimaryTabId(function(result) {
+                         sforce.console.openSubtab(result.id, url, true, tabName,null , pushSubjectToArray);
+                     });
+                 }
+             }
+             else {  
+                 sforce.console.openPrimaryTab('', url, true, tabName, openSuccess, tabIdUsngClntId);
+             }
+             return false;            
+              
+        }
+        //To Clear VCCD Params and set the URL
+          function setGetParameter(paramName, paramValue)
+            {
+                console.log('--------paramName------'+paramName);
+                console.log('--------paramValue-------'+paramValue);
+                
+                var url = encodeURI(window.location.href); //US3666255 : Checkmarx fix
+                console.log('--------url-------'+url);
+                var hash = encodeURI(location.hash); //US3666255 : Checkmarx fix
+                console.log('--------hash-------'+hash);
+                url = url.replace(hash, '');
+                console.log('--------url---hash----'+url);
+                if (url.indexOf(paramName + "=") >= 0)
+                {
+                    var prefix = url.substring(0, url.indexOf(paramName + "=")); 
+                    var suffix = url.substring(url.indexOf(paramName + "="));
+                    suffix = suffix.substring(suffix.indexOf("=") + 1);
+                    suffix = (suffix.indexOf("&") >= 0) ? suffix.substring(suffix.indexOf("&")) : "";
+                    url = prefix + paramName + "=" + paramValue + suffix;
+                }
+                
+                console.log('------------url---final----'+url);
+                window.location.href = url + hash; 
+            }
+        
+        //To convert the HTML numbers into Symbols    
+        function decodeEntities(encodedString) {
+            return $('<div/>').html(encodedString).text();
+        }
+        
+        $(document).ready(function() {
+            localStorage.removeItem("flashConsoleTab");
+            onloadSetTabTitle();
+            sforce.console.getEnclosingPrimaryTabId(function(result){
+               sforce.console.addEventListener('MemberSearchRefresh_'.concat(result.id), function(r){
+                   $("[id$='btnClear']").click();
+               });
+           });
+           var noAutoSearch = '{!JSENCODE($CurrentPage.parameters.noAutoSearch)}';
+           if(noAutoSearch != 'true'){
+               var vccdParams = JSON.parse('{!JSENCODE($CurrentPage.parameters.vccdParams)}');
+               $("[id$='memberId']").val(vccdParams.memberId);
+               if(vccdParams.dob != ''){
+                   //$("[id$='adsearch']").click();
+                   $("[id$='dateOfBirth']").val(vccdParams.dob);
+                   $("[id$='hiddenDOBVar']").val(vccdParams.dob);                  
+               }
+               console.log('$$$'+vccdParams.memberId);
+               if(vccdParams.memberId != undefined)
+               {    
+                   $("[id$='btnSearch']").click();
+               }
+           }
+        });
+                
+        function Misdirect(){
+            var url = 'interactionId={!JSENCODE($CurrentPage.parameters.interactionId)}';
+            url +='&contactId={!JSENCODE($CurrentPage.parameters.contactId)}';
+            url +='&callTopic=Provider Other Inquiry';
+            url +='&originatorRelationship={!wrapper.AdditionalInfo.OriginatorRelationship}';
+            sforce.console.getFocusedPrimaryTabId(function(result){
+                url = 'apex/ACETMemberOpenTopicMisdirect?'+url;
+                sforce.console.openSubtab(result.id , url, true,'Cancel', null);
+                });
+            return false;
+        }
+        
+        function MemberNotFound()
+        {
+            var OriginatorType = '{!JSENCODE(Interaction.Originator_Type__c)}';
+            var interactionId = '{!JSENCODE(Interaction.id)}';
+            console.log('>>>>>int'+interactionId);
+            var InteractionType = '{!JSENCODE(SourceOriginator)}';
+            console.log('>>>>>type'+InteractionType);
+            var memberId = $("[id$='memberId']").val();
+            var dateOfBirth = $("[id$='dateOfBirth']").val();
+            var lastName = $("[id$='lastName']").val();
+            var firstName = $("[id$='firstName']").val();
+            var state = $("[id$='stateHidden']").val()
+            var zipcode = $("[id$='zipcode']").val();
+            //var zipcode = $("[id$='ssn']").val();
+            //
+
+            hightlightPanelInfo = $("[id$='highlightPanelInfo']").val();
+            console.log('!!!highlights'+hightlightPanelInfo); 
+            
+            var ProvTypeCode =   '{!JSENCODE($CurrentPage.parameters.ProvTypeCode)}';
+             
+            var dtNow = new Date();
+            var dtTime = dtNow.getTime();
+            var RedirectURL = '/apex/ACETMemberNotFoundForm?IT=' + InteractionType  + '&MID=' + memberId  + '&LN=' + lastName + '&DOB=' + dateOfBirth + '&ST=' + state+ '&FN=' + firstName + '&zip=' + zipcode + '&mnf=1'+ '&TS=' + dtTime+ '&InteractionId=' + interactionId + '&IsMember = {!IsMember}'+ '&ProviderId = {!$CurrentPage.parameters.Id}'+ '&groupId = {!groupId}&additionalInfo='+hightlightPanelInfo + '&ProvTypeCode = ' + ProvTypeCode;
+            
+            console.log(RedirectURL); 
+             if (OriginatorType == 'Provider' || OriginatorType == 'Producer' || OriginatorType == 'Other' || OriginatorType == 'Broker' || OriginatorType == 'Group/Employer' || OriginatorType == 'General Agent' || OriginatorType == 'UHG' || OriginatorType == 'Third Party') {
+                 sforce.console.getFocusedPrimaryTabId(function(result) {
+                     sforce.console.openSubtab(result.id, RedirectURL, true, 'Enter Member Information', null, 'MNF' + dtTime);
+                 });
+             }
+             else {  
+                 sforce.console.openPrimaryTab(null, RedirectURL, true, 'Enter Member Information', openSuccess, 'MNF' + dtTime);
+             }
+            return false;     
+        } 
+    
+        $(document).keypress(function (e) {
+            if (e.which == 13) {
+                console.log('enter key is pressed');
+                validate();
+                return false;
+            }
+        });
+        $(document).ready(function() {
+            
+             var isMemberListing =  '{!JSENCODE(isMemberListing)}';
+            
+            if(isMemberListing == 'true')
+            {
+               var MemberId = '{!JSENCODE(MemberId)}';    
+               var dob= '{!JSENCODE(dateOfBirth)}';
+                var goToLink = '{!IsGoToLink}';
+               console.log('add info Member ID >>> '+MemberId)
+               console.log('add info DOB >>> '+dob)
+               console.log('add info goToLink >>> '+goToLink)
+               if(goToLink == 'false')
+               {
+                   $("[id$='memberId']").val(MemberId);
+                   $("[id$='dateOfBirth']").val(dob);
+                   var b = $("#adsearch");
+                   var w = $("#wrapper");
+                   var l = $("#list");
+                  
+                   w.addClass('open');
+                   w.height("20pc");
+                   $("#adsearch").html("Hide Advanced Search");
+                   console.log('Inside');
+                   $("[id$='btnSearch']").click();
+               }
+            }
+            
+        });
+        
+    </script>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"/>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+  </apex:form>
+    </html>
+</apex:page>

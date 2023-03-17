@@ -1,0 +1,117 @@
+<aura:component controller="ADBMedicalClaimsDetailController"> 
+    <aura:attribute name="mediClaimDetails" type="List" />
+    <aura:attribute name="unAuthorizedMsg" type="boolean" default="false"/>
+    <aura:attribute name="listEndCount" type="Integer" default="5" />
+    <aura:attribute name="agentUserId" type="String" />
+    <aura:attribute name="firstName" type="String"/>
+    <aura:attribute name="decodedMemberId" type="String"/>
+    <aura:attribute name="memberPolicy" type="String" />
+    <aura:attribute name="memberRelationID" type="String"/>
+    <aura:attribute name="showSpinner" type="boolean" default="true"/>
+    <aura:registerEvent name="unAuthMsgEvent" type="c:ADB_UnAuthorizationMsgEvent"/>
+    <aura:handler name="change" value="{!v.decodedMemberId}" action="{!c.onInit}" />
+    <aura:if isTrue="{!v.showSpinner}">
+        <div class="slds-p-horizontal--small slds-size--1-of-1">
+            <div class="slds-p-horizontal--small slds-size--1-of-1 isActivityLoading">
+                <lightning:spinner variant="brand" size="small"/>
+            </div>   
+        </div>
+    </aura:if>
+    
+    <div>
+        Medical
+    </div>
+    <aura:if isTrue="{!v.unAuthorizedMsg}">
+        <div id="medicalNoAuthorizationMsg" class="noDataMsg slds-p-left_medium slds-m-top_xx-small slds-p-right_medium claimNoDataMsg">
+            {!$Label.c.ADB_NoAuthorizationMsg}
+        </div>
+        <aura:set attribute="else">
+            <aura:if isTrue="{!not(empty(v.mediClaimDetails))}">
+                <table class="slds-table slds-table_fixed-layout slds-table_bordered" id="medicalTable">
+                    <thead class="slds-table_bordered" >
+                        <tr class="slds-line-height_reset">
+                            <th class="thCustom" scope="col" style="width: 15%">
+                                <div class="slds-text-align_left">Date</div>
+                            </th>
+                            <th class="thCustom" scope="col" style="width: 17.5%">
+                                <div class="slds-text-align_left">Provider</div>
+                            </th>
+                            <th class="thCustom" scope="col" style="width: 22%">
+                                <div class="slds-text-align_left slds-p-right_large">Provider <br/> Type</div>
+                            </th>
+                            <th class="thCustom" scope="col" style="width: 12.5%">
+                                <div class="slds-text-align_left" >Benefit <br/>Level</div>
+                            </th>
+                            <th class="thCustom" scope="col" style="width: 15%">
+                                <div class="slds-text-align_left" title="ICUE Program">Status</div>
+                            </th>
+                            <th class="thCustom" scope="col" style="width: 18%">
+                                <div class="slds-text-align_left slds-p-right_large">Patient <br/>Responsibility</div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <aura:iteration items="{!v.mediClaimDetails}" var="mediClaim" end="{!v.listEndCount}">
+                            <tr class="slds-hint-parent slds-border_top">
+                                <td data-label="date" style="vertical-align:top;">
+                                    <div class="slds-text-align_left wordWraped" >
+                                        <aura:if isTrue="{!equals(mediClaim.firstServiceDate,mediClaim.lastServiceDate)}">
+                                            {!mediClaim.firstServiceDate} 
+                                            <aura:set attribute="else">
+                                                {!mediClaim.firstServiceDate} - {!mediClaim.lastServiceDate}
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </td>
+                                <td data-label="provider" style="vertical-align:top;">
+                                    <div class="slds-text-align_left wordWraped" >
+                                        <aura:if isTrue="{!and(notequals(mediClaim.claimStatus,'Incomplete'),notequals(mediClaim.claimStatus,'Keyed'))}">
+                                            {!mediClaim.providerName}
+                                        </aura:if>
+                                    </div>
+                                </td>
+                                <td data-label="providerType" style="vertical-align:top;">
+                                    <div class="slds-text-align_left wordWraped" >
+                                        <aura:if isTrue="{!and(notequals(mediClaim.claimStatus,'Incomplete'),notequals(mediClaim.claimStatus,'Keyed'))}">
+                                            {!mediClaim.providerSpecialty}
+                                        </aura:if>
+                                    </div>
+                                </td>
+                                <td data-label="benefitLevel" style="vertical-align:top;">
+                                    <div class="slds-text-align_left wordWraped" >
+                                        <aura:if isTrue="{!and(notequals(mediClaim.claimStatus,'Incomplete'),notequals(mediClaim.claimStatus,'Keyed'))}">
+                                            {!mediClaim.providerTier}
+                                        </aura:if>
+                                    </div>
+                                </td>
+                                <td data-label="averageComparison" style="vertical-align:top;">
+                                    <div class="slds-text-align_left" >
+                                        {!mediClaim.claimStatus}
+                                    </div>
+                                </td>
+                                <td data-label="patientResponsibility" style="vertical-align:top;">
+                                    <div class="slds-text-align_left" >
+                                        <aura:if isTrue="{!and(notequals(mediClaim.claimStatus,'Incomplete'),notequals(mediClaim.claimStatus,'Keyed'))}">
+                                            <aura:if isTrue="{!not(empty(mediClaim.totalPatientResponsibility))}">$</aura:if>
+                                            {!mediClaim.totalPatientResponsibility}
+                                        </aura:if>
+                                    </div>
+                                </td>
+                            </tr>
+                        </aura:iteration>
+                    </tbody>
+                </table>
+                <aura:set attribute="else">
+                    <div id="medicalTwlveMnthsNoDataMsg" class="errMsg slds-m-top_xx-small slds-p-right_medium">
+                        <ui:message title="" severity="info" closable="false" class=" ">
+                            {!$Label.c.ADB_MedicalClaimsTwlveMnthsNoDataMsg}
+                        </ui:message>
+                    </div>
+                </aura:set>
+            </aura:if>       
+        </aura:set>
+    </aura:if> 
+    <div class="slds-p-top_large" align="center">
+        <lightning:button variant="base" label="View All Medical Claims" onclick="{!c.openMedicalClaims }"/>
+    </div>
+</aura:component>

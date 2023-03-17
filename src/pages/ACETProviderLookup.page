@@ -1,0 +1,1535 @@
+<apex:page controller="ACETProviderLookupController" sidebar="false" id="pid">
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="/support/console/30.0/integration.js"/>   
+    <apex:includeScript value="/soap/ajax/30.0/connection.js"/>
+    <apex:includescript value="//code.jquery.com/jquery-1.11.1.min.js"/>
+    <apex:includeScript value="{!URLFOR($Resource.ACETUIResources, '/JS/jquery-ui.js')}"/>
+    <apex:stylesheet value="{!URLFOR($Resource.ACETResources, '/css/m/memberdetail.css')}"/>  
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+    <style>
+        .messageTable {
+            border:none;
+        }
+        .headerResultStyle {
+            font-size: 15px;
+            font-weight: Bold;
+        }
+        .bPageBlock .detailList .dataCol {
+            width: 0%;
+        }
+        
+        .PageAlign {
+            width: 168px;
+        }
+        
+        .widthForSelect {
+            width: 200px;
+        }
+        
+        .bPageBlock .detailList .labelCol {
+            width: 8%;
+        }
+        
+        .apexp .bPageBlock.apexDefaultPageBlock .pbBody .pbSubheader .showListButton{
+            background-position: 1px -1px;
+        }
+        
+        .apexp .bPageBlock.apexDefaultPageBlock .pbBody .pbSubheader .hideListButton{
+            background-position: 1px -11px;
+        }
+        
+        .apexp .bPageBlock.apexDefaultPageBlock .pbBody .pbSubheader {
+            border-top: 0;
+            color: 000;
+        }
+        
+        .homeTab .tertiaryPalette, .individualPalette .homeBlock .tertiaryPalette,
+        .layoutEdit .individualPalette .homeBlock .tertiaryPalette {
+            background-color: #fff;
+            border-color: #fff;
+        }
+        pbBody, .pbBody a, .pbBody td, .lbBody a, .lbBodyDescription, .list .headerRow .noRowsHeader{
+          color: #4a4a56;
+        }
+       .disabledStyle{
+            background-color: #f8f8f1;
+            border: 0px !important;
+        }
+        .error{
+            border-color: #c00 !important;
+            box-shadow: 0px 0px 3px #c00;
+        }
+        .errorMsg {
+            color: #c00 !important;
+        }
+        .backgroundMask{
+        background-color:black;
+        opacity: 0.20;
+        filter: alpha(opacity = 20);
+        position: absolute;
+        width: 100%;
+        height: 1000%;
+        top: 0;
+        left: 0;
+        z-index: 98;
+        display :none;
+        }
+        #helpText {
+            background: transparent url(/img/alohaSkin/help_orange.png) no-repeat !important;
+            width: 15px !important;
+            height:15px !important;
+        }
+    </style>
+    
+    <apex:form id="formid">
+        
+        <apex:actionfunction name="clearResults" action="{!clearResults}" reRender="opACETDTPLResults"   />
+        
+        <apex:outputPanel id="selectedNetworkDomId">
+            <apex:inputHidden value="{!selectedNetwordId}" id="selectedNetworkId"/>
+        </apex:outputPanel>
+        <apex:inputHidden id="highlightPanelInfo" value="{!hpAdditionInfoStr}" />
+        <apex:inputHidden id="responceParam" value="{!responceParam}" /> 
+        <apex:inputHidden id="defNetworkValId" value="{!defNetworkVal}"/>
+        <apex:inputHidden id="defNetworkValName" value="{!defNetworkValName}"/>
+        <apex:actionfunction name="searchResults" action="{!searchResults}" status="loaderStatus" 
+                             reRender="opACETDTPLResults,selectedNetworkDomId,pgMsg" 
+                             oncomplete="onSearchComplete();">
+            <apex:param name="benefitTier" value="" assignTo="{!benefitTier}"/>
+            <apex:param name="networkval" value="" assignTo="{!networkval}"/>
+            <apex:param name="providerType" value="" assignTo="{!providerType}"/>
+            <apex:param name="SelSpecialityCodes" value="" assignTo="{!SelSpecialityCodes}"/> 
+            <apex:param name="selectedSpeciality" value="" assignTo="{!selectedSpeciality}"/> 
+            <apex:param name="claimType" value="" assignTo="{!claimType}"/>     
+        </apex:actionfunction>
+        <apex:actionfunction name="addErrorMessageAF" action="{!addErrorMessage}" reRender="pgMsg">           
+            <apex:param name="callOutErrorMessage" value="" assignTo="{!callOutErrorMessage}"/>     
+        </apex:actionfunction>
+        <div class = "backgroundMask">
+        </div>
+        
+        <c:ACETInteractionHighlightsPanel InteractionAtt="{!interaction}"
+                                          SubjectAtt="{!conObj}" 
+                                          AdditionalInfoAtt="{!additionalInfo}"
+                                          html-auto-doc="auto" 
+                                          selectedOriginator="{!acetCallTopicData.interaction.Originator_Name__c}"/>
+        
+        <apex:outputPanel id="hippapopupPanel"> 
+            <c:ACETHIPPADisclosure InteractionIdAtt="{!acetCallTopicData.interaction.id}" 
+                                   subjectDOB="{!acetCallTopicData.AdditionalInfo.DOB}" 
+                                   originatorDOB="{!acetCallTopicData.AdditionalInfo.OriginatorDOB}"/>
+        </apex:outputPanel> 
+        
+        <apex:pageMessages id="pgMsg" > </apex:pageMessages>
+        
+        <table border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <td>
+                    <apex:sectionHeader title="Provider Lookup" id="pageHeader"/>
+                </td>       
+                <td style="font-weight:bold;">           
+                    <apex:selectRadio id="addRadioOnSearch"  value="{!searchType}" rendered="{!IF(memId!= null,true, false)}" onchange="searchTypeChange()" >
+                         <apex:selectOption itemValue="Basic" itemLabel="Basic" />
+                         <apex:selectOption itemValue="Advanced" itemLabel="Advanced"/>                        
+                    </apex:selectRadio>         
+                </td>
+            </tr>
+        </table>
+
+        
+        <c:ACETCaseActions attrCaseDataWrapper="{!acetCallTopicData }"
+                           attrShowSaveAndCloseButton="false" 
+                           attrShowSaveButton="true"
+                           attrShowMisdirectButton="true" 
+                           attrSourceOriginator="{!acetCallTopicData.SourceOriginator}"
+                           attrInteractionId="{!acetCallTopicData.Interaction.Id}"                           
+                           attrSubjectId="{!acetCallTopicData.Subject.Id}"
+                           attrCallTopic="Provider Lookup"/>
+        
+        <apex:actionstatus id="loaderStatus">
+            <apex:facet name="start">
+                <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                    &nbsp;
+                </div>
+                <div style="margin-left:45%;position: absolute;margin-top: 8%;">
+                    <img src="/img/loading32.gif" width="18" height="18" />
+                    <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                </div>                    
+            </apex:facet>
+        </apex:actionstatus> 
+         <div id="spinner"> 
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                    &nbsp;
+                </div>
+               <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 9999; margin: 15% 50%">
+                <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                    <img src="/img/loading32.gif" width="18" height="18" style="float: left; margin: 8px;"/>
+                    <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                </div>  
+            </div>
+        </div> 
+        <apex:pageblock id="pbSearchCriteria">
+            <c:ValidateData typeVal="Global Rule;Provider Lookup"/>
+            <apex:pageBlockSection columns="3" id="pbsid">
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel rendered="{!IF(memId!= null,true, false)}">
+                        Benefit Tier
+                    </apex:outputLabel>
+                    <apex:outputPanel rendered="{!IF(memId!= null,true, false)}">
+                        <select id="benefitTier" onchange="benefitTierChange()" class="widthForSelect">
+                                                       
+                        </select>
+                        <apex:inputHidden value="{!qualityProviderRuleId}" id="qualityProviderRuleId" />
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+                
+                
+                <apex:pageblockSectionItem >
+                    &nbsp;
+                </apex:pageblockSectionItem>
+                
+                <apex:pageblockSectionItem id="benefitTierSelection">
+                    <apex:outputLabel rendered="{!IF(memId!= null,true, false)}">
+                        Service Area Type
+                    </apex:outputLabel>
+                    <apex:InputText value="{!serviceType}" html-readonly="true" 
+                                    id="serviceType" style="width: 250px;" rendered="{!IF(memId!= null,true, false)}" styleclass="PageAlign disabledStyle"/> 
+                </apex:pageblockSectionItem>
+                
+                <apex:pageblockSectionItem id="pbsttaxid">
+                    <apex:outputLabel id="pbsttaxlabelid">Tax ID</apex:outputLabel>
+                    <apex:inputText value="{!taxId}" id="TaxId" maxlength="9" style="width: 164px;" styleclass="PageAlign"/>
+                </apex:pageblockSectionItem>
+                
+                <apex:pageblockSectionItem id="pbstlastnameid">
+                    <apex:outputLabel >Last Name or Facility/Group</apex:outputLabel>
+                    <apex:inputText value="{!lastName}" id="LastName" maxlength="70" style="width: 164px;" styleclass="PageAlign"/> 
+                </apex:pageblockSectionItem>
+                
+                <apex:pageblockSectionItem id="pbstphonenumberid" >
+                    <apex:outputLabel >Phone Number</apex:outputLabel>
+                    <apex:inputText value="{!phoneNumber}" id="PhoneNumber" maxlength="10" style="width: 164px;" styleclass="PageAlign" />
+                </apex:pageblockSectionItem>
+                 
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >
+                        Network
+                    </apex:outputLabel>
+                        <select id="Network" class="PageAlign">
+                                                       
+                        </select>
+                </apex:pageBlockSectionItem>
+                
+                <apex:pageblockSectionItem id="pbstfirstnameid">
+                    <apex:outputLabel >First Name</apex:outputLabel>
+                    <apex:inputText value="{!firstName}" id="FirstName" maxlength="70"
+                                    style="width: 164px;" styleclass="PageAlign" onchange="firstNameChange()"/>
+                </apex:pageblockSectionItem>
+                
+                <apex:pageblockSectionItem >
+                    <apex:outputLabel >PCP/OBGYN ID</apex:outputLabel>
+                    <apex:inputText value="{!searchPcpOBGYNId}" id="SearchPcpOBGYNId" maxlength="19" styleclass="PageAlign" onchange="SearchPcpOBGYNIdChange()" />
+                </apex:pageblockSectionItem>
+                
+                <apex:pageblockSectionItem id="pbsprovidertypeid"> 
+                    <apex:outputLabel >Provider Type</apex:outputLabel>
+                    <select id="ProviderType" onchange="providerTypeChange()" class="PageAlign"> 
+                                                                               
+                    </select>
+                </apex:pageblockSectionItem> 
+                
+                <apex:pageblockSectionItem >
+                    <apex:outputLabel >City</apex:outputLabel>
+                    <apex:outputPanel >
+                        <apex:inputText value="{!city}" id="City" maxlength="40" style="width: 164px;" styleclass="PageAlign" />&nbsp;
+                        <a style="cursor:pointer;display: {!if(memId!=null,'inline','none')}" onclick="fillVal('City','{!JSENCODE(cityVal)}')"><u>{!cityVal}</u></a><!--US3666255 : Checkmarx fix-->
+                    </apex:outputPanel>
+                </apex:pageblockSectionItem>
+                
+                <apex:pageblockSectionItem id="pbstproviderid">
+                    <apex:outputLabel id="pbstproviderlabelid">Provider ID</apex:outputLabel>
+                    <apex:inputText value="{!searchProviderId}" id="SearchProviderId" maxlength="18" styleclass="PageAlign" />
+                </apex:pageblockSectionItem>
+                
+                <apex:pageblockSectionItem id="pbClassificationCode">
+                    <apex:outputLabel styleClass="divSpecality">Classification</apex:outputLabel>
+                    <apex:outputpanel styleClass="divSpecality" id="divSpecalityID">
+                        <select id="Classification" class="PageAlign" onchange="clasificationChange()">
+                            
+                        </select>                             
+                    </apex:outputpanel>
+                </apex:pageblockSectionItem>
+                
+                <apex:pageblockSectionItem >
+                    <apex:outputLabel >State</apex:outputLabel>
+                    <c:ACETStateCode StateCodeContainerAtt="{!stateCode}"></c:ACETStateCode>                        
+                </apex:pageblockSectionItem>
+                
+                <apex:pageblockSectionItem id="pbstnpiid">
+                    <apex:outputLabel id="pbstnpilabelid">NPI</apex:outputLabel>
+                    <apex:inputText value="{!npi}" id="NPI" maxlength="10" style="width: 164px;" styleclass="PageAlign"/>
+                </apex:pageblockSectionItem>
+                
+                <apex:pageblockSectionItem id="pbSpeciality">
+                    <apex:outputLabel styleClass="divSpecality">Specialty</apex:outputLabel>
+                    <apex:outputpanel styleClass="divSpecality" id="divSpecalityID">    
+                        <select id="Speciality" class="PageAlign">                                
+                            
+                        </select>
+                    </apex:outputpanel>
+                </apex:pageblockSectionItem>
+                
+                <apex:pageblockSectionItem id="pbstzipid">
+                    <apex:outputLabel >Zip</apex:outputLabel>
+                    <apex:outputPanel >
+                        <apex:inputText value="{!zipCode}" id="ZipCode" maxlength="5" style="width: 164px;" styleclass="PageAlign"/>&nbsp;
+                        <a style="cursor:pointer;display: {!if(memId!=null,'inline','none')}" onclick="fillVal('ZipCode','{!JSENCODE(zip)}')"><u>{!zip}</u></a> <!--US3666255 : Checkmarx fix-->
+                    </apex:outputPanel> 
+                </apex:pageblockSectionItem>
+                
+                 <apex:pageblockSectionItem id="pbsFreeStandingFaclId">                        
+                    <apex:outputLabel >Freestanding Facility</apex:outputLabel>
+                    <apex:inputCheckbox value="{!FreeStandingFacl}" id="FreeStdFacl" onclick="freeStandingFaclChange(this)"  />
+                </apex:pageblockSectionItem>
+                
+                 <apex:pageblockSectionItem id="pbstgenderid">
+                    <apex:outputLabel >Gender</apex:outputLabel>
+                    <apex:selectList value="{!gender}" id="Gender" size="1" styleclass="PageAlign" onchange="genderChange()">
+                        <apex:selectOption itemValue="" itemLabel="--None--" />
+                        <apex:selectOption itemValue="Male" itemLabel="Male" />
+                        <apex:selectOption itemValue="Female" itemLabel="Female" />
+                    </apex:selectList>
+                </apex:pageblockSectionItem>
+                
+                <apex:pageblockSectionItem id="pbsiid">
+                    <apex:outputLabel >Radius</apex:outputLabel>
+                    <apex:selectList size="1" value="{!radious}" styleclass="PageAlign" id="radiousid" > 
+                        <apex:selectOption itemValue="" itemLabel="--None--" />
+                        <apex:selectOption itemValue="1" itemLabel="1" />
+                        <apex:selectOption itemValue="2" itemLabel="2" />
+                        <apex:selectOption itemValue="5" itemLabel="5" />
+                        <apex:selectOption itemValue="10" itemLabel="10" />
+                        <apex:selectOption itemValue="20" itemLabel="20" />
+                        <apex:selectOption itemValue="30" itemLabel="30" />
+                        <apex:selectOption itemValue="50" itemLabel="50" />
+                    </apex:selectList>
+                </apex:pageblockSectionItem>
+                
+                  <apex:pageblockSectionItem id="pbstacceptingnewpatientid">
+                    <apex:outputLabel >Accepting New Patients </apex:outputLabel>
+                    <apex:inputCheckbox value="{!NewpatientsInd}" id="Newpatients" onclick="NewpatientsChange(this)" />
+                </apex:pageblockSectionItem>
+                
+                <apex:pageblockSectionItem id="pbstlanguageid">
+                    <apex:outputLabel styleClass="pbLanguageid">Language</apex:outputLabel>
+                    <apex:outputpanel styleClass="pbslanguagelabelid" >
+                        <apex:selectList value="{!LanguageVal}" size="1" id="Language" style="width:168px;" onchange="languageChange()">                                             
+                            <apex:selectOptions value="{!languagescmdt}"/>                                  
+                        </apex:selectList>                            
+                    </apex:outputpanel>
+                </apex:pageblockSectionItem>
+                
+                 <apex:pageblockSectionItem id="statusTypeId">
+
+                           <apex:outputLabel >Practicing Status
+                           <img src="/s.gif" id="helpText" title="{!$Label.ACETProviderPracticingStatusHoverText}"/>
+                         </apex:outputLabel>
+                         <apex:outputPanel >     
+                      <apex:selectRadio id="statusRadio" value="{!selectStatus}" style="margin-left:-14px;font-weight:bold;font-size:91%;position:relative;top:-10px;">
+                               <apex:selectOption itemLabel="Active" itemValue="Active"></apex:selectOption>
+                               <apex:selectOption itemLabel="Active and Termed" itemValue="Active and Termed"></apex:selectOption>                               
+                           </apex:selectRadio>
+                        </apex:outputPanel>
+                </apex:pageblockSectionItem>
+                  
+
+                
+                <apex:pageblockSectionItem id="pbstacceptexistingpatientid">                        
+                    <apex:outputLabel >Accepting Existing Patients </apex:outputLabel>
+                    <apex:inputCheckbox value="{!existingpatientsInd}" id="Existingpatients" onclick="ExistingpatientsChange(this)" />
+                </apex:pageblockSectionItem>
+                
+                
+                
+               <apex:pageblockSectionItem >
+                     <apex:outputLabel rendered="{!IF(memId!= null,true, false)}">Claim Type</apex:outputLabel>
+                     <apex:outputPanel rendered="{!IF(memId!= null,true, false)}">
+                         <select id="claimTypeId" class="PageAlign">                                             
+                             
+                         </select>
+                     </apex:outputPanel>
+                     
+                </apex:pageblockSectionItem>
+                
+                    <apex:pageblockSectionItem id="networkStatusId">
+                       <apex:outputLabel id="label" style="padding-left:42px;" rendered="{!IF(memId != null,true, false)}">Network Status</apex:outputLabel>
+                       <apex:outputPanel >
+                           <apex:selectRadio rendered="{!IF(memId != null,true, false)}" id="addRadio" value="{!selectNetwork}" style="margin-left:-14px;font-weight:bold;font-size:91%;position:relative;top:-10px;" styleclass="PageAlign" onchange="networkTypeChange()">
+                               <apex:selectOption itemLabel="INN Only" itemValue="INN Only"></apex:selectOption>
+                               <apex:selectOption itemLabel="INN and OON " itemValue="INN and OON "></apex:selectOption>                               
+                           </apex:selectRadio>
+                        </apex:outputPanel>
+                 </apex:pageblockSectionItem> 
+                
+                <apex:pageblockSectionItem id="tieredProvider" rendered="{!IF(memId != null,true, false)}">
+                       <apex:outputLabel id="label" style="padding-left:42px;" >Tiered Provider </apex:outputLabel>
+                      <apex:inputCheckbox value="{!qualityBenefitTier}" id="tieredBenefit"/>
+                 </apex:pageblockSectionItem> 
+                <apex:pageblockSectionItem >
+                    &nbsp;
+                </apex:pageblockSectionItem>
+                <apex:pageblockSectionItem >
+                    &nbsp;
+                </apex:pageblockSectionItem>
+                <apex:pageblockSectionItem id="ddpId" rendered="{!IF(memId != null,true, false)}">
+                       <apex:outputLabel id="label" style="padding-left:42px;" >DDP</apex:outputLabel>
+                      <apex:inputCheckbox value="{!isDDP}" id="ddp"/>
+                 </apex:pageblockSectionItem> 
+
+                
+                
+               
+                
+                
+               
+            
+            </apex:pageBlockSection>  
+            
+            <div align="center" draggable="false">
+                <input type="button" id="searchBtn" class="btn" value="Search"  onClick="return validate_PL();"/>
+                <input type="button" id="btnClearAll" value="Clear" class="btn" style="margin-right: 367px;" onclick="clearAll()"/>
+            </div>
+            
+            <br />
+            
+            <apex:outputPanel id="opACETDTPLResults">
+                <apex:pageblock title="Provider Lookup Results" id="pbSearchResults" rendered="{!NOT(ISNULL(PLDTWrapper))}" html-auto-doc-section-key="pbSearchResults" html-auto-doc-section-column-indexes="1,2,3,4,5,6,7,8,9,10,11,12,13" >
+                    <apex:pageBlockSection columns="1" html-auto-doc="true" html-auto-doc-case-items="true" html-auto-doc-pagination="true"  collapsible="false" rendered="{!NOT(ISNULL(PLDTWrapper))}" >
+                        <apex:outputPanel html-auto-doc-pagination="true" styleClass="enablePagination" html-auto-doc-section-combinedkey="pbSearchResults" html-auto-doc-section-tabid="" >
+                        <c:ACETDataTable id="ACETDTPLResults"  attrDatatableWrapper="{!PLDTWrapper}" />
+                        </apex:outputpanel>
+                    </apex:pageBlockSection>
+                </apex:pageblock>
+            </apex:outputPanel>
+                
+                   
+        </apex:pageblock>
+        
+        <c:ACETCaseActions attrCaseDataWrapper="{!acetCallTopicData }"
+                           attrShowSaveAndCloseButton="false" attrShowSaveButton="true"
+                           attrShowMisdirectButton="true" 
+                           attrSourceOriginator="{!acetCallTopicData .SourceOriginator}"
+                           attrInteractionId="{!acetCallTopicData .Interaction.Id}"
+                           attrSubjectId="{!acetCallTopicData .Subject.Id}"
+                           attrCallTopic="Provider Lookup"
+                           attrLocation="bottom" />
+        
+    </apex:form>
+    <script> 
+        var getBenefitFlag;
+        var getProviderFlag;
+        var getClassificationFlag;
+        var getSpecilitiesFlag;
+        
+        var memId = '{!memId}';
+        window.onload = new function(){
+            var $pbSearch = $("[id$='pbSearchCriteria']");
+            $pbSearch.find(".pbError").remove();  
+            if('{!pcpFlag}' == 'true' &&  '{!pcpLocatorID}' != null && '{!pcpLocatorID}' != '' && '{!pcpLocatorID}' > 0){
+                populateDefaultVal('ProviderType','Physician');
+                $(".backgroundMask").css("display","block");                    
+            } 
+            document.getElementById("spinner").style.display = "block";                  
+            getBenefitTiers();
+            getProviders();
+            getClasfications();
+            getSpecilities();
+            initJS();
+            init();           
+
+        }
+        
+        $(document).ready(function(){
+            localStorage.removeItem("table");
+            localStorage.removeItem("rowCheckHold");
+            acet.autodoc.startAutodoc();                        
+            acet.autodoc.createCommentsbox();
+            acet.autodoc.subTabIds = []; 
+            //request autodoc comments from sub tabs
+            var subjectId = '{!conObj.Id}';
+            acet.autodoc.getAutodocFromSubTabs = function(){
+                acet.autodoc.additionalInfo = '';              
+                sforce.console.fireEvent('RequestProviderDetail_'.concat(subjectId), subjectId);                   
+            };
+            
+            //receive autodoc comments from sub tabs                      
+            sforce.console.addEventListener('ReceiveProviderDetail_'.concat(subjectId), function(r){          
+                var res = JSON.parse(r.message);     
+                acet.autodoc.subTabIds.push(res.subTabId);                                               
+                acet.autodoc.additionalInfo = acet.autodoc.additionalInfo + res.doc; 
+                
+                //close sub tab
+                sforce.console.closeTab(res.subTabId);                                      
+            });   
+            
+            //close all sub tabs
+            acet.autodoc.closeSubTabs = function(){
+                sforce.console.fireEvent('CloseProviderDetailSubTab_'.concat(subjectId), subjectId);    
+            };
+            
+            //sync comments between claim search and claim details tabs
+            //only fire at last keyup
+            var timer;
+            $("#autodocComments").keyup(function(){
+                clearTimeout(timer);  
+                //if(cmmentsTmp !=$("#autodocComments").val()){
+                        timer = setTimeout(function(){
+                        sforce.console.fireEvent('ProviderCommentsUpdated_'.concat(subjectId), $("#autodocComments").val()); 
+                    }, 500);
+                //}
+                
+                //cmmentsTmp = $("#autodocComments").val();
+            }); 
+            //
+            sforce.console.addEventListener('ProviderCommentsUpdated_'.concat(subjectId), function(r){
+                if(r.message != $("#autodocComments").val()){
+                    $("#autodocComments").val(r.message);
+                }
+            }); 
+            
+            //send comments to detail page when requested
+            sforce.console.addEventListener('RequestProviderComments_'.concat(subjectId), function(r){
+                console.log('received');
+                sforce.console.fireEvent('ProviderCommentsUpdated_'.concat(subjectId), $("#autodocComments").val());                                         
+            });  
+            
+            //on key press - check for enter/return key - execute the search
+            $(document).keypress(function(e) {
+                if(e.which == 13 || e.keyCode == 13) {
+                    $('[id$="searchBtn"]').trigger('click');
+                }
+            });
+            
+            if('{!pcpFlag}' == 'true'){
+                console.log('helllllo');
+                populateDefaultVal('ProviderType','Physician');                
+            }              
+
+           
+        }); 
+        
+        
+         //To convert the HTML numbers into Symbols    
+        function decodeEntities(encodedString) {
+            return $('<div/>').html(encodedString).text();
+        }
+
+    
+        function funcPCPCallout(){
+           var $pbSearch = $("[id$='pbSearchCriteria']");
+           var $pcpLocatorId = $("[id$='SearchPcpOBGYNId']"); 
+           $pbSearch.find(".pbError").remove();  
+           console.log('@@@@@@ ' + $pcpLocatorId.val() + '>>>pcpFlag>>> ' + '{!pcpFlag}');
+            if('{!pcpFlag}' == 'true' &&  $pcpLocatorId.val() != null && $pcpLocatorId.val() != '' && $pcpLocatorId.val() > 0){
+                populateDefaultVal('ProviderType','Physician');
+                $(".backgroundMask").css("display","none");
+                validate_PL();
+                
+            }else if('{!pcpFlag}' == 'true' && ($pcpLocatorId.val() == 0 || $pcpLocatorId.val() == '')){
+              //  var $pbSearchError = $("[id$='pbSearchCriteria']"); 
+                populateDefaultVal('ProviderType','Physician'); 
+                $pbSearch.prepend('<div class="pbError">{!$Label.ACETProviderSearchInvalidDataErrorMessage}<br/>Enter Provider Search Criteria to complete the search</div>');
+            }
+           
+        }
+    
+        function onSearchComplete(){
+            acet.datatables['datatable'].initDatatable();
+            
+        }
+        function drawCallback(settings){
+            applyAutoDoc();
+        }
+    
+        function applyAutoDoc(){
+            acet.autodoc.startAutodoc();            
+            acet.autodoc.subTabIds = []; 
+
+           
+            $('table[id*=addRadioOnSearch]').attr('cellspacing',10);
+            $('table[id*=addRadioOnSearch]').attr('cellpadding',10);    
+        }
+    
+        var disableArr = [];
+        var enableArr = [];
+        var benefitTierNetworkOptions;    
+        function getBenefitTiers() {   
+            var bundleOptionId ='{!bundleOptionId}';
+            var surrogateKey ='{!surrogateKey}';
+            var SubscriberSRKID ='{!coverageSRK}';
+            var EffectiveDate ='{!EffectiveDate}';
+            var EndDateSSB ='{!EndDateSSB}';
+            var benefitEnddate ='{!benefitEnddate}'; // US2962032 updated ben effective and end dates in get ssb service 
+            var benefitEffectivedate ='{!benefitEffectivedate}';
+            var CoverageTypes ='';
+            var groupNo ='{!groupNum}';
+            var networkId ='{!networkId}';
+            var accumsDate ='';
+            var accumAsOf ='';
+            var planId = '{!benefitPlanId}';
+			var customerPurchaseId = '{!customerPurchaseId}';
+            Visualforce.remoting.Manager.invokeAction(
+                '{!$RemoteAction.ACETProviderLookupController.getBenefitTiers}',
+                bundleOptionId,surrogateKey,SubscriberSRKID ,benefitEffectivedate,benefitEnddate,CoverageTypes,groupNo,accumsDate,accumAsOf,memId,planId,customerPurchaseId,
+                function(result, event){
+                        if(event.status) { 
+                        document.getElementById("spinner").style.display = "none";                      
+                        getBenefitFlag = true; 
+                            result = JSON.parse(result);
+                            $('[id$="qualityProviderRuleId"]').val(result.qualityProviderRuleId);
+                            if(!result.qualityProviderRuleId){
+                                $('[id$="tieredBenefit"]').prop('disabled',true);
+                                }
+                        benefitTierNetworkOptions = result.optionsList;   
+                        if(benefitTierNetworkOptions != null){                                                     
+                            for(var i=0;i<benefitTierNetworkOptions.length;i++){                                
+                                if(benefitTierNetworkOptions[i].response != null){                                     
+                                    $("[id$=responceParam]").val(benefitTierNetworkOptions[i].response);
+                                }
+                                if(benefitTierNetworkOptions[i].errorMessage != null){
+                                    var callOutErrorMessage = benefitTierNetworkOptions[i].errorMessage;
+                                    addErrorMessageAF(benefitTierNetworkOptions[i].errorMessage); 
+                                }
+                            }                            
+                        }
+                        
+                        
+                        if(memId != null && memId != ''){
+                                      
+                            prepareSelectList('benefitTier',benefitTierNetworkOptions); 
+                            if(benefitTierNetworkOptions != undefined){
+                                for(var i=0; i<benefitTierNetworkOptions.length;i++){
+                                    if(benefitTierNetworkOptions[i].value && benefitTierNetworkOptions[i].value.toLowerCase() == 'Core Benefits from Freedom'.toLowerCase()){
+                                        populateDefaultVal('benefitTier','Core Benefits from Freedom');
+                                        populateDefaultVal('Network','Freedom Network');
+                                        populateDefaultVal('claimTypeId','Medical');
+                                        
+                                    } 
+                                    else if(benefitTierNetworkOptions[i].value && benefitTierNetworkOptions[i].value.toLowerCase() == 'Core Benefits from Garden'.toLowerCase()) {
+                                    populateDefaultVal('benefitTier','Core Benefits from Garden');
+                                    populateDefaultVal('Network','Garden State Network');
+                                    populateDefaultVal('claimTypeId','Medical');
+                                    
+                                 }
+                                    else if(benefitTierNetworkOptions[i].value && benefitTierNetworkOptions[i].value.toLowerCase() == 'Core Benefits from Liberty'.toLowerCase()) {
+                                    populateDefaultVal('benefitTier','Core Benefits from Liberty');
+                                    populateDefaultVal('Network','Liberty Network');
+                                    populateDefaultVal('claimTypeId','Medical');
+                                    
+                                 }
+                                 else if(benefitTierNetworkOptions[i].value && benefitTierNetworkOptions[i].value.toLowerCase() == 'Core Benefits'.toLowerCase()) {
+                                           populateDefaultVal('benefitTier','Core Benefits');
+                                           populateDefaultVal('Network','Freedom Network');
+                                           populateDefaultVal('Network','Liberty Network');
+                                    // 	   populateDefaultVal('Network','Garden State Network');
+                                           populateDefaultVal('claimTypeId','Medical');
+ 
+                                  } 
+                                    else if(benefitTierNetworkOptions[i].value && benefitTierNetworkOptions[i].value.toLowerCase() == 'Core Benefits from Metro'.toLowerCase()) {
+                        populateDefaultVal('benefitTier','Core Benefits from Metro');
+                              populateDefaultVal('Network','Metro Network');
+                        populateDefaultVal('claimTypeId','Medical');
+                           } 
+                                    
+                            }
+                         }
+                        }else{
+                            prepareSelectList('benefitTier',benefitTierNetworkOptions);    
+                            populateDefaultVal('benefitTier','-None-');
+                            populateNetworkVals();
+                        }
+                        if(getBenefitFlag && getProviderFlag && getClassificationFlag && getSpecilitiesFlag){
+                            funcPCPCallout();
+                        }
+                    }else {
+                        
+                    }
+                }, 
+                {escape: false} 
+            );
+        }
+    
+        var providers;
+        function getProviders() {               
+            
+            Visualforce.remoting.Manager.invokeAction(
+                '{!$RemoteAction.ACETProviderLookupController.getProviders}',
+                function(result, event){
+                    if(event.status) {    
+                        getProviderFlag = true;                                           
+                        providers = JSON.parse(result);                        
+                        prepareSelectList('ProviderType',providers); 
+                        
+                        if(getBenefitFlag && getProviderFlag && getClassificationFlag && getSpecilitiesFlag){
+                            funcPCPCallout();
+                        }                                               
+                    }else {
+                        
+                    }
+                }, 
+                {escape: false}
+            );
+        }
+    
+        var clasifications;
+        function getClasfications() {               
+            
+            Visualforce.remoting.Manager.invokeAction(
+                '{!$RemoteAction.ACETProviderLookupController.getClasifications}',
+                function(result, event){
+                    if(event.status) { 
+                        getClassificationFlag = true;                                              
+                        clasifications = JSON.parse(result);  
+                        
+                        if(getBenefitFlag && getProviderFlag && getClassificationFlag && getSpecilitiesFlag){
+                            funcPCPCallout();
+                        }                        
+                    }else {
+                        
+                    }
+                }, 
+                {escape: false}
+            );
+        }
+    
+        var specilities;
+        function getSpecilities() {               
+            
+            Visualforce.remoting.Manager.invokeAction(
+                '{!$RemoteAction.ACETProviderLookupController.getSpecilities}',
+                function(result, event){
+                    if(event.status) {  
+                        getSpecilitiesFlag = true;                                             
+                        specilities = JSON.parse(result);   
+                        
+                        if(getBenefitFlag && getProviderFlag && getClassificationFlag && getSpecilitiesFlag){
+                            funcPCPCallout();
+                        }                                                                                           
+                    }else {
+                        
+                    }
+                }, 
+                {escape: false}
+            );
+        }
+    
+        function getOption(label,value ){
+            // console.log(value+'--'+label);
+            var option = document.createElement("option");
+            option.setAttribute("value",label);
+            option.text = value;
+            return option;
+        }
+    	var defNetworkVal;
+        function benefitTierChange(){
+            var searchType = $("[name$=addRadioOnSearch]:checked").val();
+            if( $("#benefitTier").val() != ''){
+                if(benefitTierNetworkOptions != null){
+                    for(var i=0;i<benefitTierNetworkOptions.length;i++){
+                        //console.log(benefitTierNetworkOptions[i].label +':::::'+$("#benefitTier").val());
+                        if(benefitTierNetworkOptions[i].label === $("#benefitTier").val()){                                
+                            $("[id$='serviceType']").val(benefitTierNetworkOptions[i].additionalInfo);
+                            var options = benefitTierNetworkOptions[i].childValues;
+                            prepareSelectList('Network',options);
+                            if(benefitTierNetworkOptions[i].value && benefitTierNetworkOptions[i].value.toLowerCase() == 'Core Benefits from Freedom'.toLowerCase()){
+                                 populateDefaultVal('Network','Freedom Network'); 
+                                 populateDefaultVal('claimTypeId','Medical');
+                            }
+                            if(benefitTierNetworkOptions[i].value && benefitTierNetworkOptions[i].value.toLowerCase() == 'Core Benefits from Garden'.toLowerCase()){
+                                 populateDefaultVal('Network','Garden State Network');    
+                                 populateDefaultVal('claimTypeId','Medical');
+                            }
+                            if(benefitTierNetworkOptions[i].value && benefitTierNetworkOptions[i].value.toLowerCase() == 'Core Benefits from Liberty'.toLowerCase()){
+                                 populateDefaultVal('Network','Liberty Network');    
+                                 populateDefaultVal('claimTypeId','Medical');
+                            }
+                            if(benefitTierNetworkOptions[i].value && benefitTierNetworkOptions[i].value.toLowerCase() == 'Core Benefits'.toLowerCase()) {
+                                  populateDefaultVal('Network','Freedom Network');
+                                  populateDefaultVal('Network','Liberty Network');
+                            //      populateDefaultVal('Network','Garden State Network'); 
+                                  populateDefaultVal('claimTypeId','Medical');
+                            }
+                            if(searchType == 'Advanced'){
+                                $("[id$='Network']").removeAttr('disabled');
+                            }
+                        }                            
+                    }     
+                }
+                if(searchType == 'Basic'){
+                    $("[id$='Network']").append($('<option>', {
+                                value: $("[id$='defNetworkValId']").val(),
+                                text:  $("[id$='defNetworkValName']").val()
+                            }));
+                    $("[id$='Network']").val($("[id$='defNetworkValId']").val());
+                    $("[id$='Network']").attr("disabled","true");
+                    console.log('network updatedval '+$("[id$='defNetworkValId']").val());
+                }
+            }else{
+                var netwrokType = $("[name$=addRadio]:checked").val();
+                if(searchType == 'Advanced' && netwrokType != 'INN Only'){
+                    populateNetworkVals();
+                    $("[id$='serviceType']").val('');
+                    $("[id$='Network']").removeAttr('disabled');
+                }else if(searchType == 'Basic'){
+                    $("[id$='Network']").append($('<option>', {
+                                value: $("[id$='defNetworkValId']").val(),
+                                text: $("[id$='defNetworkValName']").val()
+                            }));
+                        $("[id$='Network']").val($("[id$='defNetworkValId']").val());
+                    $("[id$='Network']").attr("disabled","true");
+                    console.log('network updatedval2 '+$("[id$='defNetworkValId']").val());
+                }
+                else{
+                    removeAllOptions('Network');    
+                    $("[id$='Network']").attr("disabled","true");
+                }
+            } 
+            
+        }
+    
+        function populateNetworkVals(){
+            if(benefitTierNetworkOptions != null){
+                for(var i=0;i<benefitTierNetworkOptions.length;i++){                            
+                    if(benefitTierNetworkOptions[i].label === ''){                                                        
+                        var options = benefitTierNetworkOptions[i].childValues;
+                        prepareSelectList('Network',options);
+                    }                            
+                }     
+            }
+        }
+    
+        function providerTypeChange(){
+            enableArr = [];
+            enableArr.push('Existingpatients');
+            enableArr.push('Newpatients');
+            enableArr.push('Gender'); 
+            enableArr.push('FirstName'); 
+            enableArr.push('Language');
+            enableArr.push('SearchPcpOBGYNId');
+            enableArr.push('FreeStdFacl');
+            enableArr.push('ddp');
+            enableElements(enableArr);
+            $("[id$='SearchPcpOBGYNId']").removeAttr('disabled');
+            if( $("#ProviderType").val() != ''){
+                if(clasifications != null){
+                    for(var i=0;i<clasifications.length;i++){                        
+                        if(clasifications[i].label === $("#ProviderType").val()){ 
+                            $("[id$='Classification']").removeAttr('disabled');
+                            var options = clasifications[i].childValues;
+                            prepareSelectList('Classification',options);                            
+                        }                            
+                    }
+                    //  sortSelect(Classification);
+                    sortSelect(document.getElementById('Classification'));
+                }
+                
+                if($("#ProviderType").val() == 'Facility'){
+                    
+                    $("[id$='Existingpatients']").removeProp('checked');
+                    $("[id$='Newpatients']").removeProp('checked');
+                    $("[id$='FirstName']").val('');
+                    $("[id$='Language']").val('');
+                    $("[id$='Gender']").val('');
+                    populateDefaultVal('Gender','-None-');
+                    populateDefaultVal('Language','-None-');
+                    disableArr = [];
+                    disableArr.push('Existingpatients');
+                    disableArr.push('Newpatients');
+                    disableArr.push('Gender');
+                    disableArr.push('Language');
+                    disableArr.push('FirstName');
+                    disableArr.push('SearchPcpOBGYNId');
+                    disableElements(disableArr);
+                    $("[id$='SearchPcpOBGYNId']").val('');
+                    $("[id$='SearchPcpOBGYNId']").attr("disabled","true");
+                }else {
+                    $("[id$='FreeStdFacl']").removeProp('checked');
+                    $("[id$='ddp']").removeProp('checked');
+                    disableArr = [];
+                    disableArr.push('FreeStdFacl');
+                    disableArr.push('ddp');
+                    disableElements(disableArr);
+                 }
+                $("#Classification").change();
+            }else{
+                removeAllOptions('Classification'); 
+                $("#Classification").change();
+                disbaleSelectListAndAddMessage('Classification','Select Provider Type'); 
+                $("[id$='SearchPcpOBGYNId']").removeAttr('disabled');
+            } 
+            //sortSelect(Classification);
+            sortSelect(document.getElementById('Classification'));
+        }
+    
+        function sortSelect(selElem) {
+            var tmpAry = new Array();
+            var allValue = '';
+            var genValue = '';
+            for (var i=0;i<selElem.options.length;i++) {                
+                tmpAry[i] = new Array();                
+                if(selElem.options[i].text == 'All' && selElem.options[i].value == 'All'){
+                    allValue = 'true';
+                }                
+                else if(selElem.options[i].text == 'General' && selElem.options[i].value == 'General'){
+                    genValue = 'true';
+                } 
+                else{
+                    tmpAry[i][0] = selElem.options[i].text;
+                    tmpAry[i][1] = selElem.options[i].value;
+                }                    
+            }
+            tmpAry.sort();
+            while (selElem.options.length > 0) {                    
+                    selElem.options[0] = null;
+            }
+            for (var i=0;i<tmpAry.length;i++) {                 
+                    var op = new Option(tmpAry[i][0], tmpAry[i][1]);
+                    selElem.options[i] = op;                                     
+            }   
+                if(allValue =='true')
+                    selElem.options[0] = new Option('All', 'All');
+                
+                    if (genValue =='true'){
+                        if(allValue !='true')
+                         selElem.options[0] = new Option('General', 'General');
+                        else
+                       selElem.options[1] = new Option('General', 'General');
+                     }
+                  
+            return;
+        }
+    
+        function clasificationChange(){
+            
+            if( $("#Classification").val() != '' && $("#ProviderType").val() != ''){
+                var key = $("#ProviderType").val()+''+$("#Classification").val();
+                if(specilities != null){
+                    for(var i=0;i<specilities.length;i++){                        
+                        if(specilities[i].label === key){    
+                            $("[id$='Speciality']").removeAttr('disabled');
+                            var options = specilities[i].childValues;
+                            prepareSelectList('Speciality',options);
+                        }                            
+                    }
+                }
+            }else{
+                removeAllOptions('Speciality');   
+                disbaleSelectListAndAddMessage('Speciality','Select Classification');
+            } 
+            //  sortSelect(Speciality);
+            sortSelect(document.getElementById('Speciality'));
+        }
+    
+        function removeAllOptions(selectListId){
+            $("[id="+selectListId+"]").find('option').remove(); 
+        }
+    
+        function prepareSelectList(domId, optionValues){
+            removeAllOptions(domId);//
+            var selectList = document.getElementById(domId); 
+            if(selectList != null){
+                if(domId != 'Speciality'){
+                    selectList.appendChild(getOption('',"-None-"));
+                }
+                
+                if(optionValues != null){
+                    for(var i=0;i<optionValues.length;i++){
+                        if(optionValues[i].label != '' && optionValues[i].label != null && optionValues[i].value != '' && optionValues[i].value != null){
+                            selectList.appendChild(getOption(optionValues[i].label,optionValues[i].value));    
+                        }                            
+                    }
+                }
+            }
+        }
+        
+        function disableElements(arr){
+            if(arr != null){
+                for(var i=0;i<arr.length;i++){
+                    $("[id$="+arr[i]+"]").attr("disabled","true");
+                }    
+            }            
+        }
+
+        function enableElements(arr){
+            if(arr != null){
+                for(var i=0;i<arr.length;i++){
+                    $("[id$="+arr[i]+"]").removeAttr('disabled');
+                }    
+            } 
+        }
+    
+        function initJS(){
+            disbaleSelectListAndAddMessage('Classification','Select Provider Type');
+            disbaleSelectListAndAddMessage('Speciality','Select Classification');                                                
+            searchTypeChange();
+        }
+    
+        function disbaleSelectListAndAddMessage(domId,msg){
+            var selectList = document.getElementById(domId);
+            if(msg != null && msg != ''){
+                selectList.appendChild(getOption('',msg)); 
+            }
+            
+            $("[id$="+domId+"]").attr("disabled","true");
+        }
+    
+        function fillVal(domId, val){
+            $("[id$="+domId+"]").val(val);
+        }
+    
+        function searchTypeChange(){
+            var searchType = $("[name$=addRadioOnSearch]:checked").val();
+            
+            if(searchType == 'Advanced'){
+                enableArr = [];
+                enableArr.push('benefitTier');
+                enableArr.push('Network');
+                enableArr.push('claimTypeId');               
+                enableElements(enableArr);
+                    $("[id$='tieredBenefit']").prop('checked',false); 
+                    $("[id$='tieredBenefit']").attr("disabled",true); 
+                $("input[id$='addRadio:1']").removeAttr('disabled'); 
+                if($("[id$='ProviderType']").val() == 'Facility') {
+                $("[id$='SearchPcpOBGYNId']").val('');
+                $("[id$='SearchPcpOBGYNId']").attr("disabled","true"); 
+                }               
+            }else{
+                disableArr = [];
+                if($("[id$='qualityProviderRuleId']").val()){
+                    $("[id$='tieredBenefit']").attr("disabled",false); 
+                }
+                disableArr.push('benefitTier');
+                var memId = '{!memId}';
+                if(memId != null && memId != ''){
+                    disableArr.push('Network');
+                }
+                
+                disableArr.push('claimTypeId');
+                disableElements(disableArr);
+                //populateDefaultVal('benefitTier','Core Benefits from Freedom'); 
+                //populateDefaultVal('Network','Freedom Network'); 
+                              
+                var networkValue = $("input:radio[name$='addRadio']");
+                networkValue.filter('[value="INN Only"]').prop("checked","true");
+                var statusValue = $("input:radio[name$='statusRadio']");
+                statusValue.filter('[value="Active"]').prop("checked","true");
+                $("input[id$='addRadio:1']").attr("disabled","true"); 
+                if($("[id$='ProviderType']").val() == 'Facility') {
+                    $("[id$='SearchPcpOBGYNId']").val('');
+                    $("[id$='SearchPcpOBGYNId']").attr("disabled","true");
+                }   
+                defaultValues();
+            
+            }
+            networkTypeChange();
+        }
+    
+        function defaultValues(){
+            prepareSelectList('benefitTier',benefitTierNetworkOptions); 
+             var searchType = $("[name$=addRadioOnSearch]:checked").val();
+            var b = true;
+            var networkId = '{!networkId}';
+            if(benefitTierNetworkOptions != undefined){
+                for(var i=0; i<benefitTierNetworkOptions.length;i++){
+                    if(benefitTierNetworkOptions[i].value && benefitTierNetworkOptions[i].value.toLowerCase() == 'Core Benefits from Freedom'.toLowerCase()){
+                        populateDefaultVal('benefitTier','Core Benefits from Freedom');
+                        populateDefaultVal('Network','Freedom Network');
+                        populateDefaultVal('claimTypeId','Medical');
+                    } 
+                    if(benefitTierNetworkOptions[i].value && benefitTierNetworkOptions[i].value.toLowerCase() == 'Core Benefits from Garden'.toLowerCase()) {
+                        populateDefaultVal('benefitTier','Core Benefits from Garden');
+                        populateDefaultVal('Network','Garden State Network');
+                        populateDefaultVal('claimTypeId','Medical');
+                    }
+                    if(benefitTierNetworkOptions[i].value && benefitTierNetworkOptions[i].value.toLowerCase() == 'Core Benefits from Liberty'.toLowerCase()) {
+                       populateDefaultVal('benefitTier','Core Benefits from Liberty');
+                       populateDefaultVal('Network','Liberty Network');
+                       populateDefaultVal('claimTypeId','Medical');
+                    }
+                    if(benefitTierNetworkOptions[i].value && benefitTierNetworkOptions[i].value.toLowerCase() == 'Core Benefits'.toLowerCase()) {
+                        populateDefaultVal('benefitTier','Core Benefits');
+                        populateDefaultVal('Network','Freedom Network');
+                 //       populateDefaultVal('Network','Garden State Network');
+                        populateDefaultVal('Network','Liberty Network');
+                        populateDefaultVal('claimTypeId','Medical');
+                    }  
+                    if(benefitTierNetworkOptions[i].value && benefitTierNetworkOptions[i].value.toLowerCase() == 'Core Benefits from Metro'.toLowerCase()) {
+                        populateDefaultVal('benefitTier','Core Benefits from Metro');
+                        populateDefaultVal('Network','Metro Network');
+                        populateDefaultVal('claimTypeId','Medical');
+                    } 
+                    
+            }
+        }
+      }
+    
+        function populateDefaultVal(domId,val){
+            var selectList = document.getElementById(domId);           
+            if(selectList != null){
+                if(selectList.options){
+                    for(var i=0;i<selectList.options.length;i++){
+                        if(selectList.options[i].label && val && selectList.options[i].label.toLowerCase() == val.toLowerCase()){                            
+                            selectList.options[i].label = val;
+                            selectList.value = selectList.options[i].value; 
+                        }
+                        else if(selectList.options[i].label == val ){
+                             selectList.options[i].label = val;
+                            selectList.value =selectList.options[i].value;
+                        }
+                    }
+                }
+            }
+            $("[id$="+domId+"]").change();
+        }
+    
+        function networkTypeChange(){
+            var searchType = $("[name$=addRadioOnSearch]:checked").val();
+            var netwrokType = $("[name$=addRadio]:checked").val();
+            var networkId ='{!networkId}';
+            clearBenefitTierError();
+            if( (searchType == 'Basic')  || (searchType == 'Advanced' && netwrokType == 'INN Only')){
+                removeAllOptions('claimTypeId'); 
+                var claimType = document.getElementById('claimTypeId');
+                if($("[id$=claimTypeId]") != null){
+                    claimType.appendChild(getOption('','-None-')); 
+                    claimType.appendChild(getOption('Medical','Medical')); 
+                    claimType.appendChild(getOption('Behavioral','Behavioral'));
+                }
+                
+                populateDefaultVal('claimTypeId','Medical');
+                populateDefaultVal('benefitTier','Core Benefits from Freedom'); 
+                populateDefaultVal('Network','Freedom Network');
+                populateDefaultVal('benefitTier','Core Benefits from Garden');
+                populateDefaultVal('Network','Garden State Network');
+                populateDefaultVal('benefitTier','Core Benefits from Liberty');
+                populateDefaultVal('Network','Liberty Network');
+                populateDefaultVal('benefitTier','Core Benefits');
+                 populateDefaultVal('benefitTier','Core Benefits from Metro');
+                 populateDefaultVal('Network','Metro Network');
+
+                if(searchType == 'Advanced'){
+                    $("#benefitTier").removeAttr('disabled');
+                }
+                
+            }else if(searchType == 'Advanced' && netwrokType != 'INN Only'){
+                removeAllOptions('claimTypeId');
+                var claimType = document.getElementById('claimTypeId');
+                if(claimType != null){
+                    claimType.appendChild(getOption('','-None-')); 
+                }
+                populateDefaultVal('claimTypeId','Medical');
+                populateDefaultVal('benefitTier','-None-'); 
+                disbaleSelectListAndAddMessage('benefitTier','');
+                
+            }
+        }
+    
+        
+    
+        function firstNameChange(){
+            enableArr = [];
+            enableArr.push('FreeStdFacl');
+            enableElements(enableArr);
+            if($("[id$='FirstName']").val() != ''){
+                if($("[id$='ProviderType']").val() != 'Physician'){
+                    populateDefaultVal('ProviderType','Physician');
+                }
+            }
+            if($("[id$='FirstName']").val() != '' || ($("[id$='FirstName']").val() == '' && $("[id$='ProviderType']").val() == 'Physician')){
+                   $("[id$='FreeStdFacl']").removeProp('checked');
+                   disableArr = [];
+                   disableArr.push('FreeStdFacl');
+                   disableElements(disableArr);
+            }
+        }
+    
+        function genderChange(){
+            enableArr = [];
+            enableArr.push('FreeStdFacl');
+            enableElements(enableArr);
+            if($("[id$='Gender']").val() != ''){
+                if($("[id$='ProviderType']").val() != 'Physician'){
+                    populateDefaultVal('ProviderType','Physician');
+                }
+            }
+           if($("[id$='Gender']").val() != '' || ($("[id$='Gender']").val() == '' && $("[id$='ProviderType']").val() == 'Physician')) {
+                $("[id$='FreeStdFacl']").removeProp('checked');
+                disableArr = [];
+                disableArr.push('FreeStdFacl');
+                disableElements(disableArr);
+            }
+            
+        }
+    function freeStandingFaclChange(freeStdFacl){
+         console.log(freeStdFacl.checked);
+         if(freeStdFacl.checked == true) {
+               console.log('checked');
+               if($("[id$='ProviderType']").val() != 'Facility'){
+                    populateDefaultVal('ProviderType','Facility');
+                }                
+            }
+        }
+    function languageChange(){
+            enableArr = [];
+            enableArr.push('FreeStdFacl');
+            enableElements(enableArr);
+            if($("[id$='Language']").val() != ''){
+              $("[id$='FreeStdFacl']").removeProp('checked');
+                disableArr = [];
+                disableArr.push('FreeStdFacl');
+                disableElements(disableArr);
+            }
+       } 
+  function SearchPcpOBGYNIdChange() {
+            enableArr = [];
+            enableArr.push('FreeStdFacl');
+            enableElements(enableArr);
+            if($("[id$='SearchPcpOBGYNId']").val() != ''){
+              $("[id$='FreeStdFacl']").removeProp('checked');
+                disableArr = [];
+                disableArr.push('FreeStdFacl');
+                disableElements(disableArr);
+            }
+       }
+   function NewpatientsChange(newPatientsChange){
+            enableArr = [];
+            enableArr.push('FreeStdFacl');
+            enableElements(enableArr);
+            if(newPatientsChange.checked == true){
+              $("[id$='FreeStdFacl']").removeProp('checked');
+                disableArr = [];
+                disableArr.push('FreeStdFacl');
+                disableElements(disableArr);
+            }
+       }
+   function ExistingpatientsChange(existingPatientsChange){
+            enableArr = [];
+            enableArr.push('FreeStdFacl');
+            enableElements(enableArr);
+            if(existingPatientsChange.checked == true){
+              $("[id$='FreeStdFacl']").removeProp('checked');
+                disableArr = [];
+                disableArr.push('FreeStdFacl');
+                disableElements(disableArr);
+            }
+       }
+        function validate_PL(){
+            var benefitTier = $("[id$='benefitTier']");
+            var Network = $("[id$='Network']");
+            var ProviderType = $("[id$='ProviderType']");
+            var Classification = $("[id$='Classification']");
+            var Speciality = $("[id$='Speciality']");
+            var claimTypeId = $("[id$='claimTypeId']");
+            var $pbSearchPCP = $("[id$='pbSearchCriteria']"); 
+            $pbSearchPCP.find(".pbError").remove();
+            
+            var searchType = $("[name$=addRadioOnSearch]:checked").val();
+            var netwrokType = $("[name$=addRadio]:checked").val();
+            clearBenefitTierError();
+            if(searchType == 'Advanced' && netwrokType == 'INN Only' && benefitTier.val() == ''){
+                benefitTier.wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+                var errorMsg = "You must select a value.";
+                benefitTier.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>');                 
+            }else if(validate_comp('') == true){
+                
+                searchResults(benefitTier.val(), 
+                              Network.val(),
+                              ProviderType.val(),
+                              Classification.val(),
+                              Speciality.val(),
+                              claimTypeId.val());
+            }
+        }
+                              
+        function processDatatable(row, data, dataIndex){                        
+            $(row).children(":nth-child(1)").html("<a id='lnkProviderId' href='#'>" + data.providerId + "</a>");                      
+            var interactionId = "{!JSENCODE(interaction.Id)}";
+            var addressStatus = data.providerLocationAffiliationsStatusCode ? data.providerLocationAffiliationsStatusCode : '';
+            if(addressStatus == 'A') {
+                  $(row).find(memId?":nth-child(15)":":nth-child(14)").html('<img src="{!URLFOR($Resource.ACETResources, '/img/m/active.jpg')}" style="max-width:50px;"></img>');
+            }else if(addressStatus == 'I') {
+                 $(row).find(memId?":nth-child(15)":":nth-child(14)").html('<img src="{!URLFOR($Resource.ACETResources, '/img/m/inactive.jpg')}" style="max-width:50px;"></img>');
+              }
+			  
+			  
+			       var lbTypes = data.labTypes;
+            var searchedPrvdrType = $("[id$='ProviderType']").val();
+            if(lbTypes != null && lbTypes !=undefined){
+                var finalLbTStr = '';
+                lbTypes.forEach(function(e){ 
+                    if(finalLbTStr == ''){
+                        finalLbTStr = finalLbTStr + '<span title="'+e.description+'">'+e.code+'</span>';
+                    }else{
+                        finalLbTStr = finalLbTStr + '- <span title="'+e.description+'">'+e.code+'</span>';    
+                    }
+                    
+                });
+                console.log('searchedPrvdrType'+searchedPrvdrType);
+                if(searchedPrvdrType == ''){
+                      $(row).find(memId?":nth-child(13)":"").html(finalLbTStr);
+                    }else if(searchedPrvdrType == 'Facility'){
+                    	 $(row).children(":nth-child(12)").html(finalLbTStr);
+                    }
+            }
+            $(row).children(":nth-child(1)").on('click', function(e) {
+                var fullName =  data.fullName ? data.fullName : '';
+                var providerId =  data.providerId ? data.providerId : '';
+                var taxId =  data.taxId ? data.taxId : '';
+                var providerType =  data.providerType ? data.providerType : '';
+                var status =  data.status ? data.status : '';
+                var network =  data.network ? data.network : '';
+                var address =  data.address ? data.address : '';
+                var phoneNumber =  data.phoneNumber ? data.phoneNumber : '';
+                var speciality =  data.speciality ? data.speciality : '';
+                var gender =  data.gender ? data.gender : '';
+                var affiliation =  data.affiliation ? data.affiliation : '';
+                var PCPRole =  data.PCPRole ? data.PCPRole : '';
+                var uphd =  data.uphd ? data.uphd : '';
+                var acceptNewPatient =  data.acceptNewPatient ? data.acceptNewPatient : '';
+                var Radious =  data.radious ? data.radious : '';
+                var providerTINTypeCode =  data.providerTINTypeCode ? data.providerTINTypeCode : '';
+                var addressId =  data.addressId ? data.addressId : '';
+                var addressTypeCode =  data.addressTypeCode ? data.addressTypeCode : '';
+                var benefitPlanId = data.benefitPlanId ? data.benefitPlanId : '';
+                var Platinum = data.Platinum ? data.Platinum : '';
+                var tiered = data.qualityBenefitTier? data.qualityBenefitTier :'';
+                var networkval = $("[id$=Network]").val();//data.networkval ? data.networkval :'';
+                var claimType = $("[id$=claimTypeId]").val();
+                var selectdNetwork = $("input[name='pid:formid:pbSearchCriteria:pbsid:networkStatusId:addRadio']:checked").val(); 
+                var affiliationAddress = data.providerLocationAffiliationsStatusCode ? data.providerLocationAffiliationsStatusCode : '';
+                var pcpObgnID = data.pcpObgnID ? data.pcpObgnID : '';
+				var labTypeCd = data.labTypeCode ? data.labTypeCode : '';
+                AuthorizationNumber_OnClick(fullName, providerId + '_' + taxId, providerType, status, network, address, phoneNumber, speciality,gender, affiliation, PCPRole, uphd, acceptNewPatient, Radious, providerTINTypeCode, addressId, addressTypeCode, 
+                benefitPlanId,'{!showNonParChckBox}',Platinum,networkval,claimType,selectdNetwork,affiliationAddress,pcpObgnID,tiered,labTypeCd); 
+               return false;														 
+                
+            });            
+        }  
+                
+        function AuthorizationNumber_OnClick(firstName,unique_ProvId_TaxId,providerType,status,network,address,phoneNumber,speciality,gender,affiliation,PCPRole,uphd,acceptNewPatient,radious,providerTINTypeCode,addressId,addressTypeCode,benefitPlanId,ShowNonPar,Platinum,networkval,claimType,selectdNetwork,affiliationAddress,pcpObgnID,tiered,labTypeCd) {   
+            var varShowNonPar = $("[id$='showNonPar']");
+            //alert('shownonpar**'+varShowNonPar.prop("checked"));
+            var type = unique_ProvId_TaxId.split("_");            
+            var providerId = type[0];
+            var taxId = type[1]; 
+            var radius = radious;
+            var selectdNetwork = $("input[name='pid:formid:pbSearchCriteria:pbsid:networkStatusId:addRadio']:checked").val();
+            var varnetworkval ='';
+            var claimTypeq ='';
+            if(selectdNetwork == 'INN Only'){
+                varnetworkval = $("[id$=Network]").val(); 
+                if(varnetworkval =='' || varnetworkval == null){
+                    varnetworkval = $("[id$=selectedNetworkId]").val();
+                }
+                claimTypeq = $("[id$=claimTypeId]").val();
+            }else{
+                varnetworkval = '';
+                claimTypeq = '';
+             }
+            var varBenefitPlanId = '{!JSENCODE(benefitPlanId)}';
+            console.log('Platinum :: ' + Platinum);
+            console.log('affiliationAddress' +affiliationAddress);
+            var FullName = firstName.split(" ");
+            var hightlightPanelInfo = $("[id$='highlightPanelInfo']").val(); 
+            var urlParam = 'interactionId={!JSENCODE(interaction.Id)}' +'&' + 'contactId={!JSENCODE(conObj .Id)}' + '&' + 'sourceOriginator={!interaction.Interaction_Type__c}' + '&' + 'additionalInfo=' + encodeURIComponent(hightlightPanelInfo);
+             urlParam +='&'+'providerId='+providerId+'&'+'providerType='+providerType+'&'+'status='+status+'&'+'taxId='+taxId+'&'+'ssn='+''+'&'+'address='+encodeURIComponent(address)+'&'+'phoneNumber='+phoneNumber+'&'+'speciality='+speciality+'&'+'gender='+gender+'&'+'tieredBenefit='+tiered+'&'+'network='+network+'&'+'affiliation='+affiliation+'&'+'PCPRole='+PCPRole+'&'+'uphd='+uphd+'&'+'radious='+radious+'&'+'acceptNewPatient='+acceptNewPatient+'&'+'providerTINTypeCode='+providerTINTypeCode+'&'+'addressId='+addressId+'&'+'addressTypeCode='+addressTypeCode+'&benefitPlanId='+varBenefitPlanId+'&ShowNonPar='+varShowNonPar.prop("checked")+'&Platinum='+Platinum+'&labTypeCd='+labTypeCd;
+            var url;
+
+            // addCaseItem(firstName);
+            console.log(providerType);
+            if(providerType=='Facility' || providerType=='Facility/Group'){
+                var url = '/apex/ACETProviderFacilityDetails?'+urlParam+'&'+'FacilityName='+decodeEntities(firstName)+'&varnetworkval='+varnetworkval+'&claimType='+claimTypeq + '&radius='+radius; 
+                sforce.console.getEnclosingPrimaryTabId(function(result) {
+                    //console.log(result.id);
+                    sforce.console.openSubtab(result.id,url, true,'Prov - '+decodeEntities(firstName), null);// null, unique_ProvId_TaxId
+                });
+                
+            }
+            else if(providerType=='Physician'){ 
+            //var groupNum = '1118478';
+                //console.log('Networkval'+varnetworkval);
+                //console.log('claimType'+claimTypeq);
+                var url = '/apex/ACETProviderLookUpDetails?'+urlParam+'&'+'FacilityName='+decodeEntities(firstName)+'&returningFromService=providerLookup'+'&Id={!JSENCODE(memId)}' + '&SRK={!JSENCODE(surrogateKey)}' +'&grpnum={!JSENCODE(groupNum)}'+'&varnetworkval='+varnetworkval+'&claimType='+claimTypeq + '&radius='+radius;
+                    url = url + '&' + 'scrId={!JSENCODE(urlscrId)}' + '&' + 'rl={!JSENCODE(urlrelationshipCode)}';
+                    url = url + '&'  +'ssnId={!JSENCODE(urlssn)}' + '&' + 'pcpLocatorID={!JSENCODE(pcpLocatorID)}' + '&' + 'affiliationAddress='+affiliationAddress+ '&' + 'pcpObgnID='+pcpObgnID; 
+
+                    
+                sforce.console.getEnclosingPrimaryTabId(function(result) {
+                   if(FullName[2]!=null){
+                        sforce.console.openSubtab(result.id, url, true,'Prov - '+decodeEntities(FullName[2]), null);//,null,'PLDP');// null, unique_ProvId_TaxId
+                   } else { 
+                        sforce.console.openSubtab(result.id, url, true,'Prov - '+decodeEntities(FullName[1]), null);//,null,'PLDP');// null, unique_ProvId_TaxId
+                   } 
+                });
+            }
+            //   Facility();
+            
+            return false;         
+        }
+    
+        function clearAll(){
+            
+            clearBenefitTierError();
+            $("[id$='TaxId']").val('');
+            populateDefaultVal('ProviderType','-None-');            
+            
+            var networkValue = $("input:radio[name$='addRadio']");
+            networkValue.filter('[value="INN Only"]').prop("checked","true");            
+            networkTypeChange();
+            var searchType = $("[name$=addRadioOnSearch]:checked").val();
+            var statusValue = $("input:radio[name$='statusRadio']");
+            statusValue.filter('[value="Active"]').prop("checked","true");
+            $("[id$='tieredBenefit']").prop("checked",false);
+            if(searchType == 'Advanced'){
+                populateDefaultVal('benefitTier','-None-');
+                populateDefaultVal('claimTypeId','-None-');    
+            }
+            $("[id$='LastName']").val('');
+            $("[id$='FirstName']").val('');
+            $("[id$='City']").val('');
+            $("[id$='ddlStateCode']").val('');
+            $("[id$='radiousid']").val('');
+            $("[id$='Language']").val('');
+            $("[id$='Gender']").val('');
+            $("[id$='SearchPcpOBGYNId']").val('');
+
+            
+            $("[id$='Newpatients']").removeAttr('checked');
+            $("[id$='Existingpatients']").removeProp('checked');
+            $("[id$='FreeStdFacl']").removeProp('checked');
+            $("[id$='ddp']").removeProp('checked');           
+            $("[id$='PhoneNumber']").val('');
+            $("[id$='SearchProviderId']").val('');
+            $("[id$='NPI']").val('');
+            $("[id$='ZipCode']").val('');            
+            $('#errorMsgDiv').remove();
+            $('.errorMsg').remove();
+            clearResults();
+            $("#topErrorMsgDiv").remove();
+            
+            var SearchCriteria = $("[id$='pbSearchCriteria']");
+            var TaxId       = $("[id$='TaxId']");
+            var NPI         = $("[id$='NPI']");
+            var LastName    = $("[id$='LastName']");
+            var FirstName   = $("[id$='FirstName']");
+            var ZipCode     = $("[id$='ZipCode']");
+            var SearchProviderId  = $("[id$='SearchProviderId']");
+            var PhoneNumber  = $("[id$='PhoneNumber']");    
+            var Radius = $("[id$='pid:formid:pbSearchCriteria:pbsid:pbsiid:radiousid']");
+            var ProviderType = $("[id$='ProviderType']"); 
+            var Specialty = $("[id$='Speciality']");
+            var Classification = $("[id$='Classification']");
+            if(searchType == 'Basic'){
+            var network = $("[id$='defNetworkValId']"); 
+            }else{
+            var Network = $("[id$='Network']");  
+            }
+            var Language = $("[id$='Language']");
+            var City = $("[id$='City']");    
+            var acetstate = $("[id$='acetstate']");    
+            var Gender = $("[id$='Gender']");   
+            var ddlStateCode = $("[id$='ddlStateCode']");
+            var ExistingPatients = $("[id$='Existingpatients']");
+            var FreeStdFacl = $("[id$='FreeStdFacl']");
+            var ddp = $("[id$='ddp']");
+            var NewPatients = $("[id$='Newpatients']");
+            var showNonParChk = $("[id$='showNonPar']");
+            var benefitTier = $("[id$='benefitTier']");
+            var serviceType = $("[id$='serviceType']");
+            var claimTypeId = $("[id$='claimTypeId']");
+            var networkStatus = $("[id$='addRadio']");
+            var selectedNetworkId = $("[id$=selectedNetworkId]");
+            var SearchPcpOBGYNId= $("[id$='SearchPcpOBGYNId']");
+            SearchCriteria.find(".pbError").remove();  
+            TaxId.removeClass("error").parent().find(".errorMsg").remove();
+            NPI.removeClass("error").parent().find(".errorMsg").remove();
+            LastName.removeClass("error").parent().find(".errorMsg").remove();
+            FirstName.removeClass("error").parent().find(".errorMsg").remove();
+            SearchProviderId.removeClass("error").parent().find(".errorMsg").remove();
+            PhoneNumber.removeClass("error").parent().find(".errorMsg").remove();
+            ZipCode.removeClass("error").parent().find(".errorMsg").remove();
+            
+            if(Network.val() != '' && (memId == null || memId == '')){
+                populateDefaultVal('Network','-None-');    
+            }
+        }
+   
+    // call getNetworkVal - Hasara 17/08/2021
+        
+        window.onload = function getNetworkVal() {               
+           var netVal= $("[id$='highlightPanelInfo']").val();
+           var finalVal = JSON.parse(netVal);
+           var defNetVal= finalVal["Network"];
+            console.log('@@netvalue '+defNetVal);
+            Visualforce.remoting.Manager.invokeAction(
+                '{!$RemoteAction.ACETProviderLookupController.getNetworkVal}',defNetVal,
+                function(result, event){
+                    if(event.status) { 
+                        defNetworkVal = JSON.parse(result);
+                        console.log('@@netvaluere '+defNetworkVal);
+                        if(defNetworkVal !== null && defNetworkVal !== ''){
+                        var defNetworkst = defNetworkVal.toString();
+                            if(defNetworkst.includes("_")){
+                        var defNetworkList = defNetworkst.split("_"); 
+                        var defNetworkValId = defNetworkList[0];
+                                console.log('@@netvaluerer '+defNetworkList[1]);
+                        var defNetworkValName = defNetworkList[1]; 
+                                }
+                        }
+                        $("[id$='defNetworkValId']").val(defNetworkValId);
+                        $("[id$='defNetworkValName']").val(defNetworkValName);                        
+                    }else {
+                        
+                    }
+                }, 
+                {escape: false}
+            );
+        }
+    
+        function clearBenefitTierError(){
+            var benefitTier = $("[id$='benefitTier']");
+            benefitTier.removeClass('error').parent().find(".errorMsg").remove();
+            benefitTier.parent().find(".requiredBlock").remove();     
+        }
+        function init() {
+            var searchPcpOBGYNId= $("[id$='SearchPcpOBGYNId']");
+            searchPcpOBGYNId.keypress(AllowDigitsOnly);
+        }
+        function AllowDigitsOnly(InputElement)  {
+            //Allow delete, tab, enter and escape keys through
+            if (/^(8|9|13|27)$/.test("" + InputElement.keyCode))    {
+                return true;
+            }
+    
+            var regex = new RegExp("^[0-9]+$");
+            var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+            if (regex.test(str))    {
+                return true;
+            }
+    
+            InputElement.preventDefault();
+            return false;
+        }
+        $(function() {
+        $("[auto-doc-section-key]").each(function(){
+            if($(this).attr("auto-doc-section-key") =="pbsAdditionalAddresses"){
+                if($(this).find(".pbSubheader").find("input[type='checkbox'].autodoc").length>0){
+                    $(this).find(".pbSubheader").find("input").remove();    
+                }
+            }
+        });
+        });
+    </script>
+    <div align="left"> <a href="#" id="backToToP" style="color:Blue" >Back To Top</a> </div> 
+    
+</apex:page>

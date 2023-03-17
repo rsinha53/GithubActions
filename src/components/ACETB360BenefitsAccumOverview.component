@@ -1,0 +1,2170 @@
+<apex:component controller="ACETB360BemefitsAccumComtroller" allowDML="true"  id="ComponentId">
+
+    <apex:includeScript value="{!$Resource.ACETBenefitAccordionJSExtend}"/>
+    <apex:includeScript value="{!$Resource.ACETBenefitRedesignLanguageJquery}"/>
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/vendor/chosen.jquery.min.js')}" />
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/vendor/chosen.jquery.min.planbenefit.js')}" />
+    <apex:stylesheet value="{!URLFOR($Resource.ACETResources, '/css/vendor/chosen.min.css')}" />
+    <link rel='stylesheet' href='//code.jquery.com/ui/1.11.3/themes/smoothness/jquery-ui.css'/> 
+    
+    <apex:attribute type="String" name="attrMemberId" description="HoldsMemberid" assignTo="{!MemberId}" /> 
+    <apex:attribute type="String" name="attrBenefitBundleOptionId" description="HoldsBundleid" assignTo="{!BenefitBundleOptionId}" />
+    <apex:attribute type="String" name="attrEffectiveDate" description="HoldsBundleid" assignTo="{!EffectiveDate}" />
+    <apex:attribute type="String" name="attrEndDate" description="HoldsBundleid" assignTo="{!EndDate}" />
+    <apex:attribute type="String" name="attrCoverageType" description="HoldsBundleid" assignTo="{!CoverageType}" />
+    <apex:attribute type="String" name="attrSRKID" description="HoldsBundleid" assignTo="{!SRKID}" />
+    <apex:attribute type="String" name="attrSubSRKID" description="HoldSubscriberSRK" assignTo="{!SubSRKID}" />
+    <apex:attribute type="boolean" name="attrIsPlanBenefit" description="" assignTo="{!IsPlanBenefit}"/>
+    <apex:attribute type="ACETGroupPlanBenefitWrapper" name="attrBenefitAccumulatorSection" description="" assignTo="{!ACETPlanBenefitAccumulatorSection}"/>
+    <apex:attribute type="ACETGroupPlanBenefitWrapper" name="attrBenefitSubscriptionService" description="" assignTo="{!ACETPlanBenefitSubscriptionSection}"/>
+    <apex:attribute type="String" name="attrGroupEffectiveDate" description="attrGroupEfectiveDate" assignTo="{!groupEffectiveDate}" />
+    <apex:attribute type="String" name="attrGroupRenewalDate" description="attrGroupRenewalDate" assignTo="{!renewalDate}" />
+    <apex:attribute type="String" name="attrGroupId" description="HoldsGroupid" assignTo="{!groupId}" /> 
+    <apex:attribute type="String" name="attrSubscriptionResponse" description="HoldsSubscriptionServices" assignTo="{!ACETSubscriptionServices}" />
+    <apex:attribute type="String" name="attrSpeciality" description="HoldsprimarySpeciality" assignTo="{!primarySpeciality}" />
+    <apex:attribute type="String" name="attrOriginatorSitusState" description="Situs State of current originator(dependent)" assignTo="{!orgSitusState}"/>  
+    <style>
+        
+        .benefitFilter {
+            padding: 10px 16px;   
+            
+        }
+    
+        .content {
+          //padding: 16px;
+        }
+    
+        .sticky {
+          position: fixed;
+          top: 0;
+          width: 98.2%;
+          margin-left:-2%; 
+          background-color:rgb(248,248,248);
+          border-bottom: 2px solid black;
+        //  margin-left:-40px;
+            z-index:1000;
+        }
+    
+        .sticky + .content {
+          padding-top: 120px;
+        }
+        
+        .tblBgClr{
+            background-color: #dddddd;
+        }
+        
+        .chosen-container {
+            width: 18pc !important;
+            border: 1px solid #d8dde6;
+        }
+        .slds-button {
+            position: relative !important; 
+            display: inline-block;
+            padding: 0;
+            background: 0 0;
+            background-clip: border-box;
+            border-radius: .25rem;
+            font-size: .75rem;
+            line-height: 1.875rem;
+            text-decoration: none;
+            white-space: normal;
+            user-select: none;
+            transition: color 50ms linear,background-color 50ms linear;
+        }
+        .slds-Bb{
+        padding-left: 1rem;
+        padding-right: 1rem;
+        text-align: center;
+        vertical-align: middle;
+        background-color: #0070d2;
+        border: 1px solid #0070d2;
+        color: #fff;
+        }
+        .ageRange {
+            height: 15px;
+            width: 15px;
+        }
+        
+        .boxStyle{
+            border:1px solid #d3d3d3;
+            border-radius:4px;            
+            color:#555555;
+            padding: .5em .5em .5em .7em;
+            position: relative;
+            display: block;
+            font-size: 100%;    
+            margin: 2px 0 0 0;
+            font-weight: normal;!important;
+            font-size: 13px;
+        }
+       .search-choice{
+           width:100%;
+       }
+       .chosen-container{
+             min-width: 18pc;
+             width: auto !important;
+             max-width: 70pc;  
+       } 
+       .chosen-container-multi .chosen-choices li.search-choice{
+           width: auto !important;
+           white-space: nowrap;
+           overflow: hidden;
+           text-overflow: ellipsis;
+       }
+       .ui-tooltip{
+            max-width: 800px !important;
+       }
+        
+    </style>
+    
+    <html lang='en'>
+        <head>
+            <meta charset='utf-8' />
+
+            <script>
+            
+            var allowIconChange = false;
+            var previouslySelectedBenefitcodes= null;
+            var viewBenefitsView = false;
+            var specialtyList = [];
+            
+            $(document).ready(function(){
+                acet.autodoc.startAutodoc();                
+                $("[id$='org.ajax4jsf.oncomplete']").hide();               
+                allowIconChange = true;                
+                //apply_accordion();
+                uiChange();
+                customDatePickerBenefits();
+                var recmap = JSON.parse('{!specialtyCrosswalkString}');
+                //console.log.log(recmap);
+                var specChar = '{!primarySpeciality}';
+                //console.log.log('before::'+specChar);
+                specChar = specChar.replace(/&/g, 'and');
+                //console.log('after::'+specChar);
+                //console.log('Map::'+recmap[specChar]);
+                //console.log.log('{!primarySpeciality}');
+              
+                if(specChar != null || specChar != undefined || specChar != ''){
+                    if(recmap[specChar] != null){
+                        $("#hippaCodeList").val(recmap[specChar]).trigger("chosen:updated");
+                        $('.chosen-choices').each(function( index ) {
+                            $(this).find(".search-choice").each(function(){
+                                if($(this).text().indexOf('%') >= 0){
+                                    $(this).css("font-weight","Bold");
+                                    $(this).css("font-style","italic");
+                                    //console.log.log($(this));
+                                    $(this).find("span").text( $(this).text().replace('%', ''));
+                                }
+                                
+                                
+                            });
+                        });
+                        $('.chosen-choices').each(function( index ) {
+                            $(this).find(".search-choice").each(function(){
+                                if($(this).text()==$(this).text().toUpperCase()){
+                                    $(this).css("font-weight","Bold");
+                                }
+                            });
+                        });
+                        $("#Speciality").prop("checked", true);
+                    }
+                }
+                //checkCollapseSection();
+                // View benefit validation not working if we enable it
+                 if($("#hippaCodeList").val() != null && $("#hippaCodeList").val()){
+                    setTimeout(function(){ $('#ViewBenefits').trigger('click'); }, 3000);
+                 }
+                //console.log.log($('#ViewBenefits').focus());  
+            }); //Document Ready - Ends
+            
+            function customDatePickerBenefits() {
+                $( "#benefitDateSearchForAccums" ).datepicker({
+                    changeMonth: true,
+                    changeYear: true
+                });
+               
+                
+            }
+            
+            var isCollapsedSection = false;
+            var isClicked = false; 
+            
+            function checkCollapseSection() {
+                twistSection(document.getElementById("{!$Component.pbsBenefitDetail}").childNodes[0].childNodes[0]);                              
+            }
+            
+            
+            function showViewBenefitsSection() {                
+                //$("[id$='pageBlockBenefitsPanel']").hide();     
+                $("[id$='pageBlockBenefitsPanelBenefit']").show();     
+                viewBenefitsView = true;
+            }
+            
+            function hideViewBenefitsSection() {                
+                //$("[id$='pageBlockBenefitsPanel']").show();     
+                $("[id$='pageBlockBenefitsPanelBenefit']").hide();     
+                viewBenefitsView = false;
+            }
+            
+            
+            function spinnerMethod(domId){
+                var selector = $(domId).attr('aria-controls');
+                                
+            }
+            var viewBenefitButtonSelectedOptions = [];
+           
+            var previousBenefitOption = [];
+            function benefitValidation(){
+                
+                $('.chosen-drop').show();
+                var selectedBenefitLangOptions = [];            
+                var errorMsg = '{!$Label.MaxSelectableBenefitsErrorMsg}';                   
+                var selectedBenefitLangcodes1 = $('#hippaCodeList').chosen().val();
+               /* var selectedBenefitLangcodeswithoutappend = [];
+                if(selectedBenefitLangcodes1 != null){
+                    for(var d=0;d<selectedBenefitLangcodes1.length;d++){
+                        selectedBenefitLangcodeswithoutappend.push(selectedBenefitLangcodes1[d].substr(0, selectedBenefitLangcodes1[d].lastIndexOf("@")));
+                    }
+                }*/
+                //console.log('selectedBenefitLangcodeswithoutappend....'+selectedBenefitLangcodeswithoutappend);
+                $("[id$='maxSelectableBenefitErrorMsgInner']").remove();
+                $("[id$='maxSelectableBenefitErrorMsg']").remove();
+                var maxSelectableBenefits = parseInt('{!$Label.MaxSelectableBenefits}');                 
+                               
+                if(selectedBenefitLangcodes1 != null){
+                                       
+                        for(var i=0;i<selectedBenefitLangcodes1.length;i++){
+                            if(selectedBenefitLangcodes1[i].indexOf(';')>-1){
+                                var tempSelectedBenefitLangcodes = selectedBenefitLangcodes1[i].split(';');
+                                for(var b = 0; b<tempSelectedBenefitLangcodes.length;b++){                                   
+                                   selectedBenefitLangOptions.push(b);
+                                }  
+                            }else{
+                                 selectedBenefitLangOptions.push(1);
+                            }                           
+                        }
+                        console.log('count>>>'+selectedBenefitLangOptions);
+                        console.log('count>>>'+selectedBenefitLangOptions.length);
+                        console.log('previousBenefitOption....'+previousBenefitOption);
+                    if(selectedBenefitLangOptions.length > maxSelectableBenefits) {                                                 
+                        $('.chosen-drop').hide(); 
+                       // $("#ViewBenefits").focus();
+                       $('.search-choice-close:last').click();
+                        var str = '<div id="maxSelectableBenefitErrorMsgInner" class="message infoM4" role="alert" style="padding-right:2px;margin-left:4%">';
+                        str = str + '<table border="0" cellpadding="0" cellspacing="0" class="messageTable" style="padding:0px;margin:0px;"><tbody><tr valign="top"> <td> <img alt="Info" class="msgIcon" src="/s.gif" title="Info"/> </td> <td class="messageCell"><div  class="messageText"><span id="j_id0:j_id1:j_id2:j_id5"><h4></h4></span>';                        
+                        str = str + errorMsg;
+                        str = str + '<br/></div> </td> </tr> </tbody></table> </div>';
+                        $("[id$='errorMsgForSelectableBenefits']").wrapInner('<div id="maxSelectableBenefitErrorMsg" style="float:right;" >'+str+' </div>');                           
+                        
+                        //$("#hippaCodeList").val(previousBenefitOption).trigger("chosen:updated"); 
+                        //var len = 0;
+                        //$('.chosen-choices li:last .search-choice-close').click();
+                        
+
+                                              
+                        return 1;
+                    }else {
+                        $('.chosen-choices').each(function( index ) {
+                            $(this).find(".search-choice").each(function(){
+                                if($(this).text().indexOf('%') >= 0){
+                                   $(this).css("font-weight","Bold");
+                                   $(this).css("font-style","italic");
+                                   //console.log.log($(this));
+                                   $(this).find("span").text( $(this).text().replace('%', ''));
+                                }
+                                
+                                
+                            });
+                        });
+                        $('.chosen-choices').each(function( index ) {
+                            $(this).find(".search-choice").each(function(){
+                                if($(this).text()==$(this).text().toUpperCase()){
+                                   $(this).css("font-weight","Bold");
+                                }
+                            });
+                        });
+                        return 3;
+                    } 
+                } 
+                 
+            }
+            
+            
+            function uiChange() {
+                
+                var $dateSearch = $("[id$='benefitDateSearchForAccums']");
+                var effectiveDate = '{!EffectiveDate}';
+                var convertedEffectiveDate = new Date(effectiveDate);
+                var endDate = '{!EndDate}';
+                var convertedEndDate = new Date(endDate);
+                var todayDate = new Date();
+                var populateDate ='';
+                if(convertedEffectiveDate != null && convertedEffectiveDate != '' && convertedEndDate != null && convertedEndDate != '') {
+                if((convertedEndDate >= todayDate) && (convertedEffectiveDate < todayDate)) {
+                    populateDate = todayDate;
+                }else if (convertedEndDate < todayDate) {
+                    populateDate =convertedEndDate;
+                }else if((convertedEffectiveDate > todayDate) && (convertedEndDate >= todayDate)) {
+                    populateDate =convertedEffectiveDate;
+                }  
+                } 
+                if(populateDate != null && populateDate  != '') {
+                   var dd = populateDate.getDate();
+                   var mm = populateDate.getMonth()+1;
+                   var yyyy = populateDate.getFullYear();
+                   var today = mm+'/'+dd+'/'+yyyy;
+                $("[id$='benefitDateSearchForAccums']").val(today);
+                }
+                $('#hippaCodeList option').each(function() {
+                    console.log('codes---->'+$(this).text());
+                          if($(this).text()=='null'||$(this).text()=='NULL'||$(this).text()==''||$(this).text()=='null%'){
+                $(this).remove();
+                }
+                    if($(this).text().indexOf('%') >= 0){
+                        specialtyList.push($(this).text());
+                    }
+                });
+                var specialtyString = specialtyList.join();
+                $('#hippaCodeList').chosen({width: "%"});
+                //Start : Pavan : Cap On selectable benefit codes
+                $("[id$='hippaCodeList_chosen']").click(function(){
+                    var scrollTop = $(window).scrollTop();
+                    var topOffset = $(".dropdown").offset().top;
+                    var relativeOffset = topOffset-scrollTop;
+                    var windowHeight = $(window).height();
+                    if(relativeOffset > windowHeight/2){
+                        $('.chosen-drop').css({'top':'auto',"bottom":"100%","border-top-width":"1px"});
+                    }
+                    else{
+                       $('.chosen-drop').css({'top':'100%',"bottom":"auto","border-top-width":"0px"});
+                    }
+                    console.log('specialtyString...click'+specialtyString);
+                    var benefitFilter = $('input[name=showRadio]:checked').val();
+                    console.log('benefitFilter '+benefitFilter);
+                  //temp comm   if(benefitFilter == 'Benefit Code'){
+                        $('.chosen-results').each(function(){
+                            $(this).find(".active-result").each(function(){
+                                //console.log($(this).text());
+                                if($(this).text()==$(this).text().toUpperCase() || specialtyString.indexOf($(this).text())>= 0){
+                                   $(this).remove();
+                                }
+                            });
+                        });
+                   // } 
+                    $('.chosen-results').each(function(){
+                        $(this).find(".active-result").each(function(){
+                            if($(this).text()==$(this).text().toUpperCase()){
+                               $(this).css("font-weight","Bold");
+                            }
+                        });
+                    });
+                    $('.chosen-results').each(function(){
+                        $(this).find(".active-result").each(function(){
+                            if($(this).text().indexOf('%') >= 0){
+                                $(this).css("font-weight","Bold");
+                                $(this).css("font-style","italic");
+                                $(this).text( $(this).text().replace('%', ''));
+                            }
+                            
+                        });
+                        $(this).find(".result-selected").each(function(){
+                            if($(this).text().indexOf('%') >= 0){
+                                $(this).text( $(this).text().replace('%', ''));
+                            }
+                        });
+                    });
+                    var validben = benefitValidation(); 
+                                    
+                });
+                
+                $("[id$='hippaCodeList_chosen']").keydown(function( event ) {      
+                    if(event.which == 13 || event.keyCode == 13){
+                        event.preventDefault();
+                    }
+                    var validben = benefitValidation();
+                    
+                });
+                 
+                $(".chosen-choices").keyup(function(event) {
+                    var benefitFilter = $('input[name=showRadio]:checked').val();
+                    console.log('specialtyString...keyup'+specialtyString);
+                   // temp comm if(benefitFilter == 'Benefit Code'){
+                        $('.chosen-results').each(function(){
+                            $(this).find(".active-result").each(function(){
+                                //console.log($(this).text());
+                                if($(this).text()==$(this).text().toUpperCase() || specialtyString.indexOf($(this).text())>= 0){
+                                   $(this).remove();
+                                }
+                            });
+                        });
+                    //}
+                    $('.chosen-results').each(function(){
+                        $(this).find(".active-result").each(function(){
+                           if($(this).text()==$(this).text().toUpperCase()){
+                               $(this).css("font-weight","Bold");
+                                //event.preventDefault();
+                            }
+                            if(specialtyString.indexOf($(this).text()) >= 0){
+                                $(this).css("font-weight","Bold");
+                                $(this).css("font-style","italic");
+                                $(this).text( $(this).text().replace('%', ''));
+                            }
+                        });
+                    });
+                    $('.chosen-results').each(function(){
+                        $(this).find(".result-selected").each(function(){
+                            if($(this).text().indexOf('%') >= 0){
+                                $(this).text( $(this).text().replace('%', ''));
+                            }
+                        });
+                    });
+                });
+                
+                $(".chosen-container").keydown(function() {
+                    
+                    var benefitFilter = $('input[name=showRadio]:checked').val();
+                    console.log('specialtyString...keydown'+specialtyString);
+                  //temp comm  if(benefitFilter == 'Benefit Code'){
+                        $('.chosen-results').each(function(){
+                            $(this).find(".active-result").each(function(){
+                                if($(this).text()==$(this).text().toUpperCase() || specialtyString.indexOf($(this).text())>= 0){
+                                  $(this).remove();
+                                }
+                            });
+                        });
+                   // }
+					
+                    $('.chosen-results').each(function(){
+                        $(this).find(".active-result").each(function(){
+                            if($(this).text()==$(this).text().toUpperCase()){
+                               $(this).css("font-weight","Bold");
+                                //event.preventDefault();
+                            }
+                            if(specialtyString.indexOf($(this).text()) >= 0){
+                                $(this).css("font-weight","Bold");
+                                $(this).css("font-style","italic");
+                                $(this).text( $(this).text().replace('%', ''));
+                            }
+                        });
+                    });
+                    $('.chosen-results').each(function(){
+                        $(this).find(".result-selected").each(function(){
+                            if($(this).text().indexOf('%') >= 0){
+                                $(this).text( $(this).text().replace('%', ''));
+                            }
+                        });
+                    });
+                    
+                });
+               
+                
+                $(".chosen-drop").keydown(function( event ) { 
+                    //var validben = benefitValidation();
+                    
+                    if(event.which == 13 || event.keyCode == 13){
+                        event.preventDefault();
+                    }
+                });
+                
+                $(".chosen-results").keydown(function( event ) {      
+                    if(event.which == 13 || event.keyCode == 13){
+                        event.preventDefault();
+                        
+                    }
+                });
+              
+            
+                $(".active-result").keydown(function( event ) {      
+                    if(event.which == 13 || event.keyCode == 13){
+                        event.preventDefault();
+                        
+                    }
+                
+                });
+                
+                
+                
+                
+                //End : Pavan : Cap On selectable benefit codes
+                
+                if(GetIEVersion() > 0){
+                    var currUrl = window.location.href;
+                    if(currUrl.indexOf('ACETGroupPlanBenefitDetailRedesign') > 0){
+                        $("#benefitDateRequiredBlock").css("top", "-14px");
+                        $("#benefitDateRequiredBlock").css("bottom", "-8px");
+                    }else{
+                        $("#benefitDateRequiredBlock").css("top", "-4px");
+                        $("#benefitDateRequiredBlock").css("bottom", "-4px");
+                    }
+                }else{
+                    $("#benefitDateRequiredBlock").css("top", "-4px");
+                    $("#benefitDateRequiredBlock").css("bottom", "-4px");
+                }
+            }
+            
+            function selectedAccumList(domVal){
+                var x = '';
+                var selectedDateRange = ' ';
+                x = $("[id$="+domVal+"]").val();
+                selectedDateRange = x;
+                $("[id$='accumTable']").find("tr:not(:first)").each(function(){
+                    console.log('domVal...'+domVal);
+                    console.log('$(this).parent().parent().parent().attr("id").slice(0, -6)...'+$(this).parent().parent().parent().attr("id").slice(0, -6));
+                    if($(this).parent().parent().parent().attr("id").slice(0, -6) == domVal.slice(0,-6)){
+                        if($(this).attr("id")==$("[id$='"+selectedDateRange+"dateRange"+domVal+"']").attr("id")){
+                            $(this).show();
+                        }else{
+                            $(this).hide();
+                        }
+                    }
+                    
+                });
+            }
+            function customMethod(h3PanelId){
+                //console.log(h3PanelId);
+                var h3PanelIdElement = '#'+$(h3PanelId).attr("id");
+                //console.log();
+            }
+            function GetIEVersion() {
+                var sAgent = window.navigator.userAgent;
+                var Idx = sAgent.indexOf("MSIE");            
+                // If IE, return version number.
+                if (Idx > 0) 
+                    return parseInt(sAgent.substring(Idx+ 5, sAgent.indexOf(".", Idx)));
+                
+                // If IE 11 then look for Updated user agent string.
+                else if (!!navigator.userAgent.match(/Trident\/7\./)) 
+                    return 11;            
+                else
+                    return 0; //It is not IE
+            }
+            
+            //var viewBenefitButtonSelectedOptions = [];
+            var selectedBenefitLangcodes = [];
+             function callBenefitLanguageService() { 
+              $("#JSmsgDiv").remove();
+                $("#JSmsgDiv1").remove();
+                selectedAccums = [];
+                if(benefitDatevalidate() == false){
+                  // $("#loaderid").hide();
+                    return false;
+                }
+                
+                //comment to make the onclick work
+                if(validateNew('',true) == false){
+                   // $("#loaderid").hide();
+                    $("#errorMsgDiv").find( "p" ).css( "width", "300px" );
+                        return false;
+                }
+                
+             $('#loaderid').show();
+            //  setTimeout(function(){ accumServiceCallout() }, 1000);
+			           setTimeout(function(){ callBenefitLanguageService1() }, 1000);
+
+             }
+            function callBenefitLanguageService1() {  
+                showViewBenefitsSection(); 
+                var firstLevel = [];   
+                var firstLevelDomId = [];   
+                var domIdArray = [];
+                var accumsLevelId = [];
+                var benefitKeyDomId = [];
+                var benefitKeyDomIdh3 = [];
+                var defaultValueDateRange = [];
+               
+                var BenefitBundleOptionIdjs = '{!BenefitBundleOptionId}';
+                var DateStrFormatjs = $("[id$='benefitDateSearchForAccums']").val();
+                var MemberIdjs = '{!MemberId}';
+                var enrolleIdentifierTypejs = 'SRK';
+                var enrolleIdentiferIdjs = '{!SRKID}';
+                var subscriberIdentiferIdjs = '{!SubSRKID}'
+                var effectiveStartDatejs = '{!EffectiveDate}';
+                var groupEffectiveDate = '{!groupEffectiveDate}';
+               
+                var effectiveEndDatejs = '{!EndDate}';
+                var CoverageTypejs = '{!CoverageType}';
+                var BenefitVerIndicatorjs = '';                
+                var BenefitCodeMapjs = '';
+                var GroupIdjs = '{!groupId}';
+                var situsStatejs= '{!orgSitusState}';
+                var benefitLanguageIndicatorArray = [];
+                var responseSubscription = '{!JSENCODE(ACETSubscriptionServices)}';
+                var isPlanBenefitVal = '{!IsPlanBenefit}';
+                var benefitDisplayMap = new Map();
+                var benefitLanguageIndicator = JSON.parse('{!benefitLanguageIndicator}');
+                for(var i=0; i< benefitLanguageIndicator.length; i++) {
+                    benefitLanguageIndicatorArray.push(benefitLanguageIndicator[i]);
+                    //console.log('benefitvalue' +benefitLanguageIndicator);
+                    //console.log('benfittest' +benefitLanguageIndicatorArray);
+                }
+                if(responseSubscription != null && responseSubscription != ''){
+                        var responseSubscriptionJavascript = JSON.parse(responseSubscription);
+                        var subscriptionBenefitPlan = responseSubscriptionJavascript.getSubscriptionServiceBenefitResponse.serviceBenefit.memberGroupContractPlanOption.benefitPlan;
+                        for(var a = 0; subscriptionBenefitPlan && a < subscriptionBenefitPlan.length; a++){                    
+                                for(var b = 0; subscriptionBenefitPlan[a].benefitCode && b < subscriptionBenefitPlan[a].benefitCode.length ; b++){
+                                    if(subscriptionBenefitPlan[a].benefitCode[b].benefitCode != null && subscriptionBenefitPlan[a].benefitCode[b].benefitCode != '' && subscriptionBenefitPlan[a].benefitCode[b].benefitDisplay != null && subscriptionBenefitPlan[a].benefitCode[b].benefitDisplay != ''){
+                                        console.log('subscriptionBenefitPlan[a].benefitCode[b].benefitCode' +subscriptionBenefitPlan[a].benefitCode[b].benefitCode);
+                                        console.log('subscriptionBenefitPlan[a].benefitCode[b].benefitDisplay' +subscriptionBenefitPlan[a].benefitCode[b].benefitDisplay);
+                                        benefitDisplayMap.set(subscriptionBenefitPlan[a].benefitCode[b].benefitCode,subscriptionBenefitPlan[a].benefitCode[b].benefitDisplay);
+                                    }
+                                }
+                         }
+                 }              
+                selectedBenefitLangcodes = $('#hippaCodeList').chosen().val();
+                
+                var selectedBenefitCodesList = [];
+                var selectedBenefitCodesWithUnderScoresArray = [];
+                var selectedBenefitCodesWithoutUnderScoresArray = [];
+                var selectedBenefitCodesFinalValues = '';
+                var tempValueWithoutUnderscoresFinal = [];
+                var selectedBenefitLangcodesWOCategories=[];
+                for(var a=0; a<selectedBenefitLangcodes.length; a++){
+                    if(selectedBenefitLangcodes[a].indexOf(';')>-1){
+                        var tempSelectedBenefitLangcodes = selectedBenefitLangcodes[a].split(';');
+                        for(var b = 0; b<tempSelectedBenefitLangcodes.length;b++){
+                            var st1 = tempSelectedBenefitLangcodes[b];
+                             if(st1.includes("@")){
+                                st1 = st1.split('@')[0];
+                             } 
+                            selectedBenefitCodesWithUnderScoresArray.push(st1);
+                        }
+                    }else{
+                        selectedBenefitLangcodesWOCategories.push(selectedBenefitLangcodes[a]);
+                    }
+                    
+                }
+                //console.log('selectedBenefitLangcodesWOCategories...'+selectedBenefitLangcodesWOCategories);
+                viewBenefitButtonSelectedOptions = $('#hippaCodeList').chosen().val(); 
+                var selectedBenefitcodesJSON = JSON.stringify(selectedBenefitLangcodesWOCategories);
+                var noDataSelectedBenefit = selectedBenefitLangcodesWOCategories;
+                selectedBenefitcodesJSON = selectedBenefitcodesJSON.toString().split('-');
+                selectedBenefitcodesJSON = selectedBenefitcodesJSON.toString().split('"');
+                for(var a = 0 ; a < selectedBenefitcodesJSON.length ; a++){
+                    if(selectedBenefitcodesJSON[a].includes("_")){
+                        selectedBenefitCodesList.push(selectedBenefitcodesJSON[a]);
+                    }else if(!selectedBenefitcodesJSON[a].includes("_")){
+                        if(selectedBenefitcodesJSON[a]){
+                            //console.log('selectedBenefitcodesJSON[a].....'+selectedBenefitcodesJSON[a]);
+                             var tempValueWithoutUnderscoresVal = selectedBenefitcodesJSON[a].replace('[','').replace(']','').replace(/,/g , '');
+                            if(tempValueWithoutUnderscoresVal){
+                                tempValueWithoutUnderscoresFinal.push(tempValueWithoutUnderscoresVal);    
+                            }
+                            
+                        }
+                        
+                    }
+                }
+                
+                viewBenefitButtonSelectedOptions = $('#hippaCodeList').chosen().val(); 
+                var noDataSelectedBenefit = selectedBenefitLangcodesWOCategories;
+                for(var c = 0 ; c < tempValueWithoutUnderscoresFinal.length ; c++){
+                    if(tempValueWithoutUnderscoresFinal[c] != null){
+                        var tempValueWithoutUnderscores = tempValueWithoutUnderscoresFinal[c].split(' ');
+                        var st2 = tempValueWithoutUnderscores[0];
+                             if(st2.includes("@")){
+                                st2 = st2.split('@')[0];
+                             } 
+                        selectedBenefitCodesWithUnderScoresArray.push(st2);
+                    }
+                }
+                for(var b = 0 ; b < selectedBenefitCodesList.length ; b++){
+                    var singleBenefitCode = selectedBenefitCodesList[b].split(',');
+                   // alert('singleBenefitCode'+singleBenefitCode);
+                    var st3 = singleBenefitCode[0];
+                             if(st3.includes("@")){
+                                st3 = st3.split('@')[0];
+                             } 
+                    selectedBenefitCodesWithUnderScoresArray.push(st3);    
+                }
+				console.log('selectedBenefitCodesWithUnderScoresArray--->'+selectedBenefitCodesWithUnderScoresArray);
+                selectedBenefitCodesFinalValues = selectedBenefitCodesWithUnderScoresArray.join().trim();
+                 
+                sforce.connection.sessionId = "{!$Api.Session_ID}";
+                var responseSub = '{!JSENCODE(ACETSubscriptionServices)}';
+                var op = [];
+                var accumData = '';
+                                        
+                if(effectiveStartDatejs == ''){
+                   effectiveStartDatejs =  groupEffectiveDate;
+                }
+                console.log('54321'+groupEffectiveDate+'----effectiveStartDatejs---'+effectiveStartDatejs);
+                
+              //  var op = sforce.apex.execute("ACETPlanBenefitOveriewRedesignController","getBenefitLanguage",{BenefitBundleOptionId:BenefitBundleOptionIdjs,DateStrFormat:DateStrFormatjs,MemberId:MemberIdjs,benefitCode:selectedBenefitCodesFinalValues,EnrolleeIdentifierType:enrolleIdentifierTypejs,EnrolleeIdentifierId:enrolleIdentiferIdjs,EffectiveStartDate:effectiveStartDatejs,EffectiveEndDate:effectiveEndDatejs,CoverageType:CoverageTypejs,BenefitVerIndicator:BenefitVerIndicatorjs,accumAsOf:DateStrFormatjs,groupId:GroupIdjs,BenefitCodeMap:BenefitCodeMapjs,multiple:true});                            
+                var variableCoverage = JSON.stringify('{!ACETPlanBenefitSubscriptionSection.varriableCoverageMap}');
+                var variableCoverageSubString = '';
+                variableCoverageSubString = variableCoverage.substring(2, variableCoverage.length-2);
+                var variableCoverageArray =  [];
+                variableCoverageArray = variableCoverageSubString.split(',');
+                
+                //if(op != null){
+                    var varraibaleCovrage = '';
+                    var htmlStr = '';
+                    htmlStr = htmlStr + '<table width="100%" height="100%">';
+                    var parstatusListSize = '';
+                    
+                    //var result = JSON.parse(op);
+					var result = [];
+					selectedBenefitCodesWithUnderScoresArray;
+					for(var k = 0; k < selectedBenefitCodesWithUnderScoresArray.length; k++) {
+					var key = selectedBenefitCodesWithUnderScoresArray[k];
+					result.push(key.trim());
+					}
+                    for(var c = 0; c < result.length; c++) { 
+                        var a = noDataSelectedBenefit.indexOf(result[c]);
+                        if(a != -1) {
+                        noDataSelectedBenefit.splice(a, 1);
+                        }
+                        
+                    }
+                    for(var i = 0; i < result.length; i++) { 
+                        var withMessage = false;
+                        if(noDataSelectedBenefit.length>0){
+                            for(var b = 0; b < noDataSelectedBenefit.length; b++){
+                               // result.push({"BenefitKey":noDataSelectedBenefit[b]});
+                            }
+                            noDataSelectedBenefit = [];    
+                        }else{
+                            $("#loaderid").hide();
+                        }
+                        console.log('Hereeeeeee....'+noDataSelectedBenefit);  
+console.log('result....'+result);						
+                        var domId = '';
+                        var BenefitKeyCodeHtml = '';
+                        var BenefitKeyWithoutUnderscore = ''
+                        var BenefitKey = result[i];
+                        for (var j=0; j<variableCoverageArray.length; j++) {
+                            if (variableCoverageArray[j].match(BenefitKey)){                               
+                                var tempStr = variableCoverageArray[j].slice(-4);
+                                if(tempStr == 'true'){
+                                    varraibaleCovrage = variableCoverageArray[j].slice(-4);                                    
+                                    tempStr = '';
+                                    break;
+                                }
+                            }
+                        } 
+                        
+                        //error if starts here
+                      /*  if(result[i].Message != null && result[i].Message != ''){
+                            if(result[i].messageSeverityStr == 'INFO'){
+                                var errorDiv = '<div class="message infoM4" role="alert" id="JSmsgDiv" >';
+                                errorDiv = errorDiv + '<table border="0" cellpadding="0" cellspacing="0" class="messageTable" style="padding:0px;margin:0px;">';
+                                
+                                errorDiv = errorDiv + '<tbody>';
+                                errorDiv = errorDiv + '<tr valign="top">';
+                                errorDiv = errorDiv + '<td><img alt="info" class="msgIcon" src="/s.gif" title="info"></td>';
+                                errorDiv = errorDiv + '<td class="messageCell">';
+                                errorDiv = errorDiv + '<div  class="messageText">';
+                                errorDiv = errorDiv + result[i].Message ;
+                                errorDiv = errorDiv + '</div>';
+                                errorDiv = errorDiv + '</td>';
+                                errorDiv = errorDiv + '</td>';
+                                errorDiv = errorDiv + '</tr>';
+                                errorDiv = errorDiv + '</tbody>';
+                                errorDiv = errorDiv + '</table>';
+                                errorDiv = errorDiv + '</div>';
+                                
+                                $("[id$=pageErrorMsgs]").after(errorDiv);
+                                window.scrollTo(0, 0);
+                                return false;
+                            }else{
+                                var errorDiv = '<div class="message errorM4" role="alert" id="JSmsgDiv1" >';
+                                errorDiv = errorDiv + '<table border="0" cellpadding="0" cellspacing="0" class="messageTable" style="padding:0px;margin:0px;">';
+                                
+                                errorDiv = errorDiv + '<tbody>';
+                                errorDiv = errorDiv + '<tr valign="top">';
+                                errorDiv = errorDiv + '<td><img alt="error" class="msgIcon" src="/s.gif" title="error"></td>';
+                                errorDiv = errorDiv + '<td class="messageCell">';
+                                errorDiv = errorDiv + '<div  class="messageText">';
+                                errorDiv = errorDiv + result[i].Message ;
+                                errorDiv = errorDiv + '</div>';
+                                errorDiv = errorDiv + '</td>';
+                                errorDiv = errorDiv + '</td>';
+                                errorDiv = errorDiv + '</tr>';
+                                errorDiv = errorDiv + '</tbody>';
+                               errorDiv = errorDiv + '</table>';
+                                errorDiv = errorDiv + '</div>';
+                                if(result[i].Message != null){
+                                    $("[id$=pageErrorMsgs]").after(errorDiv);
+                                    window.scrollTo(0, 0);
+                                    return false;
+                                }
+                                
+                            }
+                        } *///error message display if condition ends here
+                        if(BenefitKey != null){                           
+                        BenefitKeyWithoutUnderscore = BenefitKey;
+                        //var benefitcode = BenefitKey.split(" - ")[0];                        
+                        console.log('BenefitKeyWithoutUnderscore '+BenefitKeyWithoutUnderscore );
+                        BenefitKey = BenefitKey.replace(/ /g,'_');
+                        console.log('BenefitKey1234-->'+BenefitKey);						
+                        domId = BenefitKey.replace(/\//g,'_').replace(/,/g,'_').replace(/[()]/g,'_');  
+                        console.log('domId--->'+domId);
+                        htmlStr = htmlStr + "<tr>";
+                        htmlStr = htmlStr + "<td >";
+                        
+                        //if(result[i].parStatusList != null){
+                            htmlStr = htmlStr + "<input style='margin-top:15px' type='checkbox' html-auto-doc-accordian2='true' id='"+i+domId+"autoDocCheckBox' value='"+BenefitKeyWithoutUnderscore+"'/>";
+                        //}
+                        htmlStr = htmlStr + "</td>"; 
+                        htmlStr = htmlStr + "<td>";
+                        htmlStr = htmlStr + "<div class='acord' id='"+i+domId+"benefitKeyId'>";
+                        var domIdSelection = domId.split("-")[0];
+                        var domIdWithoutDescription = domIdSelection.substring(0,domIdSelection.length-1);
+                        console.log('domIdWithoutDescription' +domIdWithoutDescription);
+                        console.log('temPval' +benefitLanguageIndicatorArray.indexOf(domIdWithoutDescription)); 
+                       // if(result[i].parStatusList != null){
+                          /* if(situsStatejs != null && situsStatejs == 'CT' && benefitLanguageIndicatorArray.indexOf(domIdWithoutDescription) != -1 && benefitDisplayMap.has(domIdWithoutDescription) && benefitDisplayMap.get(domIdWithoutDescription) != null && benefitDisplayMap.get(domIdWithoutDescription) !='') {   
+                               htmlStr = htmlStr + "<h3 class='firstPanel listener' onclick='ChangetheIcon(this);accordionCollapse(this);customMethod(this);' id='"+i+domId+"benefitKeyIdh3'>" + benefitDisplayMap.get(domIdWithoutDescription)+ "<img src='{!$Resource.BenefitCodeFlag}' style='height:20px;margin-left:4px;position:relative;top:5px;'/><span data-benefit-code='" + domIdWithoutDescription + "' style='color:blue; margin-left: 15px' title='" + domIdWithoutDescription + "' onclick='event.stopPropagation(); copyBenefitCode(this); return false;'>Copy Code</span></h3>";
+                               htmlStr = htmlStr + "<div class='content'>";
+                             }                    
+                           else */ if(benefitDisplayMap.has(BenefitKey) && benefitDisplayMap.get(BenefitKey) != null && benefitDisplayMap.get(BenefitKey) != ''){
+                              htmlStr = htmlStr + "<h3 class='firstPanel'  onclick='ChangetheIcon(this);accordionCollapse(this);customMethod(this);'  id='"+i+domId+"benefitKeyIdh3'>"+ benefitDisplayMap.get(BenefitKey)+"<span data-benefit-code='" + BenefitKey + "' style='color: blue; margin-left:15px' title='" + BenefitKey + "' onclick='event.stopPropagation(); copyBenefitCode(this); return false;'>Copy Code</span></h3>";
+                              htmlStr = htmlStr + "<div class='content'>";
+                        }
+                       
+                       /* if(result[i].parStatusList != null && result[i].parStatusList.length > 0) { 
+                            var parStatusList = result[i].parStatusList;
+                            parstatusListSize = result[i].parStatusList.length;  
+                           
+                                                        
+                            
+                        }else{
+                          htmlStr = htmlStr + "<img src='{!$Resource.BenefitCodeAlert}' style='height:18px;position:relative;top:3px;'></img>"+"<b style='color:blue'> No Records Found</b>";  
+                            withMessage = true; 
+                        }*/
+                         
+                        if(responseSub != null && responseSub != '' && isPlanBenefitVal == 'true'){
+                            if(!withMessage){
+                                accums = true;
+                                var accumId = domId;
+                                htmlStr = htmlStr + "<div class='content'>";
+                                htmlStr = htmlStr + "<div class='acord' onclick='ChangetheIcon(this);' id='"+domId+"accumeLevel'>";
+                                htmlStr = htmlStr +  "<h3 onclick='accumServiceCallout(this.id);' id='"+BenefitKeyWithoutUnderscore+"'>Accumulators</h3>";
+                                htmlStr = htmlStr + "<div class='content'>";
+                                htmlStr = htmlStr + "<div class='acord' id='"+domId+"accums'> ";
+                                htmlStr = htmlStr + "</div>";
+                                htmlStr = htmlStr + "</div>";
+                                htmlStr = htmlStr + "</div>";
+                                htmlStr = htmlStr + "</div>";
+                            }
+                            
+                        }        
+                        htmlStr = htmlStr + "</div>";
+                        htmlStr = htmlStr + "</div>";
+                        htmlStr = htmlStr + "</td>";
+                        domIdArray.push(domId);      
+                        firstLevel.push(domId+"firstLevel");    
+                        firstLevelDomId.push(domId+"h3firstLevel"); 
+                        accumsLevelId.push(domId+"accumeLevel");
+                        benefitKeyDomId.push(domId+"benefitKeyId");
+                        benefitKeyDomIdh3.push(i+domId+"benefitKeyIdh3")
+                        defaultValueDateRange.push(domId+"Select");
+                        }
+                    }
+                  //  }//end of outer for loop 
+                    htmlStr = htmlStr + '</table>';
+					console.log('htmlStr--->'+htmlStr);
+                $("#loaderid").hide();
+                    $("[id$='acordId2']").html(htmlStr);
+                    accordApplyList(benefitKeyDomId);  
+                    expandSectionForParStatusList(benefitKeyDomIdh3);                    
+                    accordApplyList(firstLevel);                   
+                    accordApplyList(accumsLevelId);                    
+                    exapndList(benefitKeyDomIdh3);
+                    defaultDateRangeValue(defaultValueDateRange);
+                    var selectobject=document.getElementById(accumId+"mySelect");     
+                    avoidDoubleClickIssue(benefitKeyDomIdh3);
+                   // statusForViewBenfits();
+               // }
+                $("#loaderid").hide();
+            }
+            
+            function avoidDoubleClickIssue(arr){             
+                for(var a = 0; a< arr.length; a++){                    
+                    var domIdObj = arr[a];   
+                    $("[id="+domIdObj+"]").click();
+                    ChangetheIcon(document.getElementById(domIdObj));
+                }
+            }
+            //US1917793
+            function copyBenefitCode(element){
+                var benefitCodeCopy = element.dataset.benefitCode;
+//              alert('benefitCodeCopy: ' + benefitCodeCopy);
+                var aux = document.createElement("input");
+                aux.setAttribute("value", benefitCodeCopy);
+                document.body.appendChild(aux);
+                aux.select();
+                document.execCommand("copy");
+                document.body.removeChild(aux);
+            }
+            function defaultDateRangeValue(domId){                
+                if(domId.length != null){                    
+                    for(var j = 0 ; j < domId.length ; j++  ){
+                        var hideDateRange = $("[id$="+domId[j]+"]").val();                        
+                        $("[id$='"+hideDateRange+"dateRange"+domId[j]+"']").show();
+                        $("[id$="+domId[j]+"] option").each(function(){
+                            if($(this).val()!=hideDateRange){
+                                var x = $(this).val();                                
+                                $("[id$='"+x+"dateRange"+domId[j]+"']").hide();
+                            }        
+                        });
+                    }
+                }
+            }
+            
+            function accordApplyList(domId) {
+                if(domId.length != null){
+                    for(var j = 0 ; j < domId.length ; j++  ){                        
+                        accordinaApplyNew(domId[j]);
+                   }
+                }           
+            }
+            
+            function expandSectionForParStatusList(domId) {
+                if(domId.length != null){
+                    for(var i = 0 ; i < domId.length ; i++  ){
+                        if(parstatusListSize > 0){
+                            for(var j = 0; j< parstatusListSize; j++){
+                                var firstLevel = j+domId[i];      
+                                $("[id="+firstLevel+"]").click();
+                                keyExpand(firstLevel);                        
+                            }
+                        }                    
+                    }
+                }               
+            }
+            function exapndList(arryDomIds){
+                for(var a = 0; a< arryDomIds.length; a++){                    
+                    expandSection(arryDomIds[a]);
+                }
+            }
+            
+            
+            function removeBenefitsJS(){ 
+              // alert('test');
+                
+                var specialtyList = [];
+                $('#hippaCodeList option').each(function() {
+                    if($(this).text().indexOf('%') >= 0){
+                        specialtyList.push($(this).text());
+                    }
+                });
+                specialtyString = specialtyList.join(); 
+                 
+                if($('#hippaCodeList').chosen().val() != null){
+                    selectedBenefitLangcodes = $('#hippaCodeList').chosen().val();
+                }else{
+                     selectedBenefitLangcodes = [];
+                }
+                console.log('selectedBenefitLangcodes..'+selectedBenefitLangcodes);
+                console.log('viewBenefitButtonSelectedOptions..'+viewBenefitButtonSelectedOptions);
+                $("[id$='maxSelectableBenefitErrorMsgInner']").remove();
+                $("[id$='maxSelectableBenefitErrorMsg']").remove();
+
+                if(selectedBenefitLangcodes.length == 0){
+                    if(viewBenefitButtonSelectedOptions != null){
+                        for(var i=0;i<viewBenefitButtonSelectedOptions.length;i++){
+                            if(viewBenefitButtonSelectedOptions[i].indexOf(';')>-1){
+                                var tempSelectedBenefitLangcodes = viewBenefitButtonSelectedOptions[i].split(';'); 
+                                for(var b = 0; b<tempSelectedBenefitLangcodes.length;b++){ 
+                                    var string1= tempSelectedBenefitLangcodes[b];
+                                    if(string1.includes("@")){ 
+                                            string1 = string1.split('@')[0];
+                                    }
+                                    $("[id*="+string1+"]").remove();
+                                }  
+                            }else{
+                                var benefitKeyToRemove = viewBenefitButtonSelectedOptions[i].replace(/ /g,'_').replace('/','_').replace(/,/g,'_').replace(/[()]/g,'_');   // added by Som
+                                 
+                                $("[id$="+benefitKeyToRemove+"benefitKeyId"+"]").remove();
+                                $("[id$="+benefitKeyToRemove+"autoDocCheckBox"+"]").remove();                          
+                            }
+                            
+                        } 
+                    } 
+                   
+                      hideViewBenefitsSection();  
+                      collapseExapandedSections(); 
+                }else if(viewBenefitButtonSelectedOptions != null && selectedBenefitLangcodes != null){
+                    if(viewBenefitButtonSelectedOptions.length != selectedBenefitLangcodes.length){
+                        var uniqueBenefitCode = viewBenefitButtonSelectedOptions.filter(function(obj) { return selectedBenefitLangcodes.indexOf(obj) == -1; });
+                        var selectedBenefitLangcodesString = selectedBenefitLangcodes.join();
+                        console.log('uniqueBenefitCode...'+uniqueBenefitCode);
+                        console.log('selectedBenefitLangcodesString...'+selectedBenefitLangcodesString);
+                        for(var i=0;i<uniqueBenefitCode.length;i++){
+                            if(uniqueBenefitCode[i].indexOf(';')>-1){
+                                var tempSelectedBenefitLangcodes = uniqueBenefitCode[i].split(';');
+                                for(var b = 0; b<tempSelectedBenefitLangcodes.length;b++){
+                                console.log('tempSelectedBenefitLangcodes[b]...'+tempSelectedBenefitLangcodes[b]);
+                                    var string2= tempSelectedBenefitLangcodes[b];
+                                    if(string2.includes("@")){ 
+                                            string2 = string2.split('@')[0];
+                                    }
+                                    if(selectedBenefitLangcodesString.indexOf(string2)<0){
+                                        $("[id*="+string2+"]").remove();
+                                    }
+                                    
+                                }
+                            }else{
+                                var benefitKeyToRemove = uniqueBenefitCode[i].replace(/ /g,'_').replace('/','_').replace(/,/g,'_').replace(/[()]/g,'_'); //added by Som
+                                console.log('benefitKeyToRemove'+benefitKeyToRemove);
+                                //Adding below logic as the benefitKeyToRemove is coming with both label and value 
+                                // eg:BEHAVIORAL_HEALTH_INPATIENT_REV - Behavioral Health Inpatient Revenue Code
+                                
+                                var benefitCd = uniqueBenefitCode[i];
+                                var benefitCdStr = benefitCd;
+                                if(benefitCd.indexOf('-')>-1){ 
+                                    var benefitCdStr = benefitCd.split('-')[0]; 
+                                	benefitCdStr = benefitCdStr.trimEnd();
+                                }
+                                
+                                $("[id$="+benefitCdStr+"benefitKeyId"+"]").remove();
+                                $("[id$="+benefitCdStr+"autoDocCheckBox"+"]").remove();
+                            }
+                        }
+                        
+                    }
+                }
+                var benefitFilter = $('input[name=showRadio]:checked').val();
+               /* temp comment if(benefitFilter == 'Category'){
+                    $('.chosen-results').each(function(){
+                        $(this).find(".active-result").each(function(){
+                            if($(this).text()!=$(this).text().toUpperCase()){
+                               $(this).remove();
+                            }
+                        });
+                    });
+                }else if(benefitFilter == 'Benefit Code'){*/
+                    $('.chosen-results').each(function(){
+                        $(this).find(".active-result").each(function(){
+                            if($(this).text()==$(this).text().toUpperCase() || specialtyString.indexOf($(this).text()) >= 0){
+                               $(this).remove();
+                            }
+                        });
+                    });
+                /*}else if(benefitFilter == 'Specialty'){
+                    $('.chosen-results').each(function(){
+                        $(this).find(".active-result").each(function(){
+                            if($(this).text().indexOf('%') < 0){
+                                $(this).remove();
+                            }
+                        });
+                    });
+                }*/
+                $('.chosen-choices').each(function( index ) {
+                    $(this).find(".search-choice").each(function(){
+                        if($(this).text()==$(this).text().toUpperCase()){
+                           $(this).css("font-weight","Bold");
+                        }
+                    });
+                });
+                $('.chosen-results').each(function(){
+                    $(this).find(".active-result").each(function(){
+                        if($(this).text()==$(this).text().toUpperCase()){
+                           $(this).css("font-weight","Bold");
+                        }
+                    });
+                });
+                $('.chosen-choices').each(function( index ) {
+                    $(this).find(".search-choice").each(function(){
+                        if($(this).text().indexOf('%') >= 0){
+                           $(this).css("font-weight","Bold");
+                           $(this).css("font-style","italic");
+                           //console.log.log($(this));
+                           $(this).find("span").text( $(this).text().replace('%', ''));
+                        } 
+                        
+                    });
+                });
+                $('.chosen-results').each(function(){
+                    $(this).find(".active-result").each(function(){
+                        if(specialtyString.indexOf($(this).text()) >= 0){
+                            $(this).css("font-weight","Bold");
+                            $(this).css("font-style","italic");
+                            $(this).text( $(this).text().replace('%', ''));
+                        }
+                    });
+                });
+            }
+            var passBenefitCodes = [];
+            function makeCallOut(benefitId) {
+                passBenefitCodes.push(benefitId);
+                var passBenefitCodesJSON = JSON.stringify(passBenefitCodes);
+                GetBenefitDetailSec3(passBenefitCodesJSON);
+            }
+            
+            var selectedBenefitCodes = [];            
+            var parstatusListSize ;
+            var accumListSize;            
+            var accums;
+            var simpleExpand = false;
+            function getBenefitInfoCallBack(domEle,domId,varraibaleCovrage,benefitKeyParam){
+                if(simpleExpand == true){
+                    return false;
+                }
+                if(domId != null){
+                    
+                    if(benefitDatevalidate() == false){                                             
+                        $(domEle).next().toggle('fast');
+                        $("[id$="+domId+"]").removeClass('active');                        
+                        return false;
+                    }else{
+                        
+                        getBenefitInfo(domId,varraibaleCovrage,benefitKeyParam);                                
+                        
+                        var firstLevel = domId+"firstLevel";
+                        accordinaApplyNew(firstLevel);
+                        var firstLevelDomId = domId+"h3firstLevel";                        
+                        
+                        if(accums == true){
+                            var accumId = domId+"accumeLevel";                         
+                            accordinaApplyNew(accumId);                                                
+                            accumId = domId+"accum"; 
+                            //expandSection(accumId);                     
+                        }
+                    }
+                    var dateRangeVal= domId+"Select";
+                    selectedAccumList(dateRangeVal);
+                    
+                    
+                }
+            }
+            
+            function accordinaApplyNew(domId) {
+                if(domId != null){
+                    $("[id$="+domId+"]").accordion({
+                        header: '> h3:not(.item)', //this line is a bug fix for accordion jquery//
+                        heightStyle: 'content',
+                        active: false,
+                        collapsible: true
+                    });
+                }           
+            }
+            
+            
+            
+            function expandTheSectionForParStatus(domId) {
+                if(domId != null){
+                    if(parstatusListSize > 0){
+                        for(i = 0; i< parstatusListSize; i++){
+                            var firstLevel = i+domId;      
+                            $("[id="+firstLevel+"]").click();
+                            keyExpand(firstLevel);                        
+                        }
+                    }                    
+                }               
+            }
+            
+            function expandSection(domId) {                
+                if(domId != null){                        
+                    keyExpand(domId);     
+                }               
+            }           
+            
+            
+            function getBenefitInfo(domId, varraibaleCovrage,benefitKeyParam){
+                
+                $("#JSmsgDiv").remove();
+               $("#JSmsgDiv1").remove();
+                if(domId != null){
+                    if(selectedBenefitCodes.indexOf(domId) < 0){
+                        accums = false;
+                        selectedBenefitCodes.push(domId);
+                        
+                       
+                        var parentDomId = domId+'parent';
+                        var spanDomId = domId+'span';
+                        accordinaApplyNew(parentDomId);
+                        simpleExpand = true;
+                        expandSection(domId);
+                        simpleExpand = false;
+                        $("#"+parentDomId+"").removeClass('boxStyle');
+                        $("#"+spanDomId+"").remove();
+                        parstatusListSize = 0;
+                        var BenefitBundleOptionIdjs = '{!BenefitBundleOptionId}';
+                        
+                        var DateStrFormatjs = $("[id$='benefitDateSearchForAccums']").val();
+                        var MemberIdjs = '{!MemberId}';
+                        var enrolleIdentifierTypejs = 'SRK';
+                        var enrolleIdentiferIdjs = '{!SRKID}';
+                        var effectiveStartDatejs = '{!EffectiveDate}';
+                        var subscriberIdentiferIdjs = '{!SubSRKID}'
+                        var effectiveEndDatejs = '{!EndDate}';
+                        var CoverageTypejs = '{!CoverageType}';
+                        var GroupIdjs = '{!groupId}';
+                        var BenefitVerIndicatorjs = '';
+                        var BenefitCodeMapjs = '';
+                        
+                        var hippaServiceMapping = '{!ACETPlanBenefitSubscriptionSection.hippakeyStr}';
+                        var HippaCodeAndBenefitCodeMap1 = JSON.parse(hippaServiceMapping);
+                        
+                        var benefitCodejs = domId;
+                        if(benefitCodejs != null) {
+                            if(benefitCodejs.indexOf('-') > 0){
+                                benefitCodejs = benefitCodejs.split('-')[0];                                
+                            }
+                        }
+                        
+                        var isPlanBenefitVal = '{!IsPlanBenefit}';
+                        sforce.connection.sessionId = "{!$Api.Session_ID}";
+                        var responseSub = '{!JSENCODE(ACETSubscriptionServices)}';
+                        var op = [];
+                        var accumData = '';
+                        op = sforce.apex.execute("ACETPlanBenefitOveriewRedesignController","getBenefitLanguage",{BenefitBundleOptionId:BenefitBundleOptionIdjs,DateStrFormat:DateStrFormatjs,MemberId:MemberIdjs,benefitCode:benefitCodejs,EnrolleeIdentifierType:enrolleIdentifierTypejs,EnrolleeIdentifierId:enrolleIdentiferIdjs,SubscriberIdentifierId:subscriberIdentiferIdjs,EffectiveStartDate:effectiveStartDatejs,EffectiveEndDate:effectiveEndDatejs,CoverageType:CoverageTypejs,BenefitVerIndicator:BenefitVerIndicatorjs,accumAsOf:DateStrFormatjs,BenefitCodeMap:BenefitCodeMapjs,groupId:GroupIdjs,multiple:false});    
+                        if(op != null){
+                            //console.log('op :'+op);
+                            var result = JSON.parse(op);
+                            if(result.length >0 ){
+                                for(var i = 0; i < result.length; i++) {
+                                    var BenefitKeyWithoutUnderscore = ''
+                                    var withMessage = false;
+                                    var BenefitKey = result[i].BenefitKey;
+                                    BenefitKeyWithoutUnderscore = BenefitKey;
+                                    var dateRange = [];
+                                    dateRange = result[i].dateRange; 
+                                    //console.log('result[i].Message :'+result[i]);
+                                    var htmlStr = '';
+                                    
+                                    if(!result[i].isSuccess){
+                                        withMessage = true;
+                                        if(result[i].messageSeverityStr == 'INFO'){
+                                            var errorDiv = '<div class="message infoM4" role="alert" id="JSmsgDiv" >';
+                                            errorDiv = errorDiv + '<table border="0" cellpadding="0" cellspacing="0" class="messageTable" style="padding:0px;margin:0px;margin-left:-28%">';
+                                            
+                                            errorDiv = errorDiv + '<tbody>';
+                                            errorDiv = errorDiv + '<tr valign="top">';
+                                            errorDiv = errorDiv + '<td><img alt="info" class="msgIcon" src="/s.gif" title="info"></td>';
+                                            errorDiv = errorDiv + '<td class="messageCell">';
+                                            errorDiv = errorDiv + '<div  class="messageText">';
+                                            errorDiv = errorDiv + result[i].Message ;
+                                            errorDiv = errorDiv + '</div>';
+                                            errorDiv = errorDiv + '</td>';
+                                            errorDiv = errorDiv + '</td>';
+                                            errorDiv = errorDiv + '</tr>';
+                                            errorDiv = errorDiv + '</tbody>';
+                                            errorDiv = errorDiv + '</table>';
+                                            errorDiv = errorDiv + '</div>';
+                                            
+                                            $("[id$=pageErrorMsgs]").after(errorDiv);                                            
+                                            window.scrollTo(0, 0);
+                                            return false;
+                                       }
+                                        else{
+                                            
+                                            $("#JSmsgDiv1").hide();
+                                            
+                                            var errorDiv = '<div class="message errorM4" role="alert" id="JSmsgDiv1" >';
+                                            errorDiv = errorDiv + '<table border="0" cellpadding="0" cellspacing="0" class="messageTable" style="padding:0px;margin:0px;">';
+                                            
+                                            errorDiv = errorDiv + '<tbody>';
+                                            errorDiv = errorDiv + '<tr valign="top">';
+                                            errorDiv = errorDiv + '<td><img alt="error" class="msgIcon" src="/s.gif" title="error"></td>';
+                                            errorDiv = errorDiv + '<td class="messageCell">';
+                                            errorDiv = errorDiv + '<div  class="messageText">';
+                                            errorDiv = errorDiv + result[i].Message ;
+                                            errorDiv = errorDiv + '</div>';
+                                            errorDiv = errorDiv + '</td>';
+                                            errorDiv = errorDiv + '</td>';
+                                            errorDiv = errorDiv + '</tr>';
+                                            errorDiv = errorDiv + '</tbody>';
+                                            errorDiv = errorDiv + '</table>';
+                                            errorDiv = errorDiv + '</div>';
+                                            if(result[i].Message != null){
+                                                $("[id$=pageErrorMsgs]").after(errorDiv);
+                                                window.scrollTo(0, 0);
+                                                return false;
+                                            }
+                                            
+                                        }
+                                    }else{
+                                    
+                                 
+                                        if(result[i].parStatusList != null) {
+                                        var parStatusList = result[i].parStatusList;
+                                        parstatusListSize = result[i].parStatusList.length; 
+                                        if(parstatusListSize > 0){
+                                            
+                                            for(i=0;i<parStatusList.length;i++){   
+                                            
+                                                htmlStr = htmlStr + "<div class='acord' id='"+i+domId+"firstLevel" +"'>";
+                                                htmlStr = htmlStr +  "<h3 onclick='ChangetheIcon(this);' id='"+i+domId+"h3firstLevel" +"'>"+parStatusList[i].parStatusKey+"</h3>";
+                                                htmlStr = htmlStr + "<div class='content'>";
+                                                htmlStr = htmlStr + "<div class='acord'>";
+                                                htmlStr = htmlStr + "<table class='list' border='none' cellpadding='0' cellspacing='0' style='border:none;'>";
+                                                htmlStr = htmlStr + "<colgroup span='4'></colgroup>";                            
+                                              
+                                                 var intval = i;
+                                                 var intval1 = '';
+                                                 var isboolean = true;
+                                                for(j=0;j<parStatusList[i].generalCodeList.length;j++){  
+                                                    intval1 = i;
+                                                    var generalCode = parStatusList[i].generalCodeList[j]; 
+                                                    if(generalCode.benefitLevel != '' && generalCode.benefitLevel == 1){
+                                                         
+                                                        htmlStr = htmlStr + "<tr class='headerRow'>";
+                                                        htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Level Code</th>";
+                                                        htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Covered</th>";
+                                                        htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>General Language</th>";
+                                                        htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Language</th>";
+                                                        htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Age Range ";
+                                                        
+                                                        htmlStr = htmlStr +"<img src='{!$Resource.BenefitAgeRange}' style='height:14px' title='D= Days <br/> M= Months <br/> Y= Years ' > </th>"; 
+                                                        htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Network</th>";
+                                                        htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Relationship</th>";
+                                                        htmlStr = htmlStr + "</tr>";                                                        
+                                                    }
+                                                       
+                                                    htmlStr = htmlStr + "<tr class='dataRow'>";
+                                                    htmlStr = htmlStr + "<td class='dataCell'  colspan='1' style='width:5%'>"+generalCode.benefitLevel+"</td>";
+                                                    htmlStr = htmlStr + "<td class='dataCell'  colspan='1' style='width:5%'>"+generalCode.coverageIndicator+"</td>";
+                                                    htmlStr = htmlStr + "<td class='dataCell'  colspan='1' style='width:25%'>"+generalCode.benefitCodeGeneralLanguage+"</td>";
+                                                    htmlStr = htmlStr + "<td class='dataCell'  colspan='1' style='width:25%'>"+generalCode.benefitCodeLanguage+"</td>";
+                                                    htmlStr = htmlStr + "<td class='dataCell'  colspan='1' style='width:15%'>"+generalCode.ageFrom+" "+generalCode.ageFromDuration+" - "+generalCode.ageThrough+" "+generalCode.ageThroughDuration+"</td>";
+                                                    //htmlStr = htmlStr + "<td class='dataCell'  colspan='1' style='width:12%'>"+generalCode.networkId+"</td>";
+                                                    htmlStr = htmlStr + "<td class='dataCell'  colspan='1' style='width:12%'>"+generalCode.relationshipCode+"</td>";
+                                                    htmlStr = htmlStr + "</tr>";
+                                                    isboolean = false;
+                                                } 
+                                                  
+                                                    htmlStr = htmlStr + "</table>";
+                                                     if(intval != intval1 || isboolean == true){ 
+                                                        htmlStr = htmlStr+"<img src='{!$Resource.BenefitCodeAlert}' style='height:18px;position:relative;top:3px;'></img>"+"<b style='color:blue'> Alert : No Longer Covered.</b>"; 
+                                                     }
+                                                    htmlStr = htmlStr + "</div >";
+                                                    htmlStr = htmlStr + "</div >";
+                                                    htmlStr = htmlStr + "</div >";
+                                                
+                                            }
+                                        }else{                                            
+                                            var htmlStr = "<img src='{!$Resource.BenefitCodeAlert}' style='height:18px;position:relative;top:3px;'></img>"+"<b style='color:blue'> No Records Found</b>";                                 
+                                            $("[id="+domId+"div]").html(htmlStr);
+                                       }
+                                        
+                                        
+                                    }else {                                        
+                                        var htmlStr = "<img src='{!$Resource.BenefitCodeAlert}' style='height:18px;position:relative;top:3px;'></img>"+"<b style='color:blue'> No Records Found</b>";                                 
+                                        $("[id="+domId+"div]").html(htmlStr);
+                                    }
+                                    }
+                                    if(responseSub != null && responseSub != ''){
+                                        if(!withMessage){
+                                            accums = true;
+                                            var accumId = domId;
+                                            htmlStr = htmlStr + "<div class='content'>";
+                                            htmlStr = htmlStr + "<div class='acord' onclick='ChangetheIcon(this);' id='"+domId+"accumeLevel'>";
+                                            htmlStr = htmlStr +  "<h3 onclick='accumServiceCallout(this.id)' id='"+BenefitKeyWithoutUnderscore+"'>Accumulators</h3>";
+                                            htmlStr = htmlStr + "<div class='content'>";
+                                           //console.log('BenefitKeyWithoutUnderscore ::'+BenefitKeyWithoutUnderscore);
+                                            htmlStr = htmlStr + "<div class='acord' id='"+domId+"accums'> ";
+                                            htmlStr = htmlStr + "</div>";
+                                            htmlStr = htmlStr + "</div>";
+                                            htmlStr = htmlStr + "</div>";
+                                            htmlStr = htmlStr + "</div>";
+                                        }
+                                        
+                                    }  
+
+                                    $("[id="+domId+"div]").html(htmlStr);
+                                }
+                            }else{                                
+                                var htmlStr = "<img src='{!$Resource.BenefitCodeAlert}' style='height:18px;position:relative;top:3px;'></img>"+"<b style='color:blue'> No Records Found</b>";                                 
+                                $("[id="+domId+"div]").html(htmlStr);
+                            }
+                            
+                            
+                        }                          
+                    }
+                   
+                }
+            }
+            
+            
+            function populateCurrentDateBenefits() {
+                
+                var today = new Date();
+                var dd = today.getDate();
+                var mm = today.getMonth()+1; //January is 0!
+                
+                var yyyy = today.getFullYear(); 
+                if(dd<10){
+                    dd='0'+dd;
+                } 
+                if(mm<10){
+                    mm='0'+mm;
+                } 
+                var today = mm+'/'+dd+'/'+yyyy;
+                
+                $("[id$='benefitDateSearchForAccums']").val(today);
+                
+                return false;
+            } 
+            
+            var selectedAccums = [];
+			function accumServiceCallout(accumId){
+                if(selectedAccums.indexOf(accumId) < 0){
+                    selectedAccums.push(accumId);
+                    var BenefitBundleOptionIdjs = '{!BenefitBundleOptionId}';
+                    var DateStrFormatjs = $("[id$='benefitDateSearchForAccums']").val();
+                    var MemberIdjs = '{!MemberId}';
+                    var enrolleIdentifierTypejs = 'SRK';
+                    var enrolleIdentiferIdjs = '{!SRKID}';
+                    var subscriberIdentiferIdjs  = '{!SubSRKID}';
+                    var effectiveStartDatejs = '{!EffectiveDate}';
+                    var effectiveEndDatejs = '{!EndDate}';
+                    var CoverageTypejs = '{!CoverageType}';
+                    var GroupIdjs = '{!groupId}';
+                    var BenefitVerIndicatorjs = '';
+                    var BenefitCodeMapjs = '';
+                    var htmlStr = '';
+                    var responseSub = '{!JSENCODE(ACETSubscriptionServices)}';
+                    var existsOnRiderPlanMap = JSON.stringify('{!ACETPlanBenefitSubscriptionSection.existsOnRiderPlanMap}');
+                    console.log('existsOnRiderPlanMap'+existsOnRiderPlanMap);
+                    var existsOnRiderPlanSubString = '';
+                    existsOnRiderPlanSubString = existsOnRiderPlanMap.substring(2, existsOnRiderPlanMap.length-2);
+                   var existsOnRiderPlanArray =  [];
+                    var existsOnRiderPlanArrayfinal =  [];
+
+                   existsOnRiderPlanArray = existsOnRiderPlanSubString.split(',');
+                   console.log('existsOnRiderPlanArray-->'+existsOnRiderPlanArray);
+                   for(var a = 0; a < existsOnRiderPlanArray.length; a++){
+                       
+                       if(existsOnRiderPlanArray[a].includes(accumId)){
+                       existsOnRiderPlanArrayfinal.push(existsOnRiderPlanArray[a]);
+                       }
+                                                }
+console.log('existsOnRiderPlanArrayfinal==>'+existsOnRiderPlanArrayfinal);
+                    var benefitCodejs = accumId;
+                    if(benefitCodejs != null) {
+                        if(benefitCodejs.indexOf('-') > 0){
+                            benefitCodejs = benefitCodejs.split('-')[0];                                
+                        }
+                    }
+                    if(responseSub != null && responseSub != ''){
+                        var responseSubscriptionJavascript = JSON.parse(responseSub);
+                        var subscriptionBenefitPlan = responseSubscriptionJavascript.getSubscriptionServiceBenefitResponse.serviceBenefit.memberGroupContractPlanOption.benefitPlan;
+                        var benefitPlanId = '';
+                        var tierTypeCode = [];
+                        var tierTypeIdentifier = [];
+                        var membership = [];
+                        for(var a = 0; a < subscriptionBenefitPlan.length; a++){
+                            if(subscriptionBenefitPlan[a].riderOnlyFlag == 'false'){
+                                benefitPlanId = subscriptionBenefitPlan[a].benefitPlanId;
+                                for(var b = 0; b < subscriptionBenefitPlan[a].planTier.length ; b++){
+                                    if(subscriptionBenefitPlan[a].planTier[b].tierTypeCode != null && subscriptionBenefitPlan[a].planTier[b].tierTypeCode != ''){
+                                        tierTypeCode.push(benefitPlanId +'-'+subscriptionBenefitPlan[a].planTier[b].tierIdentifier);
+                                        tierTypeIdentifier.push(subscriptionBenefitPlan[a].planTier[b].tierIdentifier + '-'+subscriptionBenefitPlan[a].planTier[b].tierTypeCode);
+                                    }
+                                }
+                                for(var b = 0; b < subscriptionBenefitPlan[a].membership.length ; b++){
+                                    if(subscriptionBenefitPlan[a].membership[b].timePeriodQualifier != null && subscriptionBenefitPlan[a].membership[b].timePeriodQualifier != ''){
+                                        membership.push(subscriptionBenefitPlan[a].membership[b].timePeriodQualifier);
+                                    }
+                                }
+                            }
+                        }
+                        console.log('tierTypeCode' +tierTypeCode);
+                        var tierTypeCodeList = (tierTypeCode).toString();
+                        console.log('tierTypeCodeList' +tierTypeCodeList);
+                        var tierTypeIdentifierList = (tierTypeIdentifier).toString();
+                        var membershipList =(membership).toString();
+                        var accumData = sforce.apex.execute("ACETPlanBenefitOveriewRedesignController","getAccumRedesign",{BenefitBundleOptionId:BenefitBundleOptionIdjs,DateStrFormat:DateStrFormatjs,MemberId:MemberIdjs,benefitCode:benefitCodejs,EnrolleeIdentifierType:enrolleIdentifierTypejs,EnrolleeIdentifierId:enrolleIdentiferIdjs,SubscriberIdentifierId:subscriberIdentiferIdjs,EffectiveStartDate:effectiveStartDatejs,EffectiveEndDate:effectiveEndDatejs,CoverageType:CoverageTypejs,BenefitVerIndicator:BenefitVerIndicatorjs,accumAsOf:DateStrFormatjs,BenefitCodeMap:BenefitCodeMapjs,groupId:GroupIdjs,SubscriptionServiceResponse:tierTypeCodeList,MembershipDuration:membershipList,SubscriptionResponse:tierTypeIdentifierList,existsOnRiderPlanArray:existsOnRiderPlanArrayfinal} );
+                        var accumResult = JSON.parse(accumData);
+                        var accumList = accumResult[0].accumulatorCodeList;
+                        console.log('accumList'+accumList)
+                        var arr = [];
+                        var arrVal = [];
+                        var accumIdWithUnderscores = accumId.replace(/ /g,'_').replace(/\//g,'_').replace(/,/g,'_');
+                        
+                        if(accumList != null && accumList.length > 0){
+                            //  htmlStr = htmlStr + "<b style='padding: 2%;'>Date Range : </b><select id='"+accumIdWithUnderscores+"Select' onchange='selectedAccumList(this.id);'>";
+                             
+                            //  htmlStr = htmlStr + "</select>";
+                            htmlStr = htmlStr + "<br/><br/>";
+                            htmlStr = htmlStr + "<table class='list' border='0' cellpadding='0' id='accumTable' cellspacing='0' >";
+                            htmlStr = htmlStr + "<colgroup span='4'></colgroup>";                            
+                            htmlStr = htmlStr + "<tr class='headerRow'>";
+                            htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Coverage Level</th>";
+                            htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Coverage Type</th>";
+                            htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Cost Share Type</th>";
+                            htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Limit</th>";
+                            htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Limit Type</th>";
+                            htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Duration</th>";
+                            htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Applied</th>";
+                            htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Remaining</th>";
+                            htmlStr = htmlStr + "</tr>";
+                            for(var k=0;k<accumList.length;k++){
+                                var benefitKeyTemp = accumList[k].BenefitKey;
+                                if(benefitKeyTemp.includes('-')){
+                                    var benefitKeyFrmd = benefitKeyTemp.split('-')[0];
+                                    benefitKeyFrmd = benefitKeyFrmd.trim();
+                                }
+                                
+                                var dateRangeVar = accumList[k].dateRangeValue;
+                                htmlStr = htmlStr + "<tr class='dataRow' id='"+dateRangeVar+"dateRange"+accumIdWithUnderscores+"Select'>";
+                                if(benefitKeyFrmd == accumId){
+                                htmlStr = htmlStr + "<td class='dataCell'  colspan='1' >"+accumList[k].coverageLevel+"</td>";
+                                htmlStr = htmlStr + "<td class='dataCell'  colspan='1' >"+accumList[k].coverageType+"</td>";
+                                htmlStr = htmlStr + "<td class='dataCell'  colspan='1' >"+accumList[k].costShareType+"</td>";
+                                htmlStr = htmlStr + "<td class='dataCell'  colspan='1' >"+accumList[k].benefitMaximumValue+"</td>";
+                                htmlStr = htmlStr + "<td class='dataCell'  colspan='1' >"+accumList[k].benefitMaximumUnit+"</td>";
+                                htmlStr = htmlStr + "<td class='dataCell'  colspan='1' >"+accumList[k].duration+"</td>"; 
+                                htmlStr = htmlStr + "<td class='dataCell'  colspan='1' >"+accumList[k].benefitYTDValue+"</td>";
+                                htmlStr = htmlStr + "<td class='dataCell'  colspan='1' >"+accumList[k].benefitRemainingValue+"</td>";
+                                //htmlStr = htmlStr + "<td class='dataCell'  colspan='1' >"+accumList[k].dateVersion+"</td>";
+                                }
+                                htmlStr = htmlStr + "</tr>";
+                                
+                            }
+                            htmlStr = htmlStr + "</table>";
+                            $("[id="+accumIdWithUnderscores+"accums]").html(htmlStr);
+                        }else{
+                            if(accumResult[0].MessageSeverity == "ERROR"){
+                                $("#JSmsgDiv1").hide();
+                                var errorDiv = '<div class="message errorM4" role="alert" id="JSmsgDiv1" >';
+                                errorDiv = errorDiv + '<table border="0" cellpadding="0" cellspacing="0" class="messageTable" style="padding:0px;margin:0px;">';
+                                
+                                errorDiv = errorDiv + '<tbody>';
+                                errorDiv = errorDiv + '<tr valign="top">';
+                                errorDiv = errorDiv + '<td><img alt="error" class="msgIcon" src="/s.gif" title="error"></td>';
+                                errorDiv = errorDiv + '<td class="messageCell">';
+                                errorDiv = errorDiv + '<div  class="messageText">';
+                                errorDiv = errorDiv + accumResult[0].Message ;
+                                errorDiv = errorDiv + '</div>';
+                                errorDiv = errorDiv + '</td>';
+                                errorDiv = errorDiv + '</td>';
+                                errorDiv = errorDiv + '</tr>';
+                                errorDiv = errorDiv + '</tbody>';
+                                errorDiv = errorDiv + '</table>';
+                                errorDiv = errorDiv + '</div>';
+                                if(accumResult[0].Message != null){
+                                    $("[id$=pageErrorMsgs]").after(errorDiv);
+                                    window.scrollTo(0, 0);
+                                    return false;
+                                }
+                            }else{
+                                htmlStr = htmlStr + "<img src='{!$Resource.BenefitCodeAlert}' style='height:18px;position:relative;top:3px;'></img>"+"<b style='color:blue'> Alert : No accumulation for this benefit. Review benefit language.</b>";                                 
+                                $("[id="+accumIdWithUnderscores+"accums]").html(htmlStr);    
+                            }
+                            
+                        
+                        }
+                    }
+                    var optionValues =[];
+                    //console.log($("[id$="+accumIdWithUnderscores+"Select]").find("option"));
+                    $("#"+accumIdWithUnderscores+"Select").find("option").each(function(){
+                        if($.inArray(this.value, optionValues) >-1){
+                            $(this).remove()
+                        }else{
+                            optionValues.push(this.value);
+                        }
+                    });
+                    console.log(accumId);
+                    var defaultDateRange = $("[id$="+accumIdWithUnderscores+"Select]").val();
+                    //if(!$("[id$='accumTable']").find(".headerRow").length>0){
+                        console.log('accumId'+accumId);
+                        $("[id$='accumTable']").find("tr:not(:first)").each(function(){
+                            if($(this).parent().parent().parent().attr("id").slice(0, -6) ==accumIdWithUnderscores){
+                                if($(this).attr("id")==$("[id$='"+defaultDateRange+"dateRange"+accumIdWithUnderscores+"Select']").attr("id")){
+                                    $(this).show();
+                                }else{
+                                    $(this).hide();
+                                }
+                            }
+                            
+                        });
+                    //}
+                    
+                }
+                                        
+                
+            }
+            function accumServiceCallouttest2(){
+			var accumId;
+                //  if(selectedAccums.indexOf(accumId) < 0){
+                    
+                //selectedAccums.push(accumId);
+                //new code start 
+                
+                
+                showViewBenefitsSection(); 
+                var firstLevel = [];   
+                var firstLevelDomId = [];   
+                var domIdArray = [];
+                var accumsLevelId = [];
+                var benefitKeyDomId = [];
+                var benefitKeyDomIdh3 = [];
+                var defaultValueDateRange = [];
+               
+                var BenefitBundleOptionIdjs = '{!BenefitBundleOptionId}';
+                var DateStrFormatjs = $("[id$='benefitDateSearchForAccums']").val();
+                var MemberIdjs = '{!MemberId}';
+                var enrolleIdentifierTypejs = 'SRK';
+                var enrolleIdentiferIdjs = '{!SRKID}';
+                var subscriberIdentiferIdjs = '{!SubSRKID}'
+                var effectiveStartDatejs = '{!EffectiveDate}';
+                var groupEffectiveDate = '{!groupEffectiveDate}';
+               
+                var effectiveEndDatejs = '{!EndDate}';
+                var CoverageTypejs = '{!CoverageType}';
+                var BenefitVerIndicatorjs = '';                
+                var BenefitCodeMapjs = '';
+                var GroupIdjs = '{!groupId}';
+                var situsStatejs= '{!orgSitusState}';
+                var benefitLanguageIndicatorArray = [];
+                var responseSubscription = '{!JSENCODE(ACETSubscriptionServices)}';
+                var isPlanBenefitVal = '{!IsPlanBenefit}';
+                var benefitDisplayMap = new Map();
+				
+                    var htmlStr = '';
+                    var responseSub = '{!JSENCODE(ACETSubscriptionServices)}';
+                    var existsOnRiderPlanMap = JSON.stringify('{!ACETPlanBenefitSubscriptionSection.existsOnRiderPlanMap}');
+                    console.log('existsOnRiderPlanMap'+existsOnRiderPlanMap);
+                    var existsOnRiderPlanSubString = '';
+                    existsOnRiderPlanSubString = existsOnRiderPlanMap.substring(2, existsOnRiderPlanMap.length-2);
+                   var existsOnRiderPlanArray =  [];
+                    var existsOnRiderPlanArrayfinal =  [];
+					
+					
+					
+                
+                if(responseSubscription != null && responseSubscription != ''){
+                        var responseSubscriptionJavascript = JSON.parse(responseSubscription);
+                        var subscriptionBenefitPlan = responseSubscriptionJavascript.getSubscriptionServiceBenefitResponse.serviceBenefit.memberGroupContractPlanOption.benefitPlan;
+                        for(var a = 0; subscriptionBenefitPlan && a < subscriptionBenefitPlan.length; a++){                    
+                                for(var b = 0; subscriptionBenefitPlan[a].benefitCode && b < subscriptionBenefitPlan[a].benefitCode.length ; b++){
+                                    if(subscriptionBenefitPlan[a].benefitCode[b].benefitCode != null && subscriptionBenefitPlan[a].benefitCode[b].benefitCode != '' && subscriptionBenefitPlan[a].benefitCode[b].benefitDisplay != null && subscriptionBenefitPlan[a].benefitCode[b].benefitDisplay != ''){
+                                        console.log('samsubscriptionBenefitPlan[a].benefitCode[b].benefitCode' +subscriptionBenefitPlan[a].benefitCode[b].benefitCode+'<----display--->'+subscriptionBenefitPlan[a].benefitCode[b].benefitDisplay);
+                                        //  console.log('samsubscriptionBenefitPlan[a].benefitCode[b].benefitDisplay' +subscriptionBenefitPlan[a].benefitCode[b].benefitDisplay);
+                                        benefitDisplayMap.set(subscriptionBenefitPlan[a].benefitCode[b].benefitCode,subscriptionBenefitPlan[a].benefitCode[b].benefitDisplay);
+                                    }
+                                }
+                         }
+                 }              
+                console.log('sambenefitDisplayMap1--->'+benefitDisplayMap.values());
+                selectedBenefitLangcodes = $('#hippaCodeList').chosen().val();
+
+                var selectedBenefitCodesList = [];
+                var selectedBenefitCodesWithUnderScoresArray = [];
+                var selectedBenefitCodesWithoutUnderScoresArray = [];
+                var selectedBenefitCodesFinalValues = '';
+                var tempValueWithoutUnderscoresFinal = [];
+                var selectedBenefitLangcodesWOCategories=[];
+                for(var a=0; a<selectedBenefitLangcodes.length; a++){
+                    if(selectedBenefitLangcodes[a].indexOf(';')>-1){
+                        var tempSelectedBenefitLangcodes = selectedBenefitLangcodes[a].split(';');
+                        for(var b = 0; b<tempSelectedBenefitLangcodes.length;b++){
+                            var st1 = tempSelectedBenefitLangcodes[b];
+                             if(st1.includes("@")){
+                                st1 = st1.split('@')[0];
+                             } 
+                            selectedBenefitCodesWithUnderScoresArray.push(st1);
+                        }
+                    }else{
+                        selectedBenefitLangcodesWOCategories.push(selectedBenefitLangcodes[a]);
+                    }
+                    
+                }
+
+                //console.log('selectedBenefitLangcodesWOCategories...'+selectedBenefitLangcodesWOCategories);
+                viewBenefitButtonSelectedOptions = $('#hippaCodeList').chosen().val(); 
+                var selectedBenefitcodesJSON = JSON.stringify(selectedBenefitLangcodesWOCategories);
+                var noDataSelectedBenefit = selectedBenefitLangcodesWOCategories;
+                selectedBenefitcodesJSON = selectedBenefitcodesJSON.toString().split('-');
+                selectedBenefitcodesJSON = selectedBenefitcodesJSON.toString().split('"');
+                for(var a = 0 ; a < selectedBenefitcodesJSON.length ; a++){
+                    if(selectedBenefitcodesJSON[a].includes("_")){
+                        selectedBenefitCodesList.push(selectedBenefitcodesJSON[a]);
+                    }else if(!selectedBenefitcodesJSON[a].includes("_")){
+                        if(selectedBenefitcodesJSON[a]){
+                            //console.log('selectedBenefitcodesJSON[a].....'+selectedBenefitcodesJSON[a]);
+                             var tempValueWithoutUnderscoresVal = selectedBenefitcodesJSON[a].replace('[','').replace(']','').replace(/,/g , '');
+                            if(tempValueWithoutUnderscoresVal){
+                                tempValueWithoutUnderscoresFinal.push(tempValueWithoutUnderscoresVal);    
+                            }
+                            
+                        }
+                        
+                    }
+                }
+
+                viewBenefitButtonSelectedOptions = $('#hippaCodeList').chosen().val(); 
+                var noDataSelectedBenefit = selectedBenefitLangcodesWOCategories;
+                for(var c = 0 ; c < tempValueWithoutUnderscoresFinal.length ; c++){
+                    if(tempValueWithoutUnderscoresFinal[c] != null){
+                        var tempValueWithoutUnderscores = tempValueWithoutUnderscoresFinal[c].split(' ');
+                        var st2 = tempValueWithoutUnderscores[0];
+                             if(st2.includes("@")){
+                                st2 = st2.split('@')[0];
+                             } 
+                        selectedBenefitCodesWithUnderScoresArray.push(st2);
+                    }
+                }
+                for(var b = 0 ; b < selectedBenefitCodesList.length ; b++){
+                    var singleBenefitCode = selectedBenefitCodesList[b].split(',');
+                   // alert('singleBenefitCode'+singleBenefitCode);
+                    var st3 = singleBenefitCode[0];
+                             if(st3.includes("@")){
+                                st3 = st3.split('@')[0];
+                             } 
+                    selectedBenefitCodesWithUnderScoresArray.push(st3);    
+                }
+                selectedBenefitCodesFinalValues = selectedBenefitCodesWithUnderScoresArray.join().trim();
+               console.log('selectedBenefitCodesFinalVal-->'+JSON.stringify(selectedBenefitCodesFinalValues)+'----'+benefitDisplayMap.keys());
+              htmlStr = htmlStr + '<table width="100%" height="100%">';
+                for(var t = 0 ; t < selectedBenefitCodesWithUnderScoresArray.length ; t++){
+                    var singleBenefitCode = selectedBenefitCodesWithUnderScoresArray[t].trim();
+                    var domId = selectedBenefitCodesWithUnderScoresArray[t].trim();
+                   console.log('sscode---->'+singleBenefitCode+'<-----mapcode--->'+benefitDisplayMap.get(singleBenefitCode));  
+			
+htmlStr = htmlStr + "<tr>";
+                        htmlStr = htmlStr + "<td >";
+htmlStr = htmlStr + "<input style='margin-top:15px' type='checkbox' html-auto-doc-accordian2='true' id='"+t+domId+"autoDocCheckBox' value='"+selectedBenefitCodesWithUnderScoresArray[t]+"'/>";	
+htmlStr = htmlStr + "</td>"; 
+                        htmlStr = htmlStr + "<td>";
+                        htmlStr = htmlStr + "<div class='acord' id='"+t+domId+"benefitKeyId'>";	
+ htmlStr = htmlStr + "<h3 class='firstPanel listener' onclick='ChangetheIcon(this);accordionCollapse(this);customMethod(this);' id='"+t+domId+"benefitKeyIdh3'>" + benefitDisplayMap.get(singleBenefitCode)+ "<img src='{!$Resource.BenefitCodeFlag}' style='height:20px;margin-left:4px;position:relative;top:5px;'/><span data-benefit-code='" + singleBenefitCode + "' style='color:blue; margin-left: 15px' title='" + singleBenefitCode + "' onclick='event.stopPropagation(); copyBenefitCode(this); return false;'>Copy Code</span></h3>";
+
+
+
+
+                               htmlStr = htmlStr + "<div class='content'>";
+ htmlStr = htmlStr + "<div class='content'>";
+
+                                htmlStr = htmlStr + "<div class='acord' onclick='ChangetheIcon(this);' id='"+domId+"accumeLevel'>";
+                                htmlStr = htmlStr +  "<h3  id='"+domId+"'>Accumulators</h3>";
+                                htmlStr = htmlStr + "<div class='content'>";
+                                htmlStr = htmlStr + "<div class='acord' id='"+domId+"accums'> ";
+                                htmlStr = htmlStr + "</div>";
+                                htmlStr = htmlStr + "</div>";
+                                htmlStr = htmlStr + "</div>";
+                                htmlStr = htmlStr + "</div>";
+				
+ htmlStr = htmlStr + "</div>";
+                        htmlStr = htmlStr + "</div>";
+                        htmlStr = htmlStr + "</td>";
+
+
+
+                }
+htmlStr = htmlStr + '</table>';
+console.log('htmlStr finl'+htmlStr);
+                    $("[id$='acordId2']").html(htmlStr);
+ accordApplyList(benefitKeyDomId);  
+                    expandSectionForParStatusList(benefitKeyDomIdh3);                    
+                    accordApplyList(firstLevel);                   
+                    accordApplyList(accumsLevelId);                    
+                    exapndList(benefitKeyDomIdh3);
+                    defaultDateRangeValue(defaultValueDateRange);
+                    avoidDoubleClickIssue(benefitKeyDomIdh3);
+ $("#loaderid").hide();
+                //new code end 
+                   
+
+                  /* existsOnRiderPlanArray = existsOnRiderPlanSubString.split(',');
+                   console.log('existsOnRiderPlanArray-->'+existsOnRiderPlanArray);
+				   console.log('benefitDisplayMap---->'+JSON.stringify(benefitDisplayMap));
+                   for(var a = 0; a < existsOnRiderPlanArray.length; a++){
+                       
+                       if(existsOnRiderPlanArray[a].includes(accumId)){
+                       existsOnRiderPlanArrayfinal.push(existsOnRiderPlanArray[a]);
+                       }
+                                                }
+console.log('existsOnRiderPlanArrayfinal==>'+existsOnRiderPlanArrayfinal);
+                    var benefitCodejs = accumId;
+                    if(benefitCodejs != null) {
+                        if(benefitCodejs.indexOf('-') > 0){
+                            benefitCodejs = benefitCodejs.split('-')[0];                                
+                        }
+                    }*/
+                   /* if(responseSub != null && responseSub != ''){
+                        var responseSubscriptionJavascript = JSON.parse(responseSub);
+                        var subscriptionBenefitPlan = responseSubscriptionJavascript.getSubscriptionServiceBenefitResponse.serviceBenefit.memberGroupContractPlanOption.benefitPlan;
+                        var benefitPlanId = '';
+                        var tierTypeCode = [];
+                        var tierTypeIdentifier = [];
+                        var membership = [];
+                        for(var a = 0; a < subscriptionBenefitPlan.length; a++){
+                            if(subscriptionBenefitPlan[a].riderOnlyFlag == 'false'){
+                                benefitPlanId = subscriptionBenefitPlan[a].benefitPlanId;
+                                for(var b = 0; b < subscriptionBenefitPlan[a].planTier.length ; b++){
+                                    if(subscriptionBenefitPlan[a].planTier[b].tierTypeCode != null && subscriptionBenefitPlan[a].planTier[b].tierTypeCode != ''){
+                                        tierTypeCode.push(benefitPlanId +'-'+subscriptionBenefitPlan[a].planTier[b].tierIdentifier);
+                                        tierTypeIdentifier.push(subscriptionBenefitPlan[a].planTier[b].tierIdentifier + '-'+subscriptionBenefitPlan[a].planTier[b].tierTypeCode);
+                                    }
+                                }
+                                for(var b = 0; b < subscriptionBenefitPlan[a].membership.length ; b++){
+                                    if(subscriptionBenefitPlan[a].membership[b].timePeriodQualifier != null && subscriptionBenefitPlan[a].membership[b].timePeriodQualifier != ''){
+                                        membership.push(subscriptionBenefitPlan[a].membership[b].timePeriodQualifier);
+                                    }
+                                }
+                            }
+                        }
+                        console.log('sambenefitDisplayMap 2--->'+benefitDisplayMap.values());
+                        console.log('tierTypeCode' +tierTypeCode);
+                        var tierTypeCodeList = (tierTypeCode).toString();
+                        console.log('tierTypeCodeList' +tierTypeCodeList);
+                        var tierTypeIdentifierList = (tierTypeIdentifier).toString();
+                        var membershipList =(membership).toString(); 
+                        var accumData = sforce.apex.execute("ACETPlanBenefitOveriewRedesignController","getAccumRedesign",{BenefitBundleOptionId:BenefitBundleOptionIdjs,DateStrFormat:DateStrFormatjs,MemberId:MemberIdjs,benefitCode:selectedBenefitCodesFinalValues,EnrolleeIdentifierType:enrolleIdentifierTypejs,EnrolleeIdentifierId:enrolleIdentiferIdjs,SubscriberIdentifierId:subscriberIdentiferIdjs,EffectiveStartDate:effectiveStartDatejs,EffectiveEndDate:effectiveEndDatejs,CoverageType:CoverageTypejs,BenefitVerIndicator:BenefitVerIndicatorjs,accumAsOf:DateStrFormatjs,BenefitCodeMap:BenefitCodeMapjs,groupId:GroupIdjs,SubscriptionServiceResponse:tierTypeCodeList,MembershipDuration:membershipList,SubscriptionResponse:tierTypeIdentifierList,existsOnRiderPlanArray:existsOnRiderPlanArrayfinal} );
+                        var accumResult = JSON.parse(accumData);
+                        var accumList = accumResult[0].accumulatorCodeList;
+                        var arr = [];
+                        var arrVal = [];
+                        var accumIdWithUnderscores = accumId.replace(/ /g,'_').replace(/\//g,'_').replace(/,/g,'_');
+                        
+                        if(accumList != null && accumList.length > 0){
+                            htmlStr = htmlStr + "<b style='padding: 2%;'>Date Range : </b><select id='"+accumIdWithUnderscores+"Select' onchange='selectedAccumList(this.id);'>";
+                             if(accumList.length ==1){
+                            // temp comm    if(accumList[0].BenefitKey == accumId){
+							if(selectedBenefitCodesWithUnderScoresArray.includes(accumList[0].BenefitKey)){
+                                    htmlStr = htmlStr + "<option value='"+accumList[0].dateRangeValue+"'> "+accumList[0].dateRangeValue+"</option>";
+                                }
+                            }else if(accumList != null && accumList.length > 1){
+                            for(var a=0;a<accumList.length;a++){
+                               // temp comm if(accumList[a].BenefitKey == accumId){
+							 if(selectedBenefitCodesWithUnderScoresArray.includes(accumList[0].BenefitKey)){
+
+                                    var b = a + 1;
+                                    if(b < accumList.length){
+                                    var current = accumList[b].dateRangeValue;
+                                    if(current != accumList[a].dateRangeValue){
+                                        arrVal.push(accumList[a].dateRangeValue);
+                                    }else if(current == accumList[a].dateRangeValue){
+                                        if(arr.length == 0){
+                                        arr.push(accumList[a].dateRangeValue);
+                                        }
+                                        current = null;
+                                    }
+                                    }
+                                }                                
+                            }
+                            }
+                            for(var c=0; c<arr.length; c++){
+                                if(arrVal.indexOf(arr[0])!=null){
+                                    arrVal.splice(c,1);
+                                }
+                                htmlStr = htmlStr + "<option value='"+arr[c]+"' selected> "+arr[c]+"</option>";
+                            }
+                            
+                            for(var d=0; d<arrVal.length; d++){
+                                htmlStr = htmlStr + "<option value='"+arrVal[d]+"'> "+arrVal[d]+"</option>";
+                            }
+                            
+                            
+                            htmlStr = htmlStr + "</select>";
+                            htmlStr = htmlStr + "<br/><br/>";
+                            htmlStr = htmlStr + "<table class='list' border='0' cellpadding='0' id='accumTable' cellspacing='0' >";
+                            htmlStr = htmlStr + "<colgroup span='4'></colgroup>";                            
+                            htmlStr = htmlStr + "<tr class='headerRow'>";
+                            htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Coverage Level</th>";
+                            htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Coverage Type</th>";
+                            htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Cost Share Type</th>";
+                            htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Limit</th>";
+                            htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Limit Type</th>";
+                            htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Duration</th>";
+                            htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Applied</th>";
+                            htmlStr = htmlStr + "<th class='blBgClr,headerRow' scope='col' colspan='1'>Remaining</th>";
+                            htmlStr = htmlStr + "</tr>";
+                            for(var k=0;k<accumList.length;k++){
+                                
+                                
+                                var dateRangeVar = accumList[k].dateRangeValue;
+                                htmlStr = htmlStr + "<tr class='dataRow' id='"+dateRangeVar+"dateRange"+accumIdWithUnderscores+"Select'>";
+                             //  temp comm if(accumList[k].BenefitKey == accumId){
+						 if(selectedBenefitCodesWithUnderScoresArray.includes(accumList[k].BenefitKey)){
+
+                                htmlStr = htmlStr + "<td class='dataCell'  colspan='1' >"+accumList[k].coverageLevel+"</td>";
+                                htmlStr = htmlStr + "<td class='dataCell'  colspan='1' >"+accumList[k].coverageType+"</td>";
+                                htmlStr = htmlStr + "<td class='dataCell'  colspan='1' >"+accumList[k].costShareType+"</td>";
+                                htmlStr = htmlStr + "<td class='dataCell'  colspan='1' >"+accumList[k].benefitMaximumValue+"</td>";
+                                htmlStr = htmlStr + "<td class='dataCell'  colspan='1' >"+accumList[k].benefitMaximumUnit+"</td>";
+                                htmlStr = htmlStr + "<td class='dataCell'  colspan='1' >"+accumList[k].duration+"</td>"; 
+                                htmlStr = htmlStr + "<td class='dataCell'  colspan='1' >"+accumList[k].benefitYTDValue+"</td>";
+                                htmlStr = htmlStr + "<td class='dataCell'  colspan='1' >"+accumList[k].benefitRemainingValue+"</td>";
+                                //htmlStr = htmlStr + "<td class='dataCell'  colspan='1' >"+accumList[k].dateVersion+"</td>";
+                               }
+                                htmlStr = htmlStr + "</tr>";
+                                
+                            }
+                            htmlStr = htmlStr + "</table>";
+                            $("[id="+accumIdWithUnderscores+"accums]").html(htmlStr);
+                        }else{
+                            if(accumResult[0].MessageSeverity == "ERROR"){
+                                $("#JSmsgDiv1").hide();
+                                var errorDiv = '<div class="message errorM4" role="alert" id="JSmsgDiv1" >';
+                                errorDiv = errorDiv + '<table border="0" cellpadding="0" cellspacing="0" class="messageTable" style="padding:0px;margin:0px;">';
+                                
+                                errorDiv = errorDiv + '<tbody>';
+                                errorDiv = errorDiv + '<tr valign="top">';
+                                errorDiv = errorDiv + '<td><img alt="error" class="msgIcon" src="/s.gif" title="error"></td>';
+                                errorDiv = errorDiv + '<td class="messageCell">';
+                                errorDiv = errorDiv + '<div  class="messageText">';
+                                errorDiv = errorDiv + accumResult[0].Message ;
+                                errorDiv = errorDiv + '</div>';
+                                errorDiv = errorDiv + '</td>';
+                                errorDiv = errorDiv + '</td>';
+                                errorDiv = errorDiv + '</tr>';
+                                errorDiv = errorDiv + '</tbody>';
+                                errorDiv = errorDiv + '</table>';
+                                errorDiv = errorDiv + '</div>';
+                                if(accumResult[0].Message != null){
+                                    $("[id$=pageErrorMsgs]").after(errorDiv);
+                                    window.scrollTo(0, 0);
+                                    return false;
+                                }
+                            }else{
+                                htmlStr = htmlStr + "<img src='{!$Resource.BenefitCodeAlert}' style='height:18px;position:relative;top:3px;'></img>"+"<b style='color:blue'> Alert : No accumulation for this benefit. Review benefit language.</b>";                                 
+                                $("[id="+accumIdWithUnderscores+"accums]").html(htmlStr);    
+                            }
+                            
+                        
+                        }
+                    }*/
+                   /* var optionValues =[];
+                    $("#"+accumIdWithUnderscores+"Select").find("option").each(function(){
+                        if($.inArray(this.value, optionValues) >-1){
+                            $(this).remove()
+                        }else{
+                            optionValues.push(this.value);
+                        }
+                    });
+                    console.log(accumId);
+                    var defaultDateRange = $("[id$="+accumIdWithUnderscores+"Select]").val();
+                        console.log('accumId'+accumId);
+                        $("[id$='accumTable']").find("tr:not(:first)").each(function(){
+                            if($(this).parent().parent().parent().attr("id").slice(0, -6) ==accumIdWithUnderscores){
+                                if($(this).attr("id")==$("[id$='"+defaultDateRange+"dateRange"+accumIdWithUnderscores+"Select']").attr("id")){
+                                    $(this).show();
+                                }else{
+                                    $(this).hide();
+                                }
+                            }
+                            
+                        });*/
+                    //}
+                    
+                    //}
+                                        
+                
+            }
+            
+            function collapseExapandedSections(){
+                $("[id$='errorMsgForBenefitDateMsg']").remove();
+                
+                
+                
+                if(viewBenefitsView == true){
+                    $('.accordian h3.secondPanel').removeClass('ui-state-active')
+                    .addClass('ui-state-default')
+                    .removeClass('ui-corner-top')
+                    .addClass('ui-corner-all')
+                    .attr('aria-expanded', 'false')
+                    .attr('aria-selected', 'false')
+                    .attr('tabIndex', -1)
+                    .find('span.ui-icon')
+                    .removeClass('ui-icon-triangle-1-s')
+                    .addClass('ui-icon-triangle-1-e')
+                    .closest('h3').next('div')
+                    .hide();
+                    
+                    $('.accordian h3.firstPanel').removeClass('ui-state-active')
+                    .addClass('ui-state-default')
+                    .removeClass('ui-corner-top')
+                    .addClass('ui-corner-all')
+                    .attr('aria-expanded', 'false')
+                    .attr('aria-selected', 'false')
+                    .attr('tabIndex', -1)
+                    .find('span.ui-icon')
+                    .removeClass('ui-icon-triangle-1-s')
+                    .addClass('ui-icon-triangle-1-e')
+                    .closest('h3').next('div')
+                    .hide();
+                }else{
+                    
+                    if(selectedBenefitCodes.length > 0){
+                        selectedBenefitCodes = [];
+                        reRenderAllBenefitCodes();
+                    }
+                    
+                }
+            }
+   
+            function CompleteEvent(e){
+                e.cancelBubble = true;
+                e.returnValue = false;
+            }
+            
+            function benefitDatevalidate() {
+                var $benefitSearch = $("[id$='benefitDateSearchForAccums']");
+                var benefitEffectiveDate = '{!EffectiveDate}';
+                var pattern =/^(0?[1-9]|1[012])[\/\-](0?[1-9]|[12][0-9]|3[01])[\/\-]\d{4}$/;
+                var convertedBenefitEffectiveDate = new Date(benefitEffectiveDate);
+                var benefitEndDate = '{!EndDate}';
+                var convertedBenefitEndDate = new Date(benefitEndDate);
+                var selectedBenefitDate = new Date($benefitSearch.val());
+                var groupEffectiveDate = '{!groupEffectiveDate}';
+                var groupRenewalDate = '{!RenewalDate}';
+                var groupEffectiveDateVal = new Date(groupEffectiveDate);
+                var groupRenewalDateVal = new Date(groupRenewalDate);
+                var $groupId = '{!groupId}';
+               
+                $("[id$='errorMsgForBenefitDateMsg']").remove();
+                if($benefitSearch.val() != null && $benefitSearch.val() != '' && !pattern.test($benefitSearch.val())){
+                    var errorMsg = "Invalid Date.";
+                    collapseExapandedSections();
+                    $("[id$='errorMsgForBenefitDate']").wrapInner('<span id="errorMsgForBenefitDateMsg"  class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</span>');   
+                    $("[id$='benefitDateSearchForAccums']").focus();
+                    return false;
+                }else if(($benefitSearch.val() != null && $benefitSearch.val() != ''  ) && (selectedBenefitDate < convertedBenefitEffectiveDate || selectedBenefitDate > convertedBenefitEndDate)){                    
+                    var errorMsg = "Date selected outside of coverage period.";
+                    collapseExapandedSections();
+                    $("[id$='errorMsgForBenefitDate']").wrapInner('<span id="errorMsgForBenefitDateMsg"  class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</span>');
+                    $("[id$='benefitDateSearchForAccums']").focus();
+                    return false;
+                }else if(($benefitSearch.val() != null && $benefitSearch.val() != ''  ) &&  ($groupId != null && $groupId != ''  ) && (selectedBenefitDate < groupEffectiveDateVal || selectedBenefitDate > groupRenewalDateVal)){                    
+                    var errorMsg = "Date selected outside of coverage period.";
+                    collapseExapandedSections();
+                    $("[id$='errorMsgForBenefitDate']").wrapInner('<span id="errorMsgForBenefitDateMsg"  class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</span>');
+                    $("[id$='benefitDateSearchForAccums']").focus();
+                    return false;
+                }else{
+                    var selectedBenefitDateVal = $("[id$='benefitDateSearchForAccums']").val();                    
+                    if(!Date.parse(selectedBenefitDateVal)){  
+                        collapseExapandedSections();
+                        $("[id$='errorMsgForBenefitDate']").wrapInner('<span id="errorMsgForBenefitDateMsg"  class="errorMsg"><strong>Error:</strong> You must enter a value </span>');                       
+                        $("[id$='benefitDateSearchForAccums']").focus();
+                        
+                        return false;
+                    }
+                }
+                return true;
+            }
+            
+            </script>
+            
+        </head>
+        
+        <body>
+            
+            <apex:slds /> 
+            
+            <apex:actionFunction name="reRenderAllBenefitCodes" reRender="pageBlockBenefitsPanel" status="benefitAsOfDateChange"/>
+            <apex:inputHidden value="{!ACETPlanBenefitSubscriptionSection.hippaBenefitCodeJSON}" id="hippaCodesAndBenefitCode"/>
+            <apex:inputHidden value="{!ACETPlanBenefitSubscriptionSection.benefitCodeMapJSON}" id="benefitCodeMapJSON"/>
+            
+            <apex:pageBlockSection title="Benefit Accumulations" id="pbsBenefitDetail2" columns="1" >
+                
+              
+                <apex:pageBlock id="pBlockbenefitDetail" >
+                    <div id="displayErrorMsg">
+                    
+                    </div>
+                    <div id="loaderid" style="display:none;">
+                        <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1002; background-color: black;">
+                            &nbsp;
+                        </div>
+            
+                        <div style="margin-left:45%;position: absolute;margin-top: 4%;z-index:1002">
+                            <img src="/img/loading32.gif" width="18" height="18" />
+                            <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                        </div>                    
+                     </div>
+                    <c:ValidateData typeVal="Plan Benefits Detail"/> 
+                  
+                    <apex:outputPanel id="pBlockbenefitDetailPanel">
+                             
+                        <div id="benefitFilter" class="benefitFilter">
+                            <b>Benefit As Of &nbsp;&nbsp;&nbsp;&nbsp;</b> 
+                            <div class="requiredInput" style="display:inline;">
+                                <div class="requiredBlock" id="benefitDateRequiredBlock"></div>
+                                <input type="text" id="benefitDateSearchForAccums" placeholder="MM/DD/YYYY" label="Date" value="{!benefitDateSearchForAccums}" style="width: 6%;"  onkeyPress="" onchange="collapseExapandedSections();benefitDatevalidate();"/>
+                                
+                            </div>      
+                            
+                         <apex:commandLink value="{!currentDateBenefits}" onclick="collapseExapandedSections();populateCurrentDateBenefits(); return false;" id="populateCurrentDateBenefits">
+                            </apex:commandLink>&nbsp;&nbsp;&nbsp;&nbsp;
+                            <apex:actionstatus id="benefitAsOfDateChange">
+                                <apex:facet name="start">
+                                    <img src="/img/loading32.gif" width="18" height="18" />           
+                                </apex:facet>
+                            </apex:actionstatus>
+                            <span id="errorMsgForBenefitDate" ></span>
+                          <!--  <input type="radio" name="showRadio" value="All" checked="checked"  style="top:3px;position:relative;"/><b>All</b>&nbsp;&nbsp;
+                            <input type="radio" name="showRadio" value="Benefit Code"  style="top:3px;position:relative;"/>Benefit Code&nbsp;&nbsp;
+                            <input type="radio" name="showRadio" value="Category"  style="top:3px;position:relative;"/><b>CATEGORY</b>&nbsp;&nbsp;
+                            <input type="radio" name="showRadio" value="Specialty" id="Speciality" style="top:3px;position:relative;"/><b><i>Specialty</i></b>&nbsp;&nbsp;-->
+                            <!--<div style="float:right;display:inline;margin-right:10%">--> 
+                            <div style="margin-right:0%;margin-top: 1%;" >
+                            <table>
+                                <tr>
+                                    <td style="">
+                                      <apex:outputpanel > 
+                                    <apex:outputLabel value="Choose&nbsp;Benefit&nbsp;&nbsp;(Max&nbsp;{!$Label.MaxSelectableBenefits})&nbsp;&nbsp;" escape="false" for="hippaCodeList" style="font-weight:bold;margin-left:-3px;">
+                                   <!-- <apex:image value="/s.gif" styleclass="helpIcon" id="helpText"  title="{!$Label.ACETPlanBenefitDetailChooseBenefitHoverText}" />-->
+                                    </apex:outputLabel>              
+                                    <br/>
+                                    
+                                    <input type="button" value="View Accumulation" id="ViewBenefits" onClick="callBenefitLanguageService();" class="slds-button slds-Bb" style="margin-top:5px;"/> 
+                                        
+                                    </apex:outputpanel>
+                                    </td>
+                                    <td>
+                                    <apex:outputpanel style="width:16% !important" styleClass="dropdown"> 
+                                        <select id="hippaCodeList"  multiple="false" data-placeholder="Choose Benefit" onchange="removeBenefitsJS()"  >
+                                            <apex:repeat value="{!ACETPlanBenefitSubscriptionSection.benefitCodeKeyMap}" var="benefitCodeKey" >
+                                                <option value="{!ACETPlanBenefitSubscriptionSection.benefitCodeKeyMap[benefitCodeKey]}" >{!benefitCodeKey}</option>
+                                            </apex:repeat>
+                                        </select> 
+                                        <div id="errorMsgForSelectableBenefits"><!--style="margin-left:22%">-->
+                                            <!-- If user try to select more than defined benefit, error message will be displayed inside this div -->
+                                    </div>
+                                </apex:outputpanel>
+                                    </td>
+                                </tr>
+                            </table> 
+                               
+                            </div>
+                       
+                         </div>
+                        <div class="content">
+                            <apex:outputText value="{!failureMessage}" rendered="{!isVal}" style="font-size: 128%;background-color: whitesmoke;font-family:initial;"/> 
+                           
+                            <apex:outputPanel id="pageBlockBenefitsPanelBenefit" style="display:none;"> 
+                                
+                                <div style='width:100%;height:100%; color:blue;' class="accordian" id="topAccordDivBenefit">                                
+                                    <div id="acordId2">
+                                        
+                                    </div>     
+                                </div>
+                            </apex:outputPanel>    
+                            
+                        </div>
+                        
+                        
+                        
+                    </apex:outputPanel>
+                    
+                </apex:pageBlock>  
+            </apex:pageBlockSection>
+            
+            <div id="pBlockbenefitDetailExample"> </div>
+        </body>
+    </html>
+    <script>
+        
+        window.onscroll = function() {feezeBenefit()};
+        
+        var header = document.getElementById("benefitFilter");
+        
+        function feezeBenefit() {
+              if (window.pageYOffset > 800) {
+                header.classList.add("sticky");
+                
+              } else {
+                header.classList.remove("sticky");
+              }
+        }
+    
+   
+    </script>
+</apex:component>

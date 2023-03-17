@@ -1,0 +1,148 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome" access="global" controller="ADBSpendingAccountsController">
+    <!-- Handlers for getting data from Apex -->
+    <aura:handler name="change" value="{!v.FIMWrapper}" action="{!c.doInit}" />
+    <aura:attribute name="FIMWrapper" type="Object" /><!--US3245061 - using SSN on faro query -->
+    <aura:attribute name="memberId" type="String" />
+    <aura:attribute name="firstName" type="String" />
+    <aura:attribute name="lastName" type="String" />
+    <aura:attribute name="birthdate" type="String" />
+    <aura:attribute name="planNumber" type="String" />
+    <!--	bringing all financial information   -->
+    <aura:attribute name="financials" type="Object" />
+    <!-- Selected Account Name Attribute : US2696920 -->       
+    <aura:attribute name="selectedAccName" type="String"/>   
+    <aura:attribute name="AccShortName" type="String" default=""/>
+    <!-- Agent userId Attribute : US2923041 - sunil vennam -->
+    <aura:attribute name="agentUserId" type="String" />
+    <!-- Selected Account User Details -->
+    <aura:attribute name="accFirstName" type="String"/>    
+    <aura:attribute name="accLastName" type="String"/>   
+    <aura:attribute name="accSSN" type="String"/>
+    <!-- Selected Account Details -->
+	<aura:attribute name="accNum" type="String"/>
+	<aura:attribute name="accSysCode" type="String"/>  
+    <aura:attribute name="accAuthUser" type="String"/>    
+    <aura:attribute name="accInvBal" type="String"/>  
+    <aura:attribute name="financialsAccountsData" type="ADBContributionsUIWrapper.AccountBalance"/>
+    <aura:attribute name="TransactionsAccountsData" type="ADBTransactionsWrapper.TransactionData"/>
+    <!-- Below two flags to define if agent has access to SPending Acccounts and if spending accounts available -->
+    <aura:attribute name="spendingAccountsAvlbl" type="boolean" default="true"/>
+    <aura:attribute name="agentHSASecurityAccess" type="boolean"/>
+    <aura:attribute name="showSpinner" type="boolean" default="false"/>
+	<!-- More Less Attributes -->
+    <aura:attribute name="isMoreButtonVisible" type="boolean" default="true"/>
+    <aura:attribute name="isMoreClicked" type="boolean" default="false"/>
+
+    <aura:if isTrue="{!v.showSpinner}">
+        <div class="slds-align--absolute-center">
+            <lightning:spinner aura:id="offers_spinner" variant="brand" size="large"/>
+        </div>
+    </aura:if>
+    <div class="sub-headline">Spending Accounts</div>
+    <lightning:layout horizontalAlign="left" multipleRows="true">
+        <!--<aura:if isTrue="{!v.accSysCode == '7'}"> -->
+            <lightning:layoutItem size="12">
+                <div class="slds-p-right_medium" align="right">
+                    <span><a onclick="{!c.camsUrl}">Go To CAMS</a></span><br/>
+                </div>
+            </lightning:layoutItem>
+        <!--</aura:if> -->
+        <lightning:layoutItem size="7" class="slds-p-bottom_small left-align">
+            <c:ADB_FinancialOverview selectedAccName = "{!v.selectedAccName}" 
+                                     AccShortName="{!v.AccShortName}"
+                                     FinOverviewData="{!v.financialsAccountsData}"
+                                     accFirstName = "{!v.accFirstName}"
+                                     accLastName = "{!v.accLastName}"
+                                     accSSN = "{!v.accSSN}"
+                                     accNum = "{!v.accNum}"
+									 accSysCode = "{!v.accSysCode}"													   
+                                     accAuthUser = "{!v.accAuthUser}" 
+                                     accInvBal = "{!v.accInvBal}" 
+                                     agentHSASecurityAccess = "{!v.agentHSASecurityAccess}"
+                                     spendingAccountsAvlbl="{!v.spendingAccountsAvlbl}"
+									 TransactionsAccountsData="{!v.TransactionsAccountsData}"
+                                     />
+        </lightning:layoutItem>
+        <br/>
+
+    	<aura:if isTrue="{!v.AccShortName=='HSA'}">
+            <aura:if isTrue="{!v.agentHSASecurityAccess}">
+            <aura:if isTrue="{!not(empty(v.financialsAccountsData.account))}">
+                    <lightning:layoutItem size="5" class="slds-p-bottom_small left-align">
+                        <c:ADB_ContributionComponent AccShortName="{!v.AccShortName}"
+                                                     FinOverviewData="{!v.financialsAccountsData}"/>
+                    </lightning:layoutItem>
+            </aura:if>
+                <aura:set attribute="else">
+
+            		<lightning:layoutItem size="5" class=" left-align slds-size_5-of-12 slds-m-top_x-large slds-p-top_x-large">
+                    <div class="noDataMsg slds-p-left_medium slds-m-top_xx-small">
+                            {!$Label.c.ADB_SpndAccNoAccessMsg}
+                        </div>
+                </lightning:layoutItem>
+                    </aura:set>
+            </aura:if>
+		</aura:if>
+        <aura:if isTrue="{!v.AccShortName!='HSA'}">
+            <aura:if isTrue="{!not(empty(v.financialsAccountsData.account))}">
+                <lightning:layoutItem size="5" class="slds-p-bottom_small left-align">
+                        <c:ADB_ContributionComponent AccShortName="{!v.AccShortName}"
+                                                     FinOverviewData="{!v.financialsAccountsData}"/>
+                    </lightning:layoutItem>
+            </aura:if>
+        </aura:if>
+    </lightning:layout>
+	<aura:if isTrue="{!v.isMoreButtonVisible}">
+        <div class="slds-align_absolute-center" onclick="{!c.onClickMore}">
+            <img src="{!$Resource.ADB_OpportunityCardImages + '/ADB_OpportunityCardImages/MoreButton.png'}" height="100" width="100"  /> 
+            
+        </div>
+    </aura:if>
+	<aura:if isTrue="{!v.isMoreClicked}">
+	<aura:if isTrue="{!not(empty(v.financialsAccountsData.account))}">
+    <aura:if isTrue="{!and(or(and(v.agentHSASecurityAccess,v.AccShortName=='HSA'),v.AccShortName!='HSA'),v.spendingAccountsAvlbl)}">
+	<lightning:layout horizontalAlign="left" multipleRows="true">
+                    <lightning:layoutItem size="8" class="slds-p-bottom_small left-align">
+                <c:ADB_Transactions AccShortName="{!v.AccShortName}"
+                                    selectedAccName = "{!v.selectedAccName}"
+                                    TransactionsAccountsData="{!v.TransactionsAccountsData}"
+                                    accFirstName = "{!v.accFirstName}"
+                                    accLastName = "{!v.accLastName}"
+                                    accSSN = "{!v.accSSN}"
+                                    accNum = "{!v.accNum}"
+                                    accInvBal = "{!v.accInvBal}"
+
+                                    />
+            </lightning:layoutItem>
+            <br/><br/>
+                    <lightning:layoutItem size="4" class="slds-p-bottom_small left-align">
+                <c:ADB_AttributesComponent selectedAccName = "{!v.selectedAccName}"
+                                           AccShortName="{!v.AccShortName}"
+                                           accFirstName = "{!v.accFirstName}"
+                                           accLastName = "{!v.accLastName}"
+                                           accSSN = "{!v.accSSN}"
+                                           accNum = "{!v.accNum}"
+                                           accAuthUser = "{!v.accAuthUser}"
+                                           accInvBal = "{!v.accInvBal}"
+                                           TransactionsAccountsData="{!v.TransactionsAccountsData}"
+
+                                           />
+            </lightning:layoutItem>
+        </lightning:layout>
+	</aura:if>
+    </aura:if>
+
+    <lightning:layout horizontalAlign="left" multipleRows="true">
+            <lightning:layoutItem size="6" class="slds-p-bottom_small left-align slds-p-right_large slds-p-left_x-large">
+            <c:ADB_DeductibleCopayMaximumsComponent deductibles="{!v.financials.deductible}" copay="{!v.financials.copay}"/>
+        </lightning:layoutItem>
+        <br/><br/>
+            <lightning:layoutItem size="6" class="slds-p-bottom_small left-align slds-p-right_large ">
+            <c:ADB_OutOfPocketMaximumsComponent oopMaximums="{!v.financials.oopMaximums}"/>
+        </lightning:layoutItem>
+    </lightning:layout>
+    <div class="slds-align_absolute-center " onclick="{!c.onClickLess}">
+            <img src="{!$Resource.ADB_OpportunityCardImages + '/ADB_OpportunityCardImages/LessButton.png'}" height="100" width="100"  /> 
+        </div>  
+    </aura:if>
+</aura:component>

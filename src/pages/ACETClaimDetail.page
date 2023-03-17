@@ -1,0 +1,1616 @@
+<apex:page controller="ACETClaimDetailController" sidebar="False" tabStyle="ClaimSearch__tab" title="Claim Detail" action="{!init}">
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="{!$Resource.JqueryTableSorter}"></apex:includeScript>
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"/>
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+    <apex:form >
+         <style>
+            .bPageBlock .labelCol,
+            body .print .topics-label {
+            padding-top: 2px;
+            padding-right: 21px;
+            padding-bottom: 2px;
+            padding-left: 2px;
+            text-align: right;
+            font-size: 91%;
+            font-weight: bold;
+            color: #333;
+            }           
+            .bPageBlock .dataCol {
+            padding-top: 2px;
+            padding-right: 46px;
+            padding-bottom: 2px;
+            padding-left: 0px;
+            }
+           .eptooltip-modal{
+            background-color: #f5f5f5;
+            z-index: 9999;
+            position: fixed;
+            display: none;
+            maximum-width: 15%;
+            box-shadow: 1px 1px 1px #bbbbbb;
+            border-style: ridge; 
+            border-width: 1px;  
+            }
+             .dataCol.first.last {             
+             vertical-align: bottom !important;
+             }
+            
+        </style>
+        <style> 
+            .messageTable {
+            border: none !important;
+            }
+        </style>
+        <apex:includeScript value="/soap/ajax/30.0/connection.js" />
+        <apex:includeScript value="/support/console/30.0/integration.js" />
+        <apex:outputPanel rendered="{!!isCancelCaseCreation}">
+            <apex:includeScript value="/support/console/40.0/integration.js"/>
+            <script type="text/javascript">
+            function launchDocumentum(chkURL){
+                $("#paymentDetail").find("tbody").find("tr").each(function(){
+                   
+                    $(this).find(":last-child").find("input").click(function(){
+                        
+                        window.open(chkURL,'_blank', 'toolbars=0, width=1333, height=706 ,left=0 ,top=0 ,scrollbars=1 ,resizable=1');
+                        });
+            
+            });
+            }
+            
+            var openSubtab = function openSubtab(result) {
+                //Now that we have the primary tab ID, we can open a new subtab in it
+                var primaryTabId = result.id;
+                sforce.console.openSubtab(primaryTabId , 'https://edms-idrs-ui.uhc.com/idrs/resources/index.html', true, 'Check Image', null, openSuccess, 'salesforceSubtab');
+            };
+            
+            var openSuccess = function openSuccess(result) {
+                //Report whether we succeeded in opening the subtab
+                if (result.success == true) {
+                    alert('subtab successfully opened');
+                } else {
+                    alert('subtab cannot be opened');
+                }
+            };
+            
+            </script>
+            <apex:actionFunction name="getClaimsCodeDescription" action="{!getClaimsCodeDescriptions}" onComplete="console.log('got desc');"/>
+        <apex:actionFunction name="showCoverageMessagename" reRender="pdmsgNew" action="{!displayCoverageMessage}" oncomplete="removeStyle();return false;"/>
+            
+            <apex:actionFunction reRender="pdmsg" name="openIDRS" action="{!getcheckimageurl}" oncomplete="launchDocumentum('{!JSENCODE(CheckImageUrl)}');">
+                <apex:param value="" name="SeriesDesignator" assignTo="{!SeriesDesignator}" />
+                <apex:param value="" name="CheckNumber" assignTo="{!CheckEFTNumber}" />
+            </apex:actionFunction>
+            <apex:actionFunction name="showCoverageMessagename" reRender="pdmsgNew" action="{!displayCoverageMessage}" oncomplete="removeStyle();return false;"/>
+            <apex:actionFunction name="addStdErrorMsgClm" reRender="errMsgClm" action="{!addStdErrorMsgClm}" oncomplete="showClmErrMsg();return false;">
+                <apex:param value="" name="statusCode" assignTo="{!resultStatusCode}" />
+            </apex:actionFunction>
+            <apex:actionFunction name="addStdErrorMsgPmt" reRender="errMsgPmt" action="{!addStdErrorMsgPmt}" oncomplete="showPmtErrMsg();return false;">
+                <apex:param value="" name="statusCode" assignTo="{!resultStatusCode}" />
+            </apex:actionFunction>
+        </apex:outputPanel>
+        <c:ACETInteractionHighlightsPanel InteractionAtt="{!wrapper.interaction}"
+            SubjectAtt="{!wrapper.Subject}"
+            AdditionalInfoAtt="{!wrapper.AdditionalInfo}" selectedOriginator="{!wrapper.interaction.Originator_Name__c}"></c:ACETInteractionHighlightsPanel>
+            <apex:outputPanel id="hippapopupPanel">
+                       <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+            </apex:outputPanel>
+        <apex:inputHidden id="highlightPanelInfo" value="{!hpAdditionInfoStr}" />
+        <apex:outputPanel rendered="{!!isCancelCaseCreation}">
+            
+            <apex:sectionHeader title="Claim" subtitle="{!ClaimId}" /> 
+            <apex:pageMessages id="pdmsg" />  
+            
+            <div id="pdmsgNew" style="display:none">
+            <apex:pageMessages id="pdmsgNew" />  
+            </div>
+            <div id="errMsgClm" style="display:none">
+            <apex:pageMessages id="errMsgClm" />  
+            </div>
+            <div id="errMsgPmt" style="display:none">
+            <apex:pageMessages id="errMsgPmt" />  
+            </div>
+            <div style="margin-top:10px;text-align:center;">
+                <div id="getClaimDetailStatus"></div>
+                <div id="docDeliveryResult"></div>
+            </div>
+            <c:ACETRepeatCallViewRelatedCases CalltopicAtt="View Claims" ExternalIDAtt="{!ClaimId}" attrCaseDataWrapper="{!wrapper}"/> 
+            <apex:pageBlock >
+                <apex:pageblockSection id="claimItemInfo" columns="1" html-auto-doc="auto" html-auto-doc-case-items="true">
+                
+                    <div id="claimItem"></div>  
+                </apex:pageblockSection>
+            </apex:pageBlock>
+            <br/>                       
+            <span class="tablinks" onclick="openClaimTab(event, 'tabOne')" id="defaultOpen" style="font-size: 102%; border-radius: 3%; background-color: rgb(125, 126, 240); padding: 1%; font-weight: bold; display: inline-block; width:6%; text-align:center;">Claim Details</span>
+            <span class="tablinks" onclick="openClaimTab(event, 'tabTwo');fctHeader()" id="defaultOpenTwo" style="font-size: 102%; border-radius: 3%; background-color: rgb(125, 126, 240); padding: 1%; font-weight: bold; display: inline-block; width:6%; text-align:center;">Payments</span>
+            <span class="tablinks" onclick="openClaimTab(event, 'tabThree');fctHeader()" id="defaultOpenThree" style="font-size: 102%; border-radius: 3%; background-color: rgb(125, 126, 240); padding: 1%; font-weight: bold; display: inline-block; width:6%; text-align:center;">Documents</span>
+            <span class="tablinks" onclick="openClaimTab(event, 'tabFour');fctHeader()" id="defaultOpenFour" style="font-size: 102%; border-radius: 3%; background-color: rgb(125, 126, 240); padding: 1%; font-weight: bold; display: inline-block; width:6%; text-align:center;">Notes</span>
+
+            <br/><br/>
+            <div id="tabOne" class="tabcontent" style="padding-bottom:100px">
+             
+               
+                <apex:pageBlock mode="maindetail">
+                
+                    
+                    
+                    <apex:pageblockSection id="pbsTotalUHC" columns="1" title="Claim Totals - UHC" html-auto-doc="true">
+                        <div id="totalUHC"></div>
+                    </apex:pageblockSection>
+                    
+                    
+                    
+
+                 <apex:pageblockSection id="pbsMemberResponsibility" columns="1" title="Member Responsibility" html-auto-doc="true" >
+                        <div id="MemberResponsibility"></div>
+                    </apex:pageblockSection>             
+                    
+                    <apex:pageblockSection id="pbsProviderResponsibility" columns="1" title="Provider Responsibility" html-auto-doc="true" >
+                        <div id="ProviderResponsibility"></div>
+                    </apex:pageblockSection>
+                                         
+                    <apex:pageblockSection columns="1" title="Claim Totals - COB" id="pbsClaimTotalCOB" html-auto-doc="true">                    
+                        <div id="totalCOB"></div> 
+                    </apex:pageblockSection>
+                    
+                        
+                        <apex:pageBlockSection id="serviceLinesInfo" columns="1" title="Service Lines" collapsible="true" html-auto-doc="true">                    
+                            <div id="serviceLines"></div>
+                        </apex:pageBlockSection>
+                        
+                        <apex:pageBlockSection id="claimCodeInfo" columns="1" title="Claim Codes" collapsible="true" html-auto-doc="true">                    
+                            <div id="claimCode"></div>  
+                        </apex:pageBlockSection>
+                        
+                         <apex:pageBlockSection id="claimDiagnosisInfo" columns="1" title="Claim Diagnosis" collapsible="true" html-auto-doc="true">                    
+                           <div id="claimDiagnosis"></div> 
+                        </apex:pageBlockSection>
+                        
+                        <apex:pageBlockSection columns="1" title="Clinical Edits" collapsible="true" html-auto-doc="true" id="pbsClaimEdits">                    
+                            <div id="claimEdits"></div> 
+                        </apex:pageBlockSection>
+                        
+                        <apex:pageblockSection columns="3" collapsible="true" title="In/Out Patient Information"  html-auto-doc="true" rendered="{!ClaimType == '02'}" id="pbsInOutPatientInfo">
+                            <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:15%">
+                                <apex:outputLabel value="Surgery Date" for="Surgery_Date" />
+                                <apex:outputText value="" id="Surgery_Date" html-data-name="SurgeryDate"></apex:outputText>
+                            </apex:pageBlockSectionItem>
+                            <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:15%">
+                                <apex:outputLabel value="Semi-Private Room" for="Semi_Private_Room" />
+                                <apex:outputText value="" id="Semi_Private_Room" html-data-name="SemiPrivateRoom"></apex:outputText>                                                    
+                            </apex:pageBlockSectionItem>
+                            <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:15%">
+                                <apex:outputLabel value="DRG Number" for="DRG_Number" />
+                                <apex:outputText value="" id="DRG_Number" html-data-name="DRGNumber"/>
+                            </apex:pageBlockSectionItem>
+                            <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:15%">
+                                <apex:outputLabel value="Discharge" for="Discharge" />
+                                <apex:outputText value="" id="Discharge" html-data-name="Discharge"></apex:outputText>                                                   
+                            </apex:pageBlockSectionItem>                        
+                        </apex:pageblockSection>
+                        
+                        <apex:pageBlockSection columns="1" title="Surgical Procedure Codes" collapsible="true" html-auto-doc="true" rendered="{!ClaimType == '02'}" id="pbsSurgicalProcedureCode">
+                            <div id="surgicalProcedureCodes"></div> 
+                        </apex:pageBlockSection>
+                        
+                    
+                        <apex:pageBlockSection columns="1" title="Occurrence Codes" collapsible="true" html-auto-doc="true" rendered="{!ClaimType == '02'}" id="pbsOccurrenceCodes">                   
+                            <div id="occurrenceCodes"></div>                   
+                            <br/>
+                            <div id="occurrenceSpanCodes"></div>
+                        </apex:pageBlockSection>  
+                         <apex:pageblockSection id="pbsGeneralInfo" columns="3" collapsible="true" title="General Information" html-auto-doc="true">
+                        
+                        <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                            <apex:outputLabel value="Group Number" for="policynum" />
+                            <apex:outputText value="" id="policynum" html-data-name="GroupNumber"/>
+                        </apex:pageBlockSectionItem> 
+     
+              <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                            <apex:outputLabel value="Patient Name" for="Patient_Name" />
+                            <apex:outputText value="" id="Patient_Name" html-data-name="PatientName" style="padding-right:10%;"/>
+                        </apex:pageBlockSectionItem>                                      
+                        
+                                           
+                        <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                            <apex:outputLabel value="Claim Split Indicator" for="Claim_Split_Ind" />
+                            <apex:outputText value="" id="Claim_Split_Ind" html-data-name="ClaimSplitIndicator"/>
+                        </apex:pageBlockSectionItem>
+                        
+                        <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                            <apex:outputLabel value="Received Date" for="Received_Date" />
+                            <apex:outputText value="" id="Received_Date" html-data-name="ReceivedDate"></apex:outputText>                                                    
+                        </apex:pageBlockSectionItem>
+                        
+                <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                            <apex:outputLabel value="Patient DOB" for="Patient_DOB" />
+                            <apex:outputText value="" id="Patient_DOB" html-data-name="PatientDOB"></apex:outputText>                                                    
+                        </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                            <apex:outputLabel value="Split Claim Number" for="Reference_claim_Id" />
+                            <apex:outputText value="" id="Reference_claim_Id" html-data-name="ReferenceClaimID"/>
+                        </apex:pageBlockSectionItem>
+    
+                <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                            <apex:outputLabel value="Claim Processed" for="Claim_Processed" />
+                            <apex:outputText value="" id="Claim_Processed" html-data-name="ClaimProcessed"/>
+                        </apex:pageBlockSectionItem>
+    
+                <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                            <apex:outputLabel value="Patient Account Number" for="Patient_Account_Number" />
+                            <apex:outputText value="" id="Patient_Account_Number" html-data-name="PatientAccountNumber" style="padding-right:10%;"/>
+                        </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                            <apex:outputLabel value="Event Type" for="Claim_Event_Type" />
+                            <apex:outputText value="" id="Claim_Event_Type" html-data-name="ClaimEventType"/>
+                        </apex:pageBlockSectionItem>
+    
+                <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                            <apex:outputLabel value="Timely Filing Limit" for="Timely_Filing_limit" />
+                            <apex:outputText value="" id="Timely_Filing_limit" html-data-name="TimelyFilingLimit"/>
+                        </apex:pageBlockSectionItem>
+    
+                        <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                            <apex:outputLabel value="Bill Type" for="Bill_Type" />
+                            <apex:outputText value="" id="Bill_Type" html-data-name="BillType"/>
+                        </apex:pageBlockSectionItem>                
+        
+                <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                            <apex:outputLabel value="Event Sequence Number" for="Claim_event_Sequence_Number"/>
+                            <apex:outputText value="" id="Claim_event_Sequence_Number" html-data-name="ClaimEventSequenceNumber"/>
+                        </apex:pageBlockSectionItem>    
+
+                <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                            <apex:outputLabel value="Submission Type" for="Submission_Type" />
+                            <apex:outputText value="" id="Submission_Type" html-data-name="SubmissionType" />                                                   
+                        </apex:pageBlockSectionItem>
+
+                <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                            <apex:outputLabel value="Admit Date" for="Admit_Date" />
+                            <apex:outputText value="" id="Admit_Date" html-data-name="AdmitDate" />                                                   
+                        </apex:pageBlockSectionItem>
+                        
+                        <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                            <apex:outputLabel value="Related Claims" for="DCN" />
+                            <apex:outputText value="" id="relatedIcns" html-data-name="relatedIcns" />                                                   
+                        </apex:pageBlockSectionItem>
+                                                
+                        <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                            <apex:outputLabel value="DCN" for="DCN" />
+                            <apex:outputText value="" id="DCN" html-data-name="DCN" />                                                   
+                        </apex:pageBlockSectionItem>    
+                         
+                        <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                            <apex:outputLabel value="Admit Time/Hr" for="Admit_TimeHr" />
+                            <apex:outputText value="" id="Admit_TimeHr" html-data-name="AdmitTime"/>
+                        </apex:pageBlockSectionItem>
+                        
+                    </apex:pageBlockSection>
+                    
+                    <apex:pageBlockSection columns="1" title="Claim Event History" collapsible="true" html-auto-doc="true" id="pbsClaimEventHistory">                    
+                        <div id="claimEventHistory"></div>
+                    </apex:pageBlockSection>
+                        
+                </apex:pageBlock>
+            </div>
+            <div id="tabTwo" class="tabcontent" style="padding-bottom:100px">
+                <apex:pageBlock mode="maindetail">
+                     <apex:pageBlockSection columns="1"  id="paymentDetailInfo" html-auto-doc="true" html-auto-doc-section-state="true" title="Medical Payment Details" collapsible="true" >
+                         <div id="paymentDetail"></div>
+                     </apex:pageblockSection>
+                                                              
+                     <apex:pageBlockSection id="payeeInfo" html-auto-doc="true" columns="1" title="Payee Information" collapsible="true">
+                         <div id="payees"></div>                        
+                     </apex:pageBlockSection>
+                 </apex:pageBlock>
+            </div>
+            <div id="tabThree" class="tabcontent" style="padding-bottom:100px">
+                <apex:pageBlock mode="maindetail">
+                    <!-- Added below section for US721131 -->
+                    <div id="pbsClaimdocsSection">
+                        <apex:outputpanel id="pbsMemberEOBSection" rendered="{!isMemberEOB}">
+                                <apex:pageblockSection rendered="{!isMemberEOB}"
+                                    title="Member EOB" id="pbsMemberEOB" html-auto-doc="true"
+                                    onclick="scrolldown('pbsMemberEOBSection');initDataTables('datatableMemberEOB', 'Member EOB', 'pbsMemberEOBSection');scrolldown('pbsMemberEOBSection');">
+                                    <c:ACETDataTable id="membereobtable"
+                                        attrDataTableName="MemberEOB"
+                                        attrDatatableWrapper="{!DTMemberEOBWrapper}" />
+                                    <apex:commandButton id="membereobbutton"
+                                        action="{!initClaimDocuments}" value="Refresh"
+                                        reRender="membereobtable"
+                                        oncomplete="initDataTables('datatableMemberEOB', 'Member EOB', 'pbsMemberEOBSection');scrolldown('pbsMemberEOBSection');" />
+                                </apex:pageblockSection>
+                            </apex:outputpanel>
+                            <apex:outputpanel id="pbsProviderPRASection" rendered="{!isProviderRA}">
+                                <apex:pageblockSection rendered="{!isProviderRA}"
+                                    title="Provider RA" id="pbsProviderPRA" html-auto-doc="true"
+                                    onclick="scrolldown('pbsProviderPRASection');initDataTables('datatableProviderPRA', 'Provider RA', 'pbsProviderPRASection');scrolldown('pbsProviderPRASection');">
+                                    <c:ACETDataTable id="ProviderPRATable"
+                                        attrDataTableName="ProviderPRA"
+                                        attrDatatableWrapper="{!DTProviderPRAWrapper}" />
+                                    <apex:commandButton action="{!initClaimDocuments}"
+                                        value="Refresh" reRender="ProviderPRATable"
+                                        oncomplete="initDataTables('datatableProviderPRA', 'Provider RA', 'pbsProviderPRASection');scrolldown('pbsProviderPRASection');" />
+                                </apex:pageblockSection>
+                            </apex:outputpanel>
+                            <apex:outputpanel id="pbsClaimLetterSection" rendered="{!isClaimLetter}">
+                                <apex:pageblockSection rendered="{!isClaimLetter}"
+                                    title="Claim Letter" id="pbsClaimLetter" html-auto-doc="true"
+                                    onclick="scrolldown('pbsClaimLetterSection');initDataTables('datatableClaimLetter', 'Claim Letter', 'pbsClaimLetterSection');scrolldown('pbsClaimLetterSection');">
+                                    <c:ACETDataTable id="ClaimLetterTable"
+                                        attrDataTableName="ClaimLetter"
+                                        attrDatatableWrapper="{!DTClaimLetterWrapper}" />
+                                    <apex:commandButton action="{!initClaimDocuments}"
+                                        value="Refresh" reRender="ClaimLetterTable"
+                                        oncomplete="initDataTables('datatableClaimLetter', 'Claim Letter', 'pbsClaimLetterSection');scrolldown('pbsClaimLetterSection');" />
+                                </apex:pageblockSection>    
+                            </apex:outputpanel>
+                            <apex:outputpanel id="pbsPhysicalHealthLetterSection" rendered="{!isPhysicalhealth}">
+                                <apex:pageblockSection rendered="{!isPhysicalhealth}"
+                                    title="Physical Health Letter" id="pbsPhysicalHealthLetter" html-auto-doc="true"
+                                    onclick="scrolldown('pbsPhysicalHealthLetterSection');initDataTables('datatablePhysicalHealthLetter', 'Physical Health Letter', 'pbsPhysicalHealthLetterSection');scrolldown('pbsPhysicalHealthLetterSection');">
+                                    <c:ACETDataTable id="PhysicalHealthLetterTable"
+                                        attrDataTableName="PhysicalHealthLetter"
+                                        attrDatatableWrapper="{!DTPhysicalHealthLetterWrapper}" />
+                                    <apex:commandButton action="{!initClaimDocuments}"
+                                        value="Refresh" reRender="PhysicalHealthLetterTable"
+                                        oncomplete="initDataTables('datatablePhysicalHealthLetter', 'Physical Health Letter', 'pbsPhysicalHealthLetterSection');scrolldown('pbsPhysicalHealthLetterSection');" />
+                                </apex:pageblockSection>    
+                            </apex:outputpanel>
+                    </div>
+                </apex:pageBlock>
+            </div>
+            <div id="tabFour" class="tabcontent" style="padding-bottom:100px">
+                <apex:pageBlock mode="maindetail">
+                    <apex:pageblockSection id="pbsClaimNotesUser" columns="1" title="User Notes" html-auto-doc="true">
+                        <div id="claimNotesUser"></div>
+                    </apex:pageblockSection>
+                    <apex:pageblockSection id="pbsClaimNotesSystem" columns="1" title="System Notes" html-auto-doc="true">
+                        <div id="claimNotesSystem"></div>
+                    </apex:pageblockSection>
+                 </apex:pageBlock>
+            </div>
+        </apex:outputPanel>
+    </apex:form>
+    <script type='text/javascript'>
+        
+    var subjectId = '{!Subject.Id}';
+    var claimId = '{!JSENCODE($CurrentPage.parameters.claimId)}';  
+    var claimType = '{!JSENCODE($CurrentPage.parameters.claimType)}';
+    var primaryCalltopicTabId = '{!JSENCODE($CurrentPage.parameters.primaryCalltopicTabId)}';
+    var claimPaymentServiceDone = '';
+    var claimNotesServiceDone = '';
+    //console.log('claimType: ' + claimType);
+    
+    //add custom tooltip class for columns under a specific table
+    function markCodeTooltip(tableId, columns){
+        var codes = [];
+        console.log(tableId +" || "+columns);
+        columns.forEach(function(colName){
+        var index = getColumnIndex(tableId, colName);
+            console.log(index > -1);
+              if(index > -1){
+              console.log($("#"+tableId).find("tbody").html());
+                 $("#"+tableId).find("tbody").find("tr").each(function(){
+                 console.log('iterating each row ');
+                 var $td = $(this).find(":nth-child(" + (index + 1) + ")");
+                 console.log(" :: " +$td);
+                  $td.addClass("encoder-pro-code");
+                 });
+              }
+        });
+    }   
+    
+    function scrolldown(SectionId){
+            document.querySelector('[id$='+SectionId+']').scrollIntoView();
+    }
+    
+    var tabClicked = '';
+    
+    function openClaimTab(evt, tabName) {
+        if(tabName == 'tabOne') {
+            tabClicked = 'Claim';
+            document.getElementById('defaultOpen').style.backgroundColor = "#85c1e9";
+            document.getElementById('defaultOpenTwo').style.backgroundColor = "#b2babb";
+            document.getElementById('defaultOpenThree').style.backgroundColor = "#b2babb";
+            document.getElementById('defaultOpenFour').style.backgroundColor = "#b2babb";
+            if(claimErr==true){
+                $("#errMsgClm").css("display","block");
+            }
+            $("#errMsgPmt").css("display","none");
+            
+        }
+        else if(tabName == 'tabTwo'){
+            tabClicked = 'Payments';
+            document.getElementById('defaultOpenTwo').style.backgroundColor = "#85c1e9";
+            document.getElementById('defaultOpen').style.backgroundColor = "#b2babb";
+            document.getElementById('defaultOpenThree').style.backgroundColor = "#b2babb";
+            document.getElementById('defaultOpenFour').style.backgroundColor = "#b2babb";
+            if(paymentErr==true){
+                $("#errMsgPmt").css("display","block");
+            }
+            $("#errMsgClm").css("display","none");
+        }
+        else if(tabName == 'tabThree'){
+            tabClicked = 'Documents';
+            document.getElementById('defaultOpen').style.backgroundColor = "#b2babb";
+            document.getElementById('defaultOpenTwo').style.backgroundColor = "#b2babb";
+            document.getElementById('defaultOpenThree').style.backgroundColor = "#85c1e9";
+            document.getElementById('defaultOpenFour').style.backgroundColor = "#b2babb";
+            $("#errMsgPmt").css("display","none");
+            $("#errMsgClm").css("display","none");
+        }
+        else if(tabName == 'tabFour'){
+            tabClicked = 'Notes';
+            document.getElementById('defaultOpen').style.backgroundColor = "#b2babb";
+            document.getElementById('defaultOpenTwo').style.backgroundColor = "#b2babb";
+            document.getElementById('defaultOpenThree').style.backgroundColor = "#b2babb";
+            document.getElementById('defaultOpenFour').style.backgroundColor = "#85c1e9";
+            $("#errMsgPmt").css("display","none");
+            if(claimErr==true){
+                $("#errMsgClm").css("display","block");
+            }
+        }
+                
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tabcontent");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tablinks");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.className += " active";
+        
+        if(tabClicked=='Payments' && claimPaymentServiceDone!='Done'){
+
+            //load claim payment information          
+            $("#getClaimPaymentStatus").html('<span>Loading Claim Payment...</span>');  
+            Visualforce.remoting.Manager.invokeAction(
+               '{!$RemoteAction.ACETClaimDetailController.queryClaimPayment}',
+               claimId,
+               function(result, event){
+                  //console.log("findClaimPayment result:");
+                 //console.log(result);  
+                  
+                  processClaimPayment(result);
+                  claimPaymentServiceDone = 'Done';
+//                alert('end of queryClaimPayment block, claimPaymentServiceDone:' + claimPaymentServiceDone);
+               }, 
+               {escape: true}
+            );
+        }
+        if(tabClicked=='Notes' && claimNotesServiceDone != 'Done'){
+            processNotesSection();
+            collapsePBSections("pbsClaimNotesUser");
+            collapsePBSections("pbsClaimNotesSystem");
+        }
+        
+    }
+  
+    
+    function prepareCodesmap(){
+        var sectionIds = ["claimCode","claimDiagnosis","serviceLines","claimItem"];
+        var tableVsColMap = new Object;
+        tableVsColMap["claimCode"]      = ["Revenue Code","Procedure Code"];
+        tableVsColMap["claimDiagnosis"] = ["Diagnosis Code"];
+        tableVsColMap["serviceLines"]   = ["Revenue","Procedure","Modifier"];
+        tableVsColMap["claimItem"] = ["Primary Dx"];
+        
+        for(var i=0; i<sectionIds.length; i++){
+            console.log("inside "+sectionIds[i]);
+            markCodeTooltip(sectionIds[i],tableVsColMap[sectionIds[i]]);
+        }
+        
+        var sectionVsCodes = new Object();
+        var codes = [];
+        for(var i = 0; i < sectionIds.length ; i++){
+            var sectionDiv = $("#"+sectionIds[i]);
+            //got section div
+            var codeObjs = $(sectionDiv).find(".encoder-pro-code");
+            codes = [];
+            for(var j = 0; j < codeObjs.length; j++){
+                codes[j] = $(codeObjs[j]).text();
+            }
+            sectionVsCodes[sectionIds[i]] = codes;  
+        }
+        console.log("sectionVsCodes >>> "+JSON.stringify(sectionVsCodes));
+        return sectionVsCodes;
+    }
+        function getEncoderProDescription(inputCodes){
+        var hoverTimeout;
+        Visualforce.remoting.Manager.invokeAction(
+           '{!$RemoteAction.ACETClaimDetailController.getEncoderProDescription}',
+           JSON.stringify(inputCodes),
+           function(result, event){
+        
+            $(".encoder-pro-code").mouseover(function(event){
+                $(".eptooltip-modal").remove();// Added by Chandan -US1037637
+                clearTimeout(hoverTimeout);
+                if(result.Success){
+                var codeArray = Object.keys(result.Response);
+                console.log(codeArray);
+                
+                    for(var i = 0 ;i < codeArray.length ; i++){
+                        var currentCode = codeArray[i];
+                        if($(this).text() == currentCode){
+                            var toolTip =  document.createElement("div");
+                            $(toolTip).addClass("eptooltip-modal");
+                            var descArray = result.Response[currentCode];
+                            var descHtml = "<ul style = 'padding:1%'>"
+                            for(var j=0; j<descArray.length; j++){
+                                if(JSON.stringify(descArray[j]).indexOf(":") > 0)
+                                    descHtml = descHtml + "<li>" + JSON.stringify(descArray[j]).slice(JSON.stringify(descArray[j]).indexOf(":")+2,JSON.stringify(descArray[j]).lastIndexOf("\"")) + "</li>";
+                                else
+                                    descHtml = descHtml + "<li>" + JSON.stringify(descArray[j]).slice(1,JSON.stringify(descArray[j]).lastIndexOf("\"")) + "</li>";
+
+                            }
+                            descHtml = descHtml +"</ul>";
+                            $(toolTip).html(descHtml);
+                            $(this).append(toolTip);
+                            var posX = event.clientX +10+ 'px';
+                            var posY = event.clientY +20 + 'px';
+                            console.log(posX + " :: " +posY);
+                            $(toolTip).show();
+                            if(event.relatedTarget!=null && event.relatedTarget.tagName=='DIV'){
+                                $(toolTip).hide();
+                            }
+                            $(toolTip).css("top",posY);                
+                            $(toolTip).css("left",posX);
+                            
+                        }
+                    }
+                }
+                
+            
+            });
+            $(".encoder-pro-code").mouseout(function(){
+                 console.log('-----I am Out-----');
+                 hoverTimeout = setTimeout(function() {
+                     $(".eptooltip-modal").remove();
+                 }, 1);
+             });
+           }, 
+           {escape: true}
+        );
+        
+        }
+        
+    function removeColumnsFromTable(tableName, columnNames) {
+        console.log('tableName:::::'+tableName+columnNames);
+        for(var i = 0; i < columnNames.length; i++){
+            var colAuth = getColumnIndex("serviceLines", columnNames[i]);  
+            console.log(colAuth);          
+            if(colAuth > -1){
+                console.log(colAuth);
+                $("#serviceLines").find("thead").find("tr").each(function(index){            
+                    $(this).find(":nth-child(" + (colAuth + 1) + ")").remove();
+                 });
+                $("#serviceLines").find("tbody").find("tr").each(function(index){            
+                    $(this).find(":nth-child(" + (colAuth + 1) + ")").remove();
+                 });
+             }   
+        }        
+    }
+    
+    $("#btnclick").click(function(){
+        var chkURL = '{!JSENCODE(CheckImageUrl)}';
+        alert(chkURL);
+        
+        });
+            var insertCurrClaimData ;
+    $(document).ready(function() {
+    insertLocalJsonData ='';
+    sforce.console.addEventListener(
+            sforce.console.ConsoleEvent.CLOSE_TAB  ,
+            function (result) {
+            closeChildWindows();
+          var rowData = JSON.parse(result.message);
+          if(rowData.ClaimID=='{!ClaimId}'){
+           localStorage.removeItem("ClaimData_{!ClaimId}");
+            localStorage.removeItem("CurrentClaimData_{!ClaimId}");
+try{
+            
+            }catch(err){
+            console.log('>>>>>> ',err);
+            }
+               console.log('Closed item', result);
+               }
+            });
+
+        //request the claim item from search result
+        sforce.console.fireEvent('RequestClaimItemOpened_'.concat(subjectId), claimId);        
+        //receive the claim item from search result
+        sforce.console.addEventListener('ReceiveClaimItemOpened_'.concat(subjectId), function(r){                         
+           //alert();
+            var rowData = JSON.parse(r.message);  
+            if(rowData.ClaimID=='{!ClaimId}'){
+             insertCurrClaimData = JSON.stringify(rowData );            
+            }
+            if(rowData.ClaimID == claimId){          
+                var columns = [];
+               columns.push({'ColumnName':'Claim Number','DataName':'ClaimID'});
+                columns.push({'ColumnName':'Cirrus Claim ID','DataName':'SourceClaimId'});
+                columns.push({'ColumnName':'PHI','DataName':'PHIRestriction'});
+                columns.push({'ColumnName':'Tax ID','DataName':'TaxID'});
+                columns.push({'ColumnName':'Provider','DataName':'Provider'});
+                columns.push({'ColumnName':'Network','DataName':'Network'});
+                columns.push({'ColumnName':'DOS Start','DataName':'ServiceStart'});
+                columns.push({'ColumnName':'DOS End','DataName':'ServiceEnd'});
+                columns.push({'ColumnName':'Charged','DataName':'TotalCharged'});
+                columns.push({'ColumnName':'Paid','DataName':'TotalPaid'});
+                columns.push({'ColumnName':'Deductible','DataName':'Deductible'});
+                columns.push({'ColumnName':'Patient Resp','DataName':'patientResponsibility'});
+                columns.push({'ColumnName':'Status Date','DataName':'claimEventStatusDate'});
+                columns.push({'ColumnName':'Status','DataName':'Status'});
+                columns.push({'ColumnName':'Event Type','DataName':'claimEvtType'});
+                columns.push({'ColumnName':'Primary Dx','DataName':'PrimaryDiagnosisCode'});
+                            
+                var claimItem = [];
+                claimItem.push(rowData);
+                var tableHTML = renderPageBlockTable(columns, claimItem); 
+                $("#claimItem").html(tableHTML); 
+                acet.autodoc.startAutodoc('claimItemInfo');
+                
+                $("div[id='claimItem']").find("tr[class='dataRow']").find("td:nth-child(4)").html("<a id='lnkTaxId' href='#'>" + rowData.TaxID + "</a>");
+                $("div[id='claimItem']").find("tr[class='dataRow']").find("td:nth-child(4)").on('click', function(e){ 
+
+                    var primaryCalltopicTabId = '{!JSENCODE($CurrentPage.parameters.primaryCalltopicTabId)}';
+                    var additionalInfoStr = '{!JSENCODE(hpAdditionInfoStr)}';
+                    sforce.console.getEnclosingTabId(function(result) {
+                        var pageurl = '/apex/ACETProviderLookup?taxid='+rowData.TaxID + '&grpnum={!AdditionalInfo.GroupNumber}' + '&benefitPlanId={!AdditionalInfo.BenefitPlanId}' + '&'+'interactionId={!wrapper.Interaction}' +'&' + 'contactId={!JSENCODE(Subject.Id)}'+ '&' + 'sourceOriginator={!SourceOriginator}'+ '&additionalInfo='+encodeURIComponent(additionalInfoStr);                            
+                        pageurl = pageurl + '&primaryCalltopicTabId=' + (primaryCalltopicTabId ? primaryCalltopicTabId : result.id);
+                        console.log('url'+pageurl);
+                        
+                        sforce.console.getFocusedPrimaryTabId(function(result){
+                            sforce.console.openSubtab(result.id, pageurl, true,'Provider Lookup', null);
+                        });       
+                    });
+                });
+                showCoverageMessage(rowData.ServiceStart,rowData.ServiceEnd); 
+            }
+            
+        });  
+        
+        
+        //reveive document delivery result from document detail page        
+        sforce.console.addEventListener('ReceiveDocDeliveryResult_'.concat(claimId), function(r){
+            //console.log(r);
+            $("#docDeliveryResult").html('<span>' + r.message + '</span>'); 
+            window.scrollTo(0,0);
+        });
+                                                                      
+        acet.autodoc.createCommentsbox();
+        
+        
+        //loading claim details
+        if(claimType == '02' || claimType == '2'){
+            //load Institutional Claim          
+            $("#getClaimDetailStatus").html('<span>Loading Institutional Claim...</span>');
+            Visualforce.remoting.Manager.invokeAction(
+               '{!$RemoteAction.ACETClaimDetailController.queryGetInstitutionalClaims}',           
+               claimType,
+               claimId,
+               function(result, event){
+               console.log('process insitutional claims');
+                 processClaimDetail(result);
+                 var codeMap =  prepareCodesmap();
+                 getEncoderProDescription(codeMap);
+                 console.log('POS::::');
+                 var columnNames = ["POS"];
+                 console.log('POS::::');
+                 removeColumnsFromTable('serviceLines',columnNames);
+               }, 
+               {escape: true}
+            );
+
+        }else if(claimType == '03' || claimType == '3'){
+            //load professional Claim
+            $("#getClaimDetailStatus").html('<span>Loading Professional Claim...</span>');
+            Visualforce.remoting.Manager.invokeAction(
+               '{!$RemoteAction.ACETClaimDetailController.queryGetProfessionalClaims}',           
+               claimType,
+               claimId,
+               function(result, event){
+                  processClaimDetail(result);
+                  //prepare map of Section > (CodeType > Set Of codes)
+                   var codeMap =  prepareCodesmap();
+                 getEncoderProDescription(codeMap);
+                 var columnNames = ["Revenue"];
+                 console.log('Revenue::::');
+                 removeColumnsFromTable('serviceLines',columnNames);
+                       }, 
+               {escape: true}
+            );  
+        }                        
+            
+        //autodoc and comments
+        //send over claim detail autodoc to primary call topic      
+        sforce.console.addEventListener('RequestSubTabAutodoc', function(r) {
+            sforce.console.getEnclosingTabId(function(result) {
+                if(r.message == primaryCalltopicTabId){
+                    var res = {};
+                    res.primaryCalltopicTabId = primaryCalltopicTabId;
+                    res.subTabId = result.id;
+                    res.doc = acet.autodoc.saveAutodoc();
+                    sforce.console.fireEvent('ReceiveSubTabAutodoc', JSON.stringify(res));
+                }
+            });
+        });                        
+            sforce.console.addEventListener(
+            'CloseViewAuthorizationSubTab_'.concat(subjectId), function(r) {
+                sforce.console.getEnclosingTabId(function(result) {
+                    var res = {};
+                    res.subTabId = result.id;
+                    res.doc = acet.autodoc.saveAutodoc();
+                    sforce.console.fireEvent('CloseViewAuthorizationSubTab_'.concat(subjectId), JSON.stringify(res));
+                    
+                });
+            });
+            
+        //sync comments between claim search and claim details tabs
+        //only fire at last keyup
+        var timer;
+        $("#autodocComments").keyup(function() {
+            clearTimeout(timer);
+            timer = setTimeout(function() {
+                sforce.console.fireEvent('ClaimCommentsUpdated_'.concat(subjectId), $("#autodocComments").val());
+            }, 500);
+        });
+        
+        //receive comments from search page    
+        sforce.console.addEventListener('ClaimCommentsUpdated_'.concat(subjectId), function(r) {
+        if(r.message != $("#autodocComments").val()){
+            $("#autodocComments").val(r.message);
+            }
+        });
+            
+        //sync comment from claim search when detail page is loaded
+        sforce.console.fireEvent('RequestClaimComments_'.concat(subjectId), subjectId);
+              
+        //close self when requested from claim search page
+        sforce.console.addEventListener('CloseClaimDetailSubTab_'.concat(subjectId), function(r) {
+            sforce.console.getEnclosingTabId(function(result) {
+                var res = {};   
+                res.subTabId = result.id;           
+                res.doc = acet.autodoc.saveAutodoc();                                                  
+                sforce.console.closeTab(result.id);
+            });
+        });
+        
+        //collapse sections by default
+        collapsePBSections("pbsClaimdocs"); 
+        collapsePBSections("pbsClaimTotalCOB");
+       // collapsePBSections("paymentDetailInfo");
+       // collapsePBSections("payeeInfo");
+        collapsePBSections("pbsClaimEdits");
+        collapsePBSections("pbsInOutPatientInfo");
+        collapsePBSections("pbsSurgicalProcedureCode");
+        collapsePBSections("pbsOccurrenceCodes");
+        collapsePBSections("pbsMemberEOB");
+        collapsePBSections("pbsProviderPRA"); 
+        collapsePBSections("pbsClaimLetter");         
+        collapsePBSections("pbsPhysicalHealthLetter");         
+        document.getElementById('defaultOpen').click();
+        
+        
+    });
+     
+     //init claim document pagination datatables
+     function initDataTables(dataTableName, docType,SectionId){
+        if(!acet.datatables[dataTableName].dataTableInited){
+            acet.datatables[dataTableName].initDatatable(); 
+            
+            acet.datatables[dataTableName].processDatatable = function(row, data, dataIndex){
+                //console.log(data);
+                var docId = data["DocumentId"];
+                var docContentType = data["cmis:contentStreamMimeType"];
+                var docName = data["cmis:contentStreamFileName"];
+                var docsize = parseInt(data["cmis:contentStreamLength"]);
+                var isDocSizeMoreThanOneMB;
+                if(docsize){
+                   isDocSizeMoreThanOneMB = (docsize/(1024*1024) >= 1 ? true : false);                    
+                }
+                
+                if(docId){        
+                    $(row).find(":nth-child(1)").html('<a style="text-decoration: underline;cursor:pointer;">' + docId + '</a>');
+                    $(row).find(":nth-child(1)").find("a").click(function(){
+                    
+                                            sforce.console.getFocusedPrimaryTabId(function(result){
+                            var primaryTabId = result.id;
+                            var urlParam = encodeURLParams(window.location.href.split('?')[1]);                             
+                            var url = '/apex/ACETDocument?' + urlParam + '&claimId=' + claimId + '&DocId=' + docId + '&docType=' + docType + '&docContentType=' + docContentType + '&isDocSizeMoreThanOneMB=' + isDocSizeMoreThanOneMB + '&docName=' + docName+'&performaction='+'1'+ '&bookOfBusinessTypeCode={!bookOfBusinessTypeCode}';  
+                     
+                            sforce.console.getEnclosingTabId(function(result) {
+                                url = url + '&parentTabId=' + result.id;
+                                sforce.console.openSubtab(primaryTabId, url, true, 'Document - ' + docId, null, null, 'Document - ' + docId);
+                            });
+                            
+                        });
+                    });
+                }
+            };
+            
+            acet.datatables[dataTableName].drawCallback = function(settings){
+                acet.autodoc.startAutodoc(SectionId); 
+                scrolldown(SectionId);       
+            };
+        }       
+     }      
+        
+    function processClaimPayment(result){
+        if(result.Success){ 
+            //Claim Processed
+            //payees information
+            var columns = [];
+            columns.push({'ColumnName':'Series Designator','DataName':'SeriesDesignator'});
+            columns.push({'ColumnName':'Payment Number','DataName':'CheckEFTNumber'});
+            columns.push({'ColumnName':'Payee Name','DataName':'PayeeName'});
+            columns.push({'ColumnName':'Address','DataName':'PayeeAddress'});
+            columns.push({'ColumnName':'City','DataName':'PayeeCity'});
+            columns.push({'ColumnName':'State','DataName':'PayeeState'});
+            columns.push({'ColumnName':'Zip','DataName':'PayeeZip'});
+              
+            var tableHTML = renderPageBlockTable(columns, result.Response.Payments); 
+            $("#payees").html(tableHTML);  
+            var colCheckEFTNum = getColumnIndex("payees", "Payment Number");           
+            if(colCheckEFTNum > -1){
+                $("#payees").find("tbody").find("tr").each(function(index){
+                    var checkEFTNumber = result.Response.Payments[index].CheckEFTNumber; 
+                    var seriesDesignator = result.Response.Payments[index].SeriesDesignator;  
+                    if(checkEFTNumber){             
+                        $(this).find(":nth-child(" + (colCheckEFTNum + 1) + ")").html('<a style="text-decoration: underline;cursor:pointer;">' + checkEFTNumber + '</a>');
+                        $(this).find(":nth-child(" + (colCheckEFTNum + 1) + ")").find("a").click(function(){
+                            sforce.console.getFocusedPrimaryTabId(function(result){                             
+                                var urlParam = encodeURLParams(window.location.href.split('?')[1]);
+                                             var additionalInfoStr = '{!JSENCODE(hpAdditionInfoStr)}';
+                                var url = '/apex/ACETClaimPayment?' + 'CheckNumber=' + checkEFTNumber + '&SeriesDesignator=' + seriesDesignator +'&payments=true' + '&primaryCalltopicTabId=' + primaryCalltopicTabId + '&memid={!AdditionalInfo.MemberId}'+ '&grpnum={!AdditionalInfo.GroupNumber}' + '&benefitPlanId={!AdditionalInfo.BenefitPlanId}' + '&'+'interactionId={!wrapper.Interaction}' +'&' + 'contactId={!JSENCODE(Subject.Id)}'+ '&' + 'sourceOriginator={!JSENCODE(SourceOriginator)}'+ '&' +'EIDstring= {!EID}'+'&additionalInfo='+encodeURIComponent(additionalInfoStr);
+                                //console.log(url);
+                                sforce.console.openSubtab(result.id, url, true,'Payment Search' + ' - ' + checkEFTNumber, null,null);
+                            });
+                        });
+                    }
+                });
+            }
+            acet.autodoc.startAutodoc('payeeInfo');
+            
+            //payment detail
+            columns = [];
+            columns.push({'ColumnName':'Series Designator','DataName':'SeriesDesignator'});
+            columns.push({'ColumnName':'Payment Number','DataName':'CheckEFTNumber'});
+            columns.push({'ColumnName':'Payment Type','DataName':'PaymentType'});
+            columns.push({'ColumnName':'Payment Issued','DataName':'PaymentIssueDate'});   //new column added
+            columns.push({'ColumnName':'Payment Total','DataName':'PaymentTotal'}); 
+            columns.push({'ColumnName':'Overpayment Withheld','DataName':'OverPaymentWithheld'});
+            //columns.push({'ColumnName':'Bulk Payment','DataName':'BulkPayment'});
+            columns.push({'ColumnName':'Check Status','DataName':''});                  
+            columns.push({'ColumnName':'Cashed','DataName':''});
+            columns.push({'ColumnName':'Void/Stop','DataName':'VoidStopDate'});
+            columns.push({'ColumnName':'Returned','DataName':''});
+            columns.push({'ColumnName':'Remailed','DataName':''});
+            columns.push({'ColumnName':'','DataName':''}); //place holder for check image button
+            
+                                                                                 
+            tableHTML = renderPageBlockTable(columns, result.Response.Payments); 
+            $("#paymentDetail").html(tableHTML);
+            $("#getClaimPaymentStatus").hide();  
+             
+            //add check image button for payment type CHK
+            $("#paymentDetail").find("tbody").find("tr").each(function(){
+                if($(this).find(":nth-child(3)").text() == 'CHK'){
+            
+                   var sd = $(this).find(":nth-child(1)").text();
+                   var np = $(this).find(":nth-child(2)").text();
+                  
+                    
+                    openIDRS(sd,np);
+                    $(this).find(":last-child").html('<input type="button" id="chkimgclick" class="btn" value="Check Image"  ></input>');                 
+            } 
+            });            
+            //add link for view payment on check EFT number
+            var colCheckEFTNum = getColumnIndex("paymentDetail", "Payment Number");           
+            if(colCheckEFTNum > -1){
+                $("#paymentDetail").find("tbody").find("tr").each(function(index){
+                    var checkEFTNumber = result.Response.Payments[index].CheckEFTNumber; 
+                    var seriesDesignator = result.Response.Payments[index].SeriesDesignator;  
+                    if(checkEFTNumber){             
+                        $(this).find(":nth-child(" + (colCheckEFTNum + 1) + ")").html('<a style="text-decoration: underline;cursor:pointer;">' + checkEFTNumber + '</a>');
+                        $(this).find(":nth-child(" + (colCheckEFTNum + 1) + ")").find("a").click(function(){
+                            sforce.console.getFocusedPrimaryTabId(function(result){  
+                                var urlParam = encodeURLParams(window.location.href.split('?')[1]); 
+                                             var additionalInfoStr = '{!JSENCODE(hpAdditionInfoStr)}';
+                               
+                                var url = '/apex/ACETClaimPayment?' + 'CheckNumber=' + checkEFTNumber + '&SeriesDesignator=' + seriesDesignator +'&payments=true' + '&primaryCalltopicTabId=' + primaryCalltopicTabId + '&memid={!AdditionalInfo.MemberId}'+ '&grpnum={!AdditionalInfo.GroupNumber}' + '&benefitPlanId={!AdditionalInfo.BenefitPlanId}' + '&'+'interactionId={!wrapper.Interaction}' +'&' + 'contactId={!JSENCODE(Subject.Id)}'+ '&' + 'sourceOriginator={!SourceOriginator}'+ '&' +'EIDstring={!EID}'+'&additionalInfo='+encodeURIComponent(additionalInfoStr)  ;
+                                sforce.console.openSubtab(result.id, url, true,'Payment Search' + ' - ' + checkEFTNumber, null,null);
+                            });
+                        });
+                    }
+                });
+            }
+            
+            acet.autodoc.startAutodoc('paymentDetailInfo');
+            
+            //call getCheckStatus service for CHK based on series designator and checkEFT number
+            //var colSeriesDesignator = getColumnIndex("paymentDetail", "SeriesDesignator");                      
+            $("#paymentDetail").find("tbody").find("tr").each(function(index){
+                var seriesDesignator = result.Response.Payments[index].SeriesDesignator;
+                var checkEFTNumber = result.Response.Payments[index].CheckEFTNumber;
+                var paymentType = result.Response.Payments[index].PaymentType;
+                if(paymentType == 'CHK' && seriesDesignator && checkEFTNumber){
+                    //load check status
+                    $("#getClaimCheckStatus").html('<span>Loading Check Status...</span>');
+                    Visualforce.remoting.Manager.invokeAction(
+                       '{!$RemoteAction.ACETClaimDetailController.queryCheckStatus}',           
+                       seriesDesignator,
+                       checkEFTNumber,
+                       function(result, event){
+                          console.log("getCheckStatus result:");
+                          console.log(result);  
+                          
+                          processCheckStatus(result);
+                       }, 
+                       {escape: true}
+                    );      
+                }       
+            });
+            
+        }else{
+            //set error message                              
+            $("#getClaimPaymentStatus").html('<div><span>' + result.Message + '</span></div>');      
+            addStdErrorMsgPmt(result.statusCode);   
+        }   
+    }
+    
+    //process institutional or professional details
+                         var loadedWindows = [];          
+                         var insertlocalstorage ;
+                         var insertLocalJsonData ;
+                         var insertLocalResult;
+    function processClaimDetail(result){
+        insertLocalResult = result;
+        insertLocalJsonData = JSON.stringify(result);
+        if(result.Success){ 
+       // localStorage.setItem("ClaimData_{!ClaimId}" , insertLocalJsonData );
+         //                localStorage.setItem("CurrentClaimData_{!ClaimId}", insertCurrClaimData );                    
+                         
+            //summary
+            var status = '{!$Label.Claim_StatusCode_to_display_Processed_Date}';
+            console.log('status@@@ ' + status);
+            var servicestatus = '{!JSENCODE($CurrentPage.parameters.claimstatuscode)}';
+            console.log('servicestatus@@@ ' + servicestatus);
+            console.log('status@@@ ' + status);
+            if(servicestatus == status){
+                console.log('Inside status@@@ ');
+            $("[data-name='ClaimProcessed']").text(result.Response.ClaimProcessed);
+                }
+            $("[data-name='GroupNumber']").text(result.Response.GroupNumber);
+            $("[data-name='ClaimSplitIndicator']").text(result.Response.ClaimSplitIndicator);
+            $("[data-name='ReceivedDate']").text(result.Response.ReceivedDate);
+            $("[data-name='BillType']").text(result.Response.BillType);
+            $("[data-name='ReferenceClaimID']").text(result.Response.ReferenceClaimID);                
+            $("[data-name='TimelyFilingLimit']").text(result.Response.TimelyFilingLimit);
+            $("[data-name='AdmitDate']").text(result.Response.AdmitDate);
+            $("[data-name='ClaimEventType']").text(result.Response.ClaimEventType);
+            $("[data-name='PatientAccountNumber']").text(result.Response.PatientAccountNumber);
+            $("[data-name='PatientName']").text(result.Response.PatientName);
+            $("[data-name='PatientDOB']").text(result.Response.PatientDOB);
+            $("[data-name='AdmitTime']").text(result.Response.AdmitTime);
+            $("[data-name='ClaimEventSequenceNumber']").text(result.Response.ClaimEventSequenceNumber);
+            $("[data-name='SubmissionType']").text(result.Response.SubmissionType);
+            $("[data-name='DCN']").text(result.Response.DCN);                
+            $("[data-name='relatedIcns']").text(result.Response.relatedIcns); 
+                acet.autodoc.startAutodoc('pbsGeneralInfo');
+            //total UHC
+            var columns = [];
+            columns.push({'ColumnName':'Status','DataName':'Status'});
+            columns.push({'ColumnName':'Charged','DataName':'Charged'});
+            columns.push({'ColumnName':'Reduction','DataName':'ReimbursementReduction'});
+            columns.push({'ColumnName':'Allowed','DataName':'Allowed'});
+            columns.push({'ColumnName':'Penalty','DataName':'Penalty'});
+            columns.push({'ColumnName':'Interest Paid','DataName':'InterestPaid'});
+            columns.push({'ColumnName':'NY Surcharge Paid','DataName':'NYSurchargePaid'});
+            columns.push({'ColumnName':'Health Plan Paid','DataName':'HealthPlanPaid'});
+            
+            var tableHTML = renderPageBlockTable(columns, result.Response.TotalUHCs); 
+            $("#totalUHC").html(tableHTML);  
+                acet.autodoc.startAutodoc('pbsTotalUHC');
+           
+            
+            //Member Responsibility 
+            columns = [];
+            columns.push({'ColumnName':'Deductible','DataName':'Deductible'});
+            columns.push({'ColumnName':'Copay','DataName':'Copay'});
+            columns.push({'ColumnName':'Coinsurance','DataName':'Coinsurance'});
+            columns.push({'ColumnName':'Reduction','DataName':'ReimbursementReduction'});
+            columns.push({'ColumnName':'Penalty','DataName':'Penalty'});
+            columns.push({'ColumnName':'Total Member Responsibility','DataName':'TotalMemberResponsibility'});
+                       
+             tableHTML = renderPageBlockTable(columns, result.Response.MemberResponsibility); 
+            $("#MemberResponsibility").html(tableHTML);  
+            acet.autodoc.startAutodoc('pbsMemberResponsibility');   
+            
+            //Provider Responsibility
+            columns = [];
+            columns.push({'ColumnName':'Reduction','DataName':'ReimbursementReduction'});
+            columns.push({'ColumnName':'Penalty','DataName':'Penalty'});  
+            columns.push({'ColumnName':'Total Provider Responsibility','DataName':'TotalProviderResponsibility'});
+                            
+                  
+             tableHTML = renderPageBlockTable(columns, result.Response.ProviderResponsibility); 
+              $("#ProviderResponsibility").html(tableHTML);  
+            acet.autodoc.startAutodoc('pbsProviderResponsibility');            
+            
+            //total COB
+            columns = [];
+            columns.push({'ColumnName':'Status','DataName':'Status'});
+            columns.push({'ColumnName':'Other Insurance Type','DataName':'OtherInsuranceType'});
+            columns.push({'ColumnName':'Charged','DataName':'Charged'}); 
+            columns.push({'ColumnName':'Not Covered','DataName':'NotCovered'}); 
+            columns.push({'ColumnName':'Paid','DataName':'Paid'}); 
+            columns.push({'ColumnName':'Member Responsibility','DataName':'MemberResponsibility'}); 
+            columns.push({'ColumnName':'COB Method','DataName':'COBMethod'});               
+                                                             
+            tableHTML = renderPageBlockTable(columns, result.Response.TotalCOB); 
+            $("#totalCOB").html(tableHTML); 
+                acet.autodoc.startAutodoc('pbsClaimTotalCOB');
+            //Claim Code
+            columns = [];
+            columns.push({'ColumnName':'Line','DataName':'serviceLineID'});
+            columns.push({'ColumnName':'Benefit Code','DataName':'BenefitCode'}); 
+            columns.push({'ColumnName':'Remark Code','DataName':'RemarkCode'});
+            columns.push({'ColumnName':'Member Remark Description','DataName':'RemarkCodeMemberDescription'}); 
+            columns.push({'ColumnName':'Provider Remark Description','DataName':'RemarkCodeProviderDescription'});  
+                                                             
+            tableHTML = renderPageBlockTable(columns, result.Response.ClaimCode); 
+            $("#claimCode").html(tableHTML);
+            if(result.Response.ClaimCode != '') {
+                $("#claimCode").find('.list').tablesorter({ 
+                     headers: {
+                            1: { sorter: false },
+                            2: { sorter: false },
+                            3: { sorter: false },
+                            4: { sorter: false },
+                            5: { sorter: false }
+                       },
+                       sortList : [[0,0]]
+                 });
+             }
+            acet.autodoc.startAutodoc('claimCodeInfo');
+              
+            //Service Line
+            columns = [];
+            columns.push({'ColumnName':'Line','DataName':'ServiceLineCode'});
+            columns.push({'ColumnName':'Original Line','DataName':'alphaParentLineNum'});
+            columns.push({'ColumnName':'Status','DataName':'Status'});
+            columns.push({'ColumnName':'Benefit Level','DataName':'BenefitLevel'});
+            columns.push({'ColumnName':'Quality Tier','DataName':'qualityTierValue'});
+            columns.push({'ColumnName':'Start Date','DataName':'StartDate'});
+            columns.push({'ColumnName':'End Date','DataName':'EndDate'});
+            columns.push({'ColumnName':'POS','DataName':'PlaceofService'});
+            columns.push({'ColumnName':'Revenue','DataName':'Revenue'}); 
+            columns.push({'ColumnName':'Procedure','DataName':'Procedure'}); 
+            columns.push({'ColumnName':'Modifier','DataName':'Modifier'});           
+            columns.push({'ColumnName':'Dx Pointer','DataName':'DxPointer'});              
+            columns.push({'ColumnName':'Units','DataName':'Units'});
+            columns.push({'ColumnName':'Charged','DataName':'Charged'});
+            columns.push({'ColumnName':'Allowed','DataName':'Allowed'});
+            columns.push({'ColumnName':'Copay','DataName':'Copay'});
+            columns.push({'ColumnName':'Deductible','DataName':'Deductible'});
+            columns.push({'ColumnName':'Coinsurance','DataName':'Coinsurance'});
+            columns.push({'ColumnName':'Paid','DataName':'Paid'});
+            columns.push({'ColumnName':'%','DataName':'Percent'});
+            columns.push({'ColumnName':'Reduction','DataName':'ReimbursementReduction'});
+            columns.push({'ColumnName':'Penalty','DataName':'Penalty'});
+            columns.push({'ColumnName':'Authorization #','DataName':'Authorization'}); 
+            columns.push({'ColumnName':'Referral #','DataName':'ReferralNumber'});                                               
+                                                                                          
+            tableHTML = renderPageBlockTable(columns, result.Response.ServiceLines); 
+            $("#serviceLines").html(tableHTML);
+            if(result.Response.ServiceLines != '') {
+                $("#serviceLines").find('.list').tablesorter({ 
+                     headers: {
+                            1: { sorter: false },
+                            2: { sorter: false },
+                            3: { sorter: false },
+                            4: { sorter: false },
+                            5: { sorter: false },
+                            6: { sorter: false },
+                            7: { sorter: false },
+                            8: { sorter: false },
+                            9: { sorter: false },
+                            10: { sorter: false },
+                            11: { sorter: false },
+                            12: { sorter: false },
+                            13: { sorter: false },
+                            14: { sorter: false },
+                            15: { sorter: false },
+                            16: { sorter: false },
+                            17: { sorter: false },
+                            18: { sorter: false },
+                            19: { sorter: false },
+                            20: { sorter: false },
+                            21: { sorter: false },
+                            22: { sorter: false }
+                       },
+                       sortList : [[0,0]]
+                 });
+             }
+             
+            //add link for Authorization
+            var colAuth = getColumnIndex("serviceLines", "Authorization #");            
+            if(colAuth > -1){
+                $("#serviceLines").find("tbody").find("tr").each(function(index){
+                    var authNumber = result.Response.ServiceLines[index].Authorization; 
+                    if(authNumber){             
+                        $(this).find(":nth-child(" + (colAuth + 1) + ")").html('<a style="text-decoration: underline;cursor:pointer;">' + authNumber + '</a>');
+                        $(this).find(":nth-child(" + (colAuth + 1) + ")").find("a").click(function(){
+                            sforce.console.getFocusedPrimaryTabId(function(result){                             
+                                var urlParam = encodeURLParams(window.location.href.split('?')[1]); 
+                                var url = '/apex/ACETViewAuthorization?' + 'authNumber=' + authNumber + '&primaryCalltopicTabId=' + primaryCalltopicTabId + '&additionalInfo={!JSENCODE(hpAdditionInfoStr)}' + '&memid={!AdditionalInfo.MemberId}'+ '&grpnum={!AdditionalInfo.GroupNumber}' + '&benefitPlanId={!AdditionalInfo.BenefitPlanId}' + '&'+'interactionId={!wrapper.Interaction}' +'&' + 'contactId={!JSENCODE(Subject.Id)}'+ '&' + 'sourceOriginator={!JSENCODE(SourceOriginator)}'+ '&' + 'SRK={!surrogateKey}';
+                                sforce.console.openSubtab(result.id, url, true,'View Authorizations' + ' - ' + authNumber, null,null);
+                            });
+                        });
+                    }
+                });
+            }
+            
+            //add link for view referral number
+            var colRef = getColumnIndex("serviceLines", "Referral #");           
+            if(colRef > -1){
+                $("#serviceLines").find("tbody").find("tr").each(function(index){
+                    var refNumber = result.Response.ServiceLines[index].ReferralNumber; 
+                    if(refNumber){              
+                        $(this).find(":nth-child(" + (colRef + 1) + ")").html('<a style="text-decoration: underline;cursor:pointer;">' + refNumber + '</a>');
+                        $(this).find(":nth-child(" + (colRef + 1) + ")").find("a").click(function(){
+                            sforce.console.getFocusedPrimaryTabId(function(result){                             
+                                var urlParam = encodeURLParams(window.location.href.split('?')[1]);
+                                var url = '/apex/ACETReferralSearch?' + 'referralNumber=' + refNumber + '&primaryCalltopicTabId=' + primaryCalltopicTabId + '&additionalInfo={!JSENCODE(hpAdditionInfoStr)}' + '&memid={!AdditionalInfo.MemberId}'+ '&grpnum={!AdditionalInfo.GroupNumber}' + '&benefitPlanId={!AdditionalInfo.BenefitPlanId}' + '&'+'interactionId={!wrapper.Interaction}' +'&' + 'contactId={!JSENCODE(Subject.Id)}'+ '&' + 'sourceOriginator={!JSENCODE(SourceOriginator)}'+ '&' + 'SRK={!surrogateKey}';
+                                //console.log(url);
+                                sforce.console.openSubtab(result.id, url, true,'View PCP Referrals' + ' - ' + refNumber, null,null);
+                            });
+                        });
+                    }
+                });
+            }
+            acet.autodoc.startAutodoc('serviceLinesInfo');
+            //Claim Diagnosis
+            columns = [];
+            if(claimType == '03' || claimType == '3'){
+            columns.push({'ColumnName':'Diagnosis Sequence','DataName':'SequenceNumber'});
+            }
+            columns.push({'ColumnName':'Diagnosis Code','DataName':'DiagnosisCode'});
+            if(claimType == '02' || claimType == '2'){
+            columns.push({'ColumnName':'POA','DataName':'POA'});
+            }
+                
+            tableHTML = renderPageBlockTable(columns, result.Response.ClaimDiagnosis); 
+            $("#claimDiagnosis").html(tableHTML); 
+            if(result.Response.ClaimDiagnosis != '') {
+                $("#claimDiagnosis").find('.list').tablesorter({ 
+                 headers: {
+                        1: { sorter: false },
+                        2: { sorter: false }
+                        
+                   },
+                   sortList : [[0,0]]
+                 });
+            }    
+            acet.autodoc.startAutodoc('claimDiagnosisInfo');
+            //Claim Edits
+            columns = [];
+            columns.push({'ColumnName':'Line','DataName':'ServiceLine'});
+            columns.push({'ColumnName':'Edit Type','DataName':'EditType'});
+            columns.push({'ColumnName':'Edit Action','DataName':'EditAction'});
+            columns.push({'ColumnName':'Edit Description','DataName':'EditDescription'});
+            tableHTML = renderPageBlockTable(columns, result.Response.ClaimEdits)
+            $("#claimEdits").html(tableHTML); 
+            if(result.Response.ClaimEdits != '') {
+                $("#claimEdits").find('.list').tablesorter({ 
+                 headers: {
+                        1: { sorter: false },
+                        2: { sorter: false },
+                        3: { sorter: false },
+                        4: { sorter: false },
+                        5: { sorter: false }
+                   },
+                   sortList : [[0,0]]
+                 });
+            }
+            acet.autodoc.startAutodoc('pbsClaimEdits');
+            //patient Information
+            if(result.Response.PatientInformation){
+                $("[data-name='SurgeryDate']").text(result.Response.PatientInformation.SurgeryDate);
+                $("[data-name='SemiPrivateRoom']").text(result.Response.PatientInformation.SemiPrivateRoom);
+                $("[data-name='DRGNumber']").text(result.Response.PatientInformation.DRGNumber);
+                $("[data-name='Discharge']").text(result.Response.PatientInformation.Discharge);
+            }
+               acet.autodoc.startAutodoc('pbsInOutPatientInfo');
+            //Surgical Procedure Code
+            columns = [];
+            columns.push({'ColumnName':'Procedure Code','DataName':'ProcedureCode'});
+            columns.push({'ColumnName':'Procedure Description','DataName':'ProcedureDescription'});                
+                
+            tableHTML = renderPageBlockTable(columns, result.Response.SurgicalProcedureCodes); 
+            $("#surgicalProcedureCodes").html(tableHTML); 
+                acet.autodoc.startAutodoc('pbsSurgicalProcedureCode');
+            //Cause Code
+            columns = [];
+            columns.push({'ColumnName':'Cause Code','DataName':'CauseCode'});
+            columns.push({'ColumnName':'Cause Description','DataName':'CauseDescription'});                
+                
+            tableHTML = renderPageBlockTable(columns, result.Response.CauseCode); 
+            $("#causeCode").html(tableHTML); 
+            
+            //Occurrence Codes
+            columns = [];
+            columns.push({'ColumnName':'Occurrence Code','DataName':'OccurrenceCode'});
+            columns.push({'ColumnName':'Occurrence Description','DataName':'OccurrenceDescription'});                                
+            columns.push({'ColumnName':'Occurrence Date','DataName':'OccurrenceDate'});  
+                                
+            tableHTML = renderPageBlockTable(columns, result.Response.OccurrenceCodes); 
+            $("#occurrenceCodes").html(tableHTML);
+                acet.autodoc.startAutodoc('pbsOccurrenceCodes');
+            
+            //Occurrence Span Codes
+            columns = [];
+            columns.push({'ColumnName':'Occurrence Span Code','DataName':'OccurrenceSpanCode'});
+            columns.push({'ColumnName':'Occurrence Span Description','DataName':'OccurrenceSpanDescription'});                                
+            columns.push({'ColumnName':'Start Date','DataName':'OccurrenceSpanStartDate'}); 
+            columns.push({'ColumnName':'End Date','DataName':'OccurrenceSpanEndDate'}); 
+                                
+            tableHTML = renderPageBlockTable(columns, result.Response.OccurrenceSpanCodes); 
+            $("#occurrenceSpanCodes").html(tableHTML);
+            acet.autodoc.startAutodoc('pbsOccurrenceCodes');
+        //Claim Event History
+            columns = [];
+            columns.push({'ColumnName':'Event Sequence Number','DataName':'EventSequenceNumber'});
+            columns.push({'ColumnName':'Event Type','DataName':'EventType'});                                
+            columns.push({'ColumnName':'Event Date','DataName':'claimEventAdjudicationDateTime'});                    
+            tableHTML = renderPageBlockTable(columns, result.Response.ClaimEvents); 
+            $("#claimEventHistory").html(tableHTML);
+            var colEventType = getColumnIndex("claimEventHistory", "Event Type");           
+            if(colEventType > -1){
+                $("#claimEventHistory").find("tbody").find("tr").each(function(index){
+                    var eventType = result.Response.ClaimEvents[index].EventType;
+                    var eventID = result.Response.ClaimEvents[index].EventID; 
+                    var eventSequenceNumber = result.Response.ClaimEvents[index].EventSequenceNumber;  
+
+                    if(eventType){   
+                        $(this).find(":nth-child(" + (colEventType + 1) + ")").html('<a style="text-decoration: underline;cursor:pointer;">' + eventType + '</a>');
+                        $(this).find(":nth-child(" + (colEventType + 1) + ")").find("a").click(function(){
+                        if(insertlocalstorage != 'true' && insertLocalJsonData != '' && insertCurrClaimData  != ''){                                                 
+                         localStorage.setItem("ClaimData_{!ClaimId}" , insertLocalJsonData );
+                         localStorage.setItem("CurrentClaimData_{!ClaimId}", insertCurrClaimData );                    
+                          insertlocalstorage = 'true';
+                          }
+                            var windObj = window.open("/apex/ACETClaimHistoryWindow?eventType=" + eventType + "&eventID=" + eventID + "&claimID={!ClaimId}"+"&claimType={!ClaimType}"+"&claimstatus={!claimStatus}"+ "&eventSequenceNumber=" + eventSequenceNumber + "&claimstatuscode=" + servicestatus, "", 'toolbars=0, width=1333, height=706 ,left=0 ,top=0 ,scrollbars=1 ,resizable=1');
+                              loadedWindows.push( windObj);
+  
+                        });
+                    }
+                });
+            }    
+            acet.autodoc.startAutodoc('pbsClaimEventHistory');
+            $("#getClaimDetailStatus").hide();
+          }else{
+            //call acet error handler with action function, pass status code through to controller thru parameter - JW
+            addStdErrorMsgClm(result.statusCode);
+            //$("#getClaimDetailStatus").html('<div><span>' + result.statusCode + ' ' + result.Message + '</span></div>');   
+            $("#getClaimDetailStatus").html('<div><span>' + '</span></div>');   
+            
+          }
+    }
+    
+    function processNotesSection(){
+        var result = insertLocalResult;
+        if(result.Success){
+            
+            //claim notes
+            var columns = [];
+            //columns.push({'ColumnName':'Claim Note Type Code','DataName':'noteTypeCode'});
+            columns.push({'ColumnName':'Text','DataName':'noteTypeText'});
+            columns.push({'ColumnName':'Create Date','DataName':'notesCreatedDate'});
+            columns.push({'ColumnName':'Created By','DataName':'notesCreatedBy'});
+            
+            var tableHTML = renderPageBlockTable(columns, result.Response.claimNotesUser); 
+            $("#claimNotesUser").html(tableHTML);  
+            acet.autodoc.startAutodoc('pbsClaimNotesUser');
+            
+            
+            var columns = [];
+            //columns.push({'ColumnName':'Claim Note  Type Code','DataName':'noteTypeCode'});
+            columns.push({'ColumnName':'Text','DataName':'noteTypeText'});
+            columns.push({'ColumnName':'Create Date','DataName':'notesCreatedDate'});
+            columns.push({'ColumnName':'Created By','DataName':'notesCreatedBy'});
+            
+            var tableHTML = renderPageBlockTable(columns, result.Response.claimNotesSystem); 
+            $("#claimNotesSystem").html(tableHTML);  
+            acet.autodoc.startAutodoc('pbsClaimNotesSystem');
+            claimNotesServiceDone = 'Done';
+            result = '';
+            insertLocalResult = ''; 
+        }
+    }
+    
+    function processCheckStatus(result){
+        if(result.Success){
+            var colSeriesDesignator = getColumnIndex("paymentDetail", "Series Designator");
+            var colCheckEFTNumber = getColumnIndex("paymentDetail", "Payment Number"); 
+            var colPaymentType = getColumnIndex("paymentDetail", "Payment Type");  
+            //Retreiving the Column Index For Payment Issued Column added.
+            var colPaymentIssueDate = getColumnIndex("paymentDetail", "Payment Issued");
+            var colCheckStatus = getColumnIndex("paymentDetail", "Check Status");
+            var colSent = getColumnIndex("paymentDetail", "Sent");
+            var colCashed = getColumnIndex("paymentDetail", "Cashed");
+            var colVoidStop = getColumnIndex("paymentDetail", "Void/Stop");
+            var colReturned = getColumnIndex("paymentDetail", "Returned");
+            var colReemailed = getColumnIndex("paymentDetail", "Remailed");
+                    
+            $("#paymentDetail").find("tbody").find("tr").each(function(index){
+                var seriesDesignator = $(this).find(":nth-child(" + (colSeriesDesignator + 1) + ")").text();
+                var checkEFTNumber = $(this).find(":nth-child(" + (colCheckEFTNumber + 1) + ")").text();
+                var paymentType = $(this).find(":nth-child(" + (colPaymentType + 1) + ")").text();
+                //Getting the value 
+                var PaymentIssueDate = $(this).find(":nth-child(" + (colPaymentIssueDate + 1) + ")").text();
+                
+                if(paymentType == 'CHK'){
+                    //console.log(result.Response.Payments[0].Sent);
+                }
+                console.log('result.Response.Payments[0]:::'+result.Response.Payments[0].VoidStop);                
+                if(paymentType == 'CHK' && seriesDesignator == result.Response.Payments[0].SeriesDesignator && checkEFTNumber == result.Response.Payments[0].CheckEFTNumber){
+                    
+                    $(this).find(":nth-child(" + (colCheckStatus + 1) + ")").html(result.Response.Payments[0].CheckStatus);
+                    $(this).find(":nth-child(" + (colSent + 1) + ")").html(result.Response.Payments[0].Sent);
+                    $(this).find(":nth-child(" + (colCashed + 1) + ")").html(result.Response.Payments[0].Cashed);
+                    $(this).find(":nth-child(" + (colVoidStop + 1) + ")").html(result.Response.Payments[0].VoidStop);
+                    $(this).find(":nth-child(" + (colReturned + 1) + ")").html(result.Response.Payments[0].Returned);
+                    $(this).find(":nth-child(" + (colReemailed + 1) + ")").html(result.Response.Payments[0].Reemailed);
+                }                               
+            });
+            
+            ////console.log(colCheckStatus);
+            ////console.log(result.Response.Payments[0].CheckStatus);
+            
+            $("#getClaimCheckStatus").hide();               
+        }else{
+            $("#getClaimCheckStatus").hide();
+            //$("#getClaimCheckStatus").html('<div><span>' + result.Message + '</span></div>');
+            
+        }   
+    }
+    
+    function renderPageBlockTable(columns, data){
+        //console.log("data >> "+JSON.stringify(data));
+        var html = '';        
+        if(data){
+            html += '<table class="list" cellspacing="0" cellpadding="0" border="0">';
+            html += '<thead><tr class="headerRow">';
+            for(var i = 0; i < columns.length; i++){
+                html += '<th class="headerRow">' + columns[i].ColumnName + '</th>';
+            }
+            html += '</tr></thead><tbody>';        
+            for(var i = 0; i < data.length; i++){
+                html += '<tr class="dataRow">';
+                for(var j = 0; j < columns.length; j++){
+                
+               //console.log(columns[j].DataName);
+                
+                   // if(columns[j].DataName == 'RevenueCode' || columns[j].DataName == 'Revenue' || columns[j].DataName == 'Procedure' || columns[j].DataName == 'DiagnosisCode' || columns[j].DataName == 'ProcedureCode'){
+                        //html += '<td class="dataCell encoder-tooltip">' + (typeof data[i][columns[j].DataName] == 'undefined' ? '' : data[i][columns[j].DataName]) + '<span class = "eptooltip-modal">'+ data[i][columns[j].DataName + "EncoderProDescription"]+'</span>'+'</td>';
+                    
+                    //}else{
+                    if(columns[j].DataName == 'RevenueCode' || columns[j].DataName == 'Revenue' || columns[j].DataName == 'Procedure' || columns[j].DataName == 'DiagnosisCode' || columns[j].DataName == 'ProcedureCode' || columns[j].DataName =='PrimaryDiagnosisCode' || columns[j].DataName =='Modifier' || columns[j].DataName == 'DiagnosisCode')
+                        html += '<td class="dataCell"><span class="encoder-pro-code">' + (typeof data[i][columns[j].DataName] == 'undefined' ? '' : data[i][columns[j].DataName]) + '</span></td>';
+                    else
+                        html += '<td class="dataCell">' + (typeof data[i][columns[j].DataName] == 'undefined' ? '' : data[i][columns[j].DataName]) + '</td>';
+                    //}
+                    
+                    //html += '<td class="dataCell">';
+                    //String strClassName = (typeof data[i][columns[j].DataName] == 'RevenueCode' ? ',tooltip-modal">' : '">');    
+                    //html += strClassName;
+                    //html += (typeof data[i][columns[j].DataName] == 'undefined' ? '' : data[i][columns[j].DataName]) + '</td>';   
+                }
+                html += '</tr>';    
+            }       
+            html += '</tbody></table>';
+        }
+                        
+        return html;
+    }
+    
+    function getColumnIndex(tableName, colName){
+        var result = -1;
+        $("#" + tableName).find("thead").find("th").each(function(index){           
+            if($(this).text() === colName){
+                result = index;
+            }
+        }); 
+        return result;
+    }
+    
+    function encodeURLParams(url){
+        var urlParams = url.replace('+', ' ').split('&');
+        for(var i = 0; i < urlParams.length; i++){
+            var urlParamParts = urlParams[i].split('=');
+            if(urlParamParts.length == 2){
+                urlParams[i] = encodeURIComponent(decodeURIComponent(urlParamParts[0])) + '=' + encodeURIComponent(decodeURIComponent(urlParamParts[1]));   
+            }else{
+                urlParams[i] = encodeURIComponent(decodeURIComponent(urlParamParts[0]));    
+            }           
+        }
+        return urlParams.join('&');
+    }
+    
+    function collapsePBSections(parentId){
+        var selector = "[Id$='" + parentId + "']";
+        $(selector).find(".pbSubheader").each(function(){
+            if($(this).find(".hideListButton").get().length > 0){           
+                twistSection($(this).find(".hideListButton").get(0));
+            }
+        });
+    }
+    
+        function closeChildWindows(){
+        console.log('Entered');
+  try{
+  console.log('cloase called');
+  loadedWindows.forEach(function(loadedWindow){
+  
+      loadedWindow.close();
+  });
+    }
+    catch(err) {
+      console.log('cloase called'+err);
+
+    }
+}
+  function showCoverageMessage(ServiceStart,ServiceEnd){
+  var ServiceStart = new Date (ServiceStart);
+  var ServiceEnd = new Date (ServiceEnd);
+  var EffectiveDate = new Date ('{!wrapper.AdditionalInfo.EffectiveDate}');
+  var EndDate = new Date ('{!wrapper.AdditionalInfo.EndDate}');
+    if(EffectiveDate!='Invalid Date' && EndDate!='Invalid Date'){
+         if(+EffectiveDate <= +ServiceStart && +EndDate >= +ServiceEnd) {
+            console.log('Claim DOS is inside of the selected coverage period.');
+        }else{
+            showCoverageMessagename();
+        }
+    }
+  }
+function removeStyle(){
+ $("#pdmsgNew").removeAttr("style");
+
+}
+    var claimErr;
+    var paymentErr;
+    
+    function showClmErrMsg(){
+         if(tabClicked=='Claim'){
+            $("#errMsgClm").css("display","block");
+         }      
+         claimErr = true;
+    }
+    function showPmtErrMsg(){
+        if(tabClicked=='Payments'){
+            $("#errMsgPmt").css("display","block");
+        }   
+        paymentErr = true;
+    }
+    
+    $('#chkimgclick').click(function(){
+        alert("JQuery Running!");
+    });
+    
+    </script>
+    <style type="text/css">
+        .sorting_disabled{
+        width: 158px !important;
+        padding-left: 58px !important;
+        }
+        #datatableProviderPRA{
+            width: 749px !important;
+        }
+        #datatableMemberEOB{
+            width: 749px !important;
+        }
+        #datatableClaimLetter{
+            width: 749px !important;
+        }
+        #datatablePhysicalHealthLetter{
+            width: 749px !important;
+        }#datatableProviderPRA tbody tr td.autodoc{
+            padding-left: 10px;
+        }
+        #datatableMemberEOB tbody tr td.autodoc{
+            padding-left: 10px;
+        }
+        #datatableClaimLetter tbody tr td.autodoc{
+            padding-left: 10px;
+        }
+        #datatablePhysicalHealthLetter tbody tr td.autodoc{
+            padding-left: 10px;
+        }
+        #datatableProviderPRA thead tr th.autodoc{
+            padding-left: 10px;
+            width: 15px !important;
+        }
+        #datatableMemberEOB thead tr th.autodoc{
+            padding-left: 10px;
+            width: 15px !important;
+        }
+        #datatableClaimLetter thead tr th.autodoc{
+            padding-left: 10px;
+            width: 44px;
+        }
+        #datatablePhysicalHealthLetter thead tr th.autodoc{
+            padding-left: 10px;
+            width: 44px;
+        }
+        #datatableProviderPRA tbody tr td{
+            padding-left: 56px;
+        }
+        #datatableMemberEOB tbody tr td{
+            padding-left: 56px;
+        }
+        #datatableClaimLetter tbody tr td{
+            padding-left: 56px;
+        }
+        #datatablePhysicalHealthLetter tbody tr td{
+            padding-left: 56px;
+        }
+        th.autodoc{
+            width: 25px !important;
+        }
+        #claimNotesUser table thead th:nth-child(2){
+            width: 80% !important;
+        }
+        #claimNotesSystem table thead th:nth-child(2){
+            width: 80% !important;
+    }
+        .imgclass:hover {
+        background-image: url('/img/help/helpOrbs.gif');
+        background-repeat: no-repeat;
+        width: 16px;
+        height: 15px;
+        background-position: right;
+        }
+        
+        .imgclass {
+        background-image: url('/img/help/helpOrbs.gif');
+        background-repeat: no-repeat;
+        width: 16px;
+        height: 15px;
+        }
+        
+        .rightclass {
+        text-align: right;
+        }
+        
+        .tooltip-modal{
+        background-color: #f5f5f5;
+            z-index: 9999;
+            padding: 10px;
+            position: absolute;
+            display: none;
+            width: 15%;
+            box-shadow: 1px 1px 1px #bbbbbb;
+            border-style: ridge; 
+            border-width: 1px;  
+        }        
+        
+    </style>
+    <script>
+    $(function() {
+            $(document).tooltip({
+            track:true});
+            });
+    </script>
+   
+  <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+      <div align="left"> <a href="#" id="backToToP" style="color:Blue" >Back To Top</a> </div>  
+</apex:page>

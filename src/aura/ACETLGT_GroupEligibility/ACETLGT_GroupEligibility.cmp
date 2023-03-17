@@ -1,0 +1,440 @@
+<aura:component implements="lightning:isUrlAddressable" controller="ACETLGT_GroupEligibilityController">
+    <!--   Attributes  -->
+    <aura:attribute name="cseTopic" type="String" access="global" default="Group Eligibility"/>
+    <aura:attribute name="srk" type="String" access="global" />
+    <aura:attribute name="int" type="Interaction__c" access="global" />
+    <aura:attribute name="intId" type="String" access="global" />
+    <aura:attribute name="memId" type="String" access="public"/>
+    <aura:attribute name="grpNum" type="String" access="public"/>
+    <aura:attribute name="AutodocKey" type="string" access="public" default="GRE"/>
+    <aura:attribute name="bookOfBusinessTypeCode" type="String" />
+    <aura:attribute name="usInfo" type="user" access="public"/>
+    <aura:attribute name="isLoading" type="Boolean" default="false" />
+    <!-- Highlight Panel -->
+    <aura:attribute name="highlightPanel" type="ACETLGT_HighlightPanelInfo" access="global"/>
+    <aura:attribute name="hgltPanelDataString" type="String" access="global"/>   
+    <aura:attribute name="contractOptionId" type="String" default="" access="public"/>
+    <aura:attribute name="contractOptionEffDate" type="String" default="" access="public"/>
+    <aura:attribute name="contractOptionStatus" type="String" default="" access="public"/>
+    <aura:attribute name="benEffDate" type="String" default="" access="public"/>
+    <aura:attribute name="benEndDate" type="String" default="" access="public"/>
+    <aura:attribute name="isMemberFlow" type="String" default="false" access="public"/>
+    <aura:attribute name="internalContacts" type="Object"/>
+    <aura:attribute name="selectedPolicyContract" type="Object"/>
+    <aura:attribute name="insuringRules" type="Object" />
+    <aura:attribute name="isPop" type="Boolean" />
+    <aura:attribute name="settingsResultMap" type="List"/>
+    <aura:attribute name="allGroupInsuringResults" type="List" />
+    <aura:attribute name="populationsList" type="List" />
+    <aura:attribute name="isShowPopulation" type="Boolean" />
+    <aura:attribute name="datesList" type="List" />
+    <aura:attribute name="dateSelected" type="String" />
+    <aura:attribute name="populationSelected" type="String" />
+    <aura:attribute name="groupSettingsObj" type="Object" />
+    
+        <!--	action handlers 	-->
+        <aura:handler name="init" action="{!c.doInit}" value="{!this}" />
+        
+        <ltng:require styles="{!$Resource.ACETLGT_MasterStyle}" />
+    <div id="{!v.AutodocKey}">
+	<c:ACETLGT_AutoDoc></c:ACETLGT_AutoDoc>  
+        <!--   top panel ends -->
+        <lightning:card
+                variant="Narrow"
+                title="Group Eligibility"
+                iconName="standard:home"
+                class="gre-card margin-sides-full-size margin-top-full-size " 
+                >
+    
+            <aura:set attribute="actions">
+                <div class="slds-grid slds-form-element slds-m-right_large" >
+                    <lightning:buttonGroup>
+                            <c:ACETLGT_TTSModal aura:id = "cComp"
+                            cseTopic="Group Eligibility" 
+                            int="{!v.int}" 
+                            intId="{!v.intId}" 
+                            srk="{!v.srk}" 
+                            bookOfBusinessTypeCode="{!v.bookOfBusinessTypeCode}"
+                            showCirrus="true"                                        
+                            memberId="{!v.memId}"
+                            groupId="{!v.grpNum}" 
+                            highlightPanel="{!v.highlightPanel}"
+                            pagefeature="{!v.AutodocKey}"
+                            userInfo="{!v.usInfo}"
+                            AutodocKey="{!v.AutodocKey}"
+                            />
+                        
+                    </lightning:buttonGroup>
+    
+                </div>
+            </aura:set>
+            
+            <div class="slds-box slds-theme--default">
+                <c:ACETLGT_HighlightPanel highlightPanelValues="{!v.highlightPanel}" pageFeature="{!v.AutodocKey}">            
+                </c:ACETLGT_HighlightPanel>
+            </div>
+        </lightning:card>
+        <!-- /  top panel ends -->
+    
+        <!--    Main content starts   -->
+        <div class="slds-is-relative card_right_margin_8 card_left_margin_8 card_bottom_padding">
+            <!--    Spinner -->
+            <aura:if isTrue="{!v.isLoading}">
+                <lightning:spinner alternativeText="" variant="brand" size="medium" />
+            </aura:if>
+            <!--    Spinner -->
+            <div class="slds-grid slds-wrap">
+                <!--    Active Contracts section  starts   -->
+                <div class="slds-col slds-size_12-of-12 card_top_margin" >
+                    <div class="slds-card">
+                        <div class="slds-card__header slds-grid">
+                            <header class="slds-media slds-media_center slds-has-flexi-truncate">                          
+                                <div class="slds-media__body">
+                                    <h2 class="slds-card__header-title bold-headers">
+                                        <span>Active Contract Options(s)</span>
+                                    </h2>
+                                </div>
+                            </header>
+                        </div>
+                        
+                        <div class="slds-card__body slds-card__body_inner">
+                            <div class="autodocTableView" data-auto-doc="true" data-auto-doc-autosave="false" data-auto-doc-feature="{!v.AutodocKey}" >   
+                                <div>
+                            	<table id="tblActiveContracts" class="slds-table preselect slds-table_bordered slds-no-row-hover noAutoSave">
+                                <thead>
+                                    <tr class="slds-line-height_reset">
+                                        <th class="" scope="col" align="left" style="width:15%">
+                                            <div class="slds-truncate" title="Policy Number">
+                                                Policy Number <lightning:helptext content="Contract Option ID(s)" />
+                                            </div>                                    
+                                        </th>
+                                        <th class="" scope="col" align="left" style="width:15%">
+                                            <div class="slds-truncate" title="Population">Population</div>                                    
+                                        </th>
+                                        <th class="" scope="col" align="left" style="width:15%">
+                                            <div class="slds-truncate" title="Plan Option ID(s)">Plan Option ID(s)</div>
+                                        </th>
+                                        <th class="" scope="col" align="left" style="width:15%">
+                                            <div class="slds-truncate" title="Benefit Bundle Option ID(s)">Benefit Bundle Option ID(s)</div>
+                                        </th>
+                                        <th class="" scope="col" align="left" style="width:10%">
+                                            <div class="slds-truncate" title="Effective Date">Effective Date</div>
+                                        </th>
+                                        <th class="" scope="col" align="left" style="width:10%">
+                                            <div class="slds-truncate" title="End Date">End Date</div>
+                                        </th>
+                                        <th class="" scope="col" align="left" style="width:10%">
+                                            <div class="slds-truncate" title="Exchange Type">Exchange Type</div>
+                                        </th>
+                                        <th class="" scope="col" align="left" style="width:10%">
+                                            <div class="slds-truncate" title="Migrated">Migrated</div>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.selectedPolicyContract}" var="dt" aura:id="pc">
+                                        <tr class="activecol slds-hint-parent">
+                                            <td class="slds-cell-wrap">{!dt.policyConId}</td>
+                                            <td class="slds-cell-wrap">{!dt.population}</td>
+                                            <td class="slds-cell-wrap">{!dt.policyOptId}</td>
+                                            <td class="slds-cell-wrap">{!dt.benefitBundleId}</td>
+                                            <td class="slds-cell-wrap">{!dt.effectiveDate}</td>
+                                            <td class="slds-cell-wrap">{!dt.endDate}</td> 
+                                            <aura:if isTrue="{!dt.exchangeType == 'Public State Exchange'}">
+                                                    <td class="slds-cell-wrap">{!dt.groupSitusState} Shop</td> 
+                                                    <aura:set attribute="else"> 
+                                                        <td class="slds-cell-wrap">None</td>
+                                                    </aura:set>
+                                                </aura:if>
+                                            <td class="slds-cell-wrap">{!dt.migrated}</td> 
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                        		</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--    / Active Contracts section ends  -->
+    
+                 <!--    Internal Group contact section  starts   -->
+                <div class="slds-col slds-size_12-of-12 card_top_margin" >
+                    <div class="slds-card">
+                        <div class="slds-card__header slds-grid">
+                            <header class="slds-media slds-media_center slds-has-flexi-truncate">                          
+                                <div class="slds-media__body">
+                                    <h2 class="slds-card__header-title bold-headers">
+                                        <span>Internal Group Contact(s)</span>
+                                    </h2>
+                                </div>
+                            </header>
+                        </div>
+                        <div class="autodocTableView" data-auto-doc="true" data-auto-doc-case-items="true" data-auto-doc-autosave="false" data-auto-doc-feature="{!v.AutodocKey}"  data-auto-doc-section-key="Internal Group Contact(s)">
+                        <div class="slds-card__body slds-card__body_inner">
+                            <table id="tblActiveContracts" class="slds-table slds-table_bordered slds-no-row-hover ">
+                                <thead>
+                                    <tr class="slds-line-height_reset">
+                                        <th class="slds-cell-wrap" scope="col" align="left" style="width:15%">
+                                            <div class="slds-truncate" title="Contact">Contact</div>                                    
+                                        </th>
+                                        <th class="slds-cell-wrap" scope="col" align="left" style="width:15%">
+                                            <div class="slds-truncate" title="Name">Name</div>                                    
+                                        </th>
+                                        <th class="slds-cell-wrap" scope="col" align="left" style="width:15%">
+                                            <div class="slds-truncate" title="Organization">Organization</div>
+                                        </th>
+                                        <th class="slds-cell-wrap" scope="col" align="left" style="width:15%">
+                                            <div class="slds-truncate" title="Phone">Phone</div>
+                                        </th>
+                                        <th class="slds-cell-wrap" scope="col" align="left" style="width:10%">
+                                            <div class="slds-truncate" title="Extension">Extension</div>
+                                        </th>
+                                        <th class="slds-cell-wrap" scope="col" align="left" style="width:10%">
+                                            <div class="slds-truncate" title="Email">Email</div>
+                                        </th>
+                                        <th class="slds-cell-wrap" scope="col" align="left" style="width:10%">
+                                            <div class="slds-truncate" title="Effective Date">Effective Date</div>
+                                        </th>
+                                        <th class="slds-cell-wrap" scope="col" align="left" style="width:10%">
+                                            <div class="slds-truncate" title="End Date">End Date</div>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.internalContacts}" var="dt" aura:id="item">
+                                    <tr class="slds-hint-parent">
+                                        <td class="slds-cell-wrap">{!dt.primaryContactType}</td>
+                                        <td class="slds-cell-wrap">{!dt.firstName} {!dt.middleName} {!dt.LastName}</td>
+                                        <td class="slds-cell-wrap">{!dt.Organization}</td>
+                                        <td class="slds-cell-wrap">{!dt.Phone}</td>
+                                        <td class="slds-cell-wrap">{!dt.extension}</td>
+                                        <td class="slds-cell-wrap">{!dt.EmailAddress}</td> 
+                                        <td class="slds-cell-wrap">{!dt.startDate}</td>
+                                        <td class="slds-cell-wrap">{!dt.endDate}</td> 
+                                    </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+                <!--    / Internal Group contact section ends  -->
+                
+                <div class="slds-col slds-size_12-of-12 card_top_margin card_right_padding">
+                    <div class="slds-grid">      
+                        <!--   Group Settings starts    -->      
+                        <div class="slds-col slds-size_1-of-2 card_right_margin">
+                            <div class="slds-card">
+                                <div class="slds-card__header slds-grid">
+                                    <header class="slds-media slds-media_center slds-has-flexi-truncate">                          
+                                        <div class="slds-media__body">
+                                            <h2 class="slds-card__header-title bold-headers">
+                                                <span>Group Settings</span>
+                                            </h2>
+                                        </div>
+                                    </header>
+                                </div>
+                                <div class="slds-card__body slds-card__body_inner">
+                                    <aura:if isTrue="{!v.isPop}">                                                                                                                        
+                                        <aura:iteration items="{!v.groupSettingsObj}" var="pop" >
+                                            <lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="">
+                                                <lightning:accordionSection name="{!pop.Id}" label="{!pop.Id}">
+                                                    <aura:iteration items="{!pop.Value}" var="fullDate">
+                                                        <lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="">
+                                                            <lightning:accordionSection name="{!fullDate.Key}" label="{!fullDate.Key}">
+                                                                <aura:iteration items="{!fullDate.Value}" var="setting">
+                                                                    <div class="autodocTableView" data-auto-doc="true" data-auto-doc-case-items="true" data-auto-doc-feature="{!v.AutodocKey}"  data-auto-doc-section-key="{!'Group Settings ( '+pop.Id+' - '+fullDate.Key+' )'}">
+                                                                    <div>    
+                                                                    <table id="tblActiveContractsPop" class="slds-table slds-table_bordered noAutoSave">
+                                                                        <thead>
+                                                                            <tr class="slds-line-height_reset">
+                                                                                <th class="" scope="col" align="left" style="width:40%">
+                                                                                    <div class="slds-truncate" title="Group Settings">Group Settings</div>                                    
+                                                                                </th>
+                                                                                <th class="" scope="col" align="left" style="width:50%">
+                                                                                    <div class="slds-truncate" title="Description">Description</div>                                    
+                                                                                </th>
+                                                                                
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            <aura:iteration items="{!setting.insrules}" var="dt">
+                                                                                <tr class="slds-hint-parent">
+                                                                                    <td class="grpinspop" style="display:none">
+                                                                                       {!pop.Id+'_'+fullDate.Key+'_'+dt.insRules+'_'+dt.insRulesDesc}
+                                                                                    </td>
+                                                                                    <td data-label="Group Settings">{!dt.insRules}</td>
+                                                                                    <td data-label="Description">
+                                                                                        <span>{!dt.insRulesDesc}</span>
+                                                                                        <aura:if isTrue="{!dt.insRules=='Onshore Restriction'}">
+                                                                                            <lightning:helpText content="{!dt.OnshoreRestrictTooltip}"></lightning:helpText>
+                                                                                        </aura:if>
+                                                                                    </td>
+                                                                                    
+                                                                                </tr>
+                                                                            </aura:iteration>
+                                                                            
+                                                                            
+                                                                            
+                                                                            <!--</aura:iteration>-->
+                                                                        </tbody>
+                                                                    </table>
+                                                                    </div>
+                                                                    </div>
+                                                                </aura:iteration>
+                                                            </lightning:accordionSection>
+                                                        </lightning:accordion>
+                                                    </aura:iteration>
+                                                </lightning:accordionSection>
+                                            </lightning:accordion>
+                                        </aura:iteration>
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        <aura:set attribute="else">
+                                            <aura:iteration items="{!v.allGroupInsuringResults}" var="res">
+                                                <lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="">
+                                                    <lightning:accordionSection name="{!res.fullDate}" label="{!res.fullDate}">
+                                                        <aura:iteration items="{!v.settingsResultMap}" indexVar="index1" var="mapKey">
+                                                            <aura:if isTrue="{!mapKey.key == res.fullDate}">
+                                                                <div class="autodocTableView" data-auto-doc="true" data-auto-doc-case-items="true" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-autosave="false"  data-auto-doc-section-key="{!'Group Settings ( '+mapKey.key+' )'}">
+                                                                    <div>
+                                                                <table id="{!index1 + 'tblActiveContracts'}" class="slds-table slds-table_bordered noAutoSave">
+                                                                    <thead>
+                                                                        <tr class="slds-line-height_reset">
+                                                                            <th class="" scope="col" align="left" style="width:40%">
+                                                                                <div class="slds-truncate" title="Group Settings">Group Settings</div>                                    
+                                                                            </th>
+                                                                            <th class="" scope="col" align="left" style="width:50%">
+                                                                                <div class="slds-truncate" title="Description">Description</div>                                    
+                                                                            </th>
+                                                                            
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        <aura:iteration items="{!mapKey.value}" var="dt">
+                                                                            <tr class="slds-hint-parent">
+                                                                                <td class="grpinspop" style="display:none">
+                                                                                   {!mapKey.key+'_'+dt.insRules+'_'+dt.insRulesDesc}
+                                                                                </td>
+                                                                                <td data-label="Group Settings">{!dt.insRules}</td>
+                                                                                <td data-label="Description">
+                                                                                    <span>{!dt.insRulesDesc}</span>
+                                                                                    <aura:if isTrue="{!dt.insRules=='Onshore Restriction'}">
+                                                                                        <lightning:helpText content="{!dt.OnshoreRestrictTooltip}"></lightning:helpText>
+                                                                                    </aura:if>
+                                                                                </td>
+                                                                                
+                                                                            </tr>
+                                                                        </aura:iteration>
+                                                                    </tbody>
+                                                                </table> 
+                                                                    </div>
+                                                                </div>
+                                                            </aura:if>
+                                                        </aura:iteration>
+                                                    </lightning:accordionSection>
+                                                </lightning:accordion>
+                                            </aura:iteration>
+                                        </aura:set>
+                                    </aura:if>                                                                                                
+                                </div>
+                            </div>
+                        </div>
+                        <!--  / Group Settings ends    -->
+    
+                        <!--   Insuring Rules starts    -->
+                        <div class="slds-col slds-size_1-of-2">
+                            <div class="slds-card">
+                                
+                                <div class="slds-card__header slds-grid">
+                                    <header class="slds-media slds-media_center slds-has-flexi-truncate">                          
+                                        <div class="slds-media__body">
+                                            <h2 class="slds-card__header-title bold-headers" style="float: left">
+                                                <span>Insuring Rules</span>
+                                            </h2>                                        
+                                            <!--	Insuraing Dates	-->
+                                            <div class="slds-truncate insuring-dates">
+                                                <span style="margin-top : 5px;">Dates: &nbsp;</span>
+                                                <div class="slds-form-element__control">
+                                                    <div class="slds-select_container">
+                                                        <select name="{!v.memId + 'insuringDates'}" class="slds-select" id="{!v.memId + 'insuringDates'}" onchange="{!c.getUpdatedRules}">
+                                                            <aura:iteration items="{!v.datesList}" var="d">
+                                                            	<option value="{!d}">{!d}</option>
+                                                            </aura:iteration>                                                   
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!--  /	Insuraing Dates	-->
+                                            <!--	Population	-->
+                                            
+                                            <aura:if isTrue="{!v.isShowPopulation}">
+                                                <div class="slds-truncate population">
+                                                    <span style="margin-top : 5px;">Population: &nbsp;</span>
+                                                    <div class="slds-form-element__control">                                                    
+                                                        <div class="slds-select_container">
+                                                            <select name="{!v.memId + 'population'}" class="slds-select" id="{!v.memId + 'population'}" onchange="{!c.getUpdatedRules}">
+                                                                <aura:iteration items="{!v.populationsList}" var="po">
+                                                                    <option value="{!po}">{!po}</option>                 
+                                                                </aura:iteration>
+                                                            </select>
+                                                        </div>                                                    
+                                                    </div>
+                                                </div>
+                                            </aura:if>
+                                            <!--  /	Population	-->
+                                        </div>
+                                    </header>
+                                </div>
+                                <div class="autodocTableView" data-auto-doc="true" data-auto-doc-case-items="true" data-auto-doc-feature="{!v.AutodocKey}"  data-auto-doc-section-key="{!'Insuring Rules ( '+v.populationSelected+'-'+v.dateSelected+' )'}">
+                                <div class="slds-card__body slds-card__body_inner autosavesection">
+                                    <table id="tblActiveContracts" class="slds-table slds-table_bordered">
+                                        <thead>
+                                            <tr class="slds-line-height_reset">
+                                                <th class="" scope="col" align="left" style="width:40%">
+                                                    <div class="slds-truncate" title="Insuring Rules">Insuring Rules</div>                                    
+                                                </th>
+                                                <th class="" scope="col" align="left" style="width:50%">
+                                                    <div class="slds-truncate" title="Description">Description</div>                                    
+                                                </th>
+                                                
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <aura:iteration items="{!v.insuringRules}" var="rule">
+                                                <tr class="slds-hint-parent">
+                                                    <aura:if isTrue="{!v.populationSelected == undefined || v.populationSelected == ''}">
+                                                        <td class="grpinspop" style="display:none">
+                                                            {!v.dateSelected+'_'+rule.insRules+'_'+rule.insRulesDesc}
+                                                        </td>
+                                                        <aura:set attribute="else">
+                                                        <td class="grpinspop" style="display:none">
+                                                            {!v.populationSelected+'_'+v.dateSelected+'_'+rule.insRules+'_'+rule.insRulesDesc}
+                                                        </td>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                    <td data-label="{!rule.insRules}">{!rule.insRules}</td>
+                                                    <td data-label="{!rule.insRulesDesc}">{!rule.insRulesDesc}</td>
+                                                </tr>
+                                            </aura:iteration>
+                                            
+                                        </tbody>
+                                    </table>
+                                </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!--  / Insuring Rules ends    -->
+                    </div>
+                </div>                        
+    
+            </div>
+        </div>
+        <!--  /  Main content ends   -->
+    </div>
+    </aura:component>

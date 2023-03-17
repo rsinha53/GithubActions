@@ -1,0 +1,131 @@
+<aura:component implements="lightning:isUrlAddressable,force:appHostable,flexipage:availableForAllPageTypes" controller= "OPTUM_MemberSearchService" >
+    <aura:attribute name="columnsList" type="List"/>
+    <aura:attribute name="selectedValue" type="String" />
+     <!-- Added by Santhi to Create New Case From Debit Cards Page-->
+     <aura:attribute name="originator" type="String" />
+     <aura:attribute name = "optumInt" type = "Interaction__c"/>
+    <aura:attribute name = "optumEID" type = "String"/>
+     <aura:attribute name="userInfo" type="user" access="public"/>
+     <aura:attribute name="SubjectId" type="String"/>
+     <aura:attribute name="OriginatorId" type="String" access="global" default=""/>
+    <aura:attribute name="memberDetails" type="Object" />
+    <!--END Create New Case-->
+    <!--US3703234: Member with No Accounts-->
+    <aura:attribute name="memAccDetails" type="boolean"/>
+    <!--Added by prasad  start-->
+    <aura:attribute name="Flag" type="boolean"/>
+    <aura:attribute name="Spinner" type="boolean" default="false"/>
+    <aura:attribute name="cardsdata" type="List" />
+    <aura:attribute name="Syntheticid" type="String" />
+    <aura:attribute name="accountCode" type="Integer" />
+    <aura:attribute name="accountAlias" type="String" />
+    <aura:attribute name="accountId" type="String" />
+    <aura:attribute name="employerId" type="String" />
+    <aura:attribute name="FAROID" type="String" />
+    <aura:attribute name="notionalFilteredList" type="List" />
+    <aura:attribute name="nonnotionalFilteredList" type="List" />
+    <aura:attribute name="options" type="List" />
+    <aura:attribute name="APIResponse" type="boolean" default="false" />
+	<aura:attribute name = "showTable" type = "boolean"/>
+    <!--Added by prasad  End-->
+    <!--sorting-->
+    <aura:attribute name="sortBy" type="String"/>
+    <aura:attribute name="sortDirection" type="String" />
+    <aura:attribute name="orderDate" type="Date" />
+    <aura:handler name="caseCommentEvent" event="c:OPTUM_CaseCommentEvent" action= "{!c.handleCaseComments}"/>
+    <aura:attribute name="comments" type="String" access="public"/>
+
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+
+     <!-- Added by Srikanya for auto audoc -->
+  <!--  <ltng:require scripts="{!$Resource.ACET_AutodocJS}" />
+    <ltng:require styles="{!$Resource.ACET_MasterStyle}" />
+    <aura:attribute name="autodocUniqueId" type="String" />
+    <aura:attribute name="autodocUniqueIdCmp" type="String"  />
+    <aura:attribute name="debitCards" type="Object" />
+    <aura:attribute name="tableDetails_prev" type="Object" />
+    <aura:attribute name="showpreview" type="Boolean" default="false" />
+    <aura:attribute name="developerName" type="String" access="public" default="Rollstone"/> -->
+
+ <div class="white">
+     <aura:if isTrue="{!not(empty(v.options))}">
+    <div class="slds-grid slds-grid--align-spread slds-p-top_small">
+		<div class="slds-col--padded slds-p-top_small slds-m-left_x-large">
+            <span>
+                    <lightning:select name="Account" label="Account" aura:id="Account" value="{!v.selectedValue}" onchange="{!c.onChange}" >
+                        <aura:iteration items="{!v.options}" var="item">
+                            <option value="{!item}">{!item}</option>
+                        </aura:iteration>
+                    </lightning:select>
+                </span>
+           </div>
+            <div class="slds-col--padded slds-p-top_small slds-m-top_xx-small">
+              <!--   <lightning:buttonGroup>
+                <lightning:button class="slds-button slds-button_neutral neutral_button" variant="neutral" label="Preview Autodoc" onclick="{!c.openPreview}" />
+                     <c:ACETLGT_TTSModal aura:id="cComp" cseTopic="Debit Cards" int="{!v.optumInt}" intId="{!v.optumInt.Id}"  showCirrus="false" showMemAlerts="false" showSave="true" showMisdirect="false" memberId="{!v.memberDetails.member.faroId}"
+                                 noAutoDoc = "true" developerName="{!v.developerName}"  autodocUniqueId="{!v.autodocUniqueId}"  OriginatorId ="{!v.optumInt.Originator__c}" originator="{!v.optumInt.Originator__c}" isOriginatorModal="true" userInfo="{!v.userInfo}" SubjectId = "{!v.optumInt.Originator__c}" comments="{!v.comments}"/>
+                </lightning:buttonGroup> -->
+            </div>
+
+    </div>
+
+     <div class="slds-p-top_x-large slds-m-top_medium "></div>
+   <!-- <c:ACET_AutoDocDataTable autodocUniqueId="{!v.autodocUniqueId}"
+                                     autodocUniqueIdCmp="{!v.autodocUniqueId}"
+                              		 enableSort="true"
+                                     dateFieldWithYear = "[5]"
+                             		 dateFields = "[7]"
+                                     tableDetails="{!v.debitCards}" /> -->
+	<aura:if isTrue="{!v.showTable}">								 
+    <lightning:datatable keyField="Id"
+                         data="{!v.cardsdata}"
+                         columns="{!v.columnsList}"
+                         sortedBy="{!v.sortBy}"
+                         sortedDirection="{!v.sortDirection}"
+                         onsort="{!c.handleSort}"
+                         resizeColumnDisabled="true"
+                         maxRowSelection="1"
+                         hideCheckboxColumn="true"
+                         class="slds-m-top_medium "
+                          />
+			</aura:if>			  
+         <aura:if isTrue="{!(and(empty(v.cardsdata),v.Flag))}">
+             <div class="cls-cart slds-text-align_center slds-m-left_medium slds-m-bottom_medium">
+                 <p class="cls-cart">No Card found for this account.</p>
+             </div>
+         </aura:if>
+          <div class="slds-p-top_small slds-m-top_x-small "></div>
+         <aura:if isTrue="{!v.APIResponse}">
+             <div class="slds-box box slds-box_x-small slds-m-left_medium slds-m-bottom_medium slds-m-right_medium">
+                <div class="slds-media slds-p-top_xxx-small slds-p-bottom_x-small slds-p-bottom_small">
+                    <div class="slds-media__figure slds-p-left_x-small slds-p-top_xxx-small ">
+                        <lightning:icon iconName="utility:error" variant="error" size="small"></lightning:icon>
+                    </div>
+                    <div class="slds-media__body">
+                        <p class="slds-card__header-title slds-m-top_x-small">
+                            <p class="cls-cart">System Error</p>
+                        </p>
+                        <p class="cls-cart-title">Please try again later and report if problem persists.</p>
+                    </div>
+                 </div>
+            </div>
+         </aura:if>
+         <div class="slds-p-top_small slds-m-top_x-small "></div>
+         <aura:if isTrue="{!v.Spinner}">
+             <lightning:spinner alternativeText="Loading, Please Wait..." title="Loading, Please Wait..." variant="brand" size="medium" />
+         </aura:if>
+     </aura:if>
+	  <!--US3703234: Member with No Accounts-->
+         <aura:if isTrue="{!not(v.memAccDetails)}">
+            <div class="cls-cart slds-text-align_center slds-m-left_medium slds-m-bottom_medium">
+                <p class="cls-cart " >No Account found.</p>
+            </div>
+         </aura:if>
+     <aura:if isTrue="{!not(empty(v.options))}">
+    <c:OPTUM_CaseComments aura:id="claims"/>
+    </aura:if>
+   <!--   <aura:if isTrue="{!v.showpreview}">
+        <c:ACET_PreviewAutoDoc tableDetails_prev="{!v.tableDetails_prev}" isModalOpen="{!v.showpreview}" />
+    </aura:if> -->
+ </div>
+</aura:component>

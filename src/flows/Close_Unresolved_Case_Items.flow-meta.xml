@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>52.0</apiVersion>
+    <assignments>
+        <description>Adds updated case items to RCV</description>
+        <name>Add_to_loop</name>
+        <label>Add to loop</label>
+        <locationX>264</locationX>
+        <locationY>518</locationY>
+        <assignmentItems>
+            <assignToReference>CaseItemsToUpdate</assignToReference>
+            <operator>Add</operator>
+            <value>
+                <elementReference>Resolve_case_items</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Resolve_case_items</targetReference>
+        </connector>
+    </assignments>
+    <assignments>
+        <description>Resolves case item</description>
+        <name>Set_resolved_to_true</name>
+        <label>Set resolved to true</label>
+        <locationX>264</locationX>
+        <locationY>398</locationY>
+        <assignmentItems>
+            <assignToReference>Resolve_case_items.Resolved__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Add_to_loop</targetReference>
+        </connector>
+    </assignments>
+    <description>Flow to close all parent case items based on child case update</description>
+    <interviewLabel>Close Unresolved Case Items {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Close Unresolved Case Items</label>
+    <loops>
+        <description>Loop to iteratively resolve case items</description>
+        <name>Resolve_case_items</name>
+        <label>Resolve case items</label>
+        <locationX>176</locationX>
+        <locationY>278</locationY>
+        <collectionReference>Get_unresolved_case_items</collectionReference>
+        <iterationOrder>Asc</iterationOrder>
+        <nextValueConnector>
+            <targetReference>Set_resolved_to_true</targetReference>
+        </nextValueConnector>
+        <noMoreValuesConnector>
+            <targetReference>Update_case_items</targetReference>
+        </noMoreValuesConnector>
+    </loops>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordLookups>
+        <description>Gets all unresolved case items from parent case</description>
+        <name>Get_unresolved_case_items</name>
+        <label>Get unresolved case items</label>
+        <locationX>176</locationX>
+        <locationY>158</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Resolve_case_items</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Case__c</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>ParentCaseID</elementReference>
+            </value>
+        </filters>
+        <filters>
+            <field>Resolved__c</field>
+            <operator>EqualTo</operator>
+            <value>
+                <booleanValue>false</booleanValue>
+            </value>
+        </filters>
+        <getFirstRecordOnly>false</getFirstRecordOnly>
+        <object>Case_Item__c</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <recordUpdates>
+        <description>Updates all case items</description>
+        <name>Update_case_items</name>
+        <label>Update case items</label>
+        <locationX>176</locationX>
+        <locationY>734</locationY>
+        <inputReference>CaseItemsToUpdate</inputReference>
+    </recordUpdates>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Get_unresolved_case_items</targetReference>
+        </connector>
+    </start>
+    <status>Active</status>
+    <variables>
+        <description>RCV to hold all Case Itmes</description>
+        <name>CaseItemsToUpdate</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <objectType>Case_Item__c</objectType>
+    </variables>
+    <variables>
+        <name>ParentCaseID</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+</Flow>

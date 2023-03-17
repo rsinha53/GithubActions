@@ -1,0 +1,444 @@
+<!--Name : Jitendra Anagani 
+   Date : 15-02-2021
+   Description : The Purpose of this component is to collect Service Request Information for ORS Routing Cases-->
+<aura:component>
+   <!-- String Attributes -->
+   <aura:attribute name="whereTTSTopics" type="String" default=""/>
+   <aura:attribute name="strIssueFilter" type="String" default=""/>
+   <aura:attribute name="reasonCode" type="String" default="--"/>
+   <aura:attribute name="category" type="String" default="--"/>
+   <aura:attribute name="strSourceCode" type="String" default=""/>
+   <aura:attribute name="strIssue" type="String" default=""/>
+   <aura:attribute name="strIssueFilterValue" type="String" default=""/>
+   <aura:attribute name="strDelegatedData" type="String" default=""/>
+      <aura:attribute name="strIssueMetadataName" type="String" default="SAE_Reason_Codes__mdt"/>
+      <aura:attribute name="strIssueSearchName" type="String" default="Issue__c"/>
+      <aura:attribute name="strIssueOrderByName" type="String" default="Issue__c"/>
+      <aura:attribute name="facetsReasonCategory" type="String" default=""/>
+      <!--US3182829 - Sravan-->
+      <aura:attribute name="requestResource" type="String" default=""/>
+   <!-- Boolean Attributes -->
+   <aura:attribute name="showCOCSData" type="Boolean" default="false"/>
+   <aura:attribute name="hideEntireSection" type="Boolean" default="false"/>
+   <aura:attribute name="IsDelegatedSpeciality" type="Boolean" default="false"/>
+      <aura:attribute name="isApPolicy" type="Boolean" default="false" />
+      <aura:attribute name="showHOPandTable" type="Boolean" default="true" />
+      <aura:attribute name="showContactName" type="Boolean" default="false" />
+      <aura:attribute name="isCOB" type="Boolean" default="false" />
+      <aura:attribute name="showExceptedPaymentAmount" type="Boolean" default="true" />
+   <!-- Object Attributes -->
+   <aura:attribute name="objHeader" type="object" default="{}"/>
+   <aura:attribute name="sendToListInputs" type="Object"/>
+      <aura:attribute name="objProviderDataWithCSP" type="Object"/>
+      <aura:attribute name="objCOBInfo" type="Object" access="public" />
+
+   <!-- List Attributes -->
+   <aura:attribute name="lstSelectedRoutedProviders" type="List" />
+      <!--US3259671 - Sravan-->
+      <aura:attribute name="flowDetails" type="Object" access="public" />
+       <aura:attribute name="isValiadContact" type="Boolean" default="true"/>
+      <aura:attribute name="validateHoursOfOperation" type="Boolean" default="false"/>
+      <aura:attribute name="availableTimeType" type="List" default="[{'label': 'AM', 'value': 'AM'},{'label': 'PM', 'value': 'PM'}]"/>
+      <aura:attribute name="availableTimeZone" type="List" default="[{'label': 'Eastern - EST', 'value': 'Eastern - EST'},
+                                                                  {'label': 'Central - CST', 'value': 'Central - CST'},
+                                                                  {'label': 'Mountain - MST', 'value': 'Mountain - MST'},
+                                                                  {'label': 'Pacific - PST', 'value': 'Pacific - PST'},
+                                                                  {'label': 'Alaska - AKST', 'value': 'Alaska - AKST'},
+                                                                  {'label': 'Hawaii - HST', 'value': 'Hawaii - HST'}
+                                                                 ]"/>
+       <aura:attribute name="radioButtonOptions" type="List" default="[{'label': 'Yes', 'value': 'Yes'},
+                                                             {'label': 'No', 'value': 'No'}]"/>
+   <!-- Change Handlers -->
+   <aura:handler name="change" value="{!v.sendToListInputs.issue}" action="{!c.issueChange}"/>
+      <!--US3259671 - Sravan-->
+      <aura:handler name="change" value="{!v.validateHoursOfOperation}" action="{!c.validateHoursOfOperation}"/>
+   <!-- Aura Method -->
+   <aura:method name="getFilterConditionForIssue" action="{!c.setFilterCondition}" access="public">
+      <aura:attribute name="strWhereCondition" type="String" default=""/>
+   </aura:method>
+   <!--whereCondition="{!v.whereTTSTopic}"-->
+   <!--Event-->
+   <aura:registerEvent name="closeRoutingTab" type="c:ACET_CloseRoutingTab" />
+   <div class="slds-p-bottom_small">
+      <div class="slds-box">
+         <div class="slds-card">
+            <aura:if isTrue="{!!v.hideEntireSection}">
+               <lightning:spinner aura:id="mySpinner" class="slds-hide"/>
+            </aura:if>
+            <c:ACET_ReferringProviderDetailsCardHeader objPcpDataHeader="{!v.objHeader}"/>
+            <div class="slds-card_body slds-card__body_inner">
+               <div class="slds-grid slds-grid_vertical">
+                  <div class="slds-col">
+                     <div class="slds-grid">
+                           <div class="{!if(v.isApPolicy, 'slds-size_3-of-12','slds-size_3-of-12')}">
+                           <div class="slds-size_6-of-7">
+                              <c:ComboboxField aura:id="issueId"
+                                 fieldName="Issue"
+                                    objectName="{!v.strIssueMetadataName}"
+                                    searchFieldName="{!v.strIssueSearchName}"
+                                 whereCondition = "{!v.whereTTSTopics}"
+                                    orderBy="{!v.strIssueOrderByName}"
+                                 required="true"
+                                 selectedRecord="{!v.sendToListInputs.issue}"/>
+                           </div>
+                        </div>
+                           <aura:if isTrue="{!v.showContactName}">
+                           <div class="slds-size_1.5-of-12">
+                              <div class="slds-size_6-of-7">
+                                    <lightning:input
+                                       label="Contact Name"
+                                       value="{!v.flowDetails.contactName}"
+                                 required="true"
+                                 aura:id="idContactNumber"/>
+                           </div>
+                        </div>
+                           </aura:if>
+                           <!--US3259671 - Sravan-->
+                           <div class="{!if(v.isApPolicy &amp;&amp; v.showExceptedPaymentAmount, 'slds-size_4-of-12','slds-size_5-of-12')}" style=" padding-top: 3px; padding-right: 15px;">
+                                 <div class="slds-size_5-of-7">
+                                       <span style="color:grey;"><span style="color: rgb(194, 57, 52)">*</span>Hours of Operation</span>
+                                 </div>
+                                 <div class="slds-grid">
+                                 <div  class="slds-col">
+                                    <div class="slds-size_6-of-7">
+                                       <c:ComboboxField aura:id="startTimeId"
+                                       fieldName=" "
+                                       objectName="ACET_Hours_of_operation__mdt"
+                                       searchFieldName="Time_Value__c"
+                                       whereCondition=""
+                                       orderBy="Order__c"
+                                       selectedRecord="{!v.flowDetails.conStartTime}"
+                                       searchKeyword="{!v.flowDetails.conStartTime}"
+                                       isLabel= "false"/>
+                                    </div>
+                                 </div>
+                                 <div  class="slds-col">
+                                    <div class="slds-size_7-of-7">
+                                       <div class="slds-grid">
+                                          <div  class="slds-col">
+                                             <lightning:combobox variant="label-hidden" required="true" class="slds-m-right_x-small" name="startTimeType" label="" value="{!v.flowDetails.conStartType}" options="{!v.availableTimeType }" />
+                                          </div>
+                                          <div  class="slds-col" style=" padding-top: 5px; padding-right: 5px;">
+                                             To
+                                          </div>
+                                       </div>
+                                    </div>
+                                 </div>
+                                 <div  class="slds-col">
+                                    <div class="slds-size_6-of-7">
+                                          <c:ComboboxField aura:id="endTimeId"
+                                          fieldName=" "
+                                          objectName="ACET_Hours_of_operation__mdt"
+                                          searchFieldName="Time_Value__c"
+                                          whereCondition=""
+                                          orderBy="Order__c"
+                                          selectedRecord="{!v.flowDetails.conEndTime}"
+                                          searchKeyword="{!v.flowDetails.conEndTime}"
+                                          isLabel= "false"/>
+                                    </div>
+                                 </div>
+                                 <div  class="slds-col">
+                                    <div class="slds-size_7-of-7">
+                                          <lightning:combobox variant="label-hidden" required="true" class="slds-m-right_x-small" name="endTimeType" label="" value="{!v.flowDetails.conEndType}"  options="{!v.availableTimeType }" />
+                                    </div>
+                                 </div>
+                                 <div  class="slds-col">
+                                    <div class="slds-size_6-of-7">
+                                          <lightning:combobox variant="label-hidden" required="true"  name="timeZone" label="" value="{!v.flowDetails.conTimeZone}"  options="{!v.availableTimeZone}"  />
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+                           <div class="{!if(v.isApPolicy, 'slds-size_1.5-of-12','slds-size_1.5-of-12')}">
+                              <div class="slds-size_6-of-7">
+                                 <lightning:input type="phone"
+                                    label="Contact Number"
+                                    value="{!v.sendToListInputs.phoneNumber}"
+                                    required="true"
+									messageWhenValueMissing ="This field is required"
+                                    aura:id="idContactNumber"
+									onchange="{!c.onChangeContact}"/>
+                              </div>
+                           </div>
+                           <div class="{!if(v.showExceptedPaymentAmount, if(!v.isApPolicy, 'slds-size_1-of-12', 'slds-size_1.5-of-12'),'slds-size_2-of-12')}">
+                           <div class="header-column slds-size_4-of-7">
+                              <p class="field-title slds-form-element__label field_label_padding">Category</p>
+                              <p class="valueCls" name="name">
+                                 <div class="">
+                                    <aura:if isTrue="{!v.isApPolicy}">
+                                       {!v.facetsReasonCategory}
+                                    <aura:set attribute="else">
+                                 {!v.category}
+                                    </aura:set>
+                                 </aura:if>
+                              </div>
+                              </p>
+                           </div>
+                        </div>
+                           <aura:if isTrue="{!!v.isApPolicy}">
+                           <div class="slds-size_2-of-12">
+                           <div class="header-column slds-size_4-of-7">
+                              <p class="field-title slds-form-element__label field_label_padding">Reason Code</p>
+                              <p class="valueCls" name="name">
+                              <div class="slds-form-element__static">
+                                 {!v.reasonCode}
+                              </div>
+                              </p>
+                           </div>
+                        </div>
+                         </aura:if>
+                         <aura:if isTrue="{!(v.showExceptedPaymentAmount &amp;&amp; v.isApPolicy)}">
+                              <div class="slds-size_2-of-12">
+                                 <div class="header-column slds-size_4-of-7">
+                                    <p class="field-title slds-form-element__label field_label_padding">Request Source(Dept)</p>
+                                    <p class="valueCls" name="name">
+                                    <div class="slds-form-element__static">
+                                        C-Call Center
+                                    </div>
+                                    </p>
+                                 </div>
+                              </div>
+                         </aura:if>
+                     </div>
+                  </div>
+                     <aura:if isTrue="{!v.showHOPandTable}">
+                  <div class="slds-col slds-p-top_large">
+                     <div class="slds-size_4-of-6">
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                           <thead>
+                              <tr class="slds-line-height_reset">
+                                 <th class="" scope="col">
+                                    <div class="slds-truncate" title="SOURCE">SOURCE</div>
+                                 </th>
+                                 <th class="" scope="col">
+                                    <div class="slds-truncate" title="PROVIDER NAME">PROVIDER NAME</div>
+                                 </th>
+                                 <th class="" scope="col">
+                                    <div class="slds-truncate" title="TIN">TIN</div>
+                                 </th>
+                                 <th class="" scope="col">
+                                    <div class="slds-truncate" title="MPIN AND SUFFIX">MPIN AND SUFFIX</div>
+                                 </th>
+                                 <th class="" scope="col">
+                                    <div class="slds-truncate" title="NPI">NPI</div>
+                                 </th>
+                                 <th class="" scope="col">
+                                    <div class="slds-truncate" title="SPECIALTY">SPECIALTY</div>
+                                 </th>
+                                 <th class="" scope="col">
+                                    <div class="slds-truncate" title="CITY">CITY</div>
+                                 </th>
+                                 <th class="" scope="col">
+                                    <div class="slds-truncate" title="STATE">STATE</div>
+                                 </th>
+                                 <th class="slds-size_1-of-2" scope="col">
+                                    <div class="slds-truncate" title="Delegated Desc"></div>
+                                 </th>
+                              </tr>
+                           </thead>
+                           <tbody>
+                              <aura:iteration items="{!v.lstSelectedRoutedProviders}" var="objEachProvider">
+                                 <tr class="slds-hint-parent">
+                                    <td data-label="SOURCE">
+                                       <div class="slds-truncate" title="{!objEachProvider.sourceCode}">{!objEachProvider.sourceCode}</div>
+                                    </td>
+                                    <td data-label="PROVIDER NAME">
+                                       <div class="slds-truncate" title="{!objEachProvider.PROVIDERNAME}">{!objEachProvider.PROVIDERNAME}</div>
+                                    </td>
+                                    <td data-label="TIN">
+                                       <div class="slds-truncate" title="{!objEachProvider.TAXID}">{!objEachProvider.TAXID}</div>
+                                    </td>
+                                    <td data-label="MPIN AND SUFFIX">
+                                       <div class="slds-truncate" title="{!objEachProvider.PROVIDERIDMPIN}">{!objEachProvider.PROVIDERIDMPIN}</div>
+                                    </td>
+                                    <td data-label="NPI">
+                                       <div class="slds-truncate" title="{!objEachProvider.NPI}">{!objEachProvider.NPI}</div>
+                                    </td>
+                                    <td data-label="SPECIALTY">
+                                       <div class="slds-truncate" title="{!objEachProvider.specialty}">{!objEachProvider.specialty}</div>
+                                    </td>
+                                    <td data-label="CITY">
+                                       <div class="slds-truncate" title="{!objEachProvider.city}">{!objEachProvider.city}</div>
+                                    </td>
+                                    <td data-label="STATE">
+                                       <div class="slds-truncate" title="{!objEachProvider.state}">{!objEachProvider.state}</div>
+                                    </td>
+                                    <td data-label="DELEGATEDSPECIALITY" class="slds-size_1-of-2">
+                                       <aura:if isTrue = "{!objEachProvider.IsDelegatedSpeciality}">
+                                          <div class="slds-truncate slds-text-color_error" title="">
+                                             Delegated Specialty. This provider is not in scope for NWM and will not be routed
+                                          </div>
+                                          <div class="slds-truncate slds-text-color_error" title="">
+                                             Refer to the <a style="color: currentColor;" href="http://knowledgecentral.uhc.com/SPA/ProviderCallAdvocateNetworkManagement/redirect.html" target="_blank">
+                                             Network Management/Credentialing/Demographic SOP</a>
+                                          </div>
+                                          <aura:set attribute="else">
+                                             <div class="slds-truncate" title=""></div>
+                                          </aura:set>
+                                       </aura:if>
+                                    </td>
+                                 </tr>
+                              </aura:iteration>
+                           </tbody>
+                        </table>
+                     </div>
+                  </div>
+                     </aura:if>
+                     <aura:if isTrue="{!v.isApPolicy &amp;&amp; !v.showExceptedPaymentAmount}">
+                        <div class="slds-col slds-p-top_large">
+                           <div class="slds-col">
+                              <div class="slds-grid">
+                                 <div class="slds-size_2-of-12">
+                                    <div class="header-column slds-size_4-of-7">
+                                       <p class="field-title slds-form-element__label field_label_padding">Subscriber ID</p>
+                                       <p class="valueCls" name="name">
+                                       <div class="slds-form-element__static">
+                                          {!v.objProviderDataWithCSP.subscriberId}
+                                       </div>
+                                       </p>
+                                    </div>
+                                 </div>
+                                 <div class="slds-size_2-of-12">
+                                    <div class="header-column slds-size_4-of-7">
+                                       <p class="field-title slds-form-element__label field_label_padding">Subscriber Name</p>
+                                       <p class="valueCls" name="name">
+                                       <div class="slds-form-element__static">
+                                          {!v.objProviderDataWithCSP.subscriberName}
+                                       </div>
+                                       </p>
+                                    </div>
+                                 </div>
+                                 <div class="slds-size_2-of-12">
+                                    <div class="header-column slds-size_4-of-7">
+                                       <p class="field-title slds-form-element__label field_label_padding">CSP Provider ID</p>
+                                       <p class="valueCls" name="name">
+                                       <div class="slds-form-element__static">
+                                          {!v.objProviderDataWithCSP.cspProviderId}
+                                       </div>
+                                       </p>
+                                    </div>
+                                 </div>
+                                 <div class="slds-size_2-of-12">
+                                    <div class="header-column slds-size_4-of-7">
+                                       <p class="field-title slds-form-element__label field_label_padding">Provider Name</p>
+                                       <p class="valueCls" name="name">
+                                       <div class="slds-form-element__static">
+                                          {!v.objProviderDataWithCSP.providerName}
+                                       </div>
+                                       </p>
+                                    </div>
+                                 </div>
+                                 <div class="slds-size_2-of-12">
+                                    <div class="header-column slds-size_4-of-7">
+                                       <p class="field-title slds-form-element__label field_label_padding">Request Source(Dept)</p>
+                                       <p class="valueCls" name="name">
+                                       <div class="slds-form-element__static">
+                                          {!v.requestResource}
+                                       </div>
+                                       </p>
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+                     </aura:if>
+                     <aura:if isTrue="{!v.facetsReasonCategory == 'COB Request'}">
+                        <div class="slds-col slds-grid slds-p-top_small">
+                           <div class="slds-size_2-of-7">
+                              <span style="color:grey;padding-top: 50px;"><span style="color: rgb(194, 57, 52)">*</span> Are you processing COB for more than one member of the household ?</span>
+                           </div>
+                           <div class="slds-size_1-of-7">
+                              <lightning:radioGroup class="customRadioCls"
+                                                   name="processingCOB"
+                                                   label=""
+                                                   options="{! v.radioButtonOptions }"
+                                                   value="{! v.objCOBInfo.processingCOB }"
+                                                   aura:id="processingCOB"
+                                                   type="radio"
+                                                   required="true"
+                                                   variant="label-hidden"
+                                                   onchange="{! c.handleRadioChange }" />
+                           </div>
+                        </div>
+                        <div class="slds-col slds-grid slds-p-top_small">
+                           <div class="slds-size_2-of-7">
+                             <span style="color:grey;padding-top: 50px;"><span style="color: rgb(194, 57, 52)">*</span> Does the member give permission to leave detailed voice mail ?</span>
+                           </div>
+                           <div class="slds-size_1-of-7">
+                              <lightning:radioGroup class="customRadioCls"
+                                                   name="voiceMail"
+                                                   label=""
+                                                   options="{! v.radioButtonOptions }"
+                                                   value="{! v.objCOBInfo.voiceMail }"
+                                                   aura:id="voiceMail"
+                                                   type="radio"
+                                                   required="true"
+                                                   variant="label-hidden"
+                                                   onchange="{! c.handleRadioChange }" />
+                           </div>
+                        </div>
+                        <div class="slds-col slds-grid slds-p-top_small">
+                           <div class="slds-size_1-of-4">
+                              <div class="slds-p-bottom_xx-small"><span style="color:grey;padding-top: 50px;"><span style="color: rgb(194, 57, 52)">*</span> What is the other insurance?</span></div>
+                              <lightning:input name="strOtherInsurance" label="What is the other insurance?"  aura:id="nameofIns"
+                                  required="true" value="{!v.objCOBInfo.nameofIns}" class="slds-size_3-of-6" variant="label-hidden" />
+                           </div>
+                           <div class="slds-size_1-of-3">
+                              <div class="slds-p-bottom_xx-small"><span style="color:grey;padding-top: 50px;"><span style="color: rgb(194, 57, 52)">*</span> What is the Policy number of other insurance? (Include Alpha Prefix)</span></div>
+                              <lightning:input name="strPolicyNumberofOtherInsurance" label="What is the Policy number of other insurance? (Include Alpha Prefix)" aura:id="numofOtherIns"
+                                 required="true" value="{!v.objCOBInfo.numofOtherIns}" variant="label-hidden" class="slds-size_3-of-8" />
+                           </div>
+                        </div>
+                        <div class="slds-col slds-grid slds-p-top_small">
+                           <div class="slds-size_1-of-4">
+                              <lightning:input name="strOtherInsurance" label="Policy holder name?" aura:id="pHname"
+                                  required="true" value="{!v.objCOBInfo.pHname}" class="slds-size_1-of-2"/>
+                           </div>
+                           <div class="slds-size_1-of-4">
+                               <lightning:input name="strPolicyNumberofOtherInsurance" label="Policy holder SSN?"  aura:id="pHSSN"
+                                                required="true" value="{!v.objCOBInfo.pHSSN}" class="slds-size_1-of-2" onchange="{!c.handleSSNChanges}"
+                                                minlength="9" maxlength="9" pattern="[0-9]*" messageWhenTooShort="Enter 9 digits" messageWhenPatternMismatch="Error: Please Enter 9 digits Numerical Value"/>
+                           </div>
+                           <div class="slds-size_1-of-4">
+                              <lightning:input name="strPolicyNumberofOtherInsurance" label="Policy holder DOB?" type="date" aura:id="phDOB" dateStyle="short" autocomplete="off"
+                                 required="true" value="{!v.objCOBInfo.phDOB}" class="slds-size_1-of-2" pattern="/^([0-9]{4})\-([0-9]{2})\-([0-9]{2})$/"/>
+                           </div>
+                        </div>
+                        <div class="slds-col slds-grid slds-p-top_small">
+                           <div class="slds-size_1-of-4">
+                              <lightning:input aura:id="othInsPhone" type="text" label="Other Insurance Phone#" value="{!v.objCOBInfo.othInsPhone}" required="true" class="slds-size_1-of-2" />
+                           </div>
+                           <div class="slds-size_2-of-4">
+                              <div class="slds-p-bottom_xx-small slds-p-top_xx-small"><span style="color:grey;padding-top: 50px;"><span style="color: rgb(194, 57, 52)">*</span> Other Insurance effective/term date if known (per member, not per CSP) </span></div>
+                              <div class="slds-grid">
+                                 <lightning:input aura:id="OthEffDate1" type="date" label=""
+                                                dateStyle="short" value="{!v.objCOBInfo.OthEffDate1}" required="true"
+                                                name="OthEffDate1"
+                                                pattern="/^([0-9]{4})\-([0-9]{2})\-([0-9]{2})$/" messageWhenBadInput="Error: Invalid Date"
+                                                messageWhenPatternMismatch="Error: Invalid Date" autocomplete="off" variant = "label-hidden" class="slds-size_1-of-4"/>
+                                 <div class="slds-size_1-of-12"></div>
+                                 <lightning:input aura:id="OthEffDate2" type="date" label="" required="true"
+                                                dateStyle="short" value="{!v.objCOBInfo.OthEffDate2}"
+                                                name="OthEffDate2"
+                                                pattern="/^([0-9]{4})\-([0-9]{2})\-([0-9]{2})$/" messageWhenBadInput="Error: Invalid Date"
+                                                messageWhenPatternMismatch="Error: Invalid Date" autocomplete="off"  variant = "label-hidden" class="slds-size_1-of-4"/>
+                              </div>
+                           </div>
+                        </div>
+                        <div class="slds-col slds-p-top_small">
+                           <b>Enter the reason for the request in the Comments section.</b>
+                        </div>
+                     </aura:if>
+                  <aura:if isTrue="{!v.IsDelegatedSpeciality}">
+                     <div class="slds-col slds-p-top_large">
+                        <lightning:button label="Cancel"
+                           class="slds-button slds-button_brand btnAlign"
+                           onclick="{!c.cancel}"/>
+                     </div>
+                  </aura:if>
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+</aura:component>

@@ -1,0 +1,955 @@
+<aura:component access="global" controller="SAEMemberProviderDetail">
+    
+    <!-- Attributes -->
+    <aura:attribute name="financialsData" type="SAEMemberProviderSearchCoveragesResult.FinancialsWrapper" />
+    <aura:attribute name="today" type="Date" default="" />
+    <aura:attribute name="selectedTab" type="String" default="" />
+    <aura:attribute name="networkStatus" type="String" default="" />
+    <aura:attribute name="yearType" type="String" default="" />
+    <aura:attribute name="displayYear" type="String" default="" />
+    <aura:attribute name="eligibleYear" type="String" default="" />
+    <aura:attribute name="innetwork" type="SAEMemberProviderSearchCoveragesResult.Financials" />
+    <aura:attribute name="outnetwork" type="SAEMemberProviderSearchCoveragesResult.Financials" />
+    <aura:attribute name="tierone" type="SAEMemberProviderSearchCoveragesResult.Financials" />
+    <aura:attribute name="policyDetails" type="SAEPolicyDetailsResult" />
+    <aura:attribute name="isCdhp" type="Boolean" default="false" />
+    <aura:attribute name="cdhpVal" type="string" access="public" />
+    <!-- End of Attributes -->
+     <!--Swapna-->
+    <aura:attribute name="claimNo" type="String" default="" />
+     <aura:attribute name="isClaimDetail" type="Boolean" default="false"/>
+     <aura:attribute name="currentIndexOfOpenedTabs" type="Integer"/>
+    <aura:attribute name="maxAutoDocComponents" type="Integer" default="20"/>
+     <!--Swapna-->
+    <!-- New Fields for Tab Default-->
+    <aura:attribute name="policyList" type="list" access="public" />
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0" />
+    <aura:attribute name="isTierOne" type="boolean" access="public" default="false"/><!--US2973232-->
+    
+    <!-- Handlers -->
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:handler name="change" value="{!v.financialsData}" action="{!c.financialsDataChange}" />
+    <aura:handler name="change" value="{!v.policyDetails}" action="{!c.dataChange}" />
+    <aura:handler name="change" value="{!v.networkStatus}" action="{!c.setDefaultTab}" />
+    <aura:handler name="change" value="{!v.isTierOne}" action="{!c.setDefaultTab}" />
+    <aura:handler name="change" value="{!v.eligibleYear}" action="{!c.setDate}" />
+    <aura:handler event="c:ACET_PolicySwithchAuthDetailsClose" action="{!c.resetChecks}" />
+    <!-- DE461925: Clearing checkboxes after save case -  Krish - 9th Aug 2021  -->
+    <aura:handler name="ACETCaseCreated" event="c:ACET_ACETCaseCreated" action="{!c.clearAutodoc}" />
+    <aura:handler event="c:ACET_AutoDocRefreshEvent" action="{!c.clearAutodoc}" />
+    
+    <!-- End of Handlers -->
+    
+    <aura:attribute name="isAggregateIndividualIndicator" type="Boolean" default="false" />
+    <aura:attribute name="isAggregateFamilyIndicator" type="Boolean" default="false" />
+    <aura:attribute name="isEmbeddedIndividualIndicator" type="Boolean" default="false" />
+    <aura:attribute name="isEmbeddedFamilyIndicator" type="Boolean" default="false" />
+    <aura:attribute name="isFamilyAccumulation" type="Boolean" default="false" />
+    <aura:attribute name="AutodocPageFeature" type="String" />
+    <aura:attribute name="initialClick" type="boolean" default="true" />
+    <aura:attribute name="componentId" type="String" />
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+    <aura:attribute name="AutodocPageFeatureMemberDtl" type="String" />
+    <aura:attribute name="AutodocKeyMemberDtl" type="String" />
+    <aura:attribute name="callTopicOrder" type="Object" />
+    <aura:attribute name="memberTabId" type="string" access="public" />
+    <aura:registerEvent name="ACET_CallTopicAutodoc" type="c:ACET_CallTopicAutodoc" />
+    <aura:attribute name="planLevelBenefitsRes" type="ACET_ExtendedServiceController.PlanLevelBenefits"
+                    access="Public" />
+    <aura:attribute name="caseNotSavedTopics" type="String[]" />
+    <aura:attribute name="tierFlag" type="Boolean" default="true" />
+    <aura:attribute name="innFlag" type="Boolean" default="true" />
+    <aura:attribute name="oonFlag" type="Boolean" default="true" />
+    <aura:attribute name="selectedPolicy" type="Object" />
+    
+    <aura:attribute name="financialObject" type="Object" />
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default="financialscmp" />
+    <aura:attribute name="autodocUniqueId" type="String" default="financials" />
+    <aura:attribute name="memberautodocUniqueId" type="String" default="financials" />
+	<aura:attribute name="showpreview" type="Boolean" default="false"/>
+    <aura:attribute name="tableDetails_prev" type="Object" />
+    <aura:attribute name="tier1HeaderChecked" type="Boolean" default="false" />
+    <aura:attribute name="innHeaderChecked" type="Boolean" default="false" />
+    <aura:attribute name="oonHeaderChecked" type="Boolean" default="false" />
+    <aura:attribute name="tier1FamilyHeader" type="Boolean" default="false" />
+    <aura:attribute name="innFamilyHeader" type="Boolean" default="false" />
+    <aura:attribute name="oonFamilyHeader" type="Boolean" default="false" />
+    <aura:attribute name="eligibleDate" type="String" access="public"/>
+    <aura:attribute name="highlightedPolicySourceCode" type="String" default=""/>
+    <aura:attribute name="isSourceCodeChanged" type="Boolean" default="false"/>
+    <aura:attribute name="policyStatus" type="Boolean" default="false"/>
+    <aura:attribute name="policyNumber" type="String" />
+    <aura:attribute name="providerDetails" type="Object" access="public" />
+    <aura:attribute name="memberId" type="string" access="public"/>
+    <aura:attribute name="memberFN" type="string" access="public" />
+    <aura:attribute name="memberLN" type="string" access="public" />
+    <aura:attribute name="memberDOB" type="string" access="public" />
+    <aura:attribute name="isFinancialDataFetched" type="Boolean" default="false"/>
+    <aura:attribute name="yearTypeBenefits" type="string" access="public" />
+    <aura:attribute name="displayYearBenefits" type="string" access="public" />
+    <aura:attribute name="showSpinnerFinancials" type="Boolean" default="true"/>
+     <aura:attribute name="isMemberSnapShot" type="Boolean" default="false"/>
+    <aura:attribute name="isProviderAndMemberFlow" type="Boolean" default="false"/>
+    <aura:attribute name="memberCardSnap" type="Object" access="public" />
+    <aura:attribute name="isDependent" type="boolean" default="false" access="public"/>
+    <aura:attribute name="currentPayerId" type="String" access="public" default="87726"/>
+    <aura:attribute name="isClaimDetails" type="Boolean" default="false"/>
+    <aura:attribute name="clickRefresh" type="Boolean" default="false"/>
+    <aura:handler name="change" value="{!v.clickRefresh}" action="{!c.dataChange}"/>
+
+    <div style="width:100%" class="slds-grid slds-wrap">
+        <div class="slds-col slds-size_12-of-12">
+            <aura:if isTrue="{!v.showSpinnerFinancials}">
+                <lightning:spinner alternativeText="Loading.." title="Loading.." variant="brand"/>
+            </aura:if>
+            <!--<aura:if isTrue="{!v.isFinancialDataFetched}"> -->
+            <!-- Header -->
+            <c:ACET_FinancialsHeader yearType="{!v.financialObject.yearType}"
+                                     displayYear="{!v.financialObject.displayYear}" isCdhp="{!v.financialObject.isCdhp}"
+                                     eligibleDate="{!v.eligibleDate}" 
+                                     highlightedPolicySourceCode="{!v.highlightedPolicySourceCode}"
+                                     isSourceCodeChanged="{!v.isSourceCodeChanged}" policyStatus="{!v.policyStatus}" clickRefresh="{!v.clickRefresh}"/>
+            <!-- End of Header -->
+            <!-- Body -->
+            <lightning:tabset selectedTabId="{!v.selectedTab}">
+                <!-- Tier 1 Tab -->
+                <lightning:tab label="Tier 1" id="tierOne" onactive="{!c.setTierData}"
+                               class="card_top_padding tabBottomPadding">
+                    <div class="slds-grid slds-wrap slds-grid_align-spread  fix-width">
+                        <!-- Individual Details -->
+                        <div class="slds-col card_right_padding rightBorder slds-size_6-of-12">
+                            <div style="height:100%">
+                                <div class="slds-box slds-card card_padding titleCheckBox detailSection SAESection"
+                                     style="height:100%">
+                                    <div class="{! 'autodocNotTableView SAESection ' + v.AutodocPageFeature }">
+                                        <h3 class="slds-text-heading_small card_bottom_margin field_value">
+                                            <lightning:input type="checkbox" name="INDIVIDUAL" label="INDIVIDUAL"
+                                                             checked="{!v.tier1HeaderChecked}" onchange="{!c.selectAllIndividual}" />
+                                        </h3>
+                                        <c:ACET_FinancialsHeader yearType="{!v.financialObject.yearType}"
+                                                                 displayYear="{!v.financialObject.displayYear}"
+                                                                 isCdhp="{!v.financialObject.isCdhp}"
+                                                                 today="{!v.financialObject.financialDate}" IsAutoDoc="true" />
+                                        <div class="slds-grid slds-wrap slds-form-element">
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialProgressBar Description="{!v.financialObject.Individual.tierone.Deductible.Description}"
+                                                                             headerChecked="{!v.financialObject.Individual.tierone.Deductible.isAutodoc}"
+                                                                             Percentage="{!v.financialObject.Individual.tierone.Deductible.Percentage}"
+                                                                             SpentAmount="{!v.financialObject.Individual.tierone.Deductible.SpentAmount}"
+                                                                             TotalAmount="{!v.financialObject.Individual.tierone.Deductible.TotalAmount}"
+                                                                             RemainingAmount="{!v.financialObject.Individual.tierone.Deductible.RemainingAmount}"
+                                                                             isAggregateIndividualIndicator="{!v.financialObject.Individual.tierone.Deductible.isAggregateIndividualIndicator}"
+                                                                             isAggregateFamilyIndicator="{!v.financialObject.Individual.tierone.Deductible.isAggregateFamilyIndicator}"
+                                                                             isEmbeddedIndividualIndicator="{!v.financialObject.Individual.tierone.Deductible.isEmbeddedIndividualIndicator}"
+                                                                             moveTop="{!v.financialObject.Individual.tierone.Deductible.moveTop}"
+                                                                             moveLeft="{!v.financialObject.Individual.tierone.Deductible.moveLeft}"
+                                                                             showDeductMsg="{!v.financialObject.Individual.tierone.Deductible.showDeductMsg}"
+                                                                             financialCardDetails="{!v.financialObject}"
+                                                                             autodocUniqueId="{!v.autodocUniqueId}"
+                                                                             autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialProgressBar Description="{!v.financialObject.Individual.tierone.OutofPocket.Description}"
+                                                                             headerChecked="{!v.financialObject.Individual.tierone.OutofPocket.isAutodoc}"
+                                                                             Percentage="{!v.financialObject.Individual.tierone.OutofPocket.Percentage}"
+                                                                             SpentAmount="{!v.financialObject.Individual.tierone.OutofPocket.SpentAmount}"
+                                                                             TotalAmount="{!v.financialObject.Individual.tierone.OutofPocket.TotalAmount}"
+                                                                             RemainingAmount="{!v.financialObject.Individual.tierone.OutofPocket.RemainingAmount}"
+                                                                             financialCardDetails="{!v.financialObject}"
+                                                                             autodocUniqueId="{!v.autodocUniqueId}"
+                                                                             autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialProgressBar Description="{!v.financialObject.Individual.tierone.MedicalLifeMaximum.Description}"
+                                                                             headerChecked="{!v.financialObject.Individual.tierone.MedicalLifeMaximum.isAutodoc}"
+                                                                             Percentage="{!v.financialObject.Individual.tierone.MedicalLifeMaximum.Percentage}"
+                                                                             SpentAmount="{!v.financialObject.Individual.tierone.MedicalLifeMaximum.SpentAmount}"
+                                                                             TotalAmount="{!v.financialObject.Individual.tierone.MedicalLifeMaximum.TotalAmount}"
+                                                                             RemainingAmount="{!v.financialObject.Individual.tierone.MedicalLifeMaximum.RemainingAmount}"
+                                                                             showRemaining="{!v.financialObject.Individual.tierone.MedicalLifeMaximum.showRemaining}"
+                                                                             financialCardDetails="{!v.financialObject}"
+                                                                             autodocUniqueId="{!v.autodocUniqueId}"
+                                                                             autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <aura:if isTrue="{!v.financialObject.Individual.tierone.OOP_Limit_2_Found}">
+                                                <div class="slds-grid_align-spread slds-size_12-of-12 field_value">
+                                                    <c:ACET_FinancialProgressBar Description="{!v.financialObject.Individual.tierone.OutofPocket2.Description}"
+                                                                                 headerChecked="{!v.financialObject.Individual.tierone.OutofPocket2.isAutodoc}"
+                                                                                 Percentage="{!v.financialObject.Individual.tierone.OutofPocket2.Percentage}"
+                                                                                 SpentAmount="{!v.financialObject.Individual.tierone.OutofPocket2.SpentAmount}"
+                                                                                 TotalAmount="{!v.financialObject.Individual.tierone.OutofPocket2.TotalAmount}"
+                                                                                 RemainingAmount="{!v.financialObject.Individual.tierone.OutofPocket2.RemainingAmount}"
+                                                                                 financialCardDetails="{!v.financialObject}"
+                                                                                 autodocUniqueId="{!v.autodocUniqueId}"
+                                                                                 autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!v.financialObject.copayMaxAmount>=0}">
+                                                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                    <c:ACET_FinancialProgressBar Description="{!v.financialObject.Individual.tierone.CopayMax.Description}"
+                                                                                 headerChecked="{!v.financialObject.Individual.tierone.CopayMax.isAutodoc}"
+                                                                                 TotalAmount="{!v.financialObject.Individual.tierone.CopayMax.TotalAmount}"
+                                                                                 financialCardDetails="{!v.financialObject}"
+                                                                                 autodocUniqueId="{!v.autodocUniqueId}"
+                                                                                 autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                                </div>
+                                            </aura:if>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialsTable iscrsAplOop="{!v.financialObject.Individual.tierone.CrossApplyOutofPocket.iscrsAplOop}"
+                                                                        headerChecked="{!v.financialObject.Individual.tierone.CrossApplyOutofPocket.isAutodoc}"
+                                                                        crsAplOopSignVal="{!v.financialObject.Individual.tierone.CrossApplyOutofPocket.crsAplOopSignVal}"
+                                                                        financialCardDetails="{!v.financialObject}"
+                                                                        autodocUniqueId="{!v.autodocUniqueId}"
+                                                                        autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialsTable iscrsAplCopy="{!v.financialObject.Individual.tierone.CrossApplyCopay.iscrsAplCopy}"
+                                                                        headerChecked="{!v.financialObject.Individual.tierone.CrossApplyCopay.isAutodoc}"
+                                                                        crsAplCopySignVal="{!v.financialObject.Individual.tierone.CrossApplyCopay.crsAplCopySignVal}"
+                                                                        financialCardDetails="{!v.financialObject}"
+                                                                        autodocUniqueId="{!v.autodocUniqueId}"
+                                                                        autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialsTable iscrsAplCore="{!v.financialObject.Individual.tierone.CrossApplyCore.iscrsAplCore}"
+                                                                        headerChecked="{!v.financialObject.Individual.tierone.CrossApplyCore.isAutodoc}"
+                                                                        crsAplCoreSignVal="{!v.financialObject.Individual.tierone.CrossApplyCore.crsAplCoreSignVal}"
+                                                                        financialCardDetails="{!v.financialObject}"
+                                                                        autodocUniqueId="{!v.autodocUniqueId}"
+                                                                        autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- End of Individual Details -->
+                        <!-- Family Details -->
+                        <div class="slds-col card_left_padding slds-size_6-of-12">
+                            <div style="height:100%">
+                                <div class="slds-box slds-card card_padding titleCheckBox detailSection SAESection"
+                                     style="height:100%">
+                                    <div class="{! ' autodocNotTableView SAESection ' +  v.AutodocPageFeature }">
+                                        <h3 class="slds-text-heading_small card_bottom_margin field_value">
+                                            <aura:if isTrue="{!v.financialObject.isFamilyAccumulation}">
+                                                FAMILY
+                                                <b class="slds-m-left_medium">Family accumulations do not apply.</b>
+                                                <aura:set attribute="else">
+                                                    <lightning:input type="checkbox" name="FAMILY" label="FAMILY"
+                                                             checked="{!v.tier1FamilyHeader}" onchange="{!c.selectAllFamily}" />
+                                                </aura:set>
+                                            </aura:if>
+                                        </h3>
+                                        
+                                        <c:ACET_FinancialsHeader yearType="{!v.financialObject.yearType}"
+                                                                 displayYear="{!v.financialObject.displayYear}"
+                                                                 isCdhp="{!v.financialObject.isCdhp}"
+                                                                 today="{!v.financialObject.financialDate}" IsAutoDoc="true" />
+                                        <div class="slds-grid slds-wrap slds-form-element">
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialProgressBar Description="{!v.financialObject.Family.tierone.Deductible.Description}"
+                                                                             headerChecked="{!v.financialObject.Family.tierone.Deductible.isAutodoc}"
+                                                                             Percentage="{!v.financialObject.Family.tierone.Deductible.Percentage}"
+                                                                             SpentAmount="{!v.financialObject.Family.tierone.Deductible.SpentAmount}"
+                                                                             TotalAmount="{!v.financialObject.Family.tierone.Deductible.TotalAmount}"
+                                                                             RemainingAmount="{!v.financialObject.Family.tierone.Deductible.RemainingAmount}"
+                                                                             isAggregateIndividualIndicator="{!v.financialObject.Family.tierone.Deductible.isAggregateIndividualIndicator}"
+                                                                             isAggregateFamilyIndicator="{!v.financialObject.Family.tierone.Deductible.isAggregateFamilyIndicator}"
+                                                                             isEmbeddedIndividualIndicator="{!v.financialObject.Family.tierone.Deductible.isEmbeddedIndividualIndicator}"
+                                                                             moveTop="{!v.financialObject.Family.tierone.Deductible.moveTop}"
+                                                                             moveLeft="{!v.financialObject.Family.tierone.Deductible.moveLeft}"
+                                                                             showDeductMsg="{!v.financialObject.Family.tierone.Deductible.showDeductMsg}"
+                                                                             isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                             financialCardDetails="{!v.financialObject}"
+                                                                             autodocUniqueId="{!v.autodocUniqueId}"
+                                                                             autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <aura:if isTrue="{!v.financialObject.isFamilyAccumulation}">
+                                                    <br />
+                                                </aura:if>
+                                                <c:ACET_FinancialProgressBar Description="{!v.financialObject.Family.tierone.OutofPocket.Description}"
+                                                                             headerChecked="{!v.financialObject.Family.tierone.OutofPocket.isAutodoc}"
+                                                                             Percentage="{!v.financialObject.Family.tierone.OutofPocket.Percentage}"
+                                                                             SpentAmount="{!v.financialObject.Family.tierone.OutofPocket.SpentAmount}"
+                                                                             TotalAmount="{!v.financialObject.Family.tierone.OutofPocket.TotalAmount}"
+                                                                             RemainingAmount="{!v.financialObject.Family.tierone.OutofPocket.RemainingAmount}"
+                                                                             isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                             financialCardDetails="{!v.financialObject}"
+                                                                             autodocUniqueId="{!v.autodocUniqueId}"
+                                                                             autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <aura:if isTrue="{!v.financialObject.isFamilyAccumulation}">
+                                                    <br />
+                                                </aura:if>
+                                                <c:ACET_FinancialProgressBar Description="{!v.financialObject.Family.tierone.MedicalLifeMaximum.Description}"
+                                                                             headerChecked="{!v.financialObject.Family.tierone.MedicalLifeMaximum.isAutodoc}"
+                                                                             Percentage="{!v.financialObject.Family.tierone.MedicalLifeMaximum.Percentage}"
+                                                                             SpentAmount="{!v.financialObject.Family.tierone.MedicalLifeMaximum.SpentAmount}"
+                                                                             TotalAmount="{!v.financialObject.Family.tierone.MedicalLifeMaximum.TotalAmount}"
+                                                                             RemainingAmount="{!v.financialObject.Family.tierone.MedicalLifeMaximum.RemainingAmount}"
+                                                                             showRemaining="{!v.financialObject.Family.tierone.MedicalLifeMaximum.showRemaining}"
+                                                                             isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                             financialCardDetails="{!v.financialObject}"
+                                                                             autodocUniqueId="{!v.autodocUniqueId}"
+                                                                             autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <aura:if isTrue="{!v.financialObject.Family.tierone.OOP_Limit_2_Found_Family}">
+                                                <div class="slds-grid_align-spread slds-size_12-of-12 field_value">
+                                                    <aura:if isTrue="{!v.financialObject.isFamilyAccumulation}">
+                                                        <br />
+                                                    </aura:if>
+                                                    <c:ACET_FinancialProgressBar Description="{!v.financialObject.Family.tierone.OutofPocket2.Description}"
+                                                                                 headerChecked="{!v.financialObject.Family.tierone.OutofPocket2.isAutodoc}"
+                                                                                 Percentage="{!v.financialObject.Family.tierone.OutofPocket2.Percentage}"
+                                                                                 SpentAmount="{!v.financialObject.Family.tierone.OutofPocket2.SpentAmount}"
+                                                                                 TotalAmount="{!v.financialObject.Family.tierone.OutofPocket2.TotalAmount}"
+                                                                                 RemainingAmount="{!v.financialObject.Family.tierone.OutofPocket2.RemainingAmount}"
+                                                                                 financialCardDetails="{!v.financialObject}"
+                                                                                 isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                                 autodocUniqueId="{!v.autodocUniqueId}"
+                                                                                 autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!v.financialObject.copayMaxAmount>=0}">
+                                                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                    <aura:if isTrue="{!v.financialObject.isFamilyAccumulation}">
+                                                        <br />
+                                                    </aura:if>
+                                                    <c:ACET_FinancialProgressBar Description="{!v.financialObject.Family.tierone.CopayMax.Description}"
+                                                                                 headerChecked="{!v.financialObject.Family.tierone.CopayMax.isAutodoc}"
+                                                                                 TotalAmount="{!v.financialObject.Family.tierone.CopayMax.TotalAmount}"
+                                                                                 isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                                 financialCardDetails="{!v.financialObject}"
+                                                                                 autodocUniqueId="{!v.autodocUniqueId}"
+                                                                                 autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                                </div>
+                                            </aura:if>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialsTable iscrsAplOop="{!v.financialObject.Family.tierone.CrossApplyOutofPocket.iscrsAplOop}"
+                                                                        headerChecked="{!v.financialObject.Family.tierone.CrossApplyOutofPocket.isAutodoc}"
+                                                                        crsAplOopSignVal="{!v.financialObject.Family.tierone.CrossApplyOutofPocket.crsAplOopSignVal}"
+                                                                        isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                        financialCardDetails="{!v.financialObject}"
+                                                                        autodocUniqueId="{!v.autodocUniqueId}"
+                                                                        autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialsTable iscrsAplCopy="{!v.financialObject.Family.tierone.CrossApplyCopay.iscrsAplCopy}"
+                                                                        headerChecked="{!v.financialObject.Family.tierone.CrossApplyCopay.isAutodoc}"
+                                                                        crsAplCopySignVal="{!v.financialObject.Family.tierone.CrossApplyCopay.crsAplCopySignVal}"
+                                                                        isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                        financialCardDetails="{!v.financialObject}"
+                                                                        autodocUniqueId="{!v.autodocUniqueId}"
+                                                                        autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialsTable iscrsAplCore="{!v.financialObject.Family.tierone.CrossApplyCore.iscrsAplCore}"
+                                                                        headerChecked="{!v.financialObject.Family.tierone.CrossApplyCore.isAutodoc}"
+                                                                        crsAplCoreSignVal="{!v.financialObject.Family.tierone.CrossApplyCore.crsAplCoreSignVal}"
+                                                                        isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                        financialCardDetails="{!v.financialObject}"
+                                                                        autodocUniqueId="{!v.autodocUniqueId}"
+                                                                        autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- End of Family Details -->
+                </lightning:tab>
+                <!-- End of Teir 1 Tab -->
+                <!-- In Network Tab -->
+                <lightning:tab label="INN" title="INN" id="inNetwork" onactive="{!c.setINNData}"
+                               class="card_top_padding tabBottomPadding">
+                    <div class="slds-grid slds-wrap slds-grid_align-spread  fix-width">
+                        <div class="slds-col card_right_padding rightBorder slds-size_6-of-12">
+                            <div style="height:100%">
+                                <div class="slds-box slds-card card_padding titleCheckBox detailSection SAESection"
+                                     style="height:100%">
+                                    <div class="{! ' autodocNotTableView SAESection ' + v.AutodocPageFeature }">
+                                        <h3 class="slds-text-heading_small card_bottom_margin field_value">
+                                            <lightning:input type="checkbox" name="INDIVIDUAL" label="INDIVIDUAL"
+                                                             checked="{!v.innHeaderChecked}" onchange="{!c.selectAllIndividual}" />
+                                        </h3>
+                                        <c:ACET_FinancialsHeader yearType="{!v.financialObject.yearType}"
+                                                                 displayYear="{!v.financialObject.displayYear}"
+                                                                 isCdhp="{!v.financialObject.isCdhp}"
+                                                                 today="{!v.financialObject.financialDate}" IsAutoDoc="true" />
+                                        <div class="slds-grid slds-wrap slds-form-element">
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialProgressBar Description="{!v.financialObject.Individual.inNetwork.Deductible.Description}"
+                                                                             headerChecked="{!v.financialObject.Individual.inNetwork.Deductible.isAutodoc}"
+                                                                             Percentage="{!v.financialObject.Individual.inNetwork.Deductible.Percentage}"
+                                                                             SpentAmount="{!v.financialObject.Individual.inNetwork.Deductible.SpentAmount}"
+                                                                             TotalAmount="{!v.financialObject.Individual.inNetwork.Deductible.TotalAmount}"
+                                                                             RemainingAmount="{!v.financialObject.Individual.inNetwork.Deductible.RemainingAmount}"
+                                                                             isAggregateIndividualIndicator="{!v.financialObject.Individual.inNetwork.Deductible.isAggregateIndividualIndicator}"
+                                                                             isAggregateFamilyIndicator="{!v.financialObject.Individual.inNetwork.Deductible.isAggregateFamilyIndicator}"
+                                                                             isEmbeddedIndividualIndicator="{!v.financialObject.Individual.inNetwork.Deductible.isEmbeddedIndividualIndicator}"
+                                                                             moveTop="{!v.financialObject.Individual.inNetwork.Deductible.moveTop}"
+                                                                             moveLeft="{!v.financialObject.Individual.inNetwork.Deductible.moveLeft}"
+                                                                             showDeductMsg="{!v.financialObject.Individual.inNetwork.Deductible.showDeductMsg}"
+                                                                             financialCardDetails="{!v.financialObject}"
+                                                                             autodocUniqueId="{!v.autodocUniqueId}"
+                                                                             autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialProgressBar Description="{!v.financialObject.Individual.inNetwork.OutofPocket.Description}"
+                                                                             headerChecked="{!v.financialObject.Individual.inNetwork.OutofPocket.isAutodoc}"
+                                                                             Percentage="{!v.financialObject.Individual.inNetwork.OutofPocket.Percentage}"
+                                                                             SpentAmount="{!v.financialObject.Individual.inNetwork.OutofPocket.SpentAmount}"
+                                                                             TotalAmount="{!v.financialObject.Individual.inNetwork.OutofPocket.TotalAmount}"
+                                                                             RemainingAmount="{!v.financialObject.Individual.inNetwork.OutofPocket.RemainingAmount}"
+                                                                             financialCardDetails="{!v.financialObject}"
+                                                                             autodocUniqueId="{!v.autodocUniqueId}"
+                                                                             autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialProgressBar Description="{!v.financialObject.Individual.inNetwork.MedicalLifeMaximum.Description}"
+                                                                             headerChecked="{!v.financialObject.Individual.inNetwork.MedicalLifeMaximum.isAutodoc}"
+                                                                             Percentage="{!v.financialObject.Individual.inNetwork.MedicalLifeMaximum.Percentage}"
+                                                                             SpentAmount="{!v.financialObject.Individual.inNetwork.MedicalLifeMaximum.SpentAmount}"
+                                                                             TotalAmount="{!v.financialObject.Individual.inNetwork.MedicalLifeMaximum.TotalAmount}"
+                                                                             RemainingAmount="{!v.financialObject.Individual.inNetwork.MedicalLifeMaximum.RemainingAmount}"
+                                                                             showRemaining="{!v.financialObject.Individual.inNetwork.MedicalLifeMaximum.showRemaining}"
+                                                                             financialCardDetails="{!v.financialObject}"
+                                                                             autodocUniqueId="{!v.autodocUniqueId}"
+                                                                             autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <aura:if isTrue="{!v.financialObject.Individual.inNetwork.OOP_Limit_2_Found}">
+                                                <div class="slds-grid_align-spread slds-size_12-of-12 field_value">
+                                                    <c:ACET_FinancialProgressBar Description="{!v.financialObject.Individual.inNetwork.OutofPocket2.Description}"
+                                                                                 headerChecked="{!v.financialObject.Individual.inNetwork.OutofPocket2.isAutodoc}"
+                                                                                 Percentage="{!v.financialObject.Individual.inNetwork.OutofPocket2.Percentage}"
+                                                                                 SpentAmount="{!v.financialObject.Individual.inNetwork.OutofPocket2.SpentAmount}"
+                                                                                 TotalAmount="{!v.financialObject.Individual.inNetwork.OutofPocket2.TotalAmount}"
+                                                                                 RemainingAmount="{!v.financialObject.Individual.inNetwork.OutofPocket2.RemainingAmount}"
+                                                                                 financialCardDetails="{!v.financialObject}"
+                                                                                 autodocUniqueId="{!v.autodocUniqueId}"
+                                                                                 autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!v.financialObject.copayMaxAmount>=0}">
+                                                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                    <c:ACET_FinancialProgressBar Description="{!v.financialObject.Individual.inNetwork.CopayMax.Description}"
+                                                                                 headerChecked="{!v.financialObject.Individual.inNetwork.CopayMax.isAutodoc}"
+                                                                                 TotalAmount="{!v.financialObject.Individual.inNetwork.CopayMax.TotalAmount}"
+                                                                                 financialCardDetails="{!v.financialObject}"
+                                                                                 autodocUniqueId="{!v.autodocUniqueId}"
+                                                                                 autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!or(v.financialObject.Individual.inNetwork.CombinedDeductible.comDedVal=='Y', v.financialObject.Individual.inNetwork.CombinedDeductible.comDedVal=='N')}">
+                                                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                    <c:ACET_FinancialsTable isComDedInn="{!v.financialObject.Individual.inNetwork.CombinedDeductible.isComDed}"
+                                                                            headerChecked="{!v.financialObject.Individual.inNetwork.CombinedDeductible.isAutodoc}"
+                                                                            comDedInnVal="{!v.financialObject.Individual.inNetwork.CombinedDeductible.comDedVal}"
+                                                                            financialCardDetails="{!v.financialObject}"
+                                                                            autodocUniqueId="{!v.autodocUniqueId}"
+                                                                            autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}"/>
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!or(v.financialObject.Individual.inNetwork.CombinedOOP.comOopVal=='Y', v.financialObject.Individual.inNetwork.CombinedOOP.comOopVal=='N')}">
+                                                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                    <c:ACET_FinancialsTable isComOopInn="{!v.financialObject.Individual.inNetwork.CombinedOOP.isComOop}"
+                                                                            headerChecked="{!v.financialObject.Individual.inNetwork.CombinedOOP.isAutodoc}"
+                                                                            comOopInnVal="{!v.financialObject.Individual.inNetwork.CombinedOOP.comOopVal}"
+                                                                            financialCardDetails="{!v.financialObject}"
+                                                                            autodocUniqueId="{!v.autodocUniqueId}"
+                                                                            autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                                </div>
+                                            </aura:if>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialsTable iscrsAplOop="{!v.financialObject.Individual.inNetwork.CrossApplyOutofPocket.iscrsAplOop}"
+                                                                        headerChecked="{!v.financialObject.Individual.inNetwork.CrossApplyOutofPocket.isAutodoc}"
+                                                                        crsAplOopSignVal="{!v.financialObject.Individual.inNetwork.CrossApplyOutofPocket.crsAplOopSignVal}"
+                                                                        financialCardDetails="{!v.financialObject}"
+                                                                        autodocUniqueId="{!v.autodocUniqueId}"
+                                                                        autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialsTable iscrsAplCopy="{!v.financialObject.Individual.inNetwork.CrossApplyCopay.iscrsAplCopy}"
+                                                                        headerChecked="{!v.financialObject.Individual.inNetwork.CrossApplyCopay.isAutodoc}"
+                                                                        crsAplCopySignVal="{!v.financialObject.Individual.inNetwork.CrossApplyCopay.crsAplCopySignVal}"
+                                                                        financialCardDetails="{!v.financialObject}"
+                                                                        autodocUniqueId="{!v.autodocUniqueId}"
+                                                                        autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialsTable iscrsAplCore="{!v.financialObject.Individual.inNetwork.CrossApplyCore.iscrsAplCore}"
+                                                                        headerChecked="{!v.financialObject.Individual.inNetwork.CrossApplyCore.isAutodoc}"
+                                                                        crsAplCoreSignVal="{!v.financialObject.Individual.inNetwork.CrossApplyCore.crsAplCoreSignVal}"
+                                                                        financialCardDetails="{!v.financialObject}"
+                                                                        autodocUniqueId="{!v.autodocUniqueId}"
+                                                                        autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- End of Individual Details -->
+                        <!-- Family Details -->
+                        <!-- Individual Details -->
+                        <div class="slds-col card_left_padding slds-size_6-of-12">
+                            <div style="height:100%">
+                                <div class="slds-box slds-card card_padding titleCheckBox detailSection SAESection"
+                                     style="height:100%">
+                                    <div class="{! ' autodocNotTableView SAESection ' + v.AutodocPageFeature }">
+                                        <h3 class="slds-text-heading_small card_bottom_margin field_value">
+                                            <aura:if isTrue="{!v.financialObject.isFamilyAccumulation}">
+                                                FAMILY
+                                                <b class="slds-m-left_medium">Family accumulations do not apply.</b>
+                                                <aura:set attribute="else">
+                                                    <lightning:input type="checkbox" name="FAMILY" label="FAMILY"
+                                                             checked="{!v.innFamilyHeader}" onchange="{!c.selectAllFamily}" />
+                                                </aura:set>
+                                            </aura:if>
+                                        </h3>
+                                        <c:ACET_FinancialsHeader yearType="{!v.financialObject.yearType}"
+                                                                 displayYear="{!v.financialObject.displayYear}"
+                                                                 isCdhp="{!v.financialObject.isCdhp}"
+                                                                 today="{!v.financialObject.financialDate}" IsAutoDoc="true" />
+                                        <div class="slds-grid slds-wrap slds-form-element">
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialProgressBar Description="{!v.financialObject.Family.inNetwork.Deductible.Description}"
+                                                                             headerChecked="{!v.financialObject.Family.inNetwork.Deductible.isAutodoc}"
+                                                                             Percentage="{!v.financialObject.Family.inNetwork.Deductible.Percentage}"
+                                                                             SpentAmount="{!v.financialObject.Family.inNetwork.Deductible.SpentAmount}"
+                                                                             TotalAmount="{!v.financialObject.Family.inNetwork.Deductible.TotalAmount}"
+                                                                             RemainingAmount="{!v.financialObject.Family.inNetwork.Deductible.RemainingAmount}"
+                                                                             isAggregateIndividualIndicator="{!v.financialObject.Family.inNetwork.Deductible.isAggregateIndividualIndicator}"
+                                                                             isAggregateFamilyIndicator="{!v.financialObject.Family.inNetwork.Deductible.isAggregateFamilyIndicator}"
+                                                                             isEmbeddedIndividualIndicator="{!v.financialObject.Family.inNetwork.Deductible.isEmbeddedIndividualIndicator}"
+                                                                             moveTop="{!v.financialObject.Family.inNetwork.Deductible.moveTop}"
+                                                                             moveLeft="{!v.financialObject.Family.inNetwork.Deductible.moveLeft}"
+                                                                             showDeductMsg="{!v.financialObject.Family.inNetwork.Deductible.showDeductMsg}"
+                                                                             isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                             financialCardDetails="{!v.financialObject}"
+                                                                             autodocUniqueId="{!v.autodocUniqueId}"
+                                                                             autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <aura:if isTrue="{!v.financialObject.isFamilyAccumulation}">
+                                                    <br />
+                                                </aura:if>
+                                                <c:ACET_FinancialProgressBar Description="{!v.financialObject.Family.inNetwork.OutofPocket.Description}"
+                                                                             headerChecked="{!v.financialObject.Family.inNetwork.OutofPocket.isAutodoc}"
+                                                                             Percentage="{!v.financialObject.Family.inNetwork.OutofPocket.Percentage}"
+                                                                             SpentAmount="{!v.financialObject.Family.inNetwork.OutofPocket.SpentAmount}"
+                                                                             TotalAmount="{!v.financialObject.Family.inNetwork.OutofPocket.TotalAmount}"
+                                                                             RemainingAmount="{!v.financialObject.Family.inNetwork.OutofPocket.RemainingAmount}"
+                                                                             isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                             financialCardDetails="{!v.financialObject}"
+                                                                             autodocUniqueId="{!v.autodocUniqueId}"
+                                                                             autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <aura:if isTrue="{!v.financialObject.isFamilyAccumulation}">
+                                                    <br />
+                                                </aura:if>
+                                                <c:ACET_FinancialProgressBar Description="{!v.financialObject.Family.inNetwork.MedicalLifeMaximum.Description}"
+                                                                             headerChecked="{!v.financialObject.Family.inNetwork.MedicalLifeMaximum.isAutodoc}"
+                                                                             Percentage="{!v.financialObject.Family.inNetwork.MedicalLifeMaximum.Percentage}"
+                                                                             SpentAmount="{!v.financialObject.Family.inNetwork.MedicalLifeMaximum.SpentAmount}"
+                                                                             TotalAmount="{!v.financialObject.Family.inNetwork.MedicalLifeMaximum.TotalAmount}"
+                                                                             RemainingAmount="{!v.financialObject.Family.inNetwork.MedicalLifeMaximum.RemainingAmount}"
+                                                                             showRemaining="{!v.financialObject.Family.inNetwork.MedicalLifeMaximum.showRemaining}"
+                                                                             isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                             financialCardDetails="{!v.financialObject}"
+                                                                             autodocUniqueId="{!v.autodocUniqueId}"
+                                                                             autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <aura:if isTrue="{!v.financialObject.Family.inNetwork.OOP_Limit_2_Found_Family}">
+                                                <div class="slds-grid_align-spread slds-size_12-of-12 field_value">
+                                                    <aura:if isTrue="{!v.financialObject.isFamilyAccumulation}">
+                                                        <br />
+                                                    </aura:if>
+                                                    <c:ACET_FinancialProgressBar Description="{!v.financialObject.Family.inNetwork.OutofPocket2.Description}"
+                                                                                 headerChecked="{!v.financialObject.Family.inNetwork.OutofPocket2.isAutodoc}"
+                                                                                 Percentage="{!v.financialObject.Family.inNetwork.OutofPocket2.Percentage}"
+                                                                                 SpentAmount="{!v.financialObject.Family.inNetwork.OutofPocket2.SpentAmount}"
+                                                                                 TotalAmount="{!v.financialObject.Family.inNetwork.OutofPocket2.TotalAmount}"
+                                                                                 RemainingAmount="{!v.financialObject.Family.inNetwork.OutofPocket2.RemainingAmount}"
+                                                                                 financialCardDetails="{!v.financialObject}"
+                                                                                 isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                                 autodocUniqueId="{!v.autodocUniqueId}"
+                                                                                 autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!v.financialObject.copayMaxAmount>=0}">
+                                                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                    <aura:if isTrue="{!v.financialObject.isFamilyAccumulation}">
+                                                        <br />
+                                                    </aura:if>
+                                                    <c:ACET_FinancialProgressBar Description="{!v.financialObject.Family.inNetwork.CopayMax.Description}"
+                                                                                 headerChecked="{!v.financialObject.Family.inNetwork.CopayMax.isAutodoc}"
+                                                                                 TotalAmount="{!v.financialObject.Family.inNetwork.CopayMax.TotalAmount}"
+                                                                                 isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                                 financialCardDetails="{!v.financialObject}"
+                                                                                 autodocUniqueId="{!v.autodocUniqueId}"
+                                                                                 autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!or(v.financialObject.Family.inNetwork.CombinedDeductible.comDedVal=='Y', v.financialObject.Family.inNetwork.CombinedDeductible.comDedVal=='N')}">
+                                                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                    <c:ACET_FinancialsTable isComDedInn="{!v.financialObject.Family.inNetwork.CombinedDeductible.isComDed}"
+                                                                            headerChecked="{!v.financialObject.Family.inNetwork.CombinedDeductible.isAutodoc}"
+                                                                            comDedInnVal="{!v.financialObject.Family.inNetwork.CombinedDeductible.comDedVal}"
+                                                                            isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                            financialCardDetails="{!v.financialObject}"
+                                                                            autodocUniqueId="{!v.autodocUniqueId}"
+                                                                            autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!or(v.financialObject.Family.inNetwork.CombinedOOP.comOopVal=='Y', v.financialObject.Family.inNetwork.CombinedOOP.comOopVal=='N')}">
+                                                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                    <c:ACET_FinancialsTable isComOopInn="{!v.financialObject.Family.inNetwork.CombinedOOP.isComOop}"
+                                                                            headerChecked="{!v.financialObject.Family.inNetwork.CombinedOOP.isAutodoc}"
+                                                                            comOopInnVal="{!v.financialObject.Family.inNetwork.CombinedOOP.comOopVal}"
+                                                                            isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                            financialCardDetails="{!v.financialObject}"
+                                                                            autodocUniqueId="{!v.autodocUniqueId}"
+                                                                            autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                                </div>
+                                            </aura:if>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialsTable iscrsAplOop="{!v.financialObject.Family.inNetwork.CrossApplyOutofPocket.iscrsAplOop}"
+                                                                        headerChecked="{!v.financialObject.Family.inNetwork.CrossApplyOutofPocket.isAutodoc}"
+                                                                        crsAplOopSignVal="{!v.financialObject.Family.inNetwork.CrossApplyOutofPocket.crsAplOopSignVal}"
+                                                                        isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                        financialCardDetails="{!v.financialObject}"
+                                                                        autodocUniqueId="{!v.autodocUniqueId}"
+                                                                        autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialsTable iscrsAplCopy="{!v.financialObject.Family.inNetwork.CrossApplyCopay.iscrsAplCopy}"
+                                                                        headerChecked="{!v.financialObject.Family.inNetwork.CrossApplyCopay.isAutodoc}"
+                                                                        crsAplCopySignVal="{!v.financialObject.Family.inNetwork.CrossApplyCopay.crsAplCopySignVal}"
+                                                                        isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                        financialCardDetails="{!v.financialObject}"
+                                                                        autodocUniqueId="{!v.autodocUniqueId}"
+                                                                        autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialsTable iscrsAplCore="{!v.financialObject.Family.inNetwork.CrossApplyCore.iscrsAplCore}"
+                                                                        headerChecked="{!v.financialObject.Family.inNetwork.CrossApplyCore.isAutodoc}"
+                                                                        crsAplCoreSignVal="{!v.financialObject.Family.inNetwork.CrossApplyCore.crsAplCoreSignVal}"
+                                                                        isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                        financialCardDetails="{!v.financialObject}"
+                                                                        autodocUniqueId="{!v.autodocUniqueId}"
+                                                                        autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- End of Family Details -->
+                    </div>
+                </lightning:tab>
+                <!-- End of In Network Tab -->
+                <!-- out of Network Tab -->
+                <lightning:tab label="OON" title="OON" id="outNetwork" onactive="{!c.setOONData}"
+                               class="card_top_padding tabBottomPadding">
+                    <div class="slds-grid slds-wrap slds-grid_align-spread  fix-width">
+                        <div class="slds-col card_right_padding rightBorder slds-size_6-of-12">
+                            <div style="height:100%">
+                                <div class="slds-box slds-card card_padding titleCheckBox detailSection SAESection"
+                                     style="height:100%">
+                                    <div class="{! ' autodocNotTableView SAESection ' + v.AutodocPageFeature }">
+                                        <h3 class="slds-text-heading_small card_bottom_margin field_value">
+                                            <lightning:input type="checkbox" name="INDIVIDUAL" label="INDIVIDUAL"
+                                                             checked="{!v.oonHeaderChecked}" onchange="{!c.selectAllIndividual}" />
+                                        </h3>
+                                        <c:ACET_FinancialsHeader yearType="{!v.financialObject.yearType}"
+                                                                 displayYear="{!v.financialObject.displayYear}"
+                                                                 isCdhp="{!v.financialObject.isCdhp}"
+                                                                 today="{!v.financialObject.financialDate}" IsAutoDoc="true" />
+                                        <div class="slds-grid slds-wrap slds-form-element">
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialProgressBar Description="{!v.financialObject.Individual.outofNetwork.Deductible.Description}"
+                                                                             headerChecked="{!v.financialObject.Individual.outofNetwork.Deductible.isAutodoc}"
+                                                                             Percentage="{!v.financialObject.Individual.outofNetwork.Deductible.Percentage}"
+                                                                             SpentAmount="{!v.financialObject.Individual.outofNetwork.Deductible.SpentAmount}"
+                                                                             TotalAmount="{!v.financialObject.Individual.outofNetwork.Deductible.TotalAmount}"
+                                                                             RemainingAmount="{!v.financialObject.Individual.outofNetwork.Deductible.RemainingAmount}"
+                                                                             isAggregateIndividualIndicator="{!v.financialObject.Individual.outofNetwork.Deductible.isAggregateIndividualIndicator}"
+                                                                             isAggregateFamilyIndicator="{!v.financialObject.Individual.outofNetwork.Deductible.isAggregateFamilyIndicator}"
+                                                                             isEmbeddedIndividualIndicator="{!v.financialObject.Individual.outofNetwork.Deductible.isEmbeddedIndividualIndicator}"
+                                                                             moveTop="{!v.financialObject.Individual.outofNetwork.Deductible.moveTop}"
+                                                                             moveLeft="{!v.financialObject.Individual.outofNetwork.Deductible.moveLeft}"
+                                                                             showDeductMsg="{!v.financialObject.Individual.outofNetwork.Deductible.showDeductMsg}"
+                                                                             financialCardDetails="{!v.financialObject}"
+                                                                             autodocUniqueId="{!v.autodocUniqueId}"
+                                                                             autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialProgressBar Description="{!v.financialObject.Individual.outofNetwork.OutofPocket.Description}"
+                                                                             headerChecked="{!v.financialObject.Individual.outofNetwork.OutofPocket.isAutodoc}"
+                                                                             Percentage="{!v.financialObject.Individual.outofNetwork.OutofPocket.Percentage}"
+                                                                             SpentAmount="{!v.financialObject.Individual.outofNetwork.OutofPocket.SpentAmount}"
+                                                                             TotalAmount="{!v.financialObject.Individual.outofNetwork.OutofPocket.TotalAmount}"
+                                                                             RemainingAmount="{!v.financialObject.Individual.outofNetwork.OutofPocket.RemainingAmount}"
+                                                                             financialCardDetails="{!v.financialObject}"
+                                                                             autodocUniqueId="{!v.autodocUniqueId}"
+                                                                             autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialProgressBar Description="{!v.financialObject.Individual.outofNetwork.MedicalLifeMaximum.Description}"
+                                                                             headerChecked="{!v.financialObject.Individual.outofNetwork.MedicalLifeMaximum.isAutodoc}"
+                                                                             Percentage="{!v.financialObject.Individual.outofNetwork.MedicalLifeMaximum.Percentage}"
+                                                                             SpentAmount="{!v.financialObject.Individual.outofNetwork.MedicalLifeMaximum.SpentAmount}"
+                                                                             TotalAmount="{!v.financialObject.Individual.outofNetwork.MedicalLifeMaximum.TotalAmount}"
+                                                                             RemainingAmount="{!v.financialObject.Individual.outofNetwork.MedicalLifeMaximum.RemainingAmount}"
+                                                                             showRemaining="{!v.financialObject.Individual.outofNetwork.MedicalLifeMaximum.showRemaining}"
+                                                                             financialCardDetails="{!v.financialObject}"
+                                                                             autodocUniqueId="{!v.autodocUniqueId}"
+                                                                             autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <aura:if isTrue="{!v.financialObject.Individual.outofNetwork.OOP_Limit_2_Found}">
+                                                <div class="slds-grid_align-spread slds-size_12-of-12 field_value">
+                                                    <c:ACET_FinancialProgressBar Description="{!v.financialObject.Individual.outofNetwork.OutofPocket2.Description}"
+                                                                                 headerChecked="{!v.financialObject.Individual.outofNetwork.OutofPocket2.isAutodoc}"
+                                                                                 Percentage="{!v.financialObject.Individual.outofNetwork.OutofPocket2.Percentage}"
+                                                                                 SpentAmount="{!v.financialObject.Individual.outofNetwork.OutofPocket2.SpentAmount}"
+                                                                                 TotalAmount="{!v.financialObject.Individual.outofNetwork.OutofPocket2.TotalAmount}"
+                                                                                 RemainingAmount="{!v.financialObject.Individual.outofNetwork.OutofPocket2.RemainingAmount}"
+                                                                                 financialCardDetails="{!v.financialObject}"
+                                                                                 autodocUniqueId="{!v.autodocUniqueId}"
+                                                                                 autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!v.financialObject.copayMaxAmount>=0}">
+                                                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                    <c:ACET_FinancialProgressBar Description="{!v.financialObject.Individual.outofNetwork.CopayMax.Description}"
+                                                                                 headerChecked="{!v.financialObject.Individual.outofNetwork.CopayMax.isAutodoc}"
+                                                                                 TotalAmount="{!v.financialObject.Individual.outofNetwork.CopayMax.TotalAmount}"
+                                                                                 financialCardDetails="{!v.financialObject}"
+                                                                                 autodocUniqueId="{!v.autodocUniqueId}"
+                                                                                 autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!or(v.financialObject.Individual.outofNetwork.CombinedDeductible.comDedVal=='Y', v.financialObject.Individual.outofNetwork.CombinedDeductible.comDedVal=='N')}">
+                                                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                    <c:ACET_FinancialsTable isComDedOon="{!v.financialObject.Individual.outofNetwork.CombinedDeductible.isComDed}"
+                                                                            headerChecked="{!v.financialObject.Individual.outofNetwork.CombinedDeductible.isAutodoc}"
+                                                                            comDedOonVal="{!v.financialObject.Individual.outofNetwork.CombinedDeductible.comDedVal}"
+                                                                            financialCardDetails="{!v.financialObject}"
+                                                                            autodocUniqueId="{!v.autodocUniqueId}"
+                                                                            autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!or(v.financialObject.Individual.outofNetwork.CombinedOOP.comOopVal=='Y', v.financialObject.Individual.outofNetwork.CombinedOOP.comOopVal=='N')}">
+                                                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                    <c:ACET_FinancialsTable isComOopOon="{!v.financialObject.Individual.outofNetwork.CombinedOOP.isComOop}"
+                                                                            headerChecked="{!v.financialObject.Individual.outofNetwork.CombinedOOP.isAutodoc}"
+                                                                            comOopOonVal="{!v.financialObject.Individual.outofNetwork.CombinedOOP.comOopVal}"
+                                                                            financialCardDetails="{!v.financialObject}"
+                                                                            autodocUniqueId="{!v.autodocUniqueId}"
+                                                                            autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                                </div>
+                                            </aura:if>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialsTable iscrsAplOop="{!v.financialObject.Individual.outofNetwork.CrossApplyOutofPocket.iscrsAplOop}"
+                                                                        headerChecked="{!v.financialObject.Individual.outofNetwork.CrossApplyOutofPocket.isAutodoc}"
+                                                                        crsAplOopSignVal="{!v.financialObject.Individual.outofNetwork.CrossApplyOutofPocket.crsAplOopSignVal}"
+                                                                        financialCardDetails="{!v.financialObject}"
+                                                                        autodocUniqueId="{!v.autodocUniqueId}"
+                                                                        autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialsTable iscrsAplCopy="{!v.financialObject.Individual.outofNetwork.CrossApplyCopay.iscrsAplCopy}"
+                                                                        headerChecked="{!v.financialObject.Individual.outofNetwork.CrossApplyCopay.isAutodoc}"
+                                                                        crsAplCopySignVal="{!v.financialObject.Individual.outofNetwork.CrossApplyCopay.crsAplCopySignVal}"
+                                                                        financialCardDetails="{!v.financialObject}"
+                                                                        autodocUniqueId="{!v.autodocUniqueId}"
+                                                                        autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialsTable iscrsAplCore="{!v.financialObject.Individual.outofNetwork.CrossApplyCore.iscrsAplCore}"
+                                                                        headerChecked="{!v.financialObject.Individual.outofNetwork.CrossApplyCore.isAutodoc}"
+                                                                        crsAplCoreSignVal="{!v.financialObject.Individual.outofNetwork.CrossApplyCore.crsAplCoreSignVal}"
+                                                                        financialCardDetails="{!v.financialObject}"
+                                                                        autodocUniqueId="{!v.autodocUniqueId}"
+                                                                        autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- End of Individual Details -->
+                        <!-- Family Details -->
+                        <div class="slds-col card_left_padding slds-size_6-of-12">
+                            
+                            <div style="height:100%">
+                                <div class="slds-box slds-card card_padding titleCheckBox detailSection SAESection"
+                                     style="height:100%">
+                                    <div class="{! ' autodocNotTableView SAESection ' + v.AutodocPageFeature }">
+                                        <h3 class="slds-text-heading_small card_bottom_margin field_value">
+                                            <aura:if isTrue="{!v.isFamilyAccumulation}">
+                                                FAMILY
+                                                <b class="slds-m-left_medium">Family accumulations do not apply.</b>
+                                                <aura:set attribute="else">
+                                                    <lightning:input type="checkbox" name="FAMILY" label="FAMILY"
+                                                                     checked="{!v.oonFamilyHeader}" onchange="{!c.selectAllFamily}" />
+                                                </aura:set>
+                                            </aura:if>
+                                        </h3>
+                                        <c:ACET_FinancialsHeader yearType="{!v.financialObject.yearType}"
+                                                                 displayYear="{!v.financialObject.displayYear}"
+                                                                 isCdhp="{!v.financialObject.isCdhp}"
+                                                                 today="{!v.financialObject.financialDate}" IsAutoDoc="true" />
+                                        <div class="slds-grid slds-wrap slds-form-element">
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialProgressBar Description="{!v.financialObject.Family.outofNetwork.Deductible.Description}"
+                                                                             headerChecked="{!v.financialObject.Family.outofNetwork.Deductible.isAutodoc}"
+                                                                             Percentage="{!v.financialObject.Family.outofNetwork.Deductible.Percentage}"
+                                                                             SpentAmount="{!v.financialObject.Family.outofNetwork.Deductible.SpentAmount}"
+                                                                             TotalAmount="{!v.financialObject.Family.outofNetwork.Deductible.TotalAmount}"
+                                                                             RemainingAmount="{!v.financialObject.Family.outofNetwork.Deductible.RemainingAmount}"
+                                                                             isAggregateIndividualIndicator="{!v.financialObject.Family.outofNetwork.Deductible.isAggregateIndividualIndicator}"
+                                                                             isAggregateFamilyIndicator="{!v.financialObject.Family.outofNetwork.Deductible.isAggregateFamilyIndicator}"
+                                                                             isEmbeddedIndividualIndicator="{!v.financialObject.Family.outofNetwork.Deductible.isEmbeddedIndividualIndicator}"
+                                                                             moveTop="{!v.financialObject.Family.outofNetwork.Deductible.moveTop}"
+                                                                             moveLeft="{!v.financialObject.Family.outofNetwork.Deductible.moveLeft}"
+                                                                             showDeductMsg="{!v.financialObject.Family.outofNetwork.Deductible.showDeductMsg}"
+                                                                             isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                             financialCardDetails="{!v.financialObject}"
+                                                                             autodocUniqueId="{!v.autodocUniqueId}"
+                                                                             autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <aura:if isTrue="{!v.financialObject.isFamilyAccumulation}">
+                                                    <br />
+                                                </aura:if>
+                                                <c:ACET_FinancialProgressBar Description="{!v.financialObject.Family.outofNetwork.OutofPocket.Description}"
+                                                                             headerChecked="{!v.financialObject.Family.outofNetwork.OutofPocket.isAutodoc}"
+                                                                             Percentage="{!v.financialObject.Family.outofNetwork.OutofPocket.Percentage}"
+                                                                             SpentAmount="{!v.financialObject.Family.outofNetwork.OutofPocket.SpentAmount}"
+                                                                             TotalAmount="{!v.financialObject.Family.outofNetwork.OutofPocket.TotalAmount}"
+                                                                             RemainingAmount="{!v.financialObject.Family.outofNetwork.OutofPocket.RemainingAmount}"
+                                                                             isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                             financialCardDetails="{!v.financialObject}"
+                                                                             autodocUniqueId="{!v.autodocUniqueId}"
+                                                                             autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <aura:if isTrue="{!v.financialObject.isFamilyAccumulation}">
+                                                    <br />
+                                                </aura:if>
+                                                <c:ACET_FinancialProgressBar Description="{!v.financialObject.Family.outofNetwork.MedicalLifeMaximum.Description}"
+                                                                             headerChecked="{!v.financialObject.Family.outofNetwork.MedicalLifeMaximum.isAutodoc}"
+                                                                             Percentage="{!v.financialObject.Family.outofNetwork.MedicalLifeMaximum.Percentage}"
+                                                                             SpentAmount="{!v.financialObject.Family.outofNetwork.MedicalLifeMaximum.SpentAmount}"
+                                                                             TotalAmount="{!v.financialObject.Family.outofNetwork.MedicalLifeMaximum.TotalAmount}"
+                                                                             RemainingAmount="{!v.financialObject.Family.outofNetwork.MedicalLifeMaximum.RemainingAmount}"
+                                                                             showRemaining="{!v.financialObject.Family.outofNetwork.MedicalLifeMaximum.showRemaining}"
+                                                                             isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                             financialCardDetails="{!v.financialObject}"
+                                                                             autodocUniqueId="{!v.autodocUniqueId}"
+                                                                             autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <aura:if isTrue="{!v.financialObject.Family.outofNetwork.OOP_Limit_2_Found_Family}">
+                                                <div class="slds-grid_align-spread slds-size_12-of-12 field_value">
+                                                    <aura:if isTrue="{!v.financialObject.isFamilyAccumulation}">
+                                                        <br />
+                                                    </aura:if>
+                                                    <c:ACET_FinancialProgressBar Description="{!v.financialObject.Family.outofNetwork.OutofPocket2.Description}"
+                                                                                 headerChecked="{!v.financialObject.Family.outofNetwork.OutofPocket2.isAutodoc}"
+                                                                                 Percentage="{!v.financialObject.Family.outofNetwork.OutofPocket2.Percentage}"
+                                                                                 SpentAmount="{!v.financialObject.Family.outofNetwork.OutofPocket2.SpentAmount}"
+                                                                                 TotalAmount="{!v.financialObject.Family.outofNetwork.OutofPocket2.TotalAmount}"
+                                                                                 RemainingAmount="{!v.financialObject.Family.outofNetwork.OutofPocket2.RemainingAmount}"
+                                                                                 financialCardDetails="{!v.financialObject}"
+                                                                                 isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                                 autodocUniqueId="{!v.autodocUniqueId}"
+                                                                                 autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!v.financialObject.copayMaxAmount>=0}">
+                                                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                    <aura:if isTrue="{!v.financialObject.isFamilyAccumulation}">
+                                                        <br />
+                                                    </aura:if>
+                                                    <c:ACET_FinancialProgressBar Description="{!v.financialObject.Family.outofNetwork.CopayMax.Description}"
+                                                                                 headerChecked="{!v.financialObject.Family.outofNetwork.CopayMax.isAutodoc}"
+                                                                                 TotalAmount="{!v.financialObject.Family.outofNetwork.CopayMax.TotalAmount}"
+                                                                                 isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                                 financialCardDetails="{!v.financialObject}"
+                                                                                 autodocUniqueId="{!v.autodocUniqueId}"
+                                                                                 autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!or(v.financialObject.Family.outofNetwork.CombinedDeductible.comDedVal=='Y', v.financialObject.Family.outofNetwork.CombinedDeductible.comDedVal=='N')}">
+                                                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                    <c:ACET_FinancialsTable isComDedInn="{!v.financialObject.Family.outofNetwork.CombinedDeductible.isComDed}"
+                                                                            headerChecked="{!v.financialObject.Family.outofNetwork.CombinedDeductible.isAutodoc}"
+                                                                            comDedInnVal="{!v.financialObject.Family.outofNetwork.CombinedDeductible.comDedVal}"
+                                                                            isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                            financialCardDetails="{!v.financialObject}"
+                                                                            autodocUniqueId="{!v.autodocUniqueId}"
+                                                                            autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!or(v.financialObject.Family.outofNetwork.CombinedOOP.comOopVal=='Y', v.financialObject.Family.outofNetwork.CombinedOOP.comOopVal=='N')}">
+                                                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                    <c:ACET_FinancialsTable isComOopInn="{!v.financialObject.Family.outofNetwork.CombinedOOP.isComOop}"
+                                                                            headerChecked="{!v.financialObject.Family.outofNetwork.CombinedOOP.isAutodoc}"
+                                                                            comOopInnVal="{!v.financialObject.Family.outofNetwork.CombinedOOP.comOopVal}"
+                                                                            isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                            financialCardDetails="{!v.financialObject}"
+                                                                            autodocUniqueId="{!v.autodocUniqueId}"
+                                                                            autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                                </div>
+                                            </aura:if>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                <c:ACET_FinancialsTable iscrsAplOop="{!v.financialObject.Family.outofNetwork.CrossApplyOutofPocket.iscrsAplOop}"
+                                                                        headerChecked="{!v.financialObject.Family.outofNetwork.CrossApplyOutofPocket.isAutodoc}"
+                                                                        crsAplOopSignVal="{!v.financialObject.Family.outofNetwork.CrossApplyOutofPocket.crsAplOopSignVal}"
+                                                                        isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                        financialCardDetails="{!v.financialObject}"
+                                                                        autodocUniqueId="{!v.autodocUniqueId}"
+                                                                        autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                 <c:ACET_FinancialsTable iscrsAplCopy="{!v.financialObject.Family.outofNetwork.CrossApplyCopay.iscrsAplCopy}"
+                                                                        headerChecked="{!v.financialObject.Family.outofNetwork.CrossApplyCopay.isAutodoc}"
+                                                                        crsAplCopySignVal="{!v.financialObject.Family.outofNetwork.CrossApplyCopay.crsAplCopySignVal}"
+                                                                        isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                        financialCardDetails="{!v.financialObject}"
+                                                                        autodocUniqueId="{!v.autodocUniqueId}"
+                                                                        autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                            <div class="slds-p-around_xx-small slds-col_bump-right slds-size_12-of-12 card_bottom_margin">
+                                                 <c:ACET_FinancialsTable iscrsAplCore="{!v.financialObject.Family.outofNetwork.CrossApplyCore.iscrsAplCore}"
+                                                                        headerChecked="{!v.financialObject.Family.outofNetwork.CrossApplyCore.isAutodoc}"
+                                                                        crsAplCoreSignVal="{!v.financialObject.Family.outofNetwork.CrossApplyCore.crsAplCoreSignVal}"
+                                                                        isFamilyAccumulation="{!v.financialObject.isFamilyAccumulation}"
+                                                                        financialCardDetails="{!v.financialObject}"
+                                                                        autodocUniqueId="{!v.autodocUniqueId}"
+                                                                        autodocUniqueIdCmp="{!v.autodocUniqueIdCmp + v.policySelectedIndex}" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- End of Family Details -->
+                    </div>
+                </lightning:tab>
+                <!-- End of ON Network Tab -->
+            </lightning:tabset>
+            <!-- End of Body -->
+        </div>
+    </div>
+    
+    <aura:if isTrue="{!v.showpreview}">
+        <c:ACET_PreviewAutoDoc  tableDetails_prev="{!v.tableDetails_prev}" isModalOpen="{!v.showpreview}"/>
+    </aura:if>
+</aura:component>

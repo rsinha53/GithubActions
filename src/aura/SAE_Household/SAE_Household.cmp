@@ -1,0 +1,126 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes" access="global" controller="SAEHouseHoldController">
+
+    <!-- SCRIPTS -->
+    <ltng:require scripts="{!$Resource.ACET_AutodocJS}" />
+    <!-- /SCRIPTS -->
+
+    <!-- ATTRIBUTES -->
+    <lightning:workspaceAPI aura:id="workspace"/>
+	<aura:attribute name="AutodocKey" type="string" access="public"/>
+    <aura:attribute name="houseHoldData" type="List"/>
+    <aura:attribute name="ChangedHouseHoldData" type="List"/>
+    <aura:attribute name="colorPalette" type="String[]" default="['red', 'green', 'blue']" />
+    <!--Malinda-->
+    <aura:attribute name="interactionCard" type="Object" access="public"/>
+    <aura:attribute name="contactName" type="string" access="public"/>
+    <aura:attribute name="searchOption" type="string" access="public"/>
+    <aura:attribute name="memberGrpN" type="string" access="public"/>
+    <aura:attribute name="membTabId" type="string" access="public"/>
+    <aura:attribute name="subjectCard" type="Object" access="public"/>
+    <aura:attribute name="conAddress" type="String" default="" access="global"/>
+
+    <!--HOT FIX : Regression issues 10 - Interaction# not populated for the Household members when accessed from Household card (Malinda)-->
+    <aura:attribute name="interactionRecd" type="Interaction__c"/>
+
+    <!-- US2060237	Other Card Validation - Snapshot - Other (Third Party) - 10/10/2019 - Sarma -->
+    <aura:attribute name="isOtherSearch" type="Boolean"  />
+    <aura:attribute name="providerNotFound" type="Boolean"  />
+    <aura:attribute name="noMemberToSearch" type="Boolean"  />
+    <aura:attribute name="isProviderSearchDisabled" type="Boolean"  />
+    <aura:attribute name="isfindIndividualFlag" type="Boolean"  />
+    <aura:attribute name="memberCardFlag" type="Boolean"  />
+    <aura:attribute name="isAdditionalMemberSearchfindIndividual" type="Boolean" />
+    <aura:attribute name="otherCardDataObj" type="Object"/>
+	<aura:attribute name="contactCard" type="Object" /><!--DE339190-->
+    <!-- US1944108 - Accommodate Multiple Payer ID's - Kavinda -->
+        <aura:attribute name="payerID" type="String" />
+        <!--US2669563-MVP- Member Snapshot - Policy Details - Populate Payer ID-Durga-->
+    <aura:attribute name="policywithPayerIdMap" type="object" access="public"/>
+    <aura:attribute name="searchQueryPayerId" type="string" access="public"/>
+
+    <!-- US2137922: Page Feature Unique - Thanish - 7th Nov 2019 -->
+    <aura:attribute name="AutodocPageFeature" type="String"/>
+
+    <!--US2658951 - Member Snapshot - Household Card Auto Doc - Sravan-->
+    <aura:attribute name="houseHoldAutoDocPageFeature" type="String" default="Household"/>
+    <aura:attribute name="rowIndexList" type="List"/>
+	
+	<aura:attribute name="providerDetails" type="Object" access="public" />
+
+    <!--DE347387: ORS Issue - Provider information is missing in ORS routing Screen - Praveen  -->
+    <aura:attribute name="providerDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+    <!-- US2808743 - Thanish - 4th Sep 2020 - New Autodoc Framework -->
+    <aura:attribute name="tableDetails" type="Object"/>
+    <aura:attribute name="autodocUniqueId" type="String" default="policySnapshot"/>
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0"/>
+    <!-- /ATTRIBUTES -->
+
+    <!-- HANDLERS -->
+    <aura:handler name="change" value="{!v.houseHoldData}" action="{!c.houseHoldChange}"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/> <!-- DE418896 - Thanish - 22nd Mar 2021 -->
+    <aura:handler event="c:ACET_AutoDocRefreshEvent" action="{!c.handleAutodocRefresh}" />
+    <!-- /HANDLERS -->
+
+    <!-- US2330408 - Avish -->
+    <aura:attribute name="interactionOverviewTabId" type="String" />
+
+	<div class="slds-is-relative slds-box slds-card card_padding">
+        <table style="margin-bottom: 6px;">
+            <tr>
+                <td style="width: 1px;vertical-align:top;">
+                    <lightning:input type="checkbox" name="Household" checked="{!v.tableDetails.allChecked}" variant="label-hidden" onchange="{!c.selectAll}" />
+                </td>
+                <td>
+                    <div class="component_title slds-text-heading_small bottom_margin">Household</div>
+                </td>
+            </tr>
+        </table>
+
+        <table class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_header-hidden">
+            <tbody>
+                <aura:iteration items="{!v.tableDetails.tableBody}" var="obj" indexVar="index">
+                    <tr class="slds-hint-parent">
+                        <td style="width: 1%; padding-left: 0px; padding-right: 0px; padding-top: 5px;">
+                            <aura:if isTrue="{!obj.isMainMember}">
+                                <div style="width: 16px;"></div>
+                                <aura:set attribute="else">
+                                    <lightning:input type="checkbox" name="{!index}" checked="{!obj.checked}" variant="label-hidden" onchange="{!c.rowAutodocCheck}"/>
+                                </aura:set>
+                            </aura:if>
+                        </td>
+                        <td style="width: 35%; padding-left: 0px; padding-right: 0px; padding-top: 5px;">
+                            <div class="truncate">
+                                <aura:if isTrue="{!obj.isMainMember}">
+                                    <div class="slds-truncate field_value">{!obj.rowColumnData[0].fieldValue}</div>
+                                    <aura:set attribute="else">
+                                        <a style="float:left" class="slds-truncate link_field_value" onclick="{!c.navigateToSnapshot}"  data-row-index="{!index}" data-label="" data-memberId="{!obj.memberId}" data-dob="{!obj.dob}" data-GroupId="{!obj.groupNumber}"
+                                            data-firstName="{!obj.firstName}" data-lastName="{!obj.lastName}" data-unique="{!obj.uniqueKey}" data-role='{!obj.relationship}' data-isMainMember="{!obj.isMainMember}">
+                                            {!obj.rowColumnData[0].fieldValue}
+                                        </a>
+                                    </aura:set>
+                                </aura:if>
+                            </div>
+                        </td>
+                        <td style="width: 10%; padding-top: 5px;">
+                            <div class="truncate">
+                                <div class="slds-truncate field_value">{!obj.rowColumnData[1].fieldValue}</div>
+                            </div>
+                        </td>
+                        <td style="width: 27%; padding-left: 0px; padding-right: 0px; padding-top: 5px;">
+                            <div class="truncate">
+                                <div class="slds-truncate field_value">{!obj.rowColumnData[2].fieldValue}</div>
+                            </div>
+                        </td>
+                        <td style="width: 27%; padding-left: 0px; padding-right: 0px; padding-top: 5px;">
+                            <div class="truncate">
+                                <div class="slds-truncate field_value" style="text-transform:capitalize;">{!obj.rowColumnData[3].fieldValue}</div>
+                            </div>
+                        </td>
+                    </tr>
+                </aura:iteration>
+            </tbody>
+        </table>
+    </div>
+
+</aura:component>

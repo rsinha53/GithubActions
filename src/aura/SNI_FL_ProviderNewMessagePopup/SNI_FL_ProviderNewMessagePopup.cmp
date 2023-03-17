@@ -1,0 +1,127 @@
+<!-- 
+Component Name    : SNI_FL_ProviderNewMessagePopup
+Description       : New Provider Message Pop-up
+Created By        : Bindu Sakhamuri
+Created Date      : 24-12-2020
+
+-->
+
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,forceCommunity:availableForAllPageTypes" controller="SNI_FL_ProviderMessageUtil" access="global" >
+    
+    <!--aura attributes --> 
+    <aura:attribute name="IsOpenNewMsg" type="boolean" default="false" />
+    <aura:attribute name="newMessageBody" type= "String" description="MessageBody used in desktop view"/>
+    <aura:attribute name="mobilenewMessageBody" type= "String" description="MessageBody used in desktop view"/>
+    <aura:attribute name="UserName" type="String" />
+    <aura:attribute name="subjectValue" type="String" default="" />
+    <aura:attribute name="selectedAccountLookUpRecords" type="sObject[]" default="[]" />
+    <aura:attribute name="selectedUserLookUpRecords" type="List" />
+    <aura:attribute name="attachId" type="String" />
+    <aura:attribute name="fileName" type="String" default="No File Selected .." />
+    <aura:attribute name="filetype" type="List" default="['.ppt', '.pptx', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.pdf', '.png', '.jpeg', '.jpg', '.gif', '.tiff', '.bmp']" />
+    <aura:attribute name="multiple" type="Boolean" default="true" />
+    <aura:attribute name="listOfSearchRecords" type="sObject"/> 
+    <aura:attribute name="AccountName" type="String"/>  
+    <aura:attribute name="selectRelatedToUser" type="Object" description="selected related to user" default=""/><!--Nanthu - ACDC  US3128774-->
+    <aura:attribute name="selectRecipients" type="Object[]" description="selected recipients" default=""/><!--Nanthu - ACDC  US3128774-->
+    <aura:attribute type="String" name="providerAffliationID" default=""/><!--DE409699 added providerAffliationID attribute-->
+    
+    <!-- end aura attributes -->
+    <aura:handler name="cmpEventx" event="c:SNI_FL_MultiSelectEvent" action="{!c.handleMulticmpEvent}"/>
+    <aura:registerevent name="retrieveAllMessages" type="c:SNI_FL_NewMessageCreatedEvt"></aura:registerevent>
+    
+    <!--Unused attributes and events-->
+    <aura:attribute name="selectedFamilyRecord" type="Object" description="selected Record Details" /> 
+    <aura:attribute name="isBackupAgentView" type="boolean" default="false" description="Family Link Level"/>
+
+    <!--MODAL BOX Start -->
+    <section role="dialog" tabindex="-1" aria-labelledby="Meaningful description of the modal content" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+        <div class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <!-- MODAL BOX HEADER Start -->
+                <header class="slds-modal__header">
+                    <lightning:buttonIcon iconName="utility:close" onclick="{!c.closeModel}" alternativeText="close" variant="inverse" size="large" class="slds-modal__close" />
+                    <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">New Message</h2>
+                </header>
+                <!-- MODAL BOX BODY Part Start -->
+                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1" style="height:34rem;">
+                    <!--loading spinner start-->
+                    <lightning:spinner aura:id="mySpinner" class="slds-hide" alternativeText="Loading" size="medium" variant="brand"/>
+                    <!-- Loading spinner end-->
+
+                    <c:SNI_FL_FamilyLinkProviderRelatedToLookup  aura:id="related" 
+                                        fieldName="Related To"
+                                        SelectedProgram="{!v.providerAffliationID}"
+                                        selectedRecord="{!v.selectRelatedToUser}"
+                                        objectName="Account"
+                                        label="Related To"
+                                        iconName="standard:employee_organization"
+                                        isBackupAgentView = "{!v.isBackupAgentView}"
+                                        placeholder="Search Members..."  
+                                        familyId="{!v.familyId}"/><br></br>
+
+                    <c:SNI_FL_FamilyLinkMultiSelectNewMessageLookUp aura:id="to"
+                                        lstSelectedRecords="{!v.selectRecipients}"
+                                        SelectedProgram="{!v.providerAffliationID}"/><br></br>    
+                
+                    <label class="slds-form-element__label " style="color:#54698d;font-size:12px;margin-bottom:-40px;">Subject</label>
+                    <lightning:input aura:id="subject" name="Subject" value="{!v.subjectValue}" placeholder="What's your message about?" maxlength="255" class="subjectField"/><br></br>
+                    
+                    <label class="slds-form-element__label" style="color:#54698d;font-size:12px;margin-bottom:-11px;">Message</label>
+                        
+                    <div class="slds-box mobileView" style="padding:10px;">
+                        <div class="mobileView divCss">
+                            <lightning:inputRichText aura:id="desktopBody" value="{!v.newMessageBody}"   placeholder="Enter your message here ..."/>
+                        </div>
+                        <div class="iconFix">
+                            <lightning:fileUpload class="uploadWizard fileuploadButton" name="fileUploader" accept="{!v.filetype}" onuploadfinished="{!c.handleUploadFinished}"/>
+                            <div class= "slds-text-body_small slds-text-color_error ">{!v.fileName}</div>
+                        </div>
+                    </div>
+                
+                    <div class="slds-box desktopView" style="padding:2px;height:200px">
+                        
+                        <div class="desktopView slds-col slds-size_1-of-1">
+                            <lightning:TextArea class="tallTextarea1" aura:id="number" value="{!v.mobilenewMessageBody}" placeholder="Enter your message here"/>
+                        </div>
+                            
+                        <div class="slds-grid slds-wrap">
+                            <!-- <lightning:fileUpload  class="fileuploder1 slds-float_right" name="fileUploader" accept="{!v.filetype}" onuploadfinished="{!c.handleUploadFinished}"/>
+                         -->
+                            <div class="slds-col slds-size-1-of-1">
+                                <lightning:fileUpload  class="fileuploder1 slds-float_right" name="fileUploader" accept="{!v.filetype}" onuploadfinished="{!c.handleUploadFinished}"/>
+                            </div>
+                            <div class="slds-col slds-size--1-of-1" style="padding-top:0px; padding-bottom:0px;">
+                                <div class="slds-text-body_small slds-text-color_error slds-float_right">{!v.fileName} </div>
+                            </div>
+                        </div>
+                            
+                    </div>
+            
+                    <div class="desktopView">
+                        <div class="slds-grid slds-wrap">
+                            <div class="slds-col slds-col1 slds-size-10-of-10 slds-medium-size_10-of-10 ">
+                                <br></br>
+                                <lightning:button label="Send" class="desktopView Btnnew" onclick="{!c.sendMessage}"/>
+                                <br></br>
+                            </div>
+                        </div>
+                        <br></br>
+                        <div class="slds-grid slds-wrap">
+                            <div class="slds-col slds-col1 slds-size-10-of-10 slds-medium-size_10-of-10 ">
+                                <lightning:button label="Cancel" class="desktopView cancelnew" onclick="{!c.closeModel}"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <footer class="mobileView slds-modal__footer">
+                    <lightning:button label="Cancel" class="cancel1" onclick="{!c.closeModel}"/>
+                    <lightning:button label="Send" class="Btn1" onclick="{!c.sendMessage}" />
+                </footer>
+
+            </div>
+        </div>
+    </section>
+    <div class="slds-backdrop slds-backdrop_open"></div>
+</aura:component>

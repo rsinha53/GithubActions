@@ -1,0 +1,274 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes" access="global" 
+                    controller="SAEClaimSearchController">
+
+      	<!-- SCRIPTS -->
+   			 <ltng:require scripts="{!$Resource.ACET_AutodocJS}" />
+   	    <!-- /SCRIPTS -->
+		<aura:attribute name="memberCardData" type="Object" access="public" />
+        <aura:attribute name="memberCardSnap" type="Object" access="public" />
+        <aura:attribute name="policySelectedIndex" type="Integer" default="0"/>
+
+        <!--<aura:handler name="init" value="{!this}" action="{!c.doInit}" />-->
+        <aura:handler name="init" value="{!this}" action="{!c.onLoad}" />
+        <aura:attribute name="showErrorMessage" type="boolean" default="false"/>
+        <aura:attribute name="error" type="object"/>
+        <aura:attribute name="isSearchEnabled" type="boolean" default="false" />
+        <aura:attribute name="climsSearchOptions" type="List" />
+        <aura:attribute name="climsSearchSelectedOption" type="String" />
+        <!--<aura:attribute name="Claiminputs" type="Object" default="{ claimNumber: '', taxId: '', ClaimType: '',FromDate:'',ToDate:'', AuthId: ''}"/-->
+         <aura:attribute name="Claiminputs" type="Object" />
+         <aura:attribute name="ClaiminputFromLastClaim" type="Object" />
+        <!--
+        <aura:attribute name="showClaimResults" type="boolean" default="false" />
+-->
+        <aura:registerEvent name="claimSearchEvent" type="c:SAEClaimSearchResultEvent"/>
+        <aura:registerEvent name="acetClaimSearchEvent" type="c:ACETClaimSearchResultEvent"/>
+        <aura:attribute name="errorMsgClaimSearch" type="String" />
+        <aura:attribute name="noClaimSearchResultFlag" type="Boolean" default="false"/>
+        <aura:attribute name="FromDateValidationError" type="boolean" />
+        <aura:attribute name="ToDateValidationError" type="boolean" />
+		<aura:attribute name="memberTabId" type="String" />
+        <!--ketki Added memberId attribute-->
+
+    <!-- US1918629 Venkat 15th Sep 2020 Started -->
+            <aura:attribute name="interactionCard" type="Object" access="public"/>
+    <aura:attribute name="disableClaimAuth" type="Boolean" default="false" required="false" />
+     <!-- US1918629 Venkat 15th Sep 2020 End -->
+
+        <!-- Sravani -->
+        <aura:attribute name="FromDate" type="Date" />
+        <aura:attribute name="ToDate" type="Date" />
+        <aura:attribute name="AuthId" type="String" />
+        <aura:attribute name="claimNumber" type="String" />
+        <aura:attribute name="taxId" type="String" />
+        <aura:attribute name="ClaimType" type="String" default="all"/>
+      <aura:attribute name="eventMessage" type="String"/>
+       <aura:attribute name="selectedop" type="String" default="all"/>
+
+    <aura:attribute name="autodocUniqueId" type="String" default="all"/>
+<!-- USUS2858385 -Rizwan-->
+     <aura:attribute name="iVRDetails" type="Object" access="public" />
+     <aura:attribute name="isVCCD" type="Boolean" default="false" />
+     <aura:attribute name="isValidFrom" type="Boolean" default="false" />
+     <aura:attribute name="isValidTo" type="Boolean" default="false" />
+     <aura:attribute name="eligibleDate" type="String" access="public"/>
+	
+	<aura:attribute name="claimInput2" type="object"/>
+    <aura:attribute name="onLoad" type="boolean" default="false"/>
+
+    <!--US3415625  - Sravan-->
+    <aura:attribute name="isAdvanceSearchPerformed" type="Boolean" default="false"/>
+    <aura:attribute name="showAdvanceSerchCriteriaPopup" type="Boolean" default="false"/>
+    <aura:method name="doAdvanceSearch" action="{!c.doAdvSearch}"/>
+    <!-- Durga-->
+        <aura:attribute name="showAdvanceSearch" type="Boolean" default="false" access="public"/>
+        <aura:attribute name="openAdvanceSearch" type="Boolean" default="false" access="public"/>
+        <aura:attribute name="selectedFilter" type="string" default="" access="public"/>
+        <aura:attribute name="advFiltOptions" type="List" default="[
+            {'label': 'Select', 'value': ''},
+            {'label': 'Applied to OOP', 'value': 'Applied to OOP'},
+            {'label': 'Authorization #', 'value': 'Authorization #'},
+            {'label': 'Claim Level Cause Code', 'value': 'Claim Level Cause Code'},
+            {'label': 'Code Range', 'value': 'Code Range'},
+            {'label': 'CPT/HCPC Code', 'value': 'CPT/HCPC Code'},
+            {'label': 'Deductible Only', 'value': 'Deductible Only'},
+            {'label': 'Remark Code', 'value': 'Remark Code'},
+            {'label': 'Revenue Code', 'value': 'Revenue Code'},
+            ]"/>
+            <aura:attribute name="advFilterInputValue" type="string" default="" access="public"/>
+            <aura:attribute name="placeHold" type="string" default="" access="public"/>
+            <aura:attribute name="showAdvInpField" type="Boolean" default="false" access="public"/>
+            <aura:attribute name="dynOptions" type="List" default="[]"/>
+            <aura:attribute name="advClaimInput" type="object"/>
+
+        <aura:attribute name="ClaimTypeOptions" type="List" default="[
+        {'label': 'All', 'value': 'all'},
+        {'label': 'Hospital', 'value': 'hospital'},
+        {'label': 'Physician', 'value': 'physician'},
+        ]"/>
+
+    <aura:attribute name="highlightedPolicySourceCode" type="String" default=""/>
+
+    <!--US280113 Claim Results line selection functionality -->
+    <aura:handler event="c:ACET_PolicyswitchclaimsEvent" action="{!c.claimSearchRefresh}"/>
+
+    <aura:attribute name="enablePopup" type="Boolean" default="false"/>
+    <aura:handler name="change" value="{!v.enablePopup}" action="{!c.enablePopup}"/>
+
+        <div onkeyup="{!c.onClickOfEnter}" class="slds-m-top_none" style="width: 100%;">
+            <p class="component_title ">Claim Search</p>
+
+            <div>
+                <!--loading spinner start  -->
+				<!--
+                <lightning:spinner class="slds-hide" aura:id="claimSearch-spinner"
+                                   alternativeText="Loading.." title="Loading.."
+                                   variant="brand" size="medium"/>
+					-->
+                <!-- Loading spinner end-->
+            </div>
+
+
+                <div class="slds-grid slds-gutters">
+                    <div class="slds-col slds-size_1-of-6">
+                      <span onkeypress="{!c.claimCheck}"><lightning:input aura:id="ClaimNumber"
+                        label="Claim Number"
+                        type="text"
+                        value="{!v.Claiminputs.claimNumber}"
+                        name="Claim Number"
+                        minlength="4" maxlength="12"
+                        pattern="[0-9a-zA-Z]*"
+                        messageWhenTooShort=" "
+                        onchange="{!c.AuthClaimTypeDisable}"
+                          /></span>
+                    </div>
+                    <div class="slds-col slds-size_1-of-6">
+                        <span onkeypress="{!c.allowOnlyNumbers}" onchange= "{!c.allowOnlyNumbers}">
+                     <lightning:input label="Tax ID"
+                        aura:id="taxId"
+                        value="{!v.Claiminputs.taxId}"
+                        name="taxIdName"
+                        minlength="9"
+                        maxlength="9"
+                        pattern="[0-9]*"
+                        messageWhenTooShort=" "
+                        onchange="{!c.AuthClaimTypeDisable}"
+
+                        /></span>
+                      </div>
+                    <div class="slds-col slds-size_1-of-6">
+                      <span onkeypress="{!c.dateCheck}"><lightning:input
+                        type="date" aura:id="FromDate"
+                        name="FromDate"
+                        label="From (mm/dd/yyyy)"
+                        value="{!v.Claiminputs.FromDate}"
+                        dateStyle="short"
+                        messageWhenTooShort="Enter a date before the To date"
+                        style="padding-right:1%" autocomplete="off" onchange="{!c.onDateChange}"/>
+                        </span>
+                    </div>
+                    <div class="slds-col slds-size_1-of-6">
+                        <span onkeypress="{!c.dateCheck}"><lightning:input
+                            type="date" aura:id="ToDate"
+                            name="ToDate"
+                            label="To (mm/dd/yyyy)"
+                            value="{!v.Claiminputs.ToDate}"
+                            dateStyle="short"
+                            style="padding-right:1%" autocomplete="off"
+                            onchange="{!c.AuthClaimTypeDisable}"/>
+                        </span>
+                      </div>
+                      <div class="slds-col slds-size_1-of-6">
+                        <span><lightning:combobox label="Claim Type"
+                            options="{!v.ClaimTypeOptions}"
+                            class="dropDownAlignment"
+                            aura:id="ClaimType"
+                            value="{!v.selectedop}"
+                            name="ClaimTypeName"
+                            disabled="{!v.disableClaimAuth}"
+                            onchange="{! c.handleChange }"
+                                                  />
+                          </span>
+                      </div>
+                      <div class="slds-col slds-size_1-of-6">
+                          <aura:if isTrue="{!v.highlightedPolicySourceCode =='CS' ? false : true}">
+                                <span onkeypress="{!c.claimCheck}"><lightning:input label="Auth / Referral Number"
+                                    aura:id="AuthId"
+                                    value="{!v.Claiminputs.AuthId}"
+                                    name="AuthId"
+                                    minlength="10" maxlength="10"
+                                    pattern="[0-9a-zA-Z]*"
+                                    messageWhenTooShort=" "
+                                    disabled="{!v.disableClaimAuth}"
+                                   /></span>
+                           </aura:if>
+                      </div>
+                  </div>
+
+                <!--US2312330 END-->
+            <br/>
+
+            <lightning:layout class="slds-m-left_small">
+                <lightning:layoutItem class="slds-gutters">
+                    <!--<lightning:button variant="brand" label="Search"  name="searchBtnName" class="brand_button"  onclick="{! c.doSearch }"/>-->
+                    <lightning:button variant="brand" label="Search"  name="searchBtnName" class="brand_button"  onclick="{! c.doSearch }"/>
+                </lightning:layoutItem>
+                <lightning:layoutItem class="slds-gutters slds-p-left_x-large">
+                    <lightning:button variant="neutral" label="Clear"  name="searchBtnName" class="neutral_button" onclick="{!c.doClear}"/>
+                </lightning:layoutItem>
+                <aura:if isTrue="{!v.showAdvanceSearch}">
+                    <lightning:layoutItem class="slds-gutters slds-p-left_x-large">
+                        <div class="slds-form-element__static slds-p-top_x-small" onclick="{!c.doAdvanceShow}">
+                                <span style="color: rgb(0, 109, 204)">{!v.openAdvanceSearch ? 'Hide Advanced Search': 'Show Advanced Search'}</span>
+                            </div>
+                    </lightning:layoutItem>
+                </aura:if>
+                <lightning:layoutItem class="{!(v.showErrorMessage) ? 'slds-gutters slds-p-left_x-large' : 'slds-gutters slds-p-left_x-large slds-hide'}">
+                        <c:ACET_ErrorPopup aura:id="errorPopup" errorMessage="{!v.error.message}" topDescription="{!v.error.topDescription}"
+                                            bottomDescription="{!v.error.bottomDescription}" descriptionList="{!v.error.descriptionList}"
+                                            moveLeft="-17" isNubbinLeft="true"/>
+                    </lightning:layoutItem>
+
+            </lightning:layout>
+
+            <lightning:layout class="{!and(v.openAdvanceSearch,v.showAdvanceSearch) ? 'slds-m-left_small slds-p-top_x-small slds-p-bottom_x-small' : 'slds-m-left_small slds-hide'}">
+                    <lightning:layoutItem class="slds-gutters slds-p-top--xx-small" size="2" >
+                            <lightning:combobox name="selectFilter" label="Filter" aura:id="selectFilter"
+                            value="{!v.selectedFilter}" options="{!v.advFiltOptions}" onchange="{! c.onSelectedFilter }" requried ="true"/>
+                    </lightning:layoutItem>
+
+
+                    <lightning:layoutItem class="{!v.showAdvInpField ? 'slds-gutters slds-p-left_xx-large slds-p-bottom_xx-small slds-p-top--large' : 'slds-gutters slds-p-left_xx-large slds-p-bottom_xx-small slds-p-top--large slds-hide'}"
+                    size="2">
+                            <lightning:input name="advInputFieldVal" label="" aura:id="advInputFieldVal"
+                            required="true" value="{!v.advFilterInputValue}"   variant = "label-hidden" placeholder="{!v.placeHold}" onchange="{! c.onAdvInpChange }"/>
+                    </lightning:layoutItem>
+
+
+
+                    <lightning:layoutItem class="{!(or(v.selectedFilter == 'Claim Level Cause Code',v.selectedFilter == 'Code Range')) ?
+                    'slds-gutters slds-p-left_xx-large slds-p-bottom_xx-small slds-p-top--large' : 'slds-gutters slds-p-left_xx-large slds-p-bottom_xx-small slds-p-top--large slds-hide'}"
+                    size="3" >
+
+                            <lightning:combobox name="advFilterComboValue"  label="" aura:id="advFilterComboValue"
+                            value="{!v.advFilterInputValue}" options="{!v.dynOptions}" variant = "label-hidden" requried ="true" onchange="{! c.onAdvCombChange }"/>
+
+                    </lightning:layoutItem>
+
+                    <lightning:layoutItem size="1">
+
+                    </lightning:layoutItem>
+
+                    <lightning:layoutItem class="slds-gutters slds-p-left_x-large slds-p-top--large slds-p-bottom_x-small">
+                            <lightning:button variant="brand" label="Apply"  name="applyButton" class="brand_button"  onclick="{! c.doAdvSearch }"/>
+                    </lightning:layoutItem>
+
+                    <lightning:layoutItem class="slds-gutters slds-p-left_x-large slds-p-top--large slds-p-bottom_x-small">
+                        <lightning:button variant="neutral" label="Reset Filter"  name="restFiltButton" class="neutral_button" onclick="{!c.resetAdvFilter}"/>
+                    </lightning:layoutItem>
+
+            </lightning:layout>
+             <!-- Sravani END-->
+             <!--US3415625 - Sravan - Start-->
+             <aura:if isTrue="{!and(v.openAdvanceSearch,v.showAdvanceSerchCriteriaPopup)}">
+                <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true"
+                aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                 <div class="slds-modal__container">
+                    <div class="slds-modal__content slds-is-relative slds-theme--warning centerTexts warningFont card_padding"
+                        style="border-top-right-radius: 0.25rem; border-top-left-radius: 0.25rem;">
+                        <lightning:icon iconName="utility:warning" variant="inverse" class="autodocWarningIcon" />Do you want to apply the current Advanced Search Criteria ?
+                    </div>
+                    <footer class="slds-modal__footer slds-theme--warning noTopBorder centerTexts">
+                        <lightning:button variant="neutral" label="Yes" class="noUnderline" onclick="{!c.enableAdvanceSearch}" />
+                        <lightning:button variant="neutral" label="No" class="noUnderline" onclick="{!c.enableAdvanceSearch}" />
+                    </footer>
+                </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open"></div>
+            </aura:if>
+            <!--US3415625 - Sravan - End-->
+
+
+
+        </div>
+    </aura:component>

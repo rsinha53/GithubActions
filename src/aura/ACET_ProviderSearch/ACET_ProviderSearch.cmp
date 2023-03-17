@@ -1,0 +1,345 @@
+<aura:component controller="ACET_ProviderSearchCtrl" access="global">
+    <ltng:require scripts="{!$Resource.ACET_SAESessionData}" />
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:handler name="change" value="{!v.isOther}" action="{!c.handleOtherChange}" />
+
+    <aura:attribute name="interactionType" type="String" default="" />
+    <aura:attribute name="flowDetails" type="Object" />
+    <aura:attribute name="providerSearchResults" type="Object" />
+    <aura:attribute name="providerDetails" type="Object" />
+    <aura:attribute name="practicingStatusOptions" type="List" />
+    <aura:attribute name="refineSearchCriteriaMsg" type="String" />
+    <aura:attribute name="isMemSearchDisabledFromPrv" type="Boolean" />
+    <!-- US2598275: Updates to Contact Name Entry Field -->
+    <!--<aura:attribute name="providerFieldsToValidate" type="List"
+        default="taxIdOrNPIAI,contactNameAI,contactNumberAI,contactTypeAI,otherContactNameAI,filterType,providerFirstNameAI,providerLastNameAI,providerZipAI,providerPhoneNumberAI" />-->
+    <aura:attribute name="providerFieldsToValidate" type="List"
+                    default="taxIdOrNPIAI,contactFirstNameAI,contactLastNameAI,contactNumberAI,contactTypeAI,otherContactNameAI,otherContactFirstNameAI,otherContactLastNameAI,otherContactNumberAI,filterType,providerFirstNameAI,providerLastNameAI,providerZipAI,providerPhoneNumberAI,startTimeId,endTimeId" />
+    <aura:attribute name="selectedProviderRecord" type="Object" />
+    <aura:attribute name="calloutProviderNotFound" type="Boolean" default="false" />
+    <aura:attribute name="filterTypeOptions" type="List" />
+    <aura:attribute name="stateOptions" type="List" />
+    <aura:attribute name="refineSearchCriteria" type="String" />
+    <aura:attribute name="showProviderDropdown" type="Boolean" default="false" />
+    <aura:attribute name="isOther" type="Boolean" default="true" />
+    <aura:attribute name="firstNameErrorMessage" type="String"
+        default="Enter at least two character followed by an asterisk, and no character after the asterisk, in order to perform a wildcard search on the first name field (example: ab*)" />
+    <aura:attribute name="lastNameErrorMessage" type="String"
+        default="Enter at least three characters followed by an asterisk, and no character after the asterisk, in order to perform a wildcard search on the last name field (example: abc*)" />
+    <!-- <aura:attribute name="isPysician" type="Boolean" default="false" /> -->
+    <aura:attribute name="contactTypesOptions" type="List" default="[{'label': '--None--', 'value': ''},
+                                                                    {'label': 'Attorney', 'value': 'Attorney'},
+                                                                    {'label': 'Internal/UHG Employee', 'value': 'Internal/UHG Employee'},
+                                                                    {'label': 'Member Representative (Friend, Family, Navigator, Representative, etc.)', 'value': 'Member Representative (Friend, Family, Navigator, Representative, etc.)'},
+                                                                    {'label': 'Other Carrier/Payor/Billing Vendor', 'value': 'Other Carrier/Payor/Billing Vendor'},
+                                                                    {'label': 'Pharmacy/Pharmacist', 'value': 'Pharmacy/Pharmacist'},
+                                                                    {'label': 'Prospective Member', 'value': 'Prospective Member'},
+                                                                    {'label': 'Reporter/Media Representative', 'value': 'Reporter/Media Representative'},
+                                                                    {'label': 'State Regulatory Agent/Government Agency', 'value': 'State Regulatory Agent/Government Agency'},
+                                                                    {'label': 'Other', 'value': 'Other'}]" />
+    <aura:attribute name="showErrorMessage" type="Boolean" default="false" />
+    <aura:attribute name="error" type="object" />
+    <aura:attribute name="timer" type="Integer"/>
+    <!--US2757958-Contact Number/Ext - Carry Over to Other/Misdirect Entry Fields -->
+    <aura:attribute name="isClearbuttonClciked" type="Boolean" default="false"/>
+
+    <!--US3181616 - Hours of Operation Explore Page - Sravan -->
+    <aura:attribute name="startTime" type="String" default="9:00"/>
+    <aura:handler name="change" value="{!v.startTime}" action="{!c.startTimeChange}"/>
+    <aura:attribute name="endTime" type="String" default="5:00"/>
+    <aura:handler name="change" value="{!v.endTime}" action="{!c.endTimeChange}"/>
+    <aura:attribute name="startTimeType" type="String" default="AM"/>
+    <aura:attribute name="endTimeType" type="String" default="PM"/>
+    <aura:attribute name="timeZone" type="String" default="Central - CST"/>
+    <aura:attribute name="startTimeError" type="Boolean" default="false"/>
+    <aura:attribute name="endTimeError" type="Boolean" default="false"/>
+    <aura:attribute name="availableTimeType" type="List" default="[{'label': 'AM', 'value': 'AM'},
+                                                                  {'label': 'PM', 'value': 'PM'}
+                                                                 ]"/>
+    <aura:attribute name="availableTimeZone" type="List" default="[{'label': 'Eastern - EST', 'value': 'Eastern - EST'},
+                                                                  {'label': 'Central - CST', 'value': 'Central - CST'},
+                                                                  {'label': 'Mountain - MST', 'value': 'Mountain - MST'},
+                                                                  {'label': 'Pacific - PST', 'value': 'Pacific - PST'},
+                                                                  {'label': 'Alaska - AKST', 'value': 'Alaska - AKST'},
+                                                                  {'label': 'Hawaii - HST', 'value': 'Hawaii - HST'}
+                                                                 ]"/>
+
+    <!--VCCD Handler-->
+    <aura:handler event="c:ACET_VCCDInBoundRouting" action="{!c.handleVCCDEvent}"/>
+    
+    <!-- US2826419-->
+    <aura:handler event="c:SAE_ProviderValidationFromMemberEvent" action="{!c.handlePrvValidation}" />
+    
+    <!-- US3762727 -->
+    <aura:attribute name="isContactDetailsRequired" type="boolean" default="false"/>
+    <!-- DE482480- Swapnil 08/25/2021 -->
+    <aura:attribute name="isContactDetailsInvalid" type="boolean" default="false"/>
+
+    <!--Provider-->
+    <aura:if aura:id="memberCardSpinnerAI" isTrue="false">
+        <lightning:spinner alternativeText="Loading" size="medium" />
+    </aura:if>
+    <div onkeyup="{!c.onClickOfEnter}" >
+        <lightning:layout multipleRows="true">
+            <lightning:layoutItem size="6" class="headerSectionHeight">
+                <lightning:layout multipleRows="true">
+                    <lightning:layoutItem size="4">
+                        <div class="headerClass">{!v.isOther ? 'Provider' : 'Other'}
+                        </div>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="8">
+                        <c:ACET_ToggleButton width="74" checked="{!v.isOther}" checkedText="Other"
+                            uncheckedText="Provider" />
+                    </lightning:layoutItem>
+                </lightning:layout>
+            </lightning:layoutItem>
+            <lightning:layoutItem size="6" class="headerSectionHeight">
+                <div class="slds-float_right">
+                    <lightning:button variant="neutral" label="Clear" name="provClearName" class="clearBtn"
+                        onclick="{!c.clearFieldValidationsAndValues}"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" />
+                </div>
+            </lightning:layoutItem>
+
+            <aura:if isTrue="{!!v.providerDetails.isOther}">
+                <!-- US2598275: Updates to Contact Name Entry Field -->
+                <!-- <lightning:layoutItem flexibility="grow" size="6">
+                    <lightning:input aura:id="contactNameAI" type="text" name="contactName" label="Contact Name"
+                        value="{!v.providerDetails.isNoProviderToSearch ? '' : v.flowDetails.contactName}" required="true"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}"
+                        class="slds-m-right_x-small" autocomplete="off" />
+                </lightning:layoutItem>  -->
+                <!-- US2598275: Updates to Contact Name Entry Field -->
+                <lightning:layoutItem flexibility="grow" size="3">
+                    <lightning:input aura:id="contactFirstNameAI" type="text" name="contactFirstName" label="First Name"
+                                    value="{!v.providerDetails.isNoProviderToSearch ? '' : v.flowDetails.contactFirstName}" required="{!v.isContactDetailsRequired}"
+                                    disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}"
+                                    class="slds-m-right_x-small" autocomplete="off" />
+                </lightning:layoutItem>
+
+                <lightning:layoutItem flexibility="grow" size="4">
+                    <lightning:input aura:id="contactLastNameAI" type="text" name="contactLastName" label="Last Name"
+                                    value="{!v.providerDetails.isNoProviderToSearch ? '' : v.flowDetails.contactLastName}" required="{!v.isContactDetailsRequired}"
+                                    disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}"
+                                    class="slds-m-right_x-small" autocomplete="off" />
+                </lightning:layoutItem>
+
+                <lightning:layoutItem flexibility="grow" size="3">
+                    <lightning:input aura:id="contactNumberAI" type="text" name="contactNumber" label="Contact Number"
+                        value="{!v.providerDetails.isNoProviderToSearch ? '' : v.flowDetails.contactNumber}" 
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}" minlength="10"
+                        maxlength="10" pattern="[0-9]*" messageWhenTooShort="Enter 10 digits"
+                        class="slds-m-right_x-small" autocomplete="off" />
+                </lightning:layoutItem>
+
+                <lightning:layoutItem flexibility="grow" size="2">
+                    <lightning:input aura:id="contactExtAI" type="text" name="contactExt" label="Ext"
+                        value="{!v.providerDetails.isNoProviderToSearch ? '' : v.flowDetails.contactExt}"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}" autocomplete="off" />
+                </lightning:layoutItem>
+
+
+                <!--US3181616 - Sravan - Start-->
+				<lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="12">
+                        <span style="color:grey;padding-top: 50px;"><span style="color: rgb(194, 57, 52)">*</span> Hours of Operation</span>
+                </lightning:layoutItem>
+                <lightning:layoutItem class="slds-m-right_x-small" flexibility="grow" size="2">
+                        <c:ComboboxField aura:id="startTimeId"
+                        fieldName=" "
+                        objectName="ACET_Hours_of_operation__mdt"
+                        searchFieldName="Time_Value__c"
+                        whereCondition=""
+                        orderBy="Order__c"
+                        selectedRecord="{!v.startTime}"
+                        searchKeyword="{!v.startTime}"
+                        isLabel= "false"
+                        fieldsdisabled="{!v.providerDetails.isNoProviderToSearch}"/>
+                </lightning:layoutItem>
+                <lightning:layoutItem  flexibility="grow" size="2">
+                        <lightning:combobox variant="label-hidden" required="true" class="slds-m-right_x-small" name="startTimeType" label="" value="{!v.startTimeType}" disabled="{!v.providerDetails.isNoProviderToSearch}" options="{!v.availableTimeType }" onchange="{!c.latestValues}"/>
+                </lightning:layoutItem>
+                <lightning:layoutItem class="opHours" size="0.5">
+                        To
+                </lightning:layoutItem>
+                <lightning:layoutItem  class="slds-m-right_x-small" flexibility="grow" size="2">
+                        <c:ComboboxField aura:id="endTimeId"
+                        fieldName=" "
+                        objectName="ACET_Hours_of_operation__mdt"
+                        searchFieldName="Time_Value__c"
+                        whereCondition=""
+                        orderBy="Order__c"
+                        selectedRecord="{!v.endTime}"
+                        searchKeyword="{!v.endTime}"
+                        isLabel= "false"
+                        fieldsdisabled="{!v.providerDetails.isNoProviderToSearch}"/>
+                </lightning:layoutItem>
+                <lightning:layoutItem  class="slds-m-left_x-small" flexibility="grow" size="2">
+                        <lightning:combobox variant="label-hidden" required="true" class="slds-m-right_x-small" name="endTimeType" label="" value="{!v.endTimeType}" disabled="{!v.providerDetails.isNoProviderToSearch}" options="{!v.availableTimeType }" onchange="{!c.latestValues}"/>
+                </lightning:layoutItem>
+                <lightning:layoutItem class="slds-m-left_x-small" flexibility="grow" size="3">
+                        <lightning:combobox variant="label-hidden" required="true"  name="timeZone" label="" value="{!v.timeZone}" disabled="{!v.providerDetails.isNoProviderToSearch}" options="{!v.availableTimeZone}" onchange="{!c.latestValues}" />
+                </lightning:layoutItem>
+                <!--US3181616 - Sravan - End-->
+
+                <lightning:layoutItem class="slds-m-top_small" size="12">
+                    <lightning:input aura:id="taxIdOrNPIAI" type="text" name="taxIdOrNPI" label="Tax ID/NPI"
+                        value="{!v.providerDetails.taxIdOrNPI}"
+                        required="{!!v.providerDetails.isAdvancedSearch || v.providerDetails.isProviderNotFound ? true : false}"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" minlength="9" maxlength="10"
+                        onchange="{!c.handleOnChange}" onblur="{!c.handleOnBlur}" messageWhenTooShort="Enter nine digits." 
+                        pattern="^[0-9_ ]*$" messageWhenPatternMismatch="Enter a numeric value." autocomplete="off" />
+                </lightning:layoutItem>
+
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="12">
+                    <lightning:input aura:id="providerLastNameAI" name="providerLastName" type="text"
+                        label="{!v.providerDetails.isOther ? 'Last Name' : 'Last Name or Facility Name/Group Name'}"
+                        value="{!v.providerDetails.lastName}"
+                        required="{!v.providerDetails.isProviderNotFound || v.providerDetails.isOther}"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}" autocomplete="off" />
+                </lightning:layoutItem>
+
+                <lightning:layoutItem size="6" class="slds-m-top_medium showOrHideAdvancedSearchSectionHeight">
+                    <a href="#" aura:id="searchTypeAI" onclick="{!c.showOrHideAdvancedSearch}"
+                        name="providerAdvanceSearchName" disabled="{!v.providerDetails.isNoProviderToSearch}"
+                        class="{!v.providerDetails.isNoProviderToSearch ?
+                            'linkField showOrHideAdvancedSearch' : 'linkField'}">{!v.providerDetails.isAdvancedSearch ?
+                        'Hide Advanced Search' : 'Show Advanced Search'}</a>
+                </lightning:layoutItem>
+
+                <lightning:layoutItem size="6" class="slds-m-top_medium showOrHideAdvancedSearchSectionHeight">
+                    <lightning:layout multipleRows="true">
+                        <lightning:layoutItem size="12">
+                            <lightning:input type="checkbox" name="noProviderToSearch" label="No provider to search"
+                                checked="{!v.providerDetails.isNoProviderToSearch}"
+                                onchange="{!c.handleNoProviderToSearch}" />
+                        </lightning:layoutItem>
+                        <aura:if isTrue="{!v.calloutProviderNotFound}">
+                            <lightning:layoutItem size="12" class="slds-m-top_x-small">
+                                <lightning:input aura:id="providerNotFoundAI" type="checkbox" name="providerNotFound"
+                                    label="Provider not found" onchange="{!c.handleProviderNotFound}"
+                                    checked="{!v.providerDetails.isProviderNotFound}"
+                                    disabled="{!v.providerDetails.isNoProviderToSearch}" />
+                            </lightning:layoutItem>
+                        </aura:if>
+                    </lightning:layout>
+                </lightning:layoutItem>
+            </aura:if>
+
+            <aura:if isTrue="{!v.providerDetails.isAdvancedSearch}">
+                <lightning:layoutItem flexibility="grow" size="12" class="slds-m-top_medium">
+                    <lightning:combobox aura:id="filterType" name="filterType" label="Filter Type"
+                        required="{!v.providerDetails.isProviderNotFound || v.providerDetails.isAdvancedSearch}"
+                        value="{!v.providerDetails.filterType}" options="{!v.filterTypeOptions}"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}" />
+                </lightning:layoutItem>
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="12">
+                    <lightning:combobox aura:id="practicingStatusAI" options="{!v.practicingStatusOptions}"
+                        name="practicingStatus" label="Practicing Status"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" value="{!v.providerDetails.practicingStatus}"
+                        onchange="{!c.handleOnChange}"
+                        fieldLevelHelp="Termed: Address, NPI, Provider ID, Specialty and/or TIN are no longer active" />
+                </lightning:layoutItem>
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="12">
+                    <lightning:input aura:id="providerFirstNameAI" name="providerFirstName" type="text" label="First Name"
+                        value="{!v.providerDetails.firstName}"
+                        required="{!v.providerDetails.isProviderNotFound &amp;&amp; v.providerDetails.filterType == 'Physician' ? true : false || v.providerDetails.isOther}"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}" autocomplete="off" />
+                </lightning:layoutItem>
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="12">
+                    <c:ACET_CustomStateComboboxField strSelectedCode ="{!v.providerDetails.state}" aura:id="StateAI"
+                        fieldsdisabled = "{!v.providerDetails.isNoProviderToSearch || v.providerDetails.isProviderNotFound}"/>
+                </lightning:layoutItem>
+
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="12">
+                    <lightning:input aura:id="providerZipAI" name="providerZip" type="text" label="Zip Code"
+                        value="{!v.providerDetails.zip}" required=""
+                        disabled="{!v.providerDetails.isNoProviderToSearch || v.providerDetails.isProviderNotFound}"
+                        minlength="5" maxlength="5" messageWhenTooShort="To search by Zip Code, enter five digits"
+                        onchange="{!c.handleOnChange}" autocomplete="off" />
+                </lightning:layoutItem>
+                <!--US2548729: Not MVP - Explore Page & Interaction Overview - Member and Provider Advanced Searches - Remove Phone Number Field -->
+                <lightning:layoutItem class="{!v.calloutProviderNotFound == false ? 'slds-hide' : 'slds-show slds-m-top_small'}" flexibility="grow" size="12">
+                    <lightning:input aura:id="providerPhoneNumberAI" name="phoneNumber" type="text" label="Phone Number"
+                        value="{!v.providerDetails.phoneNumber}"
+                        required="{!v.providerDetails.isProviderNotFound || v.providerDetails.isOther}"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" minlength="10" maxlength="10" pattern="[0-9]*"
+                        messageWhenTooShort="Enter 10 digits" onchange="{!c.handleOnChange}" autocomplete="off" />
+                </lightning:layoutItem>
+            </aura:if>
+            <aura:if isTrue="{!v.providerDetails.isOther}">
+                <lightning:layoutItem flexibility="grow" class="" size="12">
+                    <lightning:combobox aura:id="contactTypeAI" name="contactType" label="Contact Type"
+                        value="{!v.providerDetails.contactType}" options="{!v.contactTypesOptions}" required="true"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}" />
+                </lightning:layoutItem>
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="12">
+                    <!-- US2598275: Updates to Contact Name Entry Field -->
+                    <!--<lightning:input aura:id="otherContactNameAI" type="text" name="contactName" label="Contact Name"
+                        value="{!v.flowDetails.contactName}" required="true"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}" autocomplete="off" />-->
+                    <lightning:layout multipleRows="true">
+                        <lightning:layoutItem flexibility="grow" size="5">
+                            <lightning:input aura:id="otherContactFirstNameAI" type="text" name="contactFirstName" label="First Name"
+                                            value="{!v.flowDetails.contactFirstName}" required="true"
+                                            disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}" autocomplete="off"
+                                            class="slds-m-right_x-small"/>
+                        </lightning:layoutItem>
+                        <lightning:layoutItem flexibility="grow" size="7">
+                            <lightning:input aura:id="otherContactLastNameAI" type="text" name="contactLastName" label="Last Name"
+                                            value="{!v.flowDetails.contactLastName}" required="true"
+                                            disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}" autocomplete="off"
+                                            class="slds-m-right_x-small"/>
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                </lightning:layoutItem>
+
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="8">
+                    <lightning:input aura:id="otherContactNumberAI" type="text" name="contactNumber" label="Contact Number"
+                        value="{!v.flowDetails.contactNumber}" required="true" class="slds-m-right_x-small"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}" minlength="10"
+                        maxlength="10" messageWhenTooShort="Enter 10 digits" autocomplete="off" />
+
+                </lightning:layoutItem>
+
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="4">
+                    <lightning:input aura:id="otherContactExtAI" type="text" name="contactExt" label="Ext"
+                        value="{!v.flowDetails.contactExt}" disabled="{!v.providerDetails.isNoProviderToSearch}"
+                        onchange="{!c.handleOnChange}" autocomplete="off" />
+                </lightning:layoutItem>
+            </aura:if>
+
+            <aura:if isTrue="{! !v.providerDetails.isProviderNotFound}">
+                <lightning:layout>
+                    <aura:if isTrue="{! !v.providerDetails.isOther}">
+                    <lightning:layoutItem class="slds-p-right_small">
+                        <lightning:button variant="brand" label="Search" class="searchButton slds-m-top_medium"
+                            disabled="{!v.providerDetails.isNoProviderToSearch}" onclick="{!c.searchProvider}" />
+                    </lightning:layoutItem>
+                    </aura:if>
+                    <aura:if isTrue="{!v.showErrorMessage}">
+                        <lightning:layoutItem class="validationErrorMsgPosition">
+                            <c:ACET_ErrorPopup aura:id="errorPopup" errorMessage="{!v.error.message}"
+                                topDescription="{!v.error.topDescription}" bottomDescription="{!v.error.bottomDescription}"
+                                descriptionList="{!v.error.descriptionList}" moveLeft="-17" isNubbinLeft="true" />
+                        </lightning:layoutItem>
+                    </aura:if>
+                </lightning:layout>
+                <aura:if isTrue="{!v.refineSearchCriteriaMsg}">
+                    <lightning:layoutItem flexibility="grow" size="12" class="slds-p-top_small refineSearchError">
+                        {!v.refineSearchCriteriaMsg}
+                    </lightning:layoutItem>
+                </aura:if>
+				<aura:if isTrue="{! !v.providerDetails.isOther}">
+                <lightning:layoutItem flexibility="grow" size="12" class="slds-m-top_medium">
+                    <c:ACET_ProviderResultsDropdown providerSearchResults="{!v.providerSearchResults}"
+                        providerDetails="{!v.providerDetails}" showProviderDropdown="{!v.showProviderDropdown}"
+                        selectedProviderDetails="{!v.selectedProviderRecord}" />
+                </lightning:layoutItem>
+            </aura:if>
+            </aura:if>
+
+        </lightning:layout>
+    </div>
+
+</aura:component>

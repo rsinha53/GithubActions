@@ -1,0 +1,368 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,lightning:isUrlAddressable" access="global"  
+                controller="Motion_MemberInformationController">
+    <aura:attribute name="isCsMbr" type="Boolean" default="false"/>
+    <aura:attribute name="showSave" type="Boolean" default="true"/>
+    <aura:attribute name="showMemberDetailPage" type="Boolean" default="true"/>
+    <aura:attribute name="interaction" type="SObject"/>    
+    <aura:attribute name="fullName" type="String"/>
+    <aura:attribute name="registeredMemberId" type="String"/>
+    <aura:attribute name="eligibleMemberId" type="String"/>
+    <aura:attribute name="memberEmail" type="String"/>
+    <aura:attribute name="memberDob" type="String"/>
+    <aura:attribute name="interactType" type="String"/>
+    <aura:attribute name="firstName" type="String"/>
+    <aura:attribute name="lastName" type="String"/>
+    <aura:attribute name="groupName" type="String"/>
+    <aura:attribute name="groupNo" type="String"/>
+	<aura:attribute name="phoneNo" type="String"/>
+    <aura:attribute name="pageReference" type="Map" default=""/>
+    <!--<aura:attribute name="copypageReference" type="Map"/>-->
+    <aura:attribute name="showhighlightpanel" type="Boolean" default="false"/>
+    <aura:attribute name="showdigitalpanel" type="Boolean" default="false"/>
+    <aura:attribute name="showdeviceInfopanel" type="Boolean" default="false"/>
+    <aura:attribute name="showdemographicsInfopanel" type="Boolean" default="false"/>
+    <aura:attribute name="showPlanWaiverInfopanel" type="Boolean" default="false"/>
+    <aura:attribute name="SpinnerLoading" type="boolean" default="false"/>
+    
+    <aura:attribute type="object" name="intrecord" />
+    <aura:attribute type="Object" name="highlightHeader" />    
+    <aura:attribute name="cardDetails" type="Object"/>
+    <aura:attribute name="DeviceInfocardDetails" type="Object"/>
+    <aura:attribute name="DemographicsInfocardDetails" type="Object"/>
+    <aura:attribute name="HighlightsInfocardDetails" type="Object"/>
+    <aura:attribute name="PlanWaiverInfocardDetails" type="Object"/>
+    <aura:attribute name="tableHeaders" type="List[]"/>
+    <aura:attribute name="tablebody" type="List[]"/>
+    
+    <aura:attribute name="memberNotFoundHighlightsPanel" type="Object"/>
+    <aura:attribute name="memberNotFoundGeneralInfoPanel" type="Object"/>
+    <aura:attribute name ="isMemberNotFound" type="Boolean" default="false"/>
+    <aura:attribute name="orgid" type="String" access="public"/>
+    <aura:attribute name="subjectID" type="String"/>
+    <aura:attribute name="fastrrackflow" type="String" access="public" default="no"/>
+
+    <aura:attribute name="membernotfoundfirstName" type="String"/>
+    <aura:attribute name="membernotfoundlastName" type="String"/>
+    <aura:attribute name="membernotfoundemailaddress" type="String"/>
+    <aura:attribute name="membernotfoundphone" type="String"/>
+    <aura:attribute name="membernotfoundgropname" type="String"/>
+    <aura:attribute name="membernotfoundgroupnumber" type="String"/>
+    <aura:attribute name="membernotfounddob" type="String"/>
+    <aura:attribute name="membernotfoundstate" type="String"/>
+    <aura:attribute name="membernotfoundzip" type="String"/>
+    <aura:attribute name="membernotfoundinttype" type="String"/>
+    
+    <!--Originator Attributes-->
+    <aura:attribute name="FamilyMembersList" type="list" default="[]" />
+    <aura:attribute name="showOriginatorErrorFired" type="boolean" default="false" access="public"/>
+    <aura:attribute name="originatorId" type="String" access="global" default=""/>
+    <aura:attribute name="isOrigSelected" type="Boolean" default="false" access="public"/>
+    <aura:attribute name="isTPModalOpen" type="boolean" access="public" default="false" />
+    <aura:attribute name="isModalOpen" type="boolean" access="public" default="false" />
+    <aura:attribute name="originatorError" type="String" default="" access="public"/>
+    <aura:attribute name="showOriginator" type="Boolean" default="false"/>
+    <aura:attribute name="selectedLookUpRecords" type="sObject[]" default="[]"/>     
+    <aura:attribute name="originator" type="String" access="public"/>    
+    <aura:attribute name="topicError" type="String" default="" access="public"/>
+    <aura:attribute name="tpRelation" type="String" access="public"/>
+    <aura:attribute name="originatorval" type="String" access="global" />  
+    <aura:attribute name="detailPgName" type="string" default="Motion Member Detail"/>
+	<aura:attribute name="memberId" type="String"/>
+	<!-- <aura:attribute name="originatorReal" type="String"/> -->												  
+	<aura:attribute name="originatorReal" type="String"/>													  
+    <aura:attribute name="actionBtnFlag" type="Boolean" default="false"/>
+
+    <!-- Onshore Restriction -->
+    <aura:attribute name="isOnshoreError" type="Boolean" default="false" access="public"/>
+    <aura:attribute name="onshore_Error" type="String" access="public" default="Error: Onshore Restriction value not found. Please refresh and try again."/>
+
+   <!-- Onshore Restriction -->
+    <aura:attribute name="onshoreRestrictionDisp" type="String" default="" access="public"/>
+
+    <aura:attribute name="showpopup" type="Boolean" default="false"/>
+    
+    <!-- Onshore Restriction Save Handler-->
+    <aura:attribute name="OnshoreRestTrigger" type="Boolean" default="false"/>
+    <aura:handler name="change" value="{!v.OnshoreRestTrigger}" action="{!c.OnshoreSaveValidation}"/> 
+ 
+    <lightning:workspaceAPI aura:id="workspace" />
+    <!-- Pagination attributes -->
+    <aura:attribute name="tablePaginations" type="Object" />    
+    <aura:attribute name="pageNumbers" type="Integer" default="1"/>
+    <aura:attribute name="maxPageNumber" type="Integer" default="1"/>
+    <!--Pagination attributes end-->
+	<ltng:require styles="{!$Resource.ACETLGT_MasterStyle}" />
+    <!-- HANDLERS -->
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <!-- aura:handler name="render" value="{!this}" action="{!c.onRender}"/ -->
+    <!-- aura:handler event="aura:waiting" action="{!c.showSpinner}"/ -->
+	<!-- aura:handler event="aura:doneWaiting" action="{!c.hideSpinner}"/ -->
+    <ltng:require scripts="{!$Resource.ACET_AutodocJS}" />
+    <ltng:require styles="{!$Resource.ACETLGT_MasterStyle}" />
+    <aura:handler event="c:ACET_ChangePageEvt" name="changePageEvent" action="{!c.getResults}"/>
+    <aura:handler name="tpevent" event="c:ACETLGT_TPModalEvent" action="{!c.handleTPEvent}"/>
+    <aura:handler name="ttsevent" event="c:ACETLGT_TTSModalEvent" action="{!c.handleCaseEvent}"/>    
+    <aura:handler name="getOriginatorEvent" event="c:ACETLGT_OriginatorChanged" action="{!c.onOriginatorChange}"/> 
+	<aura:handler name="showOriginatorError" event="c:ACETLGT_ShowOriginatorErrorEvt"  action="{!c.handleShowOriginatorErrstop}" />
+    
+    <!-- new attributes -->
+    <aura:attribute name="autodocUniqueId" type="String" /> <!--SUM: default="MotionDemographics" /> -->
+	<aura:attribute name="autodocUniqueIdCmp" type="String" />
+   		<aura:handler name="motionpagechange" event="c:Motion_PageEvt"  action="{!c.setpage}" />
+    <aura:attribute type="Boolean" name="pagechange" default="false"/>
+    <!-- HANDLERS -->
+    
+    <div id="originatorlocationscroll"/>
+	<aura:if isTrue="{!v.showMemberDetailPage}">    
+		
+    <aura:if isTrue="{!v.showhighlightpanel}">        
+	
+
+        <c:Motion_MemberHighlights name="{!v.fullName}" 
+                                       	eligibleMemberId="{!v.eligibleMemberId}"
+                                       	registeredMemberId="{!v.registeredMemberId}"
+                                   		interaction = "{!v.interaction}" 
+                                   	   	cardDetails="{!v.HighlightsInfocardDetails}"
+                                        OriginatorId="{!v.orgid}"
+                                        orgid="{!v.orgid}"
+                                        originator= "{!v.originator}"
+                                        interId="{!v.interaction.Id}"
+                                   		memberId="{!v.memberId}"
+                                   		groupName="{!v.groupName}"
+                                   		groupNo="{!v.groupNo}"
+                                   		showSave="{!v.showSave}"
+										autodocUniqueId="{!v.autodocUniqueId}"
+										AutodocKey="{!v.autodocUniqueId}"
+                                  
+                                   />       
+      </aura:if>
+        
+     
+    <aura:if isTrue="{!v.isMemberNotFound}">   
+     <c:Motion_MemberHighlights highlightHeader="{!v.highlightHeader}" 
+                                        isMemberNotFound="{!v.isMemberNotFound}"
+                                   	   	cardDetails="{!v.memberNotFoundHighlightsPanel}"
+                                        thirdPartyId="{!v.thirdpartyId}"
+                                        intrec="{!v.intrecord}"
+                                		interaction = "{!v.intrecord}" 
+                                		showSave="{!v.showSave}"
+										autodocUniqueId="{!v.autodocUniqueId}"
+										AutodocKey="{!v.autodocUniqueId}"
+										groupName="{!v.membernotfoundgropname}"
+                                   		groupNo="{!v.membernotfoundgroupnumber}"
+                              
+                                  />       
+	  </aura:if>
+           
+        <aura:if isTrue="{!v.isMemberNotFound}"> 
+                <aura:set attribute="else">
+                    <div class="slds-grid slds-gutters slds-p-top_medium">
+                        <div class="slds-col slds-col slds-size_12-of-12">
+                            <c:Motion_CaseHistory eligibleMemberId="{!v.eligibleMemberId}"
+                                                  registeredMemberId="{!v.registeredMemberId}"
+                                                  isMemberNotFound="{!v.isMemberNotFound}"
+                                                  autodocUniqueId= "{!v.autodocUniqueId}"
+                                                  autodocUniqueIdCmp="{!v.autodocUniqueId + 'history'}"
+                                                  actionBtnFlag="{!v.actionBtnFlag}"/>
+                        </div>
+                    </div>
+                </aura:set>
+            </aura:if>     
+		
+		 
+		
+		
+		
+  	<div class="slds-grid slds-gutters slds-p-top_medium">
+    	<div class="slds-col slds-col slds-size_4-of-12">
+            <aura:if isTrue="{!v.showOriginator}">               
+            	<lightning:card >
+                	<div class="slds-p-top_x-small slds-m-top_x-small   slds-p-left_xx-large slds-p-right_xx-large">
+                    	<aura:if isTrue="{!v.isMemberNotFound}">
+                        	<c:ACETLGT_OriginatorAndTopic aura:id="OriginatorAndTopic"
+                                                  FamilyMembersList="{!v.FamilyMembersList}"                                               
+                                                  showOriginatorErrorFired="{!v.showOriginatorErrorFired}"                                                           
+                                                  showTPpopUp= "{!v.isTPModalOpen}"                                                                                  
+                                                  originator= "{!v.interaction.Originator__c}"
+                                                  interId="{!v.interaction.Id}"                     
+                                                  subjectID ="{!v.subjectID}"                     
+                                                  originatorId=  "{!v.originatorId}"
+                                                  orgid="{!v.orgid}"
+                                                  fastrrackflow="{!v.fastrrackflow}"
+                                                  isMemberNotFound="{!v.isMemberNotFound}"
+                                                      />
+                        </aura:if>
+                        <aura:if isTrue="{!v.isMemberNotFound}">
+                            <aura:set attribute="else">
+                            <c:ACETLGT_OriginatorAndTopic aura:id="OriginatorAndTopic"
+                                                  FamilyMembersList="{!v.FamilyMembersList}"                                               
+                                                  showOriginatorErrorFired="{!v.showOriginatorErrorFired}"                                                           
+                                                  showTPpopUp= "{!v.isTPModalOpen}"                                                                                  
+                                                  originator= "{!v.interaction.Originator__c}"
+                                                  interId="{!v.interaction.Id}"                     
+                                                  subjectID ="{!v.subjectID}"                     
+                                                  originatorId=  "{!v.originatorId}"
+                                                  orgid="{!v.orgid}"
+                                                  fastrrackflow="{!v.fastrrackflow}"                                                  
+                                                      />
+                            </aura:set>
+                        </aura:if>
+                    	<div class="{!v.isOrigSelected? 'slds-show': 'slds-hide'}" >
+                        <label class="slds-text-color_error">{!v.originatorError}</label>
+                    	</div>
+                    	<aura:if isTrue="{!v.originatorval == undefined}">
+                        	<p class="slds-text-color_error">{!v.originatorError}</p>
+                    	</aura:if>
+                    
+                    	<div class="card_element_bottom_margin"/>
+                    	<span onkeypress="{!c.onClickOfEnter}">
+                        <c:ACETLGT_GlobalAutocomplete aura:id="GlobalAutocomplete"
+                                                      objectAPIName="Call_Topic_Access__c"
+                                                      IconName="standard:account"	
+                                                      lstSelectedRecords="{!v.selectedLookUpRecords}"
+                                                      label="Topic"
+                                                      detailPgName="{!v.detailPgName}"
+                                                      originatorName="Member"
+                                                      topicError="{!v.topicError}"                                                      
+                                                      interaction="{!v.interaction}"  
+                                                      fastrrackflow="{!v.fastrrackflow}" 
+                                                      calltopicnamefastrack="{!v.calltopicnamefastrack}"/>
+                        <div class="{!v.isTopicSelected? 'slds-show': 'slds-hide'}">
+                            <label class="slds-text-color_error">{!v.topicError}</label>
+                        </div>                   
+                        <aura:if isTrue="{!(empty(v.selectedLookUpRecords))}">
+                            <p class="slds-text-color_error cls-error">{!v.topicError}</p>
+                        </aura:if>    
+                                                   
+                        <div style="width:200px;" class="slds-align_absolute-center">                            
+                            <lightning:button label="Open Topic" class="card_element_top_margin slds-col" aura:id="showDetButtonId"
+                                              variant="brand" iconName="utility:search" iconPosition="left" onclick="{!c.openNewTab}" />
+                        </div>
+                        </span>
+					
+                </div>
+            </lightning:card>
+            </aura:if>
+        </div>
+        
+        <!-- div class="slds-spinner_container" -->
+    		<!-- aura:if isTrue="{!v.spinner}" -->
+        		<!-- lightning:spinner aura:id="Spinner"  variant="brand" size="large" class="slds-hide"/ -->
+    		<!-- /aura:if -->
+        <!-- /div -->
+            
+      <div class="slds-col slds-col slds-size_8-of-12">
+          <aura:if isTrue="{!v.showdemographicsInfopanel}">
+          <span>
+              <c:ACET_AutoDocCard autodocUniqueId= "{!v.autodocUniqueId}"
+                                  autodocUniqueIdCmp="{!v.autodocUniqueId + 'demo'}"
+                                defaultAutodoc= "true"
+                                disbaleHeaderCheckBox= "{!v.actionBtnFlag}"
+                                cardDetails="{!v.DemographicsInfocardDetails}"
+                                showComponentName= "true"
+                                enableRefreshAutodoc= "true">
+              </c:ACET_AutoDocCard>
+                <!--c:ACET_AutoDocCard  autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}" cardDetails="{!v.cardDetails}" showComponentName="{!v.showComponentName}"/-->
+              <!--c:Motion_MemberDetailsCardInfo eligibleMemberId="{!v.eligibleMemberId}" registeredMemberId="{!v.registeredMemberId}" cardDetails="{!v.DemographicsInfocardDetails}"/--></span>
+          </aura:if>
+          <aura:if isTrue="{!v.isMemberNotFound}">
+              
+          <span>
+              
+              <c:Motion_MemberDetailsCardInfo isMemberNotFound="{!v.isMemberNotFound}" cardDetails="{!v.memberNotFoundGeneralInfoPanel}" thirdPartyId="{!v.thirdpartyId}"/></span>
+          </aura:if>
+           
+        <aura:if isTrue="{!v.showdeviceInfopanel}">
+            <div class="slds-p-top_medium">
+          <span>
+              <c:ACET_AutoDocCard 
+                                  autodocUniqueId= "{!v.autodocUniqueId}"
+                                  autodocUniqueIdCmp= "{!v.autodocUniqueId + 'Device'}"
+                               defaultAutodoc= "true"
+                                disbaleHeaderCheckBox= "{!v.actionBtnFlag}"
+                                cardDetails="{!v.DeviceInfocardDetails}"
+                                showComponentName= "true"
+                                enableRefreshAutodoc= "true">
+              </c:ACET_AutoDocCard>
+              <!--c:Motion_MemberDetailsCardInfo eligibleMemberId="{!v.eligibleMemberId}" registeredMemberId="{!v.registeredMemberId}" cardDetails="{!v.DeviceInfocardDetails}"/-->
+                </span>
+            </div>
+            </aura:if>
+          <aura:if isTrue="{!v.showdigitalpanel}">
+          <div class="slds-p-top_medium">  
+              
+              <span>
+                  <c:ACET_AutoDocCard autodocUniqueId= "{!v.autodocUniqueId}"
+                                  autodocUniqueIdCmp= "{!v.autodocUniqueId + 'Digital'}"
+                                defaultAutodoc= "true"
+                                disbaleHeaderCheckBox= "{!v.actionBtnFlag}"
+                                cardDetails="{!v.cardDetails}"
+                                showComponentName= "true"
+                                enableRefreshAutodoc= "true">
+              </c:ACET_AutoDocCard>
+                  <!--c:Motion_MemberDetailsCardInfo  eligibleMemberId="{!v.eligibleMemberId}" registeredMemberId="{!v.registeredMemberId}" cardDetails="{!v.cardDetails}"/-->
+              </span>  
+              </div>
+          </aura:if>
+          <aura:if isTrue="{!v.showPlanWaiverInfopanel}">
+            <div class="slds-p-top_medium">  
+                <span>
+                    
+                 <c:ACET_AutoDocDataTable tableDetails="{!v.PlanWaiverInfocardDetails}" enablePagination="true"
+                                          autodocUniqueId= "{!v.autodocUniqueId}"
+                                  autodocUniqueIdCmp="{!v.autodocUniqueId + 'waiver'}"
+                                     tableID="{!v.autodocUniqueId + '_MotionWaiver'}" 
+                                    noOfRecordPerPage = "25"
+                                           maxPageNumber="{!v.PlanWaiverInfocardDetails.noOfPages}"
+                                          pageNumber="{!v.pageNumbers}"
+                                          isCheckboxDisabled="{!v.actionBtnFlag}"/>
+                </span>
+                  <span><!--c:Motion_PlanWaivers aura:id="planWaiverId" 
+                                            eligibleMemberId="{!v.eligibleMemberId}" 
+                                            registeredMemberId="{!v.registeredMemberId}" 
+                                            tableDetailes="{!v.PlanWaiverInfocardDetails}"
+                   
+                                            paginationDetail="{!v.tablePaginations}"
+                                            pageNumber="{!v.tablePaginations.startNumber}"
+                                            maxPageNumber="{!v.tablePaginations.noOfPages}"  /-->
+                                            
+                </span>  
+            </div>
+          </aura:if>
+          <div>&nbsp;</div>
+       </div>      
+		
+	</div>   
+    </aura:if>
+    <aura:if isTrue="{!v.showpopup}">
+             <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <!-- Modal/Popup Box Header Starts here-->
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeModel }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>
+                        <!--h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Modal/PopUp Box</h2-->
+                    </header>
+                    <!--Modal/Popup Box Body Starts here-->
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <p><b>Registered ID or Eligible Member ID is required to view Member 360
+                            </b>
+                        </p>
+                    </div>
+                    <!--Modal/Popup Box Footer Starts here-->
+                    <footer class="slds-modal__footer">
+                        <lightning:button variant="neutral"
+                                          label="Ok"
+                                          onclick="{! c.closeModel }"/>
+                        
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+            
+        </aura:if>
+   
+</aura:component>

@@ -1,0 +1,863 @@
+<apex:page controller="ACETUpdateMemberInfoController" sidebar="false"  applyHtmlTag="true" action="{!memberData}" docType="html-5.0">
+<script
+type="text/javascript" src="{!$Label.ACETDynatraceJSURL}"
+data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1"
+crossorigin="anonymous"></script>
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+    <apex:includeScript value="/soap/ajax/38.0/connection.js" />
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+    <style>
+    .pbSubheader{
+        background-color: transparent;
+    }
+    .messageTable{
+        border: none;
+     }
+    .errorM3{
+    border: solid #cc0000; 
+    border-radius: 0;
+}
+.errorM3 .msgIcon {
+    padding: 0px 0px 0px 0px;
+    margin-left: 0px;
+    width: 0px;
+        } 
+
+.message {
+    margin: 4px 0px;
+        }
+    </style>
+
+    <script>
+        $(document).ready(function() {
+            acet.autodoc.startAutodoc();
+          acet.autodoc.createCommentsbox();
+        });        
+        var cPhoneValues = '';
+        var cirrusInfoVal='';
+        function getSelectedItems(obj)
+        {
+           /* cPhoneValues ='';
+            $(obj).parent().find("[id$='theRepeatPhone']").find('input[type=checkbox]').each(function () {
+                console.log($(this).parent().is('td'));
+                if($(this).attr("class") == "autodoc" && $(this).is(":checked") && $(this).parent().is('td'))
+                {
+                    if(cPhoneValues != '')
+                    {
+                        cPhoneValues = cPhoneValues+','+$(this).parent().parent().find("[id$='phoneNumberType']").parent().attr('class').split("phoneNum-")[1];
+                    }else
+                    {
+                        cPhoneValues = $(this).parent().parent().find("[id$='phoneNumberType']").parent().attr('class').split("phoneNum-")[1];
+                    }
+                    
+                    console.log('Next---->'+cPhoneValues );
+                }else if($(this).attr("class") == "autodoc" && $(this).is(":checked") && $(this).parent().is('th'))
+                {
+                    if(cPhoneValues != '')
+                    {
+                        cPhoneValues = cPhoneValues+',tableAllSelect';
+                    }else
+                    {
+                        cPhoneValues = 'tableAllSelect';
+                    }   
+                }
+                
+            }); */
+            
+            addPhRow();
+            
+        
+        }
+        
+        function getSelectedCheckBoxs(obj)
+        {
+           /* cPhoneValues ='';
+            console.log($(obj).parent().parent().parent().find("[id$='theRepeatPhone']"));
+            $(obj).parent().parent().parent().find("[id$='theRepeatPhone']").find('input[type=checkbox]').each(function () {
+                
+                if($(this).attr("class") == "autodoc" && $(this).is(":checked") && $(this).parent().is('td'))
+                {
+                    if(cPhoneValues != '')
+                    {
+                        cPhoneValues = cPhoneValues+','+$(this).parent().parent().find("[id$='phoneNumberType']").parent().attr('class').split("phoneNum-")[1];
+                    }else
+                    {
+                        cPhoneValues = $(this).parent().parent().find("[id$='phoneNumberType']").parent().attr('class').split("phoneNum-")[1];
+                    }
+                    
+                    console.log('Next---->'+cPhoneValues );
+                }else if($(this).attr("class") == "autodoc" && $(this).is(":checked") && $(this).parent().is('th'))
+                {
+                    if(cPhoneValues != '')
+                    {
+                        cPhoneValues = cPhoneValues+',tableAllSelect';
+                    }else
+                    {
+                        cPhoneValues = 'tableAllSelect';
+                    }   
+                }
+                
+            }); */
+            
+        }
+        
+        function getSelectedCirrusItems(obj)
+        {
+            /*cirrusInfoVal ='';
+            console.log($("[id$='addInfo']").html());
+            $("[id$='addInfo']").find('input[type=checkbox]').each(function () {
+                console.log($(this).parent().is('td'));
+                if($(this).attr("class") == "autodoc" && $(this).is(":checked") && $(this).parent().is('td'))
+                {
+                    console.log($(this).parent().parent().find("[id$='updateType']").parent().attr('class'));
+                    if(cirrusInfoVal != '')
+                    {
+                        cirrusInfoVal = cirrusInfoVal+','+$(this).parent().parent().find("[id$='updateType']").parent().attr('class').split("cirrus-")[1];
+                    }else
+                    {
+                        cirrusInfoVal = $(this).parent().parent().find("[id$='updateType']").parent().attr('class').split("cirrus-")[1];
+                    }
+                    
+                    console.log('Next---->'+cirrusInfoVal);
+                }else if($(this).attr("class") == "autodoc" && $(this).is(":checked") && $(this).parent().is('th'))
+                {
+                    if(cirrusInfoVal != '')
+                    {
+                        cirrusInfoVal = cirrusInfoVal +',tableAllSelect';
+                    }else
+                    {
+                        cirrusInfoVal = 'tableAllSelect';
+                    }   
+                }
+                
+            }); */
+            addInfoRow();
+            
+        
+        }
+    function getUrlVars()        
+        {            
+            var vars = [], hash;            
+            var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');            
+            for(var i = 0; i < hashes.length; i++)                
+            {                
+                hash = hashes[i].split('=');                
+                vars.push(hash[0]);                
+                vars[hash[0]] = hash[1];                
+            }            
+            return vars;            
+        }        
+       function refreshMemberDetailTab() {
+           //alert('Came Here');
+           var parentId = getUrlVars()["parentId"];  
+           //alert('parentId='+parentId);
+           sforce.console.fireEvent('RequestUpdateInfoData_'.concat(parentId), 'EventMessage', fireEventcallback);
+           //alert('Event got fired');
+           /*if(sforce.console.isInConsole()){
+               sforce.console.getEnclosingTabId(storeCurrentTabId);
+           }*/
+          return true;
+       }
+        var fireEventcallback = function(result) { 
+            if (result.success) { 
+                   console.log('The custom event is fired!');
+            } else { 
+                   console.log('The custom event could not be fired!');
+            } 
+        };
+       
+        function updatedSelectedCirrusItems(obj)
+        {
+           /* var selectedPhoneArr = cirrusInfoVal.split(",");
+            console.log($(obj).parent().parent().parent().parent().find("[id$='addInfo']"));
+            $.each(selectedPhoneArr,function(index,value){
+            console.log('1---->.cirrus-'+$("[id$='addInfo']").find(".cirrus-"+value).html());
+                $("[id$='addInfo']").find(".cirrus-"+value).parent().find('input[type=checkbox]').prop("checked", true);
+                if(value == 'tableAllSelect')
+                {
+                   // $("[id$='addInfo']").find("tr th").find('input[type=checkbox]').prop("checked", true)
+                }   
+            
+            }); */
+            
+        }
+        
+        function updatedSelectedItems(obj)
+        {
+           /* var selectedPhoneArr = cPhoneValues.split(",");
+            $.each(selectedPhoneArr,function(index,value){
+                $("[id$='theRepeatPhone']").find(".phoneNum-"+value).parent().find('input[type=checkbox]').prop("checked", true);
+                if(value == 'tableAllSelect')
+                {
+                    //$("[id$='theRepeatPhone']").find("tr th").find('input[type=checkbox]').prop("checked", true)
+                }   
+            
+            }); */
+            
+        }
+        
+    </script>       
+    <apex:form id="updatefrm" >
+        <apex:outputPanel >
+        <c:ACETInteractionHighlightsPanel InteractionAtt="{!wrapper.interaction}" SubjectAtt="{!wrapper.Subject}" AdditionalInfoAtt="{!wrapper.AdditionalInfo}" html-auto-doc="auto" selectedOriginator="{!wrapper.interaction.Originator_Name__c}" />       
+        </apex:outputPanel>
+        <apex:outputPanel id="hippapopupPanel">
+                       <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+            </apex:outputPanel>
+        <apex:sectionHeader Title="Update Member Detail" />
+        <!--<apex:actionFunction action="{!updateMember}" name="updateMemberdata" status="refreshMemberStatus" / >-->
+        <apex:actionFunction action="{!memberData}" name="refreshMemberdata" />
+        <apex:actionFunction action="{!addPhRow}" name="addPhRow" reRender="theRepeatPhone,pbsPhone" onComplete="updatedSelectedItems(this);acet.autodoc.startAutodoc('pbsPhone');"/>                        
+        <apex:actionFunction action="{!addInfoRow}" name="addInfoRow" reRender="updateRows,addInfo" onComplete="updatedSelectedCirrusItems(this);acet.autodoc.startAutodoc('pbsUpdates');" />
+        <apex:actionFunction action="{!updateMember}" name="updateMember"  reRender="pageMessagesId,pbsPhone" status="refreshMemberStatus" onComplete="refreshMemberDetailTab();" />
+        
+        <apex:actionFunction action="{!getAdditionalUpdates}" name="GetAdditionalUpdates" status="refreshMemberStatus" rerender="mainDetail,addInfo,pbsUpdates,pbsbuttons" / >
+        
+        <apex:actionStatus id="refreshMemberStatus"  >
+            <apex:facet name="start">
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                &nbsp;
+            </div>
+            <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 1001; margin: 15% 50%">
+                <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                    <img src="/img/loading.gif" style="float: left; margin: 8px;" />
+                    <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                </div>
+            </div>
+        </apex:facet>
+        </apex:actionStatus>
+                <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveAndCloseButton="false"
+                    attrShowSaveButton="true" 
+                    attrSourceOriginator="{!wrapper.SourceOriginator}"
+                    attrInteractionId="{!wrapper.Interaction.Id}"
+                    attrSubjectId="{!wrapper.Subject.Id}"
+                    attrCallTopic="Update Member Detail" rendered="true"
+                    attrShowMisdirectButton="true" attrRefreshNavigationTab="false" id="cmpntId"/>        
+        <apex:outputPanel id="panelId">
+        <!--<apex:outputPanel id="opid">
+            <apex:pageMessages id="pageMessagesId" />                      
+            <div style="margin-left: 10%;">
+                <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveAndCloseButton="false"
+                    attrShowSaveButton="true" 
+                    attrSourceOriginator="{!wrapper.SourceOriginator}"
+                    attrInteractionId="{!wrapper.Interaction.Id}"
+                    attrSubjectId="{!wrapper.Subject.Id}"
+                    attrCallTopic="{!wrapper.CaseObj.Topic__c}" rendered="{!isClickedUpdate}"
+                    attrShowMisdirectButton="true" attrRefreshNavigationTab="false" id="cmpntId"/>
+                  <br/>  
+                 <apex:commandButton id="btnUpdate" style="margin-left:14%;" value="Update" onclick="check('{!phoneWrprList.size}');" reRender="null" status="refreshMemberStatus" />
+                 <apex:commandButton id="btnReset" value="Clear" onclick="refreshMemberdata();" rendered="{!!isClickedUpdate}" status="refreshMemberStatus" reRender="panelId"/>
+               
+            </div>
+        </apex:outputPanel>-->
+            <apex:pageBlock id="pbid"  mode="mainDetail">
+               <!--<apex:pageBlockButtons location="top">
+                       <apex:commandButton id="btnUpdate" style="margin-left:14%;" value="Update" onclick="check('{!phoneWrprList.size}');" reRender="none" status="refreshMemberStatus" />
+                       <apex:commandButton id="btnReset" value="Clear" onclick="refreshMemberdata();" rendered="{!!isClickedUpdate}" status="refreshMemberStatus" reRender="panelId"/>
+               </apex:pageBlockButtons> -->
+               <apex:outputPanel id="opid">
+            <apex:pageMessages id="pageMessagesId" /> 
+	</apex:outputPanel>       
+        <apex:outputPanel id="phonepanel">                      
+            <div style="margin-left: 10%;">
+                              
+                 <apex:commandButton id="btnUpdate" style="margin-left:24%;" value="Update" onclick="checkValues('{!phoneWrprList.size}');getSelectedCheckBoxs(this);" reRender="null" status="refreshMemberStatus" />
+                 <apex:commandButton id="btnReset" style="margin-left:0.5%;" value="Clear" onclick="refreshMemberdata();" rendered="{!!isClickedUpdate}" status="refreshMemberStatus" reRender="panelId"/>
+              
+            </div>
+	    <apex:outputPanel style="margin-left: 3%;" > 
+                 <apex:outputLabel value="Enrollment Method:" style="font-weight: bold;margin-right: 20px;"></apex:outputLabel>
+                 <apex:outputText value="{!enrollmentmehtod}" style="color:blue;" title="{!IF((enrollmentmehtod=='EDI and Paper'),$Label.ACETEnrollmentmethod,'')}" />  
+            </apex:outputPanel>
+               <!-- <apex:variable value="{!0}" var="rowNumber" /> -->
+               <apex:pageBlockSection id="pbsPhone" title="Phone" columns="1" html-auto-doc="true" html-auto-doc-case-items="true" html-auto-doc-section-key="phone" html-auto-doc-section-column-indexes="2">
+                    <script>
+                        acet.autodoc.startAutodoc('pbsPhone');
+                        $ = jQuery.noConflict();
+                        var $phoneNumber = $("[id$='phoneNumber']");  
+			var $workExt = $("[id$='workExt']");                        
+                        function init()
+                        {
+                            $phoneNumber.keypress(AllowDigitsOnly);
+                            $phoneNumber.keydown(formatphone);  
+			    $workExt.keypress(AllowDigitsOnlyNotHyp);                            
+                        }
+                        function formatphone(InputElement){
+                            var val = this.value.replace(/\D/g, '');
+                            var newVal = '';
+                            var count = 0;
+                            while (val.length > 3) {
+                              if(count < 2){
+                                  newVal += val.substr(0, 3) + '-';
+                                  val = val.substr(3);
+                                  count++ ;
+                              }
+                              if(count == 2)
+                                  break;
+                            }
+                            newVal += val;
+                            this.value = newVal;
+                            
+                        }                        
+                        function AllowDigitsOnly(InputElement)
+                        {                                                       
+                            //Allow delete, tab, enter and escape keys through
+                            if (/^(8|9|13|27|45)$/.test("" + InputElement.keyCode))
+                            {
+                                return true;
+                            }
+                    
+                            var regex = new RegExp("^[0-9 -]+$");
+                            var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+                             
+                            if (regex.test(str))
+                            {                                
+                                return true;
+                            }
+                    
+                            InputElement.preventDefault();
+                            return false;
+                        }
+              function AllowDigitsOnlyNotHyp(InputElement)
+                             {                                                       
+                              
+                             if (/\D/g.test("" + InputElement.keyCode))
+                             {
+                             return true;
+                             }
+                                        
+                             var regex = new RegExp("^[0-9]+$");
+                             var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+                                                 
+                             if (regex.test(str))
+                             {                                
+                                return true;
+                             }
+                                        
+                            InputElement.preventDefault();
+                            return false;
+                            }
+                        $(document).ready(function() {
+                             init();
+                             
+                        });                       
+                                              
+                    </script>
+                    <apex:pageBlockTable value="{!phoneWrprList}" var="pw" id="theRepeatPhone" columnsWidth="5%,15%,30%,30%,20%">
+                        <apex:variable value="{!-1}" var="rowNumber" />
+			         <apex:column headerValue="Phone Number Type" styleClass="phoneNum-{!pw.uniqueId}">
+				 <!-- Code Changed By Chandan Begin -US1198086 -->
+                                <apex:selectList id="phoneNumberType" size="1" value="{!pw.phone.PhoneNumberType}" disabled="{!pw.makeReadOnly}" onfocus="storeOldValue(this.value)" onchange="restrictPicklist('{!phoneWrprList.size}','{!pw.phone.PhoneNumberType}');">  
+                                    <apex:selectOptions value="{!pw.PhoneNumberTypeOption}"></apex:selectOptions> 
+                                </apex:selectList>
+                        </apex:column>                        
+                        <apex:column headerValue="Phone Number">         
+                            <apex:inputText value="{!pw.phone.PhoneNumber}" id="phoneNumber"  maxlength="12"/>
+                        </apex:column>
+			<apex:column headerValue="Ext" id="ext">  
+                            <div>
+                            <apex:inputText value="{!pw.phone.WorkExt}" id="workExt"  maxlength="8" rendered="{!!(pw.phone.PhoneNumberType=='Mobile')}"/> 
+                            </div>
+                        </apex:column>
+                        <apex:column headerValue="Primary ?">
+                                <apex:selectList id="Indicator" size="1" value="{!pw.phone.PrimaryIndicator}" disabled="{!pw.makePrimaryIndiReadOnly}">                                    
+                                    <apex:selectOptions value="{!pw.PrimaryIndicator}" ></apex:selectOptions>
+                                </apex:selectList>         
+                        </apex:column>
+                        <apex:column headerValue="Action">
+                          <apex:commandButton value="x" style="color:blue;font-weight: bold;font-size: 100%;" action="{!removePhoneRow}"  oncomplete="restrictPicklist('{!phoneWrprList.size}','{!elementToRemove}');" reRender="pbid,phonepanel" status="refreshMemberStatus" rendered="{!pw.isAddedNewRow}">  <!-- Code Changed By Chandan  -US1198086 -->
+                                 <apex:param value="{!rowNumber}" name="rowToRemove" assignTo="{!rowToRemove}"/>
+                             </apex:commandButton>                
+                           <apex:variable var="rowNumber" value="{!rowNumber+ 1}"/>
+                      </apex:column>
+                    </apex:pageBlockTable>                                        
+                </apex:pageBlockSection>
+                <apex:commandButton value="+" action="{!addPhRow}" style="margin-left: 13px;color:blue;font-weight: bold;font-size: 150%;" rendered="{!!(phoneWrprList.size=4)}" reRender="phonepanel,theRepeatPhone" oncomplete="acet.autodoc.startAutodoc('pbsPhone');restrictPicklistNew('{!phoneWrprList.size}');" status="refreshMemberStatus"/>  <!-- Code Changed By Chandan  -US1198086 -->
+
+              <!--  <apex:commandlink id="addPhoneBtn" onClick="getSelectedItems(this);"  reRender="null" style="cursor:pointer;" status="refreshMemberStatus1"><apex:image id="plusIcon" value="{!$Resource.UpdateMemberPlusIcon}"/></apex:commandlink> -->
+                <apex:pageBlockSection id="pbsEmail" title="Email" columns="1" html-auto-doc="true" html-auto-doc-case-items="true" html-auto-doc-section-key="phone" html-auto-doc-section-column-indexes="2">
+                    <script>
+                        acet.autodoc.startAutodoc();
+                    </script>
+                    <apex:pageBlockTable value="{!emailWrpr}" var="eml" id="theRepeatEmail" columnsWidth="5%,15%,60%,20%">                        
+                        <apex:column headerValue="Email Type" >
+                            <apex:selectList id="emailType" size="1" value="{!eml.emailTypeStr}" disabled="true" >
+                                <apex:selectOptions value="{!emailType}"></apex:selectOptions>
+                            </apex:selectList>
+                        </apex:column>
+                        
+                        <apex:column headerValue="Email">
+                            <apex:input type="email" value="{!eml.Email}" id="email" />
+                        </apex:column>    
+                    </apex:pageBlockTable> 
+                </apex:pageBlockSection>
+             </apex:outputPanel>
+                <apex:actionStatus id="refreshMemberStatus1">
+                <apex:facet name="start">
+                    <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                        &nbsp;
+                    </div>
+                    <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 1001; margin: 15% 50%">
+                        <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                            <img src="/img/loading.gif" style="float: left; margin: 8px;" />
+                            <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                        </div>
+                    </div>
+                </apex:facet>
+                </apex:actionStatus>
+                <apex:outputPanel id="addEmlBtn">
+                    <!--<apex:commandlink id="addEmailBtn" rerender="pbsEmail,addEmlBtn" action="{!addEmailRow}" rendered="{!(emailWrpr.size < 1  || emailWrpr == null ) && !checkEmail}" status="refreshMemberStatus1" ><apex:image id="plusIcon2" value="{!$Resource.UpdateMemberPlusIcon}"/></apex:commandlink>-->
+                    <apex:commandButton value="+" id="addEmailBtn" style="margin-left: 13px;color:blue;font-weight: bold;font-size: 150%;" rerender="pbsEmail,addEmlBtn" action="{!addEmailRow}" rendered="{!(emailWrpr.size < 1  || emailWrpr == null ) && !checkEmail}" status="refreshMemberStatus1" />  <!-- Code Changed By Chandan  US1283420 -->
+                    
+                </apex:outputPanel>
+                
+               <!-- <apex:pageBlockSection id="pbsUpdates" title="Additional Updates Made in CIRRUS" columns="1" html-auto-doc="true" html-auto-doc-case-items="true" onclick="toggleUpdates(this);">
+                    
+                    <apex:outputPanel id="updateRows">
+                    <script>                                                
+                        acet.autodoc.startAutodoc('pbsUpdates');
+                    </script>
+                    <apex:pageBlockTable value="{!addInfoWrpr}" var="add" id="addInfo" columnsWidth="5%,15%,80%">                        
+                        <apex:column headerValue="Update Type" styleClass="cirrus-{!add.uniqueId}" >
+                            <apex:selectList id="updateType" size="1" value="{!add.updateTypeStr}" styleClass="noDuplicate" onchange="changeDropdown();">
+                                <apex:selectOptions value="{!add.updateType}"></apex:selectOptions>
+                            </apex:selectList>
+                        </apex:column>   
+                    </apex:pageBlockTable>
+                      
+                    </apex:outputPanel>
+                          
+                </apex:pageBlockSection>
+                <apex:outputpanel id="pbsbuttons">
+                    <apex:outputPanel rendered="{!!isShow}">
+                    
+                        <script> twistSection(document.getElementById('{!$Component.pbid.pbsUpdates}').getElementsByTagName('img')[0]) </script>
+                    </apex:outputPanel>
+                 
+                    <apex:outputPanel rendered="{!isShow}">
+                        <apex:outputPanel id="addUpdBtn" >
+                              <apex:commandlink id="addUpdateBtn" rerender="null" onClick="getSelectedCirrusItems(this);" status="refreshMemberStatus1" ><apex:image id="plusIcon3" value="{!$Resource.UpdateMemberPlusIcon}"/></apex:commandlink>                 
+                        </apex:outputPanel>
+                        
+                        <apex:outputPanel layout="block" style="text-align:center;width:71%;" >
+                            <input type="button" id="launchCIRRUSBtn" value="Launch Cirrus"
+                            onclick="openCirrusWindow('{!swivelcirrusBtn_URL}');" style="margin-left: 15pc;margin-top:10px" />
+                        </apex:outputPanel> <br/>
+                        
+                        <apex:outputPanel id="infoButton" >
+                            <div style="margin-left: 13%;">
+                                <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveAndCloseButton="false"
+                                    attrShowSaveButton="true" 
+                                    attrSourceOriginator="{!wrapper.SourceOriginator}"
+                                    attrInteractionId="{!wrapper.Interaction.Id}"
+                                    attrSubjectId="{!wrapper.Subject.Id}"
+                                    attrCallTopic="{!wrapper.CaseObj.Topic__c}"  
+                                    attrShowMisdirectButton="true" attrRefreshNavigationTab="false"  rendered="{!NOT(isClickedUpdate)}"
+                                    attrLocation="top"/>
+                            </div>  
+                        </apex:outputPanel> 
+                    </apex:outputPanel>
+                    </apex:outputpanel>   -->
+                    
+                </apex:pageBlock>
+            
+            <apex:pageBlock id="pbidAdd" mode="mainDetail">
+            <apex:outputPanel id="updateRows">          
+                <apex:pageBlockSection id="pbsUpdates" title="Additional Updates Made in CIRRUS" columns="1" html-auto-doc="true" html-auto-doc-case-items="true" html-auto-doc-section-key="pbsUpdates" html-auto-doc-section-column-indexes="2" onclick="toggleUpdates(this);">              
+                   <apex:variable value="{!0}" var="rowNoAddInfo"/>
+                    <script>                                                
+                        acet.autodoc.startAutodoc('pbsUpdates');
+                    </script>
+                    <apex:pageBlockTable value="{!addInfoWrpr}" var="add" id="addInfo" columnsWidth="5%,15%,80%">  
+                        <apex:column headerValue="Update Type" > <!-- styleClass="cirrus-{!add.uniqueId}" > -->
+                            <apex:selectList id="updateType" size="1" value="{!add.updateTypeStr}" styleClass="noDuplicate" onchange="changeDropdown();">
+                                <apex:selectOptions value="{!add.updateType}"></apex:selectOptions>
+                            </apex:selectList>
+                        </apex:column>
+                     <apex:column headerValue="Action" >
+                        <apex:commandButton value="x" style="color:blue;font-weight: bold;font-size: 100%;"  action="{!removeAddInfoRow}" reRender="pbidAdd,updateRows" onComplete="acet.autodoc.startAutodoc('pbsUpdates');" status="refreshMemberStatus">
+                                 <apex:param value="{!rowNoAddInfo}" name="removeInfoRow" assignTo="{!removeInfoRow}"/>
+                          </apex:commandButton>                
+                           <apex:variable var="rowNoAddInfo" value="{!rowNoAddInfo+ 1}"/>
+                      </apex:column>                          
+                    </apex:pageBlockTable>         
+                 </apex:pageBlockSection>   
+                 </apex:outputPanel>     
+                <apex:pageBlockSection id="pbsUpdates2">
+                <apex:outputpanel id="pbsbuttons">
+                    <apex:outputPanel rendered="{!!isShow}">
+                    
+                        <script> twistSection(document.getElementById('{!$Component.pbidAdd.pbsUpdates}').getElementsByTagName('img')[0]) </script>
+                    </apex:outputPanel>
+                 
+                    <apex:outputPanel rendered="{!isShow}">
+                        <apex:outputPanel id="addUpdBtn" >
+                        <apex:commandButton value="+" action="{!addInfoRow}" style="margin-left:5px;color:blue;font-weight: bold;font-size: 150%;" reRender="updateRows" oncomplete="acet.autodoc.startAutodoc('pbsUpdates');" status="refreshMemberStatus"/>
+                             <!-- <apex:commandlink id="addUpdateBtn" rerender="null" onClick="getSelectedCirrusItems(this);" status="refreshMemberStatus1" ><apex:image id="plusIcon3" value="{!$Resource.UpdateMemberPlusIcon}"/></apex:commandlink> -->                  
+                        </apex:outputPanel>
+                        
+                         <br/>
+                          <apex:outputPanel style="margin-left:75%;">
+                              <c:ACETCirrusLandingPage id="cirrus" attrMemberId="{!wrapper.AdditionalInfo.MemberId}"/>    
+                          </apex:outputPanel><br/>
+            
+                        
+                   <!--     <apex:outputPanel id="infoButton" >
+                            <div style="margin-left: 13%;">
+                                <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveAndCloseButton="false"
+                                    attrShowSaveButton="true" 
+                                    attrSourceOriginator="{!wrapper.SourceOriginator}"
+                                    attrInteractionId="{!wrapper.Interaction.Id}"
+                                    attrSubjectId="{!wrapper.Subject.Id}"
+                                    attrCallTopic="{!wrapper.CaseObj.Topic__c}"  
+                                    attrShowMisdirectButton="true" attrRefreshNavigationTab="false"  rendered="{!NOT(isClickedUpdate)}"
+                                    attrLocation="top"/>
+                            </div>  
+                        </apex:outputPanel> -->
+                    </apex:outputPanel>
+                    </apex:outputpanel> 
+                    </apex:pageBlockSection>  
+            </apex:pageBlock>
+            
+            <!--Documentation section after click of update-->
+            <!-- removed by US779068 -->
+            <!--<apex:pageBlock id="buttonid" mode="mainDetail" rendered="{!isClickedUpdate}"> 
+            
+                <apex:pageBlockSection Title="Documentation" columns="1" html-auto-doc="{!IF(wrapper.isSystemUnavailable, 'auto', 'false')}" >
+                    <apex:pageBlockSectionItem html-auto-doc-item="false" >    
+                       <apex:outputLabel value="Comments"></apex:outputLabel>
+                       <apex:inputTextArea id="comments" cols="100" rows="5" value="{!wrapper.Comments}"  html-maxlength="3999" style="margin-left: 10px;"/>
+                    </apex:pageBlockSectionItem>
+                    
+                    <apex:pageBlockSectionItem >
+                        <apex:outputLabel value="System Unavailable"></apex:outputLabel>
+                        <apex:inputCheckbox id="sysUnavailableChkb"
+                            style="margin-left:10px;" value="{!wrapper.isSystemUnavailable }" />
+                    </apex:pageBlockSectionItem>
+                
+                </apex:pageBlockSection>
+                
+            </apex:pageBlock>
+            <br />-->
+
+            <br />
+        </apex:outputPanel>
+            <!--<div style="margin-left: 10%;"> -->
+	    <div>
+                <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveAndCloseButton="false"
+                    attrShowSaveButton="true" 
+                    attrSourceOriginator="{!wrapper.SourceOriginator}"
+                    attrInteractionId="{!wrapper.Interaction.Id}"
+                    attrSubjectId="{!wrapper.Subject.Id}"
+                    attrCallTopic="Update Member Detail"  rendered="true"
+                    attrShowMisdirectButton="true" attrRefreshNavigationTab="false" 
+                    attrLocation="bottom"/>
+            </div>        
+    </apex:form>
+    <apex:outputpanel rendered="{!updated}">
+        <script>
+            testGetFocusedPrimaryTabId();
+            function testGetFocusedPrimaryTabId() {
+                sforce.console.getEnclosingPrimaryTabId(function(result){
+                    sforce.console.getSubtabIds(result.id , refreshSuccess);
+                });
+            }
+            var refreshSuccess = function refreshSuccess(result) {
+            //Report whether refreshing the subtab was successful
+            if (result.success == true) {
+                var tabid = result.ids[0] ;
+                sforce.console.refreshSubtabById( tabid, true);
+            }
+            
+        };
+        </script>
+    </apex:outputpanel>
+    <script> 
+        $ = jQuery.noConflict();
+        var $phoneNumber = $("[id$='phoneNumber']");  
+        var $workExt = $("[id$='workExt']");        
+        var phonenum = $phoneNumber.val();
+        function init()
+        {
+            $phoneNumber.keydown(formatphone); 
+	    $workExt.keypress(AllowDigitsOnlyNotHyp);                            
+        }
+	function AllowDigitsOnlyNotHyp(InputElement)
+           {                                                       
+         if (/\D/g.test("" + InputElement.keyCode))
+          {
+          return true;
+          }
+                    
+         var regex = new RegExp("^[0-9]+$");
+         var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+                             
+         if (regex.test(str))
+          {                                
+            return true;
+          }
+                    
+        InputElement.preventDefault();
+        return false;
+        }
+        function formatphone(InputElement){
+            var val = this.value.replace(/\D/g, '');
+            var newVal = '';
+            var count = 0;
+            while (val.length > 3) {
+              if(count < 2){
+                  newVal += val.substr(0, 3) + '-';
+                  val = val.substr(3);
+                  count++ ;
+              }
+              if(count == 2)
+                  break;
+            }
+            newVal += val;
+            this.value = newVal;            
+        }
+        var oldStore;
+        function storeOldValue(oldValue){
+            oldStore=oldValue;
+            }     
+        function restrictPicklistNew(size ){
+            console.log('It came here in restrictPicklist='+size);
+            //alert('this='+rowNumber);
+            //alert('this.value='+current.value);
+            var rowSize = size;
+            var selctedPicklist="";
+            for(var i = 0 ; i < rowSize ; i++ ){
+                var rowNum = i;
+                var phoneNumberType="[id$='"+rowNum+":phoneNumberType']" ;
+                
+                var $phoneNumberType = $(phoneNumberType);
+                console.log('$(phoneNumberType)@@ ' + $(phoneNumberType));
+
+                if($phoneNumberType.val() != ''){
+                    selctedPicklist=selctedPicklist+$phoneNumberType.val()
+                }
+		var workExtType="[id$='"+rowNum+":workExt']" ;
+                var $workExtType = $(workExtType);
+                if($phoneNumberType.val()=='Mobile'){
+                     $workExtType.hide();
+                      }
+                   else{
+                     $workExtType.show();
+                }
+            }
+            console.log('selctedPicklist='+selctedPicklist);
+            //var inputStatus=document.querySelectorAll('[id$="phoneNumberType"]')[0];
+            for(var r = 0 ; r < rowSize ; r++ ){
+                var rowNum = r;
+                var phoneNumberType="[id$='"+rowNum+":phoneNumberType']" ;
+                
+                var $phoneNumberType = $(phoneNumberType);
+                console.log('$(phoneNumberType)@@ ' + $(phoneNumberType));
+                var inputStatus=document.querySelectorAll('[id$="phoneNumberType"]')[rowNum];
+                console.log('inputStatus='+inputStatus+' '+inputStatus.length);
+                for (var i=0; i<inputStatus.length; i++){
+                  console.log('i='+i);
+                  console.log('inputStatus.options[i].value='+inputStatus.options[i].value);
+                     if (selctedPicklist.includes(inputStatus.options[i].value) && inputStatus.options[i].value!=$phoneNumberType.val()){
+                      console.log('inputStatus.options[i].value111='+inputStatus.options[i].value);
+                     inputStatus.remove(i);
+                     i--;
+                  }
+                }
+              }
+          }
+         
+            
+        function restrictPicklist(size,oldvalue){
+            console.log('It came here in restrictPicklist1111='+size);
+	    console.log('oldvalue='+oldvalue);
+            console.log('oldStore='+oldStore);
+            if(oldvalue==null || oldvalue==''){
+                oldvalue=oldStore;
+            }
+            var rowSize = size;
+            var selctedPicklist="";
+            for(var i = 0 ; i < rowSize ; i++ ){
+                var rowNum = i;
+                var phoneNumberType="[id$='"+rowNum+":phoneNumberType']" ;
+                
+                var $phoneNumberType = $(phoneNumberType);
+                console.log('$(phoneNumberType)@@ ' + $(phoneNumberType));
+
+                if($phoneNumberType.val() != ''){
+                    selctedPicklist=selctedPicklist+$phoneNumberType.val()
+                }
+		var workExtType="[id$='"+rowNum+":workExt']" ;
+                var $workExtType = $(workExtType);
+                if($phoneNumberType.val()=='Mobile'){
+                     $workExtType.hide();
+                      }
+                   else{
+                     $workExtType.show();
+                }
+            }
+            console.log('selctedPicklist='+selctedPicklist);
+            //var inputStatus=document.querySelectorAll('[id$="phoneNumberType"]')[0];
+            for(var r = 0 ; r < rowSize ; r++ ){
+                var rowNum = r;
+                var phoneNumberType="[id$='"+rowNum+":phoneNumberType']" ;
+                var checkOldValStr="";
+                var $phoneNumberType = $(phoneNumberType);
+                console.log('$(phoneNumberType)@@ ' + $(phoneNumberType));
+                var inputStatus=document.querySelectorAll('[id$="phoneNumberType"]')[rowNum];
+                console.log('inputStatus@@@@='+inputStatus.length);
+                
+                for (var i=0; i<inputStatus.length; i++){
+                  console.log('i='+i);
+                  console.log('inputStatus.options[i].value='+inputStatus.options[i].value);
+                    
+                  if (selctedPicklist.includes(inputStatus.options[i].value) && inputStatus.options[i].value!=$phoneNumberType.val()){
+                      console.log('inputStatus.options[i].value111='+inputStatus.options[i].value);
+                     inputStatus.remove(i);
+                     i--;
+                  }
+                   else{
+                       checkOldValStr=checkOldValStr+inputStatus.options[i].value;
+                   }
+              }
+                if(oldvalue!=null && oldvalue!='' && !checkOldValStr.includes(oldvalue)){
+                        var OldOption = document.createElement("option");
+                        OldOption.value = oldvalue;
+                        OldOption.text = oldvalue;
+                        inputStatus.appendChild(OldOption);
+                        console.log('It came here '+OldOption.text)
+                }
+                 console.log('inputStatus!!!='+inputStatus.length);
+             }
+          } 
+	
+        function checkValues(size){
+            var rowSize = size;
+            var ValidationResult = true;
+            var errorMsg = "You must enter a value.";
+	    var prYes=false; 
+            var phoneTypeString=""; 
+	     var morePR=false;
+            for(var i = 0 ; i < rowSize ; i++ ){
+                var rowNum = i;
+                var phonStr = "[id$='"+rowNum+":phoneNumber']" ;
+                var phoneIndicator ="[id$='"+rowNum+":Indicator']" ; 
+                var $phoneNumber = $(phonStr);
+                var $phoneIndicator = $(phoneIndicator); 
+                console.log('$(phoneIndicator)@@ ' + $phoneIndicator.val()); 
+                console.log('$(phonStr)@@ ' + $(phonStr) + ' >>$phoneNumber.val()@@ ' + $phoneNumber.val() + ' &&Len&& ' + $phoneNumber.val().length);
+                //$phoneNumber.find(".pbError").remove();
+                //ValidationResult = true;
+                $phoneNumber.removeClass("error").parent().find(".errorMsg").remove();
+                $phoneIndicator.removeClass("error").parent().find(".errorMsg").remove(); 
+                var phone = $phoneNumber.val();
+
+                if($phoneNumber.val() == ''){
+		        	$phoneNumber.parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + errorMsg + '</div>');
+		        	ValidationResult = false;    
+		        	//break;            
+                }
+		        if($phoneNumber.val() != '' && ($phoneNumber.val().length < 12 || $phoneNumber.val().length > 12)){
+		        	$phoneNumber.find(".pbError").remove();
+		        	$phoneNumber.parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + 'Enter a valid 10 digit number' + '</div>');
+		        	ValidationResult = false;
+		        	//break;
+		        }   
+                if($phoneIndicator.val() != '' && $phoneIndicator.val() =='Yes' && phoneTypeString.includes($phoneIndicator.val())){
+		        	/* $phoneIndicator.find(".pbError").remove();
+		        	$phoneIndicator.parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + 'You cannot have more than one Primary phone' + '</div>');
+		        	ValidationResult = false; */
+				morePR=true;
+		        	//break;
+		        } 
+                else if($phoneIndicator.val() != '' && $phoneIndicator.val() =='Yes'){
+                    phoneTypeString=phoneTypeString+$phoneIndicator.val();
+		    prYes=true;
+                }
+            }
+	    if(morePR || !prYes)
+               for(var i = 0 ; i < rowSize ; i++ ){
+                
+                    var phonStrNew ="[id$='"+i+":Indicator']" ; 
+                    var $ErrorPhoneInd = $(phonStrNew); 
+                    $ErrorPhoneInd.find(".pbError").remove();
+                    ValidationResult = false;
+               if(!prYes){
+                    $ErrorPhoneInd.parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + 'You must select one Primary phone' + '</div>');
+               }     
+               else if(morePR && $ErrorPhoneInd.val() =='Yes'){
+                    $ErrorPhoneInd.parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + 'You cannot have more than one Primary phone' + '</div>');
+               }
+            }
+            //getSelectedCheckBoxs();
+            if(ValidationResult)
+            {
+                
+                updateMember();
+            }
+            
+            return ValidationResult;
+        }   
+        
+        function changeDropdown()
+        {
+            var $elements = $('select.noDuplicate');
+            $elements.each(function() {
+                var selectedValue = this.value;
+                var $matchElements = $elements.not(this).filter(function() {
+                        return this.value == selectedValue;
+                    });
+                $(this).removeClass("error").parent().find(".errorMsg").remove();
+                if($matchElements.length>0 && selectedValue!='--None--'){
+                	$matchElements.removeClass("error").parent().find(".errorMsg").remove();    
+                	$matchElements.addClass('error').parent().append('<div class="errorMsg"><strong>Error:</strong>Duplicate Update Type Selected</div>'); 
+                	$(this).addClass('error').parent().append('<div class="errorMsg"><strong>Error:</strong>Duplicate Update Type Selected</div>'); 
+                }
+                //$(this).removeClass("error").parent().find(".errorMsg").remove();
+                });
+        
+        }  
+        function validate(btnSaveCase)
+        {
+            var validationResult = true;
+                    
+            changeDropdown();
+            
+                var $elements = $('select.noDuplicate');
+                $elements.each(function() {
+                    var selectedValue = this.value;
+                    console.log('---->>>>'+ selectedValue);
+                    if(selectedValue=='--None--' && displayinfo){
+                        $(this).addClass('error').parent().append('<div class="errorMsg"><strong>Error:</strong> You must enter a value.</div>'); 
+                    }
+                    
+                    if($(this).hasClass("error"))
+                    {
+                        validationResult = false;
+                        //return false;
+    
+                    }
+                });
+            
+            
+            return validationResult ;
+        } 
+        var refreshUpdates = false;
+        var displayinfo = false;  
+        function toggleUpdates()
+        {
+            if (!refreshUpdates ) {
+                refreshUpdates = true;
+                GetAdditionalUpdates();
+            }
+            displayinfo = !displayinfo;
+
+        }  
+
+    </script>         
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+</apex:page>

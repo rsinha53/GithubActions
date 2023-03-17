@@ -1,0 +1,191 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,lightning:isUrlAddressable"
+                controller="SAECaseCreationController" access="global" >
+    
+    <ltng:require scripts="{!$Resource.ACET_AutodocJS}" />
+    <ltng:require scripts="{!$Resource.ACET_SAEContactDetails}" />
+    <ltng:require styles="{!$Resource.slds_page_header_hide}" />
+    <ltng:require styles="{!$Resource.ACET_MasterStyle}" />
+    
+     <aura:attribute name="caseWrapper" type="SAETTSCaseWrapper" access="public" default="[]"/>    
+   
+    <aura:attribute name="isModalOpen" type="boolean" default="false"/>
+   
+    <!-- Added by vinay for pilot -->
+    <aura:attribute name="contactName" type="String" access="public"/>
+    <aura:attribute name="interactionCard" type="Object" access="public"/>
+    <aura:attribute name="interactionRec" type="Interaction__c"/>
+    <lightning:workspaceAPI aura:id="workspace"/>
+    
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/> <!-- DE267648 - Thanish - 10th Oct 2019 -->
+  
+    
+    <!-- US2396743 -->
+    <aura:attribute name="isPreviewOpen" type="boolean" default="false" />
+    <aura:attribute name="commentsValue" type="String" default=""/>
+     <aura:attribute name="showpreview" type="Boolean" default="false" />
+    <!-- header -->
+    <!-- Nikhil -->
+    <!--US2076634 - HIPAA Guidelines Button - Sravan-->
+    <aura:attribute name="hipaaEndpointUrl" type="String" default=""/>
+    <aura:attribute name="isHippaInvokedInProviderSnapShot" type="Boolean" default="false"/>
+    
+    <aura:attribute name="autodocUniqueId" type="String" />
+    <aura:attribute name="autodocUniqueIdCmp" type="String"/>
+    <aura:attribute name="contactDetails" type="Object" />
+    <aura:attribute name="PNFDetails" type="Object" />
+    <aura:attribute name="providerTypeCard" type="Object" />
+    <aura:attribute name="tableDetails_prev" type="Object" />
+    
+    <!-- US2960236: Add Link to NWM OneSource -->
+    <aura:attribute name="oneSourceLink" type="String" />
+    
+  	
+     <aura:if aura:id="pnfSpinner" isTrue="true">
+        <lightning:spinner alternativeText="Loading" size="medium" />
+    </aura:if>
+    
+    <div class="slds-card card_padding" style="background: rgb(243, 242, 242);">
+        <div class="slds-grid">
+            <div class="slds-col slds-has-flexi-truncate">
+                <div class="slds-media slds-no-space slds-grow">
+                    <div class="slds-media__figure">
+                        <span class="slds-icon_container slds-icon-custom-custom38" >
+                            <lightning:icon iconName="custom:custom38" alternativeText="Snapshot" />
+                        </span>
+                    </div>
+                    <div class="slds-media__body">
+                        <div class="slds-page-header__name">
+                            <div class="slds-page-header__name-title">
+                                <h1 class="page_header_label slds-m-right_small  slds-truncate">Snapshot</h1>
+                                <p class="page_header_link">
+                                    <a href="javascript:void(0)" data-intId="{!v.interactionRec.Id}" onclick="{!c.navigateToDetail}">{!v.interactionRec.Name}</a>
+                                </p>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            <!-- ACTION BUTTONS -->
+            <lightning:buttonGroup>
+                <!--US2076634 - HIPAA Guidelines Button - Sravan-->
+                <c:ACET_HippaGuidelines hipaaEndpointUrl="{!v.hipaaEndpointUrl}" showButton="true"/><!--US2705857 - Sravan-->
+                <lightning:button variant="neutral" label="Misdirect" name="misDirectBtnName"
+                                  class="slds-button  misdirect_button" onclick="{!c.openMisdirectComp}" />
+                
+                <c:SAE_Alerts aura:id="alertsAI"
+                              /><!--providerId="{!v.providerId}"
+                              taxId="{!v.taxId}"
+                              providerNotFound="{!v.providerNotFound}"
+                              noMemberToSearch="{!v.noMemberToSearch}"
+                              memberNotFound="{!v.mnf}"
+                              isProviderSearchDisabled="{!v.isProviderSearchDisabled}"
+                              isProviderSnapshot="true"-->
+                <!-- US3648370 -->
+                <lightning:button variant="neutral" label="Autodoc" name="autodocBtnName"
+                    class="slds-button  misdirect_button" onclick="{!c.displayPreview}"/>
+                <lightning:button variant="brand" label="Save Case" name="saveCaseWrap" onclick="{!c.saveCase}"/>
+            </lightning:buttonGroup>
+            
+        </div>
+        <!-- PUT PAGE HEADER DETAIL ROW HERE -->
+    </div>
+    <div>
+        
+      <!-- US2744897: Update Provider Not Found Card Removing Contact Card
+        <div class="slds-card slds-size_8-of-12 slds-m-top_small card_left_padding card_top_padding card_right_padding card_bottom_padding" >
+            <c:ACET_AutoDocCard autodocUniqueId="{!v.autodocUniqueId}" 
+                                cardDetails="{!v.contactDetails}" 
+                                autodocUniqueIdCmp="{!v.autodocUniqueId}"
+                                defaultAutodoc="false"
+                                disbaleHeaderCheckBox="true"
+                                aura:id="pnf" />
+        </div> 
+    -->
+        <div class="slds-card slds-size_8-of-12 slds-m-top_small card_left_padding card_top_padding card_right_padding card_bottom_padding" >
+            <c:ACET_AutoDocCard autodocUniqueId="{!v.autodocUniqueId}" 
+                                cardDetails="{!v.PNFDetails}" 
+                                autodocUniqueIdCmp="{!v.autodocUniqueId}"
+                                defaultAutodoc="false"
+                                disbaleHeaderCheckBox="true"
+                                aura:id="pnf1"/>
+        </div> 
+        <!-- 
+        <div class="slds-card slds-size_8-of-12 slds-m-top_small card_left_padding card_top_padding card_right_padding card_bottom_padding">
+            <div class="slds-is-absolute slds-float_right card_buttons">
+                <lightning:buttonGroup>
+                    <lightning:button class="slds-button slds-button_neutral neutral_button" variant="neutral"
+                                      label="Autodoc"  onclick="{!c.openPreview}"/>
+                    <lightning:button class="slds-button slds-button_neutral neutral_button"
+                                      variant="brand" label="Add Comments" disabled="true"/>
+                    <lightning:button class="slds-button slds-button_brand brand_button" variant="brand" label="Save Case"
+                                      onclick="{!c.SaveCase}"/>
+                </lightning:buttonGroup>
+            </div>
+            <c:ACET_AutodocCard autodocUniqueId="{!v.autodocUniqueId}" 
+                                autodocUniqueIdCmp="{!v.autodocUniqueId}"
+                                cardDetails="{!v.providerTypeCard}"
+                                defaultAutodoc="false"
+                                disbaleHeaderCheckBox="true"
+                                aura:id="pnf2"/>
+        </div> -->
+        <!-- US2960236: Add Link to NWM OneSource -->
+        <div>
+            <!-- US3648370 - Added aura id -->
+            <c:ACET_ProviderNotFoundProviderType aura:id="providerType" caseWrapper="{! v.caseWrapper}"
+                                                 isHippaInvokedInProviderSnapShot="{!v.isHippaInvokedInProviderSnapShot}"
+                                                 contactDetails="{!v.contactDetails}"
+                                                 providerDetails="{!v.PNFDetails}"
+                                                 interactionCard="{!v.interactionCard}"
+                                                 autodocUniqueId="{!v.autodocUniqueId}"
+                                                 oneSourceLink="{!v.oneSourceLink}"
+                                                 />
+        </div>
+        
+        
+        <!-- Removing and replaced in the ACET_ProviderNotFoundProviderType component US2960236
+        <div class="slds-size_8-of-12 slds-m-top_small slds-card card_left_padding card_top_padding card_right_padding card_bottom_padding">
+            <c:ACET_HoverPopup aura:id="commentsId" 
+                               moveRight="" 
+                               description="" 
+                               isNubbinLeft="true"
+                               descriptionList="[ 'Use the comments to include a brief','description of the issue, research performed,', 'and any attempts to resolve' ]" />
+            <p class="component_title slds-form-element__label field_label_padding" 
+               style="border-bottom:1px dashed;padding:0px"
+               data-popupId="commentsId"
+               onmouseover="{!c.togglePopup}" 
+               onmouseout="{!c.togglePopup}">
+                Comments: 
+            </p>
+            <b class="component_title slds-p-left_small">Provider Not Found</b>
+            <lightning:textarea name="commentsTextArea"
+                                value="{!v.commentsValue}" 
+                                label="Commets" 
+                                aura:id="commentsBoxId"
+                                variant="label-hidden" 
+                                class="slds-p-top_small"
+                                onkeyup="{!c.handleKeyup }"
+                                maxlength="2000"/>
+            <span class="floatToRight valueCls slds-form-element__static">Characters remaining: <lightning:formattedNumber value = "{!2000-v.commentsValue.length}" /> </span>
+        </div>
+        -->
+    </div>
+    <!--
+    <aura:if isTrue="{!v.showpreview}">
+        <c:ACET_PreviewAutodoc tableDetails_prev="{!v.tableDetails_prev}" isModalOpen="{!v.showpreview}" />
+    </aura:if>
+    
+    <aura:if isTrue="{!v.isModalOpen}">
+        <!- US1875495 : Malinda - sending case data to the TTS popup model ->
+        <c:SAE_TtsModalCaseCreation Topic="Provider Not Found"
+                                    caseWrapper="{!v.caseWrapper}" 
+                                    isProvider="true"
+                                    pagefeature="{!v.AutodocPageFeature}"
+                                    AutodocKey="{!v.AutodocKey}" 
+                                    freeFormCommentsVal="{!v.commentsValue}"
+                                    isModalOpen="{!v.isModalOpen}"
+                                    isMemberSnapshot="false"/>
+        <!- US2119567 - Thanish - 20th Nov 2019 ->
+    </aura:if> 
+    -->
+</aura:component>

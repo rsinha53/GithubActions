@@ -1,0 +1,103 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes"
+                 access="global">
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:attribute name="issueCategory" type="String" />
+    <aura:attribute name="maxEventReceivedDate" type="String" />
+    <aura:attribute name="defectType" type="String" />
+    <aura:attribute name="defectTypeOptions" type="List" />
+    <aura:attribute name="rootCauseIssueCategory" type="String" />
+    <aura:attribute name="rootCauseIssueCategoryOptions" type="List" />
+    <aura:attribute name="defectOptions" type="List" />
+    <aura:attribute name="rootCause" type="String" />
+    <aura:attribute name="rowIndex" type="integer" />
+    <aura:attribute name="rootCauseOptions" type="String" />
+    <aura:attribute name="briefDesc" type="String" default=""/>
+    <aura:attribute name="serviceImpactDate" type="Date" />
+    <aura:attribute name="businessUnit" type="String" />
+    <aura:attribute name="disabledByBusinessUnit" type="Boolean" default="false"/>
+    <aura:attribute name="userInfo" type="user" />
+    <aura:attribute name="isDefect" type="Boolean" default="false" />
+    <aura:registerEvent name="ETSBE_closeRootCauseModal" type="c:ETSBE_closeRootCauseModal" />
+    <aura:registerEvent name="ETSBE_submitRootCauseModal" type="c:ETSBE_submitRootCauseModal" />
+    
+	<section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open" style="z-index:88">
+		<div class="slds-modal__container" >
+			<header class="slds-modal__header">
+				<lightning:buttonIcon iconName="utility:close"
+					onclick="{!c.closeRootCauseModel}"
+					alternativeText="close"
+					variant="bare-inverse"
+					class="slds-modal__close"/>
+				<h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Root Cause Details</h2>
+			</header>
+			<div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1" style="padding-bottom:1%">
+            	<div class="slds-grid slds-wrap">
+    				<div class="slds-col slds-size_1-of-2" style="padding-right:1%">
+        				<lightning:input aura:id="issueCategory" label="Issue Category"
+							value="{!v.issueCategory}" disabled="true"/>
+					</div>
+					<div class="slds-col slds-size_1-of-2" style="padding-right:1%">
+						<!--lightning:combobox aura:id="defectType" label="Defect Type" value="{!v.defectType}"
+			        	options="{!v.defectTypeOptions}" onchange="{!c.selectDefectType}" required="true" disabled="{!v.disabledByBusinessUnit}"/>
+			        	<ui:inputtext aura:id="defectTypeError" class="slds-hide"/>-->
+                        <lightning:input aura:id="defectType" label="Defect Type"
+							value="{!v.defectType}" required="true" disabled="true"/>
+					</div>
+					<div class="slds-col slds-size_1-of-2" style="padding-right:1%">
+						<lightning:combobox aura:id="rootCauseIssueCategory" label="Root Cause Issue Category" value="{!v.rootCauseIssueCategory}"
+			        	options="{!v.rootCauseIssueCategoryOptions}" onchange="{!c.selectRootCauseIssueCategory}" required="true" disabled="{!v.disabledByBusinessUnit}"/>
+			        	<ui:inputtext aura:id="rootCauseIssueCategoryError" class="slds-hide"/>
+					</div>
+					<div class="slds-col slds-size_1-of-2" style="padding-right:1%">
+        				<!--<lightning:input aura:id="rootCause" label="Root Cause"
+							value="{!v.rootCause}" required="true" disabled="{!v.disabledByBusinessUnit}"/>-->
+                        <lightning:input aura:id="rootCause" label="Root Cause"
+							value="{!v.rootCause}" required="true" disabled="true"/>
+					</div>
+					<div class="slds-col slds-size_2-of-2" style="padding-right:1%">
+        				<lightning:textarea aura:id="briefDesc" label="Brief Description"
+							value="{!v.briefDesc}" required="false"/>
+					</div>
+                    
+                   <!-- DE381934:Change Starts -->
+                   <aura:if isTrue="{!v.isDefect}">
+					<div class="slds-col slds-size_1-of-2" style="padding-right:1%">
+						<lightning:input type="date" aura:id="serviceImpactDate" dateStyle="short" label="Service Impact Date" value="{!v.serviceImpactDate}" required="true" 
+	        			onkeypress="{!c.noManualEntry}" onpaste="{!c.noManualEntry}" onkeyup="{!c.noManualEntry}" onkeydown="{!c.noManualEntry}" max="{!v.maxEventReceivedDate}"/>
+					</div>
+                   </aura:if>
+                    
+                  <aura:if isTrue="{!not(v.isDefect)}">
+                    <div class="slds-col slds-size_1-of-2" style="padding-right:1%">
+						<lightning:input type="date" aura:id="serviceImpactDate" dateStyle="short" label="Service Impact Date" value="{!v.serviceImpactDate}"
+	        			 onkeypress="{!c.noManualEntry}" onpaste="{!c.noManualEntry}" onkeyup="{!c.noManualEntry}" onkeydown="{!c.noManualEntry}" max="{!v.maxEventReceivedDate}"/>
+					</div>
+                    </aura:if>
+                     <!-- DE381934:Change Ends -->
+                    
+					<div class="slds-col slds-size_1-of-2" style="padding-right:1%">
+        				<lightning:input aura:id="businessUnit" label="Business Unit"
+							value="{!v.businessUnit}" disabled="true"/>
+					</div>
+				</div>
+			</div>
+			<footer class="slds-modal__footer">
+               
+                 <aura:if isTrue="{!greaterthan(v.rowIndex,0)}">
+                     <aura:set attribute="else">
+				<lightning:button aura:id="saveContinue" variant="neutral"
+					label="Save and Continue" disabled="false"
+					onclick="{!c.saveAndContinueRootCauseModel}"/>
+                         </aura:set>
+                </aura:if>
+				<lightning:button aura:id="saveClose" variant="neutral"
+					label="Save and Close" disabled="false"
+					onclick="{!c.saveAndCloseRootCauseModel}"/>
+				<lightning:button variant="brand"
+					label="Cancel"
+					onclick="{!c.closeRootCauseModel}"/>
+            </footer>
+		</div>
+	</section>
+	<div class="slds-backdrop slds-backdrop_open" style="z-index:77"></div>
+</aura:component>

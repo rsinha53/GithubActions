@@ -1,0 +1,97 @@
+<aura:component  controller="SNI_FL_ContactsController" implements="forceCommunity:themeLayout,forceCommunity:availableForAllPageTypes,forceCommunity:layout,force:lightningQuickAction,force:appHostable" access="global">
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute name="familyId" type="string" />
+    <aura:attribute name="EditMode" type="Boolean" default="false" />
+    <aura:attribute name="DeleteMode" type="Boolean" default="false" />
+    <aura:attribute name="isMobileDevice" type="Boolean" default="false"/>
+    <aura:attribute name="isUpdated" type="Boolean" default="false"/>
+    <aura:attribute name="isDeleted" type="Boolean" default="false"/>
+    <aura:attribute name="SelectedFamilyContactID" type="string" />
+    <aura:attribute name="SelectedFamilyContact" type="SNI_FL_ContactsController.contactWrapper" />
+    <aura:attribute name="SelectedFamilyName" type="string" />
+    <aura:handler name="init" value="{!this}" action="{!c.doinit}"/>
+    <aura:attribute name="contactWrapperList" type="SNI_FL_ContactsController.contactWrapper[]" />
+    <div>
+        <aura:iteration items="{!v.contactWrapperList}" var="flContact" indexVar="index">
+            <c:SNI_FL_CommonCard cardTitle="{!flContact.contactName}" cardObject="{!flContact}" subFields="contactEmail,contactFormattedPhone" index="{!index}" fnEdit="{!c.EditContacts}" fnRemove="{!c.ClickRemove}"/>
+        </aura:iteration>
+        <aura:if isTrue="{!if(v.EditMode == true,true,false)}">
+            <div class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <div class="slds-modal__content ">
+                        <h2 class="title modalTitle">Edit {!v.SelectedFamilyName}</h2>
+                        <!-- if additional fields are being added, please add a lightning Edit Form fields-->
+                        <aura:if isTrue="{!if(v.isMobileDevice == true,true,false)}">
+                            <div class="modalBody">
+                                <lightning:layout multipleRows="true" >
+                                    <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+                                        <span style="color:red">* </span>
+                                        <ui:outputText value="Name" class="modalLabels"></ui:outputText>
+                                        <lightning:input value="{!v.SelectedFamilyContact.contactName}" id="EditcontactName" aura:id="contactName" variant="label-hidden" maxlength="80" placeholder="Name"/>
+                                    </lightning:layoutitem>
+                                    <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+                                        <ui:outputText value="Phone" class="modalLabels"/>
+                                        <lightning:input id="EditcontactPhone" aura:id="contactPhone" value="{!v.SelectedFamilyContact.contactPhone}" variant="label-hidden" maxlength="40" placeholder="Phone"/>
+                                    </lightning:layoutitem>
+                                    <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+                                        <ui:outputText value="Email" class="modalLabels"/>
+                                        <lightning:input type="email" value="{!v.SelectedFamilyContact.contactEmail}" id="EditcontactEmail" aura:id="contactEmail" variant="label-hidden" placeholder="Email"/>
+                                    </lightning:layoutitem>
+                                    <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+                                        <ui:outputText value="Relationship" class="modalLabels"/>
+                                        <lightning:input value="{!v.SelectedFamilyContact.contactRelationship}" id="EditcontactRelationship" aura:id="contactRelationship" variant="label-hidden" maxlength="255" placeholder="Relationship"/>
+                                    </lightning:layoutitem>
+                                    <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+                                        <ui:outputText value="Address" class="modalLabels"/>
+                                        <lightning:input value="{!v.SelectedFamilyContact.contactAddress}" id="EditcontactAddress" aura:id="contactAddress" variant="label-hidden" maxlength="255" placeholder="Enter a location"/>
+                                    </lightning:layoutitem>
+                                </lightning:layout>
+                            </div>
+                            <div>
+                                <lightning:button class="slds-savebutton-box" variant="Inverse" label="Save" onclick="{!c.SaveUpdateContacts}"/>
+                                <lightning:button class="slds-backbutton-box" variant="Inverse" label="Back" onclick="{!c.closeEditDialog}"/>
+                            </div>
+                            <aura:set attribute="else">
+                                <div class="modalBody">
+                                    <lightning:layout multipleRows="true" >
+                                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                                            <span style="color:red">* </span>
+                                            <ui:outputText value="Name" class="modalLabels"></ui:outputText>
+                                            <lightning:input value="{!v.SelectedFamilyContact.contactName}" id="EditcontactName" aura:id="contactName" variant="label-hidden" maxlength="80" placeholder="Name"/>
+                                        </lightning:layoutitem>
+                                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                                            <ui:outputText value="Phone" class="modalLabels"/>
+                                            <lightning:input id="EditcontactPhone" aura:id="contactPhone" value="{!v.SelectedFamilyContact.contactPhone}" variant="label-hidden" maxlength="40" placeholder="Phone"/>
+                                        </lightning:layoutitem>
+                                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                                            <ui:outputText value="Email" class="modalLabels"/>
+                                            <lightning:input type="email" id="EditcontactEmail" value="{!v.SelectedFamilyContact.contactEmail}" variant="label-hidden" placeholder="Email" aura:id="contactEmail"/>
+                                        </lightning:layoutitem>
+                                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                                            <ui:outputText value="Relationship" class="modalLabels"/>
+                                            <lightning:input id="EditcontactRelationship" value="{!v.SelectedFamilyContact.contactRelationship}" variant="label-hidden" maxlength="255" placeholder="Relationship" aura:id="contactRelationship"/>
+                                        </lightning:layoutitem>
+                                        <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+                                            <ui:outputText value="Address" class="modalLabels"/>
+                                            <lightning:input id="EditcontactAddress" value="{!v.SelectedFamilyContact.contactAddress}" variant="label-hidden" maxlength="255" placeholder="Enter a location" aura:id="contactAddress"/>
+                                        </lightning:layoutitem>
+                                    </lightning:layout>
+                                </div>
+                                <div>
+                                    <lightning:button class="slds-backbutton-box" variant="Inverse" label="Back" onclick="{!c.closeEditDialog}"/>
+                                    <lightning:button class="slds-savebutton-box" variant="Inverse" label="Save" onclick="{!c.SaveUpdateContacts}"/>
+                                </div>
+                            </aura:set>
+                        </aura:if>
+                        
+                    </div>
+                </div>
+            </div>
+            <div class="backdrop"></div>
+        </aura:if>
+        <aura:if isTrue="{!if(v.DeleteMode == true,true,false)}"> 
+            <c:SNI_FL_CommonCardRemove DialogTitle="Remove Contact" DialogMessage="Are you sure you want to remove this contact?" DialogName="{! v.SelectedFamilyName}" fnRemove="{!c.RemoveContacts}" fnCancel="{!c.closeRemoveDialog}"/>
+        </aura:if>
+    </div>
+    
+</aura:component>

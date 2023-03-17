@@ -1,0 +1,647 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,force:lightningQuickAction"
+                access="global">
+    <ltng:require scripts="{!$Resource.ACET_SAESessionData}" />
+    <!--<aura:handler name="init" value="{!this}" action="{!c.doInit}"/>-->
+    <aura:attribute name="interactionOverviewTabId" type="String" access="public"/>
+    <aura:attribute name="memberId" type="String" />
+    <aura:attribute name="highLightObj" type="Object" access="public" />
+    <aura:attribute name="memberData" type="Object" access="public" />
+    <aura:attribute name="providerData" type="Object" access="public" />
+    <aura:attribute name="OtherDetails" type="Object" access="public" />
+    <aura:attribute name="contactNumber" type="String" />
+    <aura:handler name="change" value="{!v.interactionOverviewTabId}" action="{!c.processHighlightData}"/>
+    <aura:attribute name="isMemberFlow" type="Boolean" default="true" />
+	<aura:attribute name="isProviderLookup" type="Boolean" default="true" />
+    <aura:attribute name="displayName" type="Boolean" default="true" />
+    <aura:attribute name="isMRlob" type="Boolean" default="false" />
+    <aura:attribute name="NetworkStatus" type="string" default="" />
+    <aura:attribute name="policyDetails" type="SAEPolicyDetailsResult"/>
+     <aura:handler name="change" value="{!v.policyDetails}" action="{!c.processHighlightData}"/>
+     <aura:attribute name="displayChevron" type="Boolean" default="true" />
+        <aura:attribute name="contactNameFreeze" type="String" />
+    <aura:attribute name="isProviderFlow" type="Boolean" default="true" />
+    <!--US3259469 - Sravan-->
+    <aura:attribute name="hoursOfOperation" type="String" default=""/>
+	<aura:attribute name="changeMemberAlignment" type="Boolean" default="false"/>
+
+    <!--section 1 start-->  
+    <div class="slds-card">
+        <div class="{! v.displayChevron == true ? 'slds-section slds-is-close' : 'slds-section slds-is-open' }" aura:id="highLightSection">
+            <!--section header-->
+            <div class="{!v.displayChevron == true ? 'slds-show' : 'slds-hide'}">
+            <h3 class="slds-section__title">
+                <button aria-controls="highLightList" class="slds-button slds-section__title-action">
+                    <span onclick="{!c.toggleSection}" data-auraId="highLightSection">
+                        <lightning:icon iconName="utility:switch"
+                                        size="x-small"
+                                        class="slds-section__title-action-icon slds-button__icon_left"
+                                        alternativeText="button icon" 
+                                        />
+                    </span>
+                    <span class="slds-truncate" title="Highlight Panel">
+                        <b>
+                            <aura:if isTrue="{!v.displayName}">
+                                <aura:if isTrue="{!v.OtherDetails.contactName}">
+                                    Highlight Panel: {!v.OtherDetails.contactName}
+                                    <aura:set attribute="else">
+                                        Highlight Panel
+                                    </aura:set>
+                                </aura:if>
+                            </aura:if>
+                        </b>
+                    </span>
+                </button>
+            </h3>
+            </div>
+            <!--section body-->
+            <div class="slds-section__content" id="highLightList">
+                <div class="slds-grid slds-wrap slds-gutters slds-m-left_x-small">
+                    <aura:If isTrue="{!v.providerData.isOther}">
+                        <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding preselect-enable">Other
+                                </p>
+                                <p class="valueCls">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.OtherDetails.contactName}">
+                                            {!v.OtherDetails.contactName}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding preselect-enable">Contact Type
+                                </p>
+                                <p class="valueCls">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.providerData.contactType}">
+                                            {!v.providerData.contactType}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </p>
+                            </div>
+                        </div>
+                    </aura:If>
+                    <aura:If isTrue="{!or(!v.providerData.isOther,v.isMemberFlow)}">
+                        <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding preselect-enable">Contact Name
+                                </p>
+                                <p class="valueCls">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.OtherDetails.contactName}">
+                                            {!v.OtherDetails.contactName}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </p>
+                            </div>
+                        </div>
+                    </aura:If>
+
+                    <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding preselect-enable">Contact Number
+                            </p>
+                            <p class="valueCls">
+                                <div class="slds-form-element__static">
+                                    <aura:if isTrue="{!v.contactNumber}">
+                                        {!v.contactNumber}
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding preselect-enable">Ext
+                            </p>
+                            <p class="valueCls">
+                                <div class="slds-form-element__static">
+                                    <aura:if isTrue="{!v.OtherDetails.contactExt}">
+                                        {!v.OtherDetails.contactExt}
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+
+                    <aura:If isTrue="{!or(v.providerData.isValidProvider,and(!v.providerData.isNoProviderToSearch,v.providerData.isProviderNotFound))}">
+                    <div class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding preselect-enable">Hours of Operation
+                                </p>
+                                <p class="valueCls">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.hoursOfOperation}">
+                                            {!v.hoursOfOperation}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </p>
+                            </div>
+                    </div>
+                    </aura:If>
+
+					<aura:if isTrue="{!v.isProviderFlow}">
+                        <div class="slds-grid slds-size_1-of-1">
+                        <aura:If isTrue="{!or(v.providerData.isValidProvider,and(!v.providerData.isNoProviderToSearch,v.providerData.isProviderNotFound))}">
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">Provider Name
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{!or(v.providerData.firstName,v.providerData.lastName)}">
+                                                {!v.providerData.firstName + ' ' + v.providerData.lastName}
+                                                <aura:set attribute="else">
+                                                    --
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+                        </aura:If>
+
+                        <aura:If isTrue="{!or(v.providerData.isValidProvider,and(!v.providerData.isNoProviderToSearch,v.providerData.isProviderNotFound))}">
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">Provider TaxID
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{!v.providerData.taxId}">
+                                                {!v.providerData.taxId}
+                                                <aura:set attribute="else">
+                                                    --
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+                        </aura:If>
+
+                        <aura:If isTrue="{!and(v.providerData.isValidProvider,and(!v.providerData.isNoProviderToSearch,!v.providerData.isProviderNotFound))}">
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">NPI
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{!v.providerData.npi}">
+                                                {!v.providerData.npi}
+                                                <aura:set attribute="else">
+                                                    --
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+                        </aura:If>
+
+                        <aura:If isTrue="{!or(v.providerData.isValidProvider,and(!v.providerData.isNoProviderToSearch,v.providerData.isProviderNotFound))}">
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">Phone
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{!v.providerData.phoneNumber}">
+                                                {!v.providerData.phoneNumber}
+                                                <aura:set attribute="else">
+                                                    --
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+                        </aura:If>
+
+                        <aura:If isTrue="{!and(v.providerData.isValidProvider,and(!v.providerData.isNoProviderToSearch,!v.providerData.isProviderNotFound))}">
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">Specialty
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{!v.providerData.primarySpeciality}">
+                                                {!v.providerData.primarySpeciality}
+                                                <aura:set attribute="else">
+                                                    --
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+                        </aura:If>
+
+                        <aura:If isTrue="{!and(v.providerData.isValidProvider,and(!v.providerData.isNoProviderToSearch,!v.providerData.isProviderNotFound))}">
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">Status
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                                    <aura:if isTrue="{!v.NetworkStatus}">
+                                                        {!v.NetworkStatus}
+                                                        <aura:set attribute="else">
+                                                    <aura:if isTrue="{!v.providerData.status}">
+                                                        {!v.providerData.status}
+                                                        <aura:set attribute="else">
+                                                            --
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+                        </aura:If>
+                        </div>
+                    </aura:if>
+
+                    <aura:If isTrue="{!v.isMemberFlow}">
+						<!--<div class="slds-grid slds-size_1-of-1">
+                        <aura:If isTrue="{!or(v.providerData.isValidProvider,and(!v.providerData.isNoProviderToSearch,v.providerData.isProviderNotFound))}">
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">Provider Name
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{!or(v.providerData.firstName,v.providerData.lastName)}">
+                                                {!v.providerData.firstName + ' ' + v.providerData.lastName}
+                                                <aura:set attribute="else">
+                                                    -
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+                        </aura:If>
+
+                        <aura:If isTrue="{!or(v.providerData.isValidProvider,and(!v.providerData.isNoProviderToSearch,v.providerData.isProviderNotFound))}">
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">Provider TaxID
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{!v.providerData.taxId}">
+                                                {!v.providerData.taxId}
+                                                <aura:set attribute="else">
+                                                    -
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+                        </aura:If>
+
+                        <aura:If isTrue="{!and(v.providerData.isValidProvider,and(!v.providerData.isNoProviderToSearch,!v.providerData.isProviderNotFound))}">
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">NPI
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{!v.providerData.npi}">
+                                                {!v.providerData.npi}
+                                                <aura:set attribute="else">
+                                                    -
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+                        </aura:If>
+
+                        <aura:If isTrue="{!or(v.providerData.isValidProvider,and(!v.providerData.isNoProviderToSearch,v.providerData.isProviderNotFound))}">
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">Phone
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{!v.providerData.phoneNumber}">
+                                                {!v.providerData.phoneNumber}
+                                                <aura:set attribute="else">
+                                                    -
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+                        </aura:If>
+
+                        <aura:If isTrue="{!and(v.providerData.isValidProvider,and(!v.providerData.isNoProviderToSearch,!v.providerData.isProviderNotFound))}">
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">Specialty
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{!v.providerData.primarySpeciality}">
+                                                {!v.providerData.primarySpeciality}
+                                                <aura:set attribute="else">
+                                                    -
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+                        </aura:If>
+
+                        <aura:If isTrue="{!and(v.providerData.isValidProvider,and(!v.providerData.isNoProviderToSearch,!v.providerData.isProviderNotFound))}">
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">Status
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{!v.providerData.status}">
+                                                {!v.providerData.status}
+                                                <aura:set attribute="else">
+                                                    <aura:if isTrue="{!v.NetworkStatus}">
+                                                        {!v.NetworkStatus}
+                                                        <aura:set attribute="else">
+                                                            -
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+                        </aura:If>
+                        </div>-->
+						<aura:if isTrue="{!!v.changeMemberAlignment}">
+							<aura:if isTrue="{!!v.memberData.noMemberToSearch}">
+
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">Member Name
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{!v.memberData.memberName}">
+                                                {!v.memberData.memberName}
+                                                <aura:set attribute="else">
+                                                    --
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+
+
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">Member ID
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{!v.memberData.memberID}">
+                                                {!v.memberData.memberID}
+                                                <aura:set attribute="else">
+                                                    --
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">Policy
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{!v.memberData.policy}">
+                                                {!v.memberData.policy}
+                                                <aura:set attribute="else">
+                                                    --
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">Group #
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{!v.memberData.groupNumber}">
+                                                {!v.memberData.groupNumber}
+                                                <aura:set attribute="else">
+                                                    --
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <aura:If isTrue="{!v.memberData.sourceCode == 'CO'}">
+                            	<!--<aura:If isTrue="{!v.isMRlob}">-->
+                            	<!--<aura:If isTrue="{! !v.PolicyDetails.policysourcecode == 'CO'}">-->
+                                <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                    <div class="header-column">
+                                        <p class="field-title slds-form-element__label field_label_padding preselect-enable">DIV
+                                        </p>
+                                        <p class="valueCls">
+                                            <div class="slds-form-element__static">
+                                                <aura:if isTrue="{!v.memberData.DIV}">
+                                                    {!v.memberData.DIV}
+                                                    <aura:set attribute="else">
+                                                        --
+                                                    </aura:set>
+                                                </aura:if>
+                                            </div>
+                                        </p>
+                                    </div>
+                                </div>
+
+
+                                <aura:If isTrue="{!and(v.memberData.panel != 'N/A', v.memberData.panel != '')}">
+                                    <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                        <div class="header-column">
+                                            <p class="field-title slds-form-element__label field_label_padding preselect-enable">Panel #
+                                            </p>
+                                            <p class="valueCls">
+                                                <div class="slds-form-element__static">
+                                                    <aura:if isTrue="{!v.memberData.panel}">
+                                                        {!v.memberData.panel}
+                                                        <aura:set attribute="else">
+                                                            --
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </aura:If>
+                            </aura:If>
+                        </aura:if>
+						</aura:if>
+						</aura:If>
+						</div>
+						<div class="slds-grid slds-wrap slds-gutters slds-m-left_x-small">
+						<aura:If isTrue="{!v.isMemberFlow}">
+						<aura:if isTrue="{!v.changeMemberAlignment}">
+                        <aura:if isTrue="{!!v.memberData.noMemberToSearch}">
+
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">Member Name
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{!v.memberData.memberName}">
+                                                {!v.memberData.memberName}
+                                                <aura:set attribute="else">
+                                                    --
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+
+
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">Member ID
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{!v.memberData.memberID}">
+                                                {!v.memberData.memberID}
+                                                <aura:set attribute="else">
+                                                    --
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">Policy
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{!v.memberData.policy}">
+                                                {!v.memberData.policy}
+                                                <aura:set attribute="else">
+                                                    --
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect-enable">Group #
+                                    </p>
+                                    <p class="valueCls">
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{!v.memberData.groupNumber}">
+                                                {!v.memberData.groupNumber}
+                                                <aura:set attribute="else">
+                                                    --
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <aura:If isTrue="{!v.memberData.sourceCode == 'CO'}">
+                            	<!--<aura:If isTrue="{!v.isMRlob}">-->
+                            	<!--<aura:If isTrue="{! !v.PolicyDetails.policysourcecode == 'CO'}">-->
+                                <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                    <div class="header-column">
+                                        <p class="field-title slds-form-element__label field_label_padding preselect-enable">DIV
+                                        </p>
+                                        <p class="valueCls">
+                                            <div class="slds-form-element__static">
+                                                <aura:if isTrue="{!v.memberData.DIV}">
+                                                    {!v.memberData.DIV}
+                                                    <aura:set attribute="else">
+                                                        --
+                                                    </aura:set>
+                                                </aura:if>
+                                            </div>
+                                        </p>
+                                    </div>
+                                </div>
+
+
+                                <aura:If isTrue="{!and(v.memberData.panel != 'N/A', v.memberData.panel != '')}">
+                                    <div class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                                        <div class="header-column">
+                                            <p class="field-title slds-form-element__label field_label_padding preselect-enable">Panel #
+                                            </p>
+                                            <p class="valueCls">
+                                                <div class="slds-form-element__static">
+                                                    <aura:if isTrue="{!v.memberData.panel}">
+                                                        {!v.memberData.panel}
+                                                        <aura:set attribute="else">
+                                                            --
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </aura:If>
+                            </aura:If>
+                        </aura:if>
+						</aura:if>
+                    </aura:If>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--section 1 end-->
+</aura:component>

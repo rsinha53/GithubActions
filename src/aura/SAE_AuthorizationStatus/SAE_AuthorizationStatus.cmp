@@ -1,0 +1,340 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes" access="global"
+    controller="ACET_AuthorizationController">
+
+    <aura:attribute name="AuthorizationStatusInfo" type="Object" access="public" />
+    <aura:attribute name="compName" type="String" />
+
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+
+    <lightning:workspaceAPI aura:id="workspace" />
+    <!-- US2325822 	View Authorizations - ECAA Letter Button Landing Page UI - Sarma - 30-01-2020 -->
+    <aura:attribute name="isMainComponent" type="Boolean" default="true" />
+    <aura:attribute name="interactionRec" type="Interaction__c" />
+    <aura:attribute name="isMedicaidPlan" type="boolean" />
+
+    <!-- US2263100 - View Authrizations and Notifications - Results and Status Wrap Text UI -->
+    <aura:attribute name="memberTabId" type="string" access="public" />
+    <aura:registerEvent name="ACET_AuthorizationStatusClose" type="c:ACET_AuthorizationStatusClose" />
+
+    <!-- US2154803 - View Authrizations and Notifications - Inpatient Details Integration -->
+    <aura:attribute type="String" name="authID" />
+    <aura:attribute type="String" name="xrefID" />
+    <aura:attribute type="Object" name="authStatusDetails" />
+    <aura:attribute type="String" name="authType" />
+    <aura:attribute type="String" name="SRN" />
+    <aura:attribute type="String" name="LengthOfStay" />
+    <aura:attribute name="ICUEURL" type="String" access="global" />
+
+    <!-- US2308090 -->
+    <aura:attribute type="Map" name="TabMap" />
+    <aura:handler event="lightning:tabClosed" action="{! c.onTabClosed }" />
+
+    <!-- US2061071 - Auto Doc Attributes -->
+    <aura:attribute name="AutodocPageFeature" type="String" />
+    <aura:attribute name="initialClick" type="boolean" default="true" />
+    <aura:attribute name="componentId" type="String" />
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+    <aura:attribute name="spinnerFlag" type="boolean" default="false" />
+    <!-- US2428601 -->
+    <aura:attribute name="isEditSrnBtnClicked" type="boolean" default="false" />
+    <aura:attribute name="isICUEBtnClicked" type="boolean" default="false" />
+    <aura:attribute name="isECAABtnClicked" type="boolean" default="false" />
+    <aura:attribute name="cmpId" type="string" access="public" />
+
+    <!-- US2271237 - View Authorizations - Update Policies in Auto Doc : Kavinda -->
+	<aura:attribute name="IsAutoDocEnable" type="Boolean" default="true" />
+    <aura:handler event="c:ACET_AuthResultAutoDocActivation" action="{!c.handlePolicyClick}" />
+    <aura:attribute name="assignmentFlag" type="boolean" default="false"/> <!-- US2382470 - Avish -->
+	<aura:attribute name="contactUniqueId" type="string" access="public" />
+
+    <!-- DE322503 - Resetting button autodoc during case save - Sarma -->
+    <aura:handler event="c:ACET_ButtonAutodocResetEvent" action="{!c.resetBtnAutodoc}"/>
+
+    <!--DE334279 - Avish -->
+    <aura:attribute name="uniqueSRN" type="List" default="[]"/>
+    <aura:handler event="c:ACET_ECAAUniqueTabEvent" action="{!c.checkduplicateTab}" />
+    <aura:handler event="c:ACET_ECAATabClosed" action="{!c.handleClosedTabID}" />
+    <aura:attribute name="docIdLst" type="List" />
+    <!--DE334279-->
+	
+    <!-- US2382581 -->
+    <aura:attribute name="cardOrder" type="String" />
+    	
+    <!--US2076634 - HIPAA Guidelines Button - Sravan-->
+    <aura:attribute name="hipaaEndpointUrl" type="String" default=""/>
+    <!-- DE349016 -->
+    <aura:attribute name="isComponentFullyLoaded" type="boolean" default="false" />
+    
+    <!-- US2330408  - Avish -->
+    <aura:attribute name="interactionOverviewTabId" type="String" /> 
+    <aura:attribute name="memberId" type="String" />
+
+    <!-- US2619431 -->
+    <div class="{!' slds-is-relative slds-p-vertical_small slds-card slds-m-top_small ' + v.AutodocPageFeature}" id="{!v.AutodocKey}">
+        <!-- <lightning:spinner class="slds-hide" aura:id="asdasd"
+                           alternativeText="Loading.." title="Loading.."
+                           variant="brand" size="medium"/>	 -->
+        <aura:if isTrue="{! v.spinnerFlag }">
+            <lightning:spinner size="medium" variant="brand" />
+        </aura:if>
+        <!-- US2271237 -->
+        <!-- US2382581 -->
+        <!-- US2619431 -->
+        <div id="{! v.compName }" class="slds-box slds-card titleCheckBox card_padding" data-auto-doc="{! v.IsAutoDocEnable }"
+            data-auto-doc-feature="{!v.AutodocPageFeature}"
+            data-auto-doc-section-key="{!'Authorization ' + (v.isMainComponent ? '' : ' Detail ') + 'Status : ' + v.SRN}" data-auto-doc-section-column-indexes="1,2">
+
+            <div class="autodocNotTableView" data-auto-doc-feature="{!v.AutodocPageFeature}">
+
+                <!-- US2271237 -->
+                <div style="{! 'width:100%; display: none; order:' + v.cardOrder + ';' }" class="slds-text-heading_small slds-p-left_small autodochandle">
+
+                    <!-- US2619431 -->
+                    <span class="component_title">{! 'Authorization ' + (v.isMainComponent ? '' : ' Detail ')  + 'Status :' }&nbsp;</span>
+                    <span class="component_title" style="color:rgb(0, 109, 204)">
+                        <!-- US2325822 -->
+                        <aura:If isTrue="{!v.isMainComponent}">
+                            <a href="javascript:void(0)" onclick="{! c.openAuthorizationDetail }"> {!v.SRN} </a>
+                            <aura:set attribute="else">
+                                {!v.SRN}
+                            </aura:set>
+                        </aura:If>
+                    </span>
+
+                    <!--  US2079906	Edit SRN Button UI -->
+                    <!-- <lightning:layoutItem size="4" class="slds-p-left_medium slds-float_right" alignmentBump="right"> -->
+                    <div class="slds-float_right" style="text-align: right;">
+                        <lightning:buttonGroup>
+                            <lightning:button label="Edit SRN" title="Edit SRN" onclick="{!c.editSRN}" />
+                            <!-- US2079907 Added by Avish -->
+                            <lightning:button label="ICUE Letter" title="ICUE Letter" onclick="{! c.loadICUE }" />
+                            <aura:If isTrue="{!v.isMedicaidPlan}">
+                                <!-- US2325822 	View Authorizations - ECAA Letter Button Landing Page UI - Sarma - 30-01-2020 -->
+                                <lightning:button label="ECAA Letter" title="ECAA Letter" onclick="{! c.loadECAA }" />
+                            </aura:If>
+                        </lightning:buttonGroup>
+                        <!-- </lightning:layoutItem> -->
+                        <!-- US2325822 -->
+                        <aura:If isTrue="{!v.isMainComponent}">
+                            <!-- US2263100 - View Authrizations and Notifications - Results and Status Wrap Text UI: KAVINDA - START -->
+                            <!-- <lightning:layoutItem size="1" class="slds-p-left_medium slds-float_right" alignmentBump="right"> -->
+                            <div class="slds-float_right" style="padding-left: 50px;">
+                                <div title="Close Authorization Status" class="slds-icon-action-close slds-icon_container" style="padding:0;" onclick="{!c.closeAuthStatus}">
+                                     <img src="{!$Resource.SLDS_Close_Icon+'/icons/close_60_black.png'}" style="background: white;" class="slds-icon">
+                                     </img>
+                                </div>
+                             </div>
+                            <!-- </lightning:layoutItem> -->
+                            <!-- US2263100 - View Authrizations and Notifications - Results and Status Wrap Text UI: KAVINDA - END -->
+                        </aura:If>
+                    </div>
+                </div>
+
+                <br />
+                <!-- US2428601 -->
+                <div class="slds-grid slds-gutters slds-m-left_x-small">
+
+                    <div class="slds-p-around_xx-small slds-size_1-of-1 card_bottom_margin" style="display: none;" >
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding" id="{!v.cmpId}" title="Testing Autodoc">
+                                Autodoc
+                            </p>
+                            <p class="valueCls">
+                                <div class="slds-form-element__static">
+                                    Autodoc
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+
+                    <p class="hide">
+                        <aura:if isTrue="{!v.isEditSrnBtnClicked}">
+                            Edit SRN Button was selected
+                        </aura:if>
+                        <br />
+                        <aura:if isTrue="{!v.isICUEBtnClicked}">
+                            ICUE Letter Button was selected
+                        </aura:if>
+                        <br />
+                        <aura:if isTrue="{!v.isECAABtnClicked}">
+                            ECAA Letter Button was selected
+                        </aura:if>
+                    </p> <br /> <br />
+                </div>
+                <!-- US2428601 - End -->
+                <div class="slds-grid slds-gutters slds-m-left_x-small">
+                    <div class="slds-p-around_xx-small slds-size_1-of-8 card_bottom_margin">
+                        <div class="header-column">
+                            <!-- US2382581 -->
+                            <p class="field-title slds-form-element__label field_label_padding preselect-enable" title="Status">Status
+                            </p>
+                            <p class="valueCls">
+                                <div class="slds-form-element__static">
+                                    <aura:if isTrue="{!v.authStatusDetails.AuthDetailsResponse.statusCode.description}">
+                                        {!v.authStatusDetails.AuthDetailsResponse.statusCode.description}
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-size_1-of-8 card_bottom_margin">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding" title="Type">Type</p>
+                            <p class="valueCls">
+                                <div class="slds-form-element__static">
+                                    <aura:if
+                                        isTrue="{!v.authStatusDetails.AuthDetailsResponse.serviceCategoryTypeCode.description}">
+                                        {!v.authStatusDetails.AuthDetailsResponse.serviceCategoryTypeCode.description}
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-size_1-of-8 card_bottom_margin">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding" title="Service Setting">
+                                Service Setting</p>
+                            <p class="valueCls">
+                                <div class="slds-form-element__static">
+                                    <aura:if
+                                        isTrue="{!v.authStatusDetails.AuthDetailsResponse.serviceSettingTypeCode.description}">
+                                        {!v.authStatusDetails.AuthDetailsResponse.serviceSettingTypeCode.description}
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-size_1-of-8 card_bottom_margin">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding"
+                                title="Decision Date/Time">
+                                Decision
+                                Date/Time
+                            </p>
+                            <p class="valueCls">
+                                <div class="slds-form-element__static">
+                                    <aura:if
+                                        isTrue="{!v.authStatusDetails.AuthDetailsResponse.facility.facilityDecision.renderedDateTimeFormated}">
+                                        <!-- <ui:outputDateTime format="MM/dd/yyyy hh:mm:ss a"
+                                            value="{!v.authStatusDetails.AuthDetailsResponse.facility.facilityDecision.renderedDateTime}" /> -->
+                                        {!v.authStatusDetails.AuthDetailsResponse.facility.facilityDecision.renderedDateTimeFormated}
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-size_1-of-8 card_bottom_margin">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding" title="Decision Reason">
+                                Decision Reason
+                            </p>
+                            <p class="valueCls">
+                                <div class="slds-form-element__static slds-truncate"
+                                    title="{!v.authStatusDetails.AuthDetailsResponse.facility.facilityDecision.decisionReasonCode.description}">
+                                    <aura:if
+                                        isTrue="{!v.authStatusDetails.AuthDetailsResponse.facility.facilityDecision.decisionReasonCode.description}">
+                                        {!v.authStatusDetails.AuthDetailsResponse.facility.facilityDecision.decisionReasonCode.description}
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-size_1-of-8 card_bottom_margin">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding" title="GAP Outcome">GAP
+                                Outcome
+                            </p>
+                            <p class="valueCls">
+                                <div class="slds-form-element__static">
+                                    <div class="slds-form-element__static">
+                                        <aura:if
+                                            isTrue="{!v.authStatusDetails.AuthDetailsResponse.facility.facilityDecision.gapReviewOutcomeCode.description}">
+                                            {!v.authStatusDetails.AuthDetailsResponse.facility.facilityDecision.gapReviewOutcomeCode.description}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-size_1-of-8 card_bottom_margin">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding"
+                                title="HSC Coverage Type">
+                                HSC Coverage
+                                Type
+                            </p>
+                            <p class="valueCls">
+                                <div class="slds-form-element__static">
+                                    <div class="slds-form-element__static">
+                                        <!-- US2807198 Enhancement - View Authorizations:  New Fields Added for Authorization Details Integration -->
+                                        <aura:if isTrue="{!v.authStatusDetails.AuthDetailsResponse.serviceCategoryTypeCode.description}">
+                                            {!v.authStatusDetails.AuthDetailsResponse.serviceCategoryTypeCode.description}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="slds-grid slds-gutters slds-m-left_x-small">
+                    <div class="slds-p-around_xx-small slds-size_1-of-8 card_bottom_margin">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding" title="Review Priority">
+                                Review Priority
+                            </p>
+                            <p class="valueCls">
+                                <div class="slds-form-element__static">
+                                    <div class="slds-form-element__static">
+                                        <aura:if
+                                            isTrue="{!v.authStatusDetails.AuthDetailsResponse.reviewPriority.description}">
+                                            {!v.authStatusDetails.AuthDetailsResponse.reviewPriority.description}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- US2382470 -->
+        <aura:If isTrue="{!v.assignmentFlag}">
+            <div class="slds-card card_padding" style="height: 100%;">
+                <c:ACET_AuthAssignments authDetailsObj= "{!v.authStatusDetails.AuthDetailsResponse}" />
+            </div>
+        </aura:If>
+        <!-- US2325822 -->
+        <aura:If isTrue="{!v.isMainComponent}">
+            <!--<div class="slds-card slds-p-around_x-small">--> <!-- US2382474	Auth Details -  Work Assignment Integration - 19/08/2020 - Sarma -->
+            <div class="slds-card card_padding" style="height: 100%;">
+                <c:ACET_AuthNotes AutodocPageFeature="{!v.AutodocPageFeature}" AutodocKey="{!v.AutodocKey}"
+                    authDetailsObj="{!v.authStatusDetails.AuthDetailsResponse}" IsAutoDocEnable="{!v.IsAutoDocEnable}" /> <!-- US2271237 -->
+            </div>
+        </aura:If>
+    </div>
+</aura:component>

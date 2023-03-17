@@ -1,0 +1,134 @@
+<aura:component implements="flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,lightning:isUrlAddressable" access="global" controller="ACETLGT_PlanBenefitController">
+	<aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="groupNumberSearch" type="String"/>
+	<aura:attribute name="groupNameSearch" type="String"/>
+    <aura:attribute name="cseTopic" type="String" access="public" default="Plan Benefits"/>
+    <aura:attribute name="int" type="Interaction__c" access="public"/>
+    <aura:attribute name="intId" type="String" access="public"/>
+    <aura:attribute name= "pagerefaranceobj" type="object"/>
+    <aura:attribute name="srk" type="String" access="global" />
+    <aura:attribute name="memberid" type="String"/>
+    <aura:attribute name="grpNum" type="String" access="public"/>
+    <aura:attribute name="usInfo" type="user" access="public"/>
+    <aura:attribute name="cpid" type="String" access="public"/>
+    <aura:attribute name="highlightPanel" type="ACETLGT_HighlightPanelInfo" access="global"/>
+    <aura:attribute name="highlightPanel_String" type="String" access="global"/>
+    <aura:attribute name="bookOfBusinessTypeCode" type="String" />
+    <aura:attribute name="coverageData" type="sObject" access="global"/>
+    <aura:attribute name="hasgroupIdError" type="Boolean" default="false"/>
+    <aura:attribute name="groupErrorMessage" type="String" />
+    <aura:attribute name="planInfoList" type="ACETGroupPlanBenefitLEXWrapper.PlanInformationWrapper[]"/>
+    <aura:attribute name="networkScheduleList" type="List"/>
+    <aura:attribute name="exchangeType" type="String"/>
+    <aura:attribute name="SitusState" type="String"/>
+    <aura:attribute name="fundingArrangement" type="String"/>
+    <aura:attribute name="hsaPlan" type="String"/>
+    <aura:attribute name="memberPlanBenefitList" type="ACETGroupPlanBenefitLEXWrapper.BenefitWrapper[]"/>
+    <aura:attribute name="OONReimbursementList" type="ACETGroupPlanBenefitLEXWrapper.OONReimbursement[]"/>
+    <aura:attribute name="eHBIndicator" type="String"/>
+    <aura:attribute name="benefitCodeKeyMap" type="Map"/>
+    <aura:attribute name="varriableCoverageMap" type="Map"/>
+    <aura:attribute name="benefitDisplayMap" type="Map"/>
+    <aura:attribute name="tierTypeCodeList" type="String"/>
+    <aura:attribute name="tierTypeIdentifierList" type="String"/>
+    <aura:attribute name="Spinner" type="boolean" default="true"/>
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+    <aura:attribute name="existsOnRiderPlanMap" type="Map"/>
+    <aura:attribute name="COStartDate" type="String"/>
+    <aura:attribute name="COEndDate" type="String"/>
+	<aura:attribute name="planDatesList" type="String[]"/>
+    <aura:attribute name="selectedPlnDt" type="String" />													  
+	<aura:attribute name="selectedPlanObj" type="Object"/>													  
+    <aura:if isTrue="{!v.Spinner}">
+    	<div class="exampleHolder">
+            <lightning:spinner alternativeText="Loading" size="medium" variant="brand" />
+        </div>
+  	</aura:if>
+    <lightning:workspaceAPI aura:id="workspace"/>
+     <div id="{!v.AutodocKey}" class="{!v.AutodocKey}" >  
+     <div data-auto-doc-multiple-pages="true">
+     <c:ACETLGT_AutoDoc></c:ACETLGT_AutoDoc>
+	<lightning:card variant="Narrow" title="Plan Benefits" iconName="standard:home">
+		<aura:set attribute="actions">
+			<div class="slds-grid slds-form-element slds-m-right_large">
+				<lightning:buttonGroup>
+                    <c:ACETLGT_TTSModal aura:id = "cComp"
+						                cseTopic="{!v.cseTopic}" 
+		                                int="{!v.int}" 
+		                                intId="{!v.intId}" 
+		                                srk="{!v.srk}" 
+		                                showCirrus="true" 
+                                        pagefeature="{!v.AutodocKey}"
+		                                showMemAlerts="true"
+		                                showSave = "true"
+		                                showMisdirect="true"
+		                                memberId="{!v.memberid}"
+		                                groupId="{!v.grpNum}"
+		                                userInfo="{!v.usInfo}"
+                                        highlightPanel="{!v.highlightPanel}"
+                                        bookOfBusinessTypeCode="{!v.bookOfBusinessTypeCode}"
+                                        AutodocKey="{!v.AutodocKey}"/>
+                </lightning:buttonGroup>
+			</div>
+		</aura:set>
+		<c:ACETLGT_HighlightPanel highlightPanelValues="{!v.highlightPanel}" pageFeature="{!v.AutodocKey}" AutodocKey="{!v.AutodocKey}" />
+	</lightning:card>
+
+    <lightning:card class="slds-p-around_none" >
+        <aura:set attribute="title"><div class="slds-text-heading_small"><b>Plan Information</b></div></aura:set>
+        <div class="slds-wrap slds-grid slds-size_4-of-12">
+            <div class=" slds-p-left_medium slds-p-top_large">Plan Dates</div>
+        <lightning:select name="select"   aura:id="planDtsSelect" class="slds-p-left_medium slds-size_6-of-12" onchange="{!c.updatePlanInfo}">
+        <aura:iteration items="{!v.planDatesList}" var="plnDt">
+            <option text="{!plnDt.displayText}" value="{!plnDt.displayText}" selected="{!plnDt.selected}"/>
+            </aura:iteration>
+    </lightning:select>
+            </div>
+        <div class="slds-grid slds-gutters_xxx-small slds-m-top_medium"> 
+            <div class="slds-col slds-size_1-of-1">
+                <aura:if isTrue="{!v.planInfoList.length > 0}">
+                <div class="autodocTableView" data-auto-doc="true" data-auto-doc-case-items="true" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-section-key="Plan Information" >   
+                    <table class="slds-table accordionTables benefitAccordionTable slds-table_bordered slds-table_cell-buffer slds-no-row-hover">
+                        <thead>   
+                            <tr>
+                                <th>Plan ID</th>
+                                <th>Product ID</th>
+                                <th>Tiered Plan</th>
+                                <th>Metallic Level</th>
+                                <th>Effective Date</th>
+                                <th>Expiration Date</th>
+                                <th>Exchange Type</th>
+                            </tr>
+                        </thead>
+                        <tbody> 
+                            <aura:iteration items="{!v.planInfoList}" var="planInfo"> 
+                                <tr class="slds-hint-parent">
+                                    <td><a href="javascript:void(0);" onclick="{!c.navPlanBenefitDetail}" 
+                                         data-planId="{!planInfo.PlanId}" data-productId="{!planInfo.productId}" data-gatedProductIndicator="{!planInfo.gatedProductIndicator}" data-planTypeCode="{!planInfo.planTypeCode}" 
+                                         data-timePeriodQualifier="{!planInfo.timePeriodQualifier}" data-administeredByName="{!planInfo.administeredByName}" data-pcpRequiredIndicator="{!planInfo.pcpRequiredIndicator}"
+                                         data-legalSubsidiary ="{!planInfo.legalSubsidiary}" data-planMetallicLevel="{!planInfo.planMetallicLevel}" data-effctDt="{!planInfo.EffectiveDate}" data-expiryDt="{!planInfo.ExpirationDate}"
+                                           >{!planInfo.PlanId}</a>
+                                        <!--<ui:outputText aura:id="test" value="{!planInfo.PlanId}"></ui:outputText></a>--></td>
+                                    <td>{!planInfo.productId}</td>
+                                    <td>{!planInfo.qualityProviderTierRuleID}
+                                    </td>
+                               
+                                   
+                                    <td>{!planInfo.planMetallicLevel}</td>
+                                    <td>{!planInfo.EffectiveDate}</td>
+                                    <td>{!planInfo.ExpirationDate}</td>
+                                    <td>{!v.exchangeType}</td>
+                                </tr>
+                           </aura:iteration>
+                        </tbody>    
+                    </table>  
+                </div>
+                <aura:set attribute="else"><p class="slds-align_absolute-center">Search criteria returned no matches.</p>
+                </aura:set>
+           </aura:if>
+            </div>
+        </div>
+    </lightning:card>
+         </div>
+    </div>
+</aura:component>

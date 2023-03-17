@@ -1,0 +1,314 @@
+<!-- 
+Component Name    : SNI_FL_CommonMessagingView
+Description       : Component which holds current messages
+Created By        : Sameera De Silva
+Created Date      : 8/12/2020
+
+Modification Log: 
+
+Developer                   Date                   Description
+1.Sameera De Silva			8/12/2020			Created base component for Common Messaging View
+2.Sameera De Silva			8/19/2020			Updated Padding and spacing for Family Account Name div
+3.Nanthavarman				27/8/2020			Setting up open family profile page in new tab
+-->
+
+<aura:component access="global" controller="SNI_FLDirectMessageUtil" >
+    
+    <aura:attribute name="isConnectAPI" type="Boolean" default="false" />
+    <aura:attribute name="restFile" type="Boolean" default="true" />
+    <aura:attribute name="logedUserID" type="String"></aura:attribute>
+    <aura:attribute name="selectedFeedIdValue" type="String" />
+    <aura:attribute name="replyValue" type="String" />
+    <aura:attribute name="isFamilyLevel" type="Boolean"/>
+    <aura:attribute name="attachId" type="String" />
+    <aura:attribute name="selectedMsgWrapper" type="SNI_FLDirectMessageWrapper" />
+    <aura:attribute name="FeedCreatedDateTime" type="DateTime" default="2020-07-20T09:57:05.000Z"/>
+    <aura:attribute name="isBackupAgentView" type="Boolean" />
+    <aura:attribute name="showToggle" type="Boolean"/>
+    <aura:attribute name="lstDirectMessages" type="List" />
+    <aura:attribute name="commentPageSize" type="Integer" />
+    <aura:attribute name="commentPageNumber" type="Integer" />
+    <aura:attribute name="prefixURL" type="String" default="/sfc/servlet.shepherd/version/download/"/>    
+    <aura:attribute name="fileName" type="String" default="No File Selected.." />
+    <aura:attribute name="accountOwner" type="String" description="Store owner of the family when navigating to messages through family account page"/> <!-- AC/DC (Nanthu) - US3219701 -->
+    <aura:attribute name="accept" type="List" default="['.ppt', '.pptx', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.pdf', '.png', '.jpeg', '.jpg', 
+    '.gif', '.tiff', '.tif', '.bmp']" />
+    <aura:attribute name="acceptProvider" type="List" default="['.ppt', '.pptx', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.pdf', '.png', '.jpeg', '.jpg', 
+    '.gif', '.tiff', '.tif', '.bmp', '.mp4', '.mov', '.avi' , '.zip', '.rtf', '.odt' , '.txt' , '.wpf' , '.wpd']" />
+    <aura:method name="scrollToBottom" action="{!c.scrollToBottom}" />
+    <aura:registerEvent name="selectedMessage" type="c:SNI_FL_SelectedMessageEvt"></aura:registerEvent>
+    <aura:handler name="change" value="{!v.selectedDirectMessage}" action="{!c.clearReplyBody}"></aura:handler>
+    <!--Added by Sameera--> 
+    <aura:attribute name="selectedDirectMessage" type="SNI_FLDirectMessageWrapper"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="isProviderMessage" type="Boolean"></aura:attribute>
+    <aura:attribute name="isProviderMsgLevel" type="Boolean" default="false"/> <!-- Added by Nanthu(AC/DC) - US3315143 leave message hyperlink -->
+    <aura:attribute name="isPermissionSetAssigned" type="Boolean" default="false"/> <!-- Added by Nanthu(AC/DC) - US3315143 leave message hyperlink -->
+    
+    <lightning:workspaceAPI aura:id="workspace"/>
+    <aura:if isTrue="{!!empty(v.selectedDirectMessage)}">
+        <div class="slds-border_bottom" style="margin-top:-10px;">
+            <div class="">                            
+                <section role="log" class="slds-chat ">
+                    
+                    <ul>
+                        <div class="slds-grid slds-wrap  slds-p-bottom_small">
+                            <div class="slds-col slds-size_1-of-2 slds-medium-size_8-of-12 slds-large-size_8-of-12">
+                                <span>
+                                    
+                                    <div style=" font-size: 20px;">
+                                        <aura:if isTrue="{!!empty(v.selectedDirectMessage)}">                                            
+                                            <aura:if isTrue="{!v.isProviderMessage}"> 
+                                                <a href="javascript:void(0)" aura:id="{!v.selectedDirectMessage.flMessage.member}" onclick="{!c.openFamilyProfilePage}"><b>{!v.selectedDirectMessage.flMessage.member.firstName + ' ' + v.selectedDirectMessage.flMessage.member.lastName }</b></a> 
+                                                <aura:if isTrue="{!!empty(v.selectedDirectMessage.flMessage.member)}">
+                                                    - 
+                                                </aura:if>
+                                                <strong>{!v.selectedDirectMessage.directMssageSubject}</strong>                                                                                               
+                                                <aura:set attribute="else">
+                                                    <a href="javascript:void(0)" aura:id="{!v.selectedDirectMessage.flMessage.familyAccountID}" onclick="{!c.openFamilyProfilePage}"><b>{!v.selectedDirectMessage.flMessage.familyAccountName}</b></a> - <strong>{!v.selectedDirectMessage.directMssageSubject}</strong>
+                                                </aura:set>
+                                            </aura:if> 
+
+                                        </aura:if>
+                                    </div>
+                                    <span>                                     
+                                        <div class="slds-float_left">                                             
+                                            <aura:if isTrue="{!!empty(v.selectedDirectMessage)}">From: <a><b>{!v.selectedDirectMessage.directMessageFeed.initiatedUser.userFirstName +' '+v.selectedDirectMessage.directMessageFeed.initiatedUser.userLastName}</b></a>,<lightning:formattedDateTime value="{!v.selectedDirectMessage.directMessageFeed.directMessageFeedCreatedDateTime}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="true" timeZone="{! $Locale.timezone }"/></aura:if>                                                                                                                                       
+                                            <div>
+                                                <aura:if isTrue="{!!empty(v.selectedDirectMessage)}">To:&nbsp;</aura:if>
+                                                
+                                                <aura:iteration items="{!v.selectedDirectMessage.lstDirectMessageUsers}" var="user" indexVar="index">
+                                                    <a>{!user.userFirstName+' '+user.userLastName}
+                                                        <aura:if isTrue="{!notequals(v.selectedDirectMessage.lstDirectMessageUsers.length-1,index)}">,</aura:if>
+                                                    </a>
+                                                </aura:iteration>                                                
+                                                <aura:if isTrue="{!and (v.selectedDirectMessage.flMessage.providerTeam.length != 0 , v.selectedDirectMessage.flMessage.familyAccountID == null)}">,&nbsp;</aura:if> 
+                                                <aura:if isTrue="{!!empty(v.selectedDirectMessage.flMessage.providerTeam)}">                                                    
+                                                    <aura:iteration items="{!v.selectedDirectMessage.flMessage.providerTeam}" var="team" indexVar="index1">
+                                                        <a>{!team.teamName}<aura:if isTrue="{!notequals(v.selectedDirectMessage.flMessage.providerTeam.length-1,index1)}">,&nbsp;</aura:if></a>
+                                                    </aura:iteration>
+                                                </aura:if>
+                                                
+                                            </div>                                            
+                                        </div>
+                                    </span> 
+                                </span>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2 slds-medium-size_4-of-12 slds-large-size_4-of-12">
+                                <aura:if isTrue="{!!empty(v.selectedDirectMessage)}">
+                                    <div class="slds-float_right">
+                                        <ul class="slds-list_horizontal">
+                                            <li>
+                                                <aura:if isTrue="{!v.isBackupAgentView}">
+                                                    <aura:if isTrue="{!v.isFamilyLevel}">
+                                                        <lightning:input id="toggle-button-id2" disabled="{! v.accountOwner == v.logedUserID ? false : true}" aura:id="{!v.selectedDirectMessage.flMessage.feedId}"  value="{!v.selectedDirectMessage.flMessage.marked}" style="position:relative;" type="toggle" messageToggleActive="Flag" messageToggleInactive="Flag" checked="{!v.selectedDirectMessage.flMessage.marked}" onchange="{!c.getToggleButtonValue}"> </lightning:input>
+                                                        <aura:set attribute="else">
+                                                            <lightning:input id="toggle-button-id2" aura:id="{!v.selectedDirectMessage.flMessage.feedId}" value="{!v.selectedDirectMessage.flMessage.marked}" style="position:relative;" type="toggle" messageToggleActive="Flag" messageToggleInactive="Flag" checked="{!v.selectedDirectMessage.flMessage.marked}" onchange="{!c.getToggleButtonValue}"> </lightning:input>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                    <aura:set attribute="else">
+                                                        <aura:if isTrue="{!v.showToggle}">
+                                                            <lightning:input id="toggle-button-id1" aura:id="{!v.selectedDirectMessage.flMessage.feedId}"  value="{!v.selectedDirectMessage.flMessage.marked}" style="position:relative;" type="toggle" messageToggleActive="Flag" messageToggleInactive="Flag" checked="{!v.selectedDirectMessage.flMessage.marked}" onchange="{!c.getToggleButtonValue}"> </lightning:input>
+                                                        </aura:if>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </aura:if>
+                            </div>
+                        </div>
+                        <div class="slds-scrollable_y slds-border_top scrollbar" aura:id="scroll" onscroll="{!c.getNextComments}">
+                            
+                            <aura:iteration items="{!v.selectedDirectMessage.lstDirectMessageComments}" var="comment" indexVar="index">
+                                <aura:if isTrue="{!comment.commentedUser.userID == v.logedUserID}">
+                                    <li class="slds-chat-listitem slds-chat-listitem_outbound">
+                                        <div class="slds-chat-message">
+                                            <div class="slds-chat-message__body">
+                                                <aura:if isTrue="{!comment.isAttachmentAvailable}">
+                                                    <div class="slds-chat-message__text slds-chat-message__text_outbound"> 
+                                                        <span>
+                                                            <aura:if isTrue="{!! empty(comment.commentBody)}">
+                                                                <lightning:formattedRichText value="{!comment.commentBody}"/><br></br>
+                                                            </aura:if>                                                            
+                                                            <aura:if isTrue="{! equals(comment.documentFileextension,'jpg') || equals(comment.documentFileextension,'jpeg') || equals(comment.documentFileextension,'png') || equals(comment.documentFileextension,'gif')}">
+                                                                <a href="{!v.prefixURL + comment.documentID}">
+                                                                    <img src="{!v.prefixURL + comment.documentID}" alt="{!comment.documentTitle +'.'+comment.documentFileextension}"/>
+                                                                </a>
+                                                                <aura:set attribute="else">
+                                                                    <a href="{!v.prefixURL + comment.documentID}">{!comment.documentTitle +'.'+comment.documentFileextension}</a> 
+                                                                </aura:set>
+                                                            </aura:if>
+                                                        </span> 
+                                                    </div>
+                                                    <aura:set attribute="else">
+
+                                                        <aura:if isTrue="{!!comment.isNewUser}">
+                                                            <div class="slds-chat-message__text slds-chat-message__text_outbound"> <span><lightning:formattedRichText value="{!comment.commentBody}"/></span> </div>
+                                                        </aura:if>
+
+                                                    </aura:set>
+                                                </aura:if>
+                                                
+                                                <aura:if isTrue="{!v.isProviderMessage}"> 
+                                                    <div class="slds-chat-message__meta" > 
+                                                        <lightning:formattedText value="{!comment.commentedUser.userFirstName + ' ' +comment.commentedUser.userLastName}"></lightning:formattedText>.                                                    
+                                                        <aura:if isTrue="{!equals(comment.commentedUser.profileName, 'AD')}">
+                                                            <small style="font-size:10px"> (Advisor) </small>
+                                                            <aura:set attribute="else">
+                                                                <aura:if isTrue="{! equals (comment.commentedUser.profileName, 'PU' )}">
+                                                                    <small style="font-size:10px"> (Provider) </small>
+                                                                    <aura:set attribute="else">
+                                                                        <aura:if isTrue="{! equals (comment.commentedUser.profileName, 'PT' )}">
+                                                                            <small style="font-size:10px"> (Provider Team) </small>
+                                                                        </aura:if>
+                                                                    </aura:set>
+                                                                </aura:if>
+                                                            </aura:set>
+                                                        </aura:if>
+                                                        <lightning:formattedDateTime value="{!comment.commentedDateTime}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="true" timeZone="{! $Locale.timezone }"/> 
+                                                    </div>
+                                                    <aura:set attribute="else">
+                                                        <aura:if isTrue="{!!comment.isNewUser}">
+                                                        <div class="slds-chat-message__meta" >
+                                                           <lightning:formattedText value="{!comment.commentedUser.userFirstName + ' ' +comment.commentedUser.userLastName+ (comment.commentedUser.userRole != ''? ' ('+comment.commentedUser.userRole+')' : '')}"></lightning:formattedText>.                                                    
+                                                            <lightning:formattedDateTime value="{!comment.commentedDateTime}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="true" timeZone="{! $Locale.timezone }"/> </div>
+                                                     </aura:if>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </div>
+                                        </div>
+                                    </li>
+
+                                <aura:if isTrue="{!comment.isNewUser}">
+                                    <li class="slds-chat-listitem slds-chat-listitem_event">
+                                        <div class="slds-chat-event">
+                                          <div class="slds-chat-event__body">
+                                      <b>{!comment.commentBody}&nbsp;<p><lightning:formattedDateTime value="{!comment.commentedDateTime}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="true" timeZone="{! $Locale.timezone }"/></p></b>
+                                          </div>
+                                        </div>
+                                    </li>
+                                </aura:if>
+
+
+                                    <aura:set attribute="else">
+
+                                        <aura:if isTrue="{!comment.isNewUser}">
+                                            <li class="slds-chat-listitem slds-chat-listitem_event">
+                                                <div class="slds-chat-event">
+                                                  <div class="slds-chat-event__body">
+
+                                                      <b>{!comment.commentBody}</b>&nbsp;<p><lightning:formattedDateTime value="{!comment.commentedDateTime}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="true" timeZone="{! $Locale.timezone }"/></p>
+
+                                                  </div>
+                                                </div>
+                                            </li>
+                                        </aura:if>
+
+                                        <li class="slds-chat-listitem slds-chat-listitem_inbound">
+                                            <div class="slds-chat-message">
+                                                <div class="slds-chat-message__body">
+                                                    <aura:if isTrue="{!comment.isAttachmentAvailable}">
+                                                        <div class="slds-chat-message__text slds-chat-message__text_inbound"> 
+                                                            <span>
+                                                                <aura:if isTrue="{!! empty(comment.commentBody)}">
+                                                                    <lightning:formattedRichText value="{!comment.commentBody}"/><br></br>
+                                                                </aura:if>                                                            
+                                                                <aura:if isTrue="{! equals(comment.documentFileextension,'jpg') || equals(comment.documentFileextension,'jpeg') || equals(comment.documentFileextension,'png') || equals(comment.documentFileextension,'gif')}">
+                                                                    <a href="{!v.prefixURL + comment.documentID}">
+                                                                        <img src="{!v.prefixURL + comment.documentID}" alt="{!comment.documentTitle +'.'+comment.documentFileextension}"/>
+                                                                    </a>
+                                                                    <aura:set attribute="else">
+                                                                        <a href="{!v.prefixURL + comment.documentID}">{!comment.documentTitle +'.'+comment.documentFileextension}</a> 
+                                                                    </aura:set>
+                                                                </aura:if>
+                                                            </span> 
+                                                        </div>
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!!comment.isNewUser}">
+                                                                <div class="slds-chat-message__text slds-chat-message__text_inbound"> <span><lightning:formattedRichText value="{!comment.commentBody}"/></span> </div>
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                   
+                                                    <aura:if isTrue="{!v.isProviderMessage}"> 
+                                                        <div class="slds-chat-message__meta" > 
+                                                            <lightning:formattedText value="{!comment.commentedUser.userFirstName + ' ' +comment.commentedUser.userLastName}"></lightning:formattedText>.
+                                                            <aura:if isTrue="{! equals (comment.commentedUser.profileName, 'AD' )}">
+                                                                (Advisor)
+                                                                <aura:set attribute="else">
+                                                                    <aura:if isTrue="{! equals (comment.commentedUser.profileName, 'PU' )}">
+                                                                        (Provider)
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{! equals (comment.commentedUser.profileName, 'PT' )}">
+                                                                                (Provider Team)
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                    
+                                                                </aura:set>
+                                                            </aura:if>
+                                                            <lightning:formattedDateTime value="{!comment.commentedDateTime}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="true" timeZone="{! $Locale.timezone }"/> 
+                                                        </div>
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!!comment.isNewUser}">
+                                                            <div class="slds-chat-message__meta" >
+                                                                <lightning:formattedText value="{!comment.commentedUser.userFirstName + ' ' +comment.commentedUser.userLastName+ (comment.commentedUser.userRole != ''? ' ('+comment.commentedUser.userRole+')' : '')}"></lightning:formattedText>.
+                                                                <lightning:formattedDateTime value="{!comment.commentedDateTime}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="true" timeZone="{! $Locale.timezone }"/> 
+                                                            </div>
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                    
+
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </aura:set>
+                                </aura:if>
+                            </aura:iteration>
+                            
+                        </div>
+                    </ul>
+                    
+                </section>
+            </div>
+        </div>
+        
+        
+        <div class="slds-grid slds-wrap">
+            <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-4 slds-large-size_11-of-12">
+                <div class="slds-p-around_small">
+                    <lightning:inputRichText value="{!v.replyValue}"  aura:id="replyRichText" placeholder="Enter your message here ..."  ></lightning:inputRichText>
+                </div>	
+            </div>
+            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-4 slds-large-size_1-of-12" style=" margin-top: -11px" >
+                <div class="slds-p-around_small btnReply">
+                    <lightning:button variant="brand" label="Send" title="Brand action" onclick="{!c.postComments}"/>  
+                </div>
+            </div>
+        </div>
+        <div class=" slds-grid slds-gutters slds-p-left_medium">
+            <div class="slds-col slds-size_8-of-12 ">
+                <aura:if isTrue="{!v.restFile}">
+                    <aura:if isTrue="{!v.isFamilyLevel}">
+                        <lightning:fileUpload aura:id="fileId" label="Attach Files" disabled="{! v.accountOwner == v.logedUserID ? false : true}" name="fileUploader" multiple="false" accept="{! v.isProviderMessage? v.acceptProvider:v.accept}" onuploadfinished="{!c.handleUploadFinishedNew}" />
+                        <aura:set attribute="else">
+                            <lightning:fileUpload aura:id="fileId" label="Attach Files" name="fileUploader" multiple="false" accept="{! v.isProviderMessage? v.acceptProvider:v.accept}" onuploadfinished="{!c.handleUploadFinishedNew}"/>
+                        </aura:set>
+                    </aura:if>
+                    <div class="slds-text-body_small slds-text-color_error">{!v.fileName} </div>
+                </aura:if>
+            </div>
+            <div class="slds-col slds-size_4-of-12">
+                <aura:if isTrue="{!$Browser.isPhone}">
+                    <br></br>
+                    <br></br>
+                    <lightning:button variant="brand" label="Send" title="Brand action" onclick="{!c.postComments}" /> </aura:if>
+            </div>
+        </div>
+        <aura:set attribute="else">
+            <p class="slds-text-heading_small slds-text-align_center">Please select a message from the list to view here.</p>
+        </aura:set>
+    </aura:if>
+</aura:component>

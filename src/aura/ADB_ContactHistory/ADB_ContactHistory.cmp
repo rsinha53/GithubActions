@@ -1,0 +1,264 @@
+<aura:component controller='ADBContactHistoryController'>    
+   <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+   <!-- Sample Values : Contact History : US2645912 -->
+    <aura:attribute name="masterContactHistoryDataList" type="List" />
+    <aura:attribute name="contactHistoryDataList" type="List" />
+    <aura:attribute name="conHistLink" type="String" />
+    <aura:attribute name="twelveMonthRollingDataAvlbl" type="boolean" default="true" />
+    <aura:attribute name="listEndCount" type="Integer" default="10" />
+    <aura:attribute name="isVisibleDetailPage" type="boolean" default="false" />
+    <aura:attribute name="currIndex" type="Integer" />
+    <aura:attribute name="contactHistoryDetailData" type="List" />
+    <aura:attribute name="sortField" type="String"  />
+    <aura:attribute name="sortAsc" type="boolean"  />
+    <aura:attribute name="status" type="boolean" default="true"/>
+    <aura:attribute name="communication" type="boolean" default="true"/>
+    <aura:attribute name="type" type="boolean" default="true"/>
+    <aura:attribute name="createdBy" type="boolean" default="true"/>
+    <aura:attribute name="closedDateTime" type="boolean" default="true"/>
+    <aura:attribute name="openedDateTime" type="boolean" default="false"/>
+    <aura:attribute name="engagementId" type="boolean" default="true" />
+    <aura:attribute name="xrefId" type="String" />
+    <aura:attribute name="systemErrorMsg" type="String" />
+    <aura:attribute name="spinner" type="Boolean" default="false" />
+    <aura:attribute name="noDataMsg" type="String" />
+    <aura:attribute name="renderContactHistory" type="Boolean" default="true" />
+    <aura:attribute name="renderCommitmentsCards" type="Boolean" default="false" />
+    <aura:attribute name="apiCallMade" type="Boolean" default="false" />
+    
+    <aura:if isTrue="{!v.renderContactHistory}">   
+        <!-- content renders if true --> 
+                                        <div class="chevron slds-grid slds-gutters slds-p-left_small ">
+                                            <div class="slds-col slds-size_9-of-12">
+                                                <div class="slds-float--left ">
+                                                    <img id="rightArrow" src="{!$Resource.ADB_Chevron + '/ADB_Chevron/Right.png'}" style="width:20px;height:20px;"
+                                                         onclick="{!c.showContactHistoryCard}"/>
+                                                </div>
+                                                <div class="sub-headline-chevron slds-m-left--large">Contact History</div>
+                                            </div>
+                                        </div>
+                                        <aura:set attribute="else">
+                                            <div class="chevron slds-grid slds-gutters slds-p-left_small">
+                                                <div class="slds-col slds-size_9-of-12">
+                                                    <div class="slds-float--left ">
+                                                        <img src="{!$Resource.ADB_Chevron + '/ADB_Chevron/Down.png'}" style="width:20px;height:20px;"
+                                                             onclick="{!c.hideContactHistoryCard}"/>
+                                                    </div>
+                                                    <div class="sub-headline-chevron slds-m-left--large">Contact History</div>
+                                                </div>
+                                            </div>
+                                        </aura:set>
+                                    </aura:if>
+    
+    <aura:if isTrue="{!v.renderCommitmentsCards}">
+    <aura:if isTrue="{!v.spinner}">
+        <div class="slds-align--absolute-center">
+            <lightning:spinner aura:id="offers_spinner" variant="brand" size="large"/>
+        </div>
+    </aura:if>
+    
+    <lightning:layout horizontalAlign="spread" multipleRows="true">
+        <lightning:layoutItem size="12" >
+            <div class="slds-scrollable">    
+                <!-- Header  -->
+                <div class="slds-grid">
+                    <!-- <div class="slds-p-bottom_large">
+                        <span><b>Contact History</b></span>
+                    </div>
+                    Commented US2943826 -->
+                    <!--<aura:if isTrue="{!not(empty(v.contactHistoryTestData))}">
+     <div class="slds-col_bump-left">
+             <span><p><a onclick="{!c.navigateDigitalContactHistory}">View Digital Contact History</a></p></span>
+     </div>
+            </aura:if>-->
+                </div>
+                <!-- /Header End -->
+                
+                <!-- Data table for Contact History --><!-- Commented US2943826 -->
+                <aura:if isTrue="{!not(empty(v.contactHistoryDataList))}">
+                <lightning:layoutItem size="12">
+                    <span class="slds-p-left_large"><b>Member Engagements</b></span>
+                    <div class="slds-p-left_large">
+                        <aura:if isTrue="{!not(empty(v.contactHistoryDataList))}">
+                            <table class="tableWidth slds-table slds-table_fixed-layout slds-no-row-hover slds-table_bordered slds-border_right slds-border_left">
+                                <thead class="slds-table_bordered" >
+                                    <tr class="slds-line-height_reset">
+                                        <th class="thCustom tableHeader" scope="col" style="width: 9%" onclick="{!c.sortByEngagementId}">
+                                            <div class="slds-truncate" title="Engagement Id">Eng Id
+                                                <span>  <aura:if isTrue="{!v.engagementId}"><img src="{!$Resource.ADB_SortingArrows + '/ADB_SortingArrows/up.png'}" class="sortingArrow"/>
+                                                    <aura:set attribute="else">
+                                                        <img src="{!$Resource.ADB_SortingArrows + '/ADB_SortingArrows/down.png'}" class="sortingArrow"/>
+                                                    </aura:set>
+                                                    </aura:if>
+                                                </span></div>
+                                        </th>
+                                        <th class="thCustom tableHeader" scope="col" style="width: 11%" onclick="{!c.sortByOpened}">
+                                            <div class="slds-truncate" title="Opened">Opened
+                                                <span>  <aura:if isTrue="{!v.openedDateTime}"><img src="{!$Resource.ADB_SortingArrows + '/ADB_SortingArrows/up.png'}" class="sortingArrow"/>
+                                                    <aura:set attribute="else">
+                                                        <img src="{!$Resource.ADB_SortingArrows + '/ADB_SortingArrows/down.png'}" class="sortingArrow"/>
+                                                    </aura:set>
+                                                    </aura:if>
+                                                </span></div>
+                                        </th>
+                                        <th class="thCustom tableHeader" scope="col" style="width: 11%" onclick="{!c.sortByClosed}">
+                                            <div class="slds-truncate" title="Closed">Closed
+                                                <span>  <aura:if isTrue="{!v.closedDateTime}"><img src="{!$Resource.ADB_SortingArrows + '/ADB_SortingArrows/up.png'}" class="sortingArrow"/>
+                                                    <aura:set attribute="else">
+                                                        <img src="{!$Resource.ADB_SortingArrows + '/ADB_SortingArrows/down.png'}" class="sortingArrow"/>
+                                                    </aura:set>
+                                                    </aura:if>
+                                                </span></div>
+                                        </th>
+                                        <th class="thCustom tableHeader" scope="col" style="width: 13%" onclick="{!c.sortByCreatedBy}">
+                                            <div class="slds-truncate" title="CreatedBy">Created By
+                                                <span>  <aura:if isTrue="{!v.createdBy}"><img src="{!$Resource.ADB_SortingArrows + '/ADB_SortingArrows/up.png'}" class="sortingArrow"/>
+                                                    <aura:set attribute="else">
+                                                        <img src="{!$Resource.ADB_SortingArrows + '/ADB_SortingArrows/down.png'}" class="sortingArrow"/>
+                                                    </aura:set>
+                                                    </aura:if>
+                                                </span></div>
+                                        </th>
+                                        <th class="thCustom tableHeader" scope="col" style="width: 11%" onclick="{!c.sortByType}">
+                                            <div class="slds-truncate" title="Type">Type
+                                                <span>  <aura:if isTrue="{!v.type}"><img src="{!$Resource.ADB_SortingArrows + '/ADB_SortingArrows/up.png'}" class="sortingArrow"/>
+                                                    <aura:set attribute="else">
+                                                        <img src="{!$Resource.ADB_SortingArrows + '/ADB_SortingArrows/down.png'}" class="sortingArrow"/>
+                                                    </aura:set>
+                                                    </aura:if>
+                                                </span></div>
+                                        </th>
+                                        <th class="thCustom tableHeader" scope="col" style="width: 25%" onclick="{!c.sortByCommunication}">
+                                            <div class="slds-truncate" title="Communication">Communication
+                                                <span>  <aura:if isTrue="{!v.communication}"><img src="{!$Resource.ADB_SortingArrows + '/ADB_SortingArrows/up.png'}" class="sortingArrow"/>
+                                                    <aura:set attribute="else">
+                                                        <img src="{!$Resource.ADB_SortingArrows + '/ADB_SortingArrows/down.png'}" class="sortingArrow"/>
+                                                    </aura:set>
+                                                    </aura:if>
+                                                </span></div>
+                                        </th>
+                                        <th class="thCustom tableHeader" scope="col" style="width: 11%" onclick="{!c.sortByStatus}">
+                                            <div class="slds-truncate" title="Status">Status
+                                                <span>  <aura:if isTrue="{!v.status}"><img src="{!$Resource.ADB_SortingArrows + '/ADB_SortingArrows/up.png'}" class="sortingArrow"/>
+                                                    <aura:set attribute="else">
+                                                        <img src="{!$Resource.ADB_SortingArrows + '/ADB_SortingArrows/down.png'}" class="sortingArrow"/>
+                                                    </aura:set>
+                                                    </aura:if>
+                                                </span></div>
+                                        </th>
+                                        <th class="thCustom tableHeader" style="width: 9%" scope="col">
+                                            <div class="slds-text-align_left"></div>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.contactHistoryDataList}" var="conHist" indexVar="index" end="{!v.listEndCount}">
+                                        <tr class="slds-hint-parent slds-border_top">
+                                            <td data-label="conHistChannel" style="vertical-align:top;">
+                                                <div class="slds-text-align_left" >
+                                                    {!conHist.engagementId}
+                                                </div>
+                                            </td>
+                                            <td data-label="conHistChannel" style="vertical-align:top;">
+                                                <div class="slds-text-align_left" >
+                                                    <aura:if isTrue="{!or((conHist.status == 'Open'),(conHist.status == 'Closed'))}">
+                                                        {!conHist.openedDate}<br/>
+                                                        {!conHist.openedTime}
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                            <td data-label="conHistSender" style="vertical-align:top;">
+                                                <div class="slds-text-align_left" >
+                                                    <aura:if isTrue="{!(conHist.status == 'Closed')}">
+                                                        {!conHist.closedDate}<br/>
+                                                        {!conHist.closedTime}
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                            <td data-label="conHistReceiver" style="vertical-align:top;">
+                                                <div class="slds-text-align_left" >
+                                                    {!conHist.createdBy}
+                                                </div>
+                                            </td>
+                                            <td data-label="conHistSource" style="vertical-align:top;">
+                                                <div class="slds-text-align_left" >
+                                                    {!conHist.type}
+                                                </div>
+                                            </td>
+                                            <td data-label="conHistCampaign" style="vertical-align:top;">
+                                                <div class="slds-text-align_left">
+                                                    {!conHist.communication}
+                                                </div>
+                                            </td>
+                                            <td data-label="conHistDateTime" style="vertical-align:top;">
+                                                <div class="slds-text-align_left">
+                                                    {!conHist.status}
+                                                </div>
+                                            </td>
+                                            <td data-label="conHistDateTime" style="vertical-align:top;">
+                                                <div class="slds-text-align_left" >
+                                                    <button class="slds-button slds-button_neutral"
+                                                            label="Detail"
+                                                            title="Details"
+                                                            onclick="{!c.handleDetailButton}"
+                                                            data-index="{!index}"
+                                                            data-curr="{!conHist}" >Details</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                        </aura:if>
+                    </div>
+                </lightning:layoutItem>
+                    <aura:set attribute="else">
+                        <aura:if isTrue="{! !empty(v.systemErrorMsg)}">
+                        <div class="noDataMsg slds-p-left_large slds-size_1-of-1  slds-m-top_xx-small">
+                            {!v.systemErrorMsg}
+                        </div>        
+                        </aura:if>
+                        
+                        <aura:if isTrue="{! !empty(v.noDataMsg)}">
+                         <ui:message title="" severity="info" closable="false" class="messageBold slds-m-left_xx-large">
+                    		{!v.noDataMsg}
+                		</ui:message>
+                            </aura:if>
+                    </aura:set>
+                </aura:if>
+            </div>
+        </lightning:layoutItem>     
+    </lightning:layout>
+    </aura:if>
+	<!--	Detail Button SubCard Popup	-->
+    <aura:if isTrue="{!v.isVisibleDetailPage}">
+        
+        <section role="dialog" class="slds-modal slds-fade-in-open slds-modal_large" >
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <div class="content_wrapper">
+                        <lightning:layout  horizontalAlign="space">
+                            <lightning:layoutItem size="11" padding="around-small" >
+                                <div class="sub-headline" align="left">
+                                    <c:ADB_ContactHistoryDetailPage contactHistoryDetailData="{!v.contactHistoryDetailData}"/>
+                                </div>
+                            </lightning:layoutItem>
+                            <lightning:layoutItem size="1" padding="around-small">
+
+                                <!-- Close Button-->
+                                <div class="close-button" align="right">
+                                    <img src="{!$Resource.ADB_CallerProfileCardImages + '/ADB_CallerProfileCardImages/closebutton.png'}" style="height: 17px; width: 17px;"
+                                         onclick="{! c.closeDetailPage}"/>
+                                </div>
+                                <!-- / Close Button-->
+
+                            </lightning:layoutItem>
+                        </lightning:layout>
+                    </div>
+                </header>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+    <!--	/Detail Button SubCard Popup	-->
+</aura:component>

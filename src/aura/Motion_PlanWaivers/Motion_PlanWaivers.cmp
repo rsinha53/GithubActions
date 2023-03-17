@@ -1,0 +1,238 @@
+<aura:component >
+    <aura:attribute type="Object[]" name="tableHeaders" />
+    <aura:attribute type="Object" name="tableDetailes" />
+    <aura:attribute name="tempTableBody" type="Object[]" />
+    <aura:attribute name="tableBodyOriginal" type="Object[]" />
+    <aura:attribute name="registeredMemberId" type="String"/>
+    <aura:attribute name="eligibleMemberId" type="String"/>
+    <aura:attribute name="tableBody" type="Object[]" />
+    
+    <!--pagination attributes-->
+    <aura:attribute name="enablePagination" type="Boolean" default="true"/>
+    <aura:attribute name="noOfRecordPerPage" type="Integer" default="25" />
+    <aura:attribute name="pageNumber" type="Integer" default="1" />
+    <aura:attribute name="maxPageNumber" type="Integer" default="0" />
+    <aura:attribute name="currentStartNumber" type="Integer" default="0" />
+    <aura:attribute name="currentEndNumber" type="Integer" />
+    <aura:attribute name="paginationDetail" type="Object"/>  
+    <!--pagination attributes-->
+    
+    <aura:method name="refreshTable" action="{!c.refreshTable}" />
+    <aura:registerEvent name="changePageEvent" type="c:Motion_ChangePageEvt" />
+    <!--Handler-->
+    <aura:handler name="change" value="{!v.tableBodyOriginal}" action="{!c.dataLoaded}" />
+    <!--Handler-->
+    
+    <div class="slds-card card-background" >
+        <div style="margin-left:22px;" class="slds-text-heading_small slds-p-top_medium slds-p-left_medium" ><b> Plan Waivers</b></div>
+        <div style="margin-top:7px;" class="slds-border_top"></div>
+       
+        <aura:if isTrue="{!v.tableDetailes.tableBody.length > 0}">
+            <div style="height:100%;width:100%" class="slds-box slds-card">
+                <div class="FixedHeader">
+                    <table style="" class="slds-table slds-table_cell-buffer slds-table_bordered customWidth">
+                        <thead>
+                            <tr class="slds-line-height_reset" >
+                                <aura:iteration items="{!v.tableDetailes.tableHeaders}" var="i" indexVar="index">
+                                    <th  scope="col" data-index="{!index}"
+                                        data-colname="{!i}">
+                                        <a href="javascript:void(0);" class="slds-th__action slds-text-link_reset">
+                                            <span  class="slds-truncate" title="{!i}">{!i}</span>
+                                        </a>
+                                    </th>
+                                </aura:iteration>               
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:iteration items="{!v.tableDetailes.tableBody}" var="i" indexVar="index">
+                                <aura:if isTrue="{!index % 2!=0}">
+                                <tr class="slds-hint-parent" data-index="{!index}" >
+                                    
+                                    <aura:iteration items="{!i.PlanWaiverRowColumnData}" var="j">
+                                        <aura:if isTrue="{!j.isLink}">
+                                            <td style="{!empty(j.tdStyle) ? '' : j.tdStyle }">
+                                                <span class="{!(i.linkDisabled) ? 'disableLink slds-text-linkt' : 'slds-text-link'}">{!j.fieldValue}</span>
+                                            </td>
+                                        </aura:if>
+                                        <aura:if isTrue="{!j.isIcon}">
+                                            <td style="{!empty(j.tdStyle) ? '' : j.tdStyle }" >                                            
+                                                
+                                                <aura:if isTrue="{!j.fieldValue == 'Active'}">
+                                                    
+                                                    <div id="idActive" class="progressRing">
+                                                        <a data-index="{!index}" onmouseover="{!c.showToolTipActive}" onmouseout="{!c.HideToolTipActive}">    
+                                                            <!--lightning:progressRing value="100" variant="base-autocomplete" size="small" /-->
+                                                            <img src="{!$Resource.Plan_Waivers_Icon+'/complete.svg'}" style="padding-left:4px;" />
+                                                            
+                                                            <div id="{!index}" class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left tooltipText" role="tooltip" >
+                                                                <div class="slds-popover__body">Active</div>
+                                                            </div>
+                                                            
+                                                        </a>
+                                                        
+                                                        
+                                                    </div>                                                       		  
+                                                </aura:if>
+                                                <aura:if isTrue="{!j.fieldValue == 'Expired'}">
+                                                    
+                                                    <div id="expired" class="progressRing">
+                                                        <a data-index="{!index}" onmouseover="{!c.showToolTipExpired}" onmouseout="{!c.HideToolTipExpired}">
+                                                            <!--lightning:progressRing value="0" variant="expired" size="small" /-->
+                                                            <img src="{!$Resource.Plan_Waivers_Icon+'/Expired.svg'}" style="padding-left:4px;" />
+                                                            <div id="{!index}" class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left tooltipText " role="tooltip" >
+                                                                <div class="slds-popover__body">Expired</div>
+                                                            </div>
+                                                        </a>
+                                                        
+                                                    </div>
+                                                </aura:if>
+                                                <aura:if isTrue="{!j.fieldValue == 'Incomplete'}">
+                                                    <div id="incomplete" class="progressRing">
+                                                        <a data-index="{!index}" onmouseover="{!c.showToolTipIncomplete}" onmouseout="{!c.HideToolTipIncomplete}">
+                                                            <!--lightning:progressRing value="25"  direction="drain" variant="warning" size="small" /-->
+                                                            <img src="{!$Resource.Plan_Waivers_Icon+'/Warning.svg'}" style="padding-left:4px;" />
+                                                            <div id="{!index}" class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left tooltipText " role="tooltip" >
+                                                                <div class="slds-popover__body">Incomplete</div>
+                                                            </div>
+                                                        </a>
+                                                        
+                                                    </div>
+                                                </aura:if>
+                                                
+                                                <!--</span>-->
+                                            </td>
+                                        </aura:if>
+                                        <aura:if isTrue="{!j.isOutputText}">
+                                            <td style="{!empty(j.tdStyle) ? '' : j.tdStyle }" >
+                                                <div title="{!j.titleName ? j.titleName : j.fieldValue}" class="slds-truncate">
+                                                    {!j.fieldValue}
+                                                </div>
+                                            </td>
+                                        </aura:if>
+                                        
+                                    </aura:iteration>
+                                    
+                                </tr>
+                                </aura:if>
+                                
+                                <aura:if isTrue="{!index % 2==0}">
+                                <tr class="tr-alt" data-index="{!index}" >
+                                    
+                                    <aura:iteration items="{!i.PlanWaiverRowColumnData}" var="j">
+                                        <aura:if isTrue="{!j.isLink}">
+                                            <td style="{!empty(j.tdStyle) ? '' : j.tdStyle }">
+                                                <span class="{!(i.linkDisabled) ? 'disableLink slds-text-linkt' : 'slds-text-link'}">{!j.fieldValue}</span>
+                                            </td>
+                                        </aura:if>
+                                        <aura:if isTrue="{!j.isIcon}">
+                                            <td style="{!empty(j.tdStyle) ? '' : j.tdStyle }" >                                            
+                                                
+                                                <aura:if isTrue="{!j.fieldValue == 'Active'}">
+                                                    
+                                                    <div id="idActive" class="progressRing">
+                                                        <a data-index="{!index}" onmouseover="{!c.showToolTipActive}" onmouseout="{!c.HideToolTipActive}">    
+                                                            <!--lightning:progressRing value="100" variant="base-autocomplete" size="small" /-->
+                                                            <img src="{!$Resource.Plan_Waivers_Icon+'/complete.svg'}" style="padding-left:4px;" />
+                                                            
+                                                            <div id="{!index}" class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left tooltipText " role="tooltip">
+                                                                <div class="slds-popover__body">Active</div>
+                                                            </div>
+                                                            
+                                                        </a>
+                                                        
+                                                        
+                                                    </div>                                                       		  
+                                                </aura:if>
+                                                <aura:if isTrue="{!j.fieldValue == 'Expired'}">
+                                                    
+                                                    <div id="expired" class="progressRing">
+                                                        <a data-index="{!index}" onmouseover="{!c.showToolTipExpired}" onmouseout="{!c.HideToolTipExpired}">
+                                                            <!--lightning:progressRing value="0" variant="expired" size="small" /-->
+                                                            <img src="{!$Resource.Plan_Waivers_Icon+'/Expired.svg'}" style="padding-left:4px;" />
+                                                            <div id="{!index}" class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left tooltipText " role="tooltip">
+                                                                <div class="slds-popover__body">Expired</div>
+                                                            </div>
+                                                        </a>
+                                                        
+                                                    </div>
+                                                </aura:if>
+                                                <aura:if isTrue="{!j.fieldValue == 'Incomplete'}">
+                                                    <div id="incomplete" class="progressRing">
+                                                        <a data-index="{!index}" onmouseover="{!c.showToolTipIncomplete}" onmouseout="{!c.HideToolTipIncomplete}">
+                                                            <!--lightning:progressRing value="25"  direction="drain" variant="warning" size="small" /-->
+                                                            <img src="{!$Resource.Plan_Waivers_Icon+'/Warning.svg'}" style="padding-left:4px;" />
+                                                            <div id="{!index}" class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left tooltipText " role="tooltip">
+                                                                <div class="slds-popover__body">Incomplete</div>
+                                                            </div>
+                                                        </a>
+                                                        
+                                                    </div>
+                                                </aura:if>
+                                                
+                                                <!--</span>-->
+                                            </td>
+                                        </aura:if>
+                                        <aura:if isTrue="{!j.isOutputText}">
+                                            <td style="{!empty(j.tdStyle) ? '' : j.tdStyle }" >
+                                                <div title="{!j.titleName ? j.titleName : j.fieldValue}" class="slds-truncate">
+                                                    {!j.fieldValue}
+                                                </div>
+                                            </td>
+                                        </aura:if>
+                                        
+                                    </aura:iteration>
+                                    
+                                </tr>
+                                
+                                
+                                
+                                </aura:if>
+                                
+                                
+                                
+                                
+                                
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </div>
+                <aura:if isTrue="{!v.enablePagination}">
+                    <!-- Pagination Start -->
+                    <!-- Showing {!v.currentStartNumber} to {!v.currentEndNumber} of {!v.tableBody.length} entries -->
+                    <div class="slds-p-top_xx-small page-info">
+                        <!-- Showing {!v.paginationDetail.startNumber} to {!v.paginationDetail.endNumber} of {!v.paginationDetail.recordCount}
+                    entries  -->
+                        Showing {!v.currentStartNumber} to {!v.currentEndNumber} of {!v.paginationDetail.recordCount} entries                  
+                    </div>
+                    <lightning:layout class="slds-align_absolute-center">
+                        <lightning:buttonGroup>
+                            <lightning:button variant="neutral" class="slds-button firstButton" label="First" iconName="utility:left" 
+                                              iconPosition="left" onclick="{!c.firstPage}" disabled="{!v.pageNumber == 1}"/>
+                            <lightning:button variant="neutral" class="slds-button" iconName="utility:chevronleft"
+                                              iconPosition="left" onclick="{!c.prevPage}" disabled="{!v.pageNumber == 1}" />
+                            <lightning:button variant="neutral" class="paginationbutton">
+                                <lightning:input name="" label="" style="width: 30%;" value="{!v.pageNumber}"
+                                                 onblur="{!c.enterPage}" variant="label-hidden" />&nbsp;of {!v.paginationDetail.noOfPages}
+                            </lightning:button>
+                            <lightning:button variant="neutral" iconName="utility:chevronright" iconPosition="right"
+                                              onclick="{!c.nextPage}" class="slds-button" disabled="{!v.maxPageNumber == v.pageNumber}" />
+                            <lightning:button variant="neutral" label="Last" iconName="utility:right" iconPosition="right"
+                                              onclick="{!c.lastPage}" class="slds-button" disabled="{!v.maxPageNumber == v.pageNumber}" />
+                        </lightning:buttonGroup>
+                    </lightning:layout>
+                    <!-- Pagination end -->
+                </aura:if>     
+            </div>
+            <aura:set attribute="else">
+                <div style="height:100%;width:100%" class="slds-box slds-card">
+                    <div style="margin-left:5px;padding-bottom: 10px;" class="slds-text-heading_small slds-p-top_medium slds-p-left_medium" ><b> No Plan Waiver records available.</b></div>
+                    
+                </div>
+            </aura:set>
+            
+        </aura:if>       
+        
+    </div>
+    <div class="slds-p-bottom_small">&nbsp;</div>
+    
+</aura:component>

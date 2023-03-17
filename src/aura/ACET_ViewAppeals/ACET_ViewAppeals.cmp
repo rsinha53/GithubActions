@@ -1,0 +1,148 @@
+<aura:component controller="ACET_ViewAppealsController">
+    <!-- Attributes -->
+	<aura:attribute name="isOpenSearch" type="Boolean" default="false"/>
+	<aura:attribute name="showAppealResults" type="Boolean" default="false"/>
+	<aura:attribute name="showSearchError" type="Boolean" default="false"/>
+    <aura:attribute name="showSpinner" type="Boolean" default="false"/>
+	<aura:attribute name="memberId" type="String" default=""/>
+	<aura:attribute name="sourceCode" type="String" default=""/>
+	<aura:attribute name="taxId" type="String" default=""/>
+	<aura:attribute name="appealNum" type="String" default=""/>
+	<aura:attribute name="claimNum" type="String" default=""/>
+	<aura:attribute name="fromDate" type="String" default=""/>
+	<aura:attribute name="toDate" type="String" default=""/>
+	<aura:attribute name="toMinDate" type="String" default=""/>
+	<aura:attribute name="toMaxDate" type="String" default=""/>
+	<aura:attribute name="error" type="Object" default="{}"/>
+    <aura:attribute name="autodocUniqueId" type="String" default=""/>
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0"/>
+	<aura:attribute name="appealTableDetails" type="Object" default="{}"/>
+    <aura:attribute name="showComments" type="boolean" default="false"/>
+    <aura:attribute name="commentsValue" type="String" default=""/>
+    <aura:attribute name="tableDetails_prev" type="Object"/>
+    <aura:attribute name="showPreviewAutodoc" type="Boolean" default="false"/>
+    <aura:attribute name="caseWrapper" type="SAETTSCaseWrapper" default="[]"/>
+    <aura:attribute name="showRouteCase" type="Boolean" default="false"/>
+    <aura:attribute name="memberMap" type="Map" access="public"/>
+    <aura:attribute name="memberPolicyNumberMap" type="Map" default=""/>
+    <aura:attribute name="flowDetails" type="Object" access="public"/>
+    <aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public"/>
+    <aura:attribute name="hasUnresolved" type="Boolean" default="false"/>
+    <aura:attribute name="policy" type="SAEPolicyDetailsResult" access="public" />
+    <aura:attribute name="caseNotSavedTopics" type="String[]"/>
+    <aura:attribute name="selectedRows" type="Object[]" />
+    <aura:attribute name="memberautodocUniqueId" type="String" default="auto" />
+    <aura:attribute name="isProviderSnapshot" type="Boolean" default="false" />
+    <lightning:workspaceAPI aura:id="workspace" />
+
+    <!-- Handlers -->
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:handler name="change" value="{!v.policy}" action="{!c.onPolicyChange}" />
+    <aura:handler name="selectedRowLink" event="c:ACET_AutoDocSelectedRow" action="{!c.navigateToAppealDetail}" />
+    <aura:handler name="selectedRowData" event="c:ACET_AutoDocSelectedRow" action="{!c.handleRowSelect}" />
+    <aura:handler event="c:ACET_EnableAutoDocLink" action="{!c.enableRowLink}" />
+
+    <aura:attribute name="memberFN" type="string" access="public" />
+    <aura:attribute name="memberLN" type="string" access="public" />
+
+    <!-- Appeal Search -->
+    <div class="slds-card card_padding">
+        <div class="slds-grid slds-grid_vertical-align-center slds-gutters">
+            <div class="slds-col slds-size_1-of-12 component_title">
+                Appeal Search
+            </div>
+            <div class="slds-col slds-size_1-of-12">
+                <lightning:input type="checkbox" label="Open Search" checked="{!v.isOpenSearch}"/>
+            </div>
+        </div>
+        <div class="slds-grid slds-gutters card_element_top_margin">
+            <div class="slds-col slds-size_2-of-12">
+                <lightning:input aura:id="taxId" required="true" disabled="{!!v.isOpenSearch}" value="{!v.taxId}" label="Tax ID" maxlength="9" minlength="9" messageWhenTooShort="Enter nine digits." pattern="^[0-9]*$" messageWhenPatternMismatch="Enter a numeric value."/>
+            </div>
+            <div class="slds-col slds-size_2-of-12">
+                <lightning:input aura:id="appealNum" disabled="{!!v.isOpenSearch}" value="{!v.appealNum}" label="Appeal #" pattern="^[a-zA-Z0-9]*$" messageWhenPatternMismatch="Enter a valid Appeal Number."/>
+            </div>
+            <div class="slds-col slds-size_2-of-12">
+                <lightning:input aura:id="claimNum" disabled="{!!v.isOpenSearch}" value="{!v.claimNum}" label="Claim #" pattern="^[a-zA-Z0-9]*$" messageWhenPatternMismatch="Enter a valid Claim Number."/>
+            </div>
+            <div class="slds-col slds-size_2-of-12">
+                <lightning:input aura:id="fromDate" disabled="{!!v.isOpenSearch}" value="{!v.fromDate}" type="date" label="From" dateStyle="short" messageWhenBadInput="Enter a valid Date." messageWhenPatternMismatch="Enter a valid Date." onchange="{!c.onFromChange}"/>
+            </div>
+            <div class="slds-col slds-size_2-of-12">
+                <lightning:input aura:id="toDate" required="{!!empty(v.fromDate)}" disabled="{!!v.isOpenSearch}" value="{!v.toDate}" type="date" label="To" dateStyle="short" messageWhenBadInput="Enter a valid Date." messageWhenPatternMismatch="Enter a valid Date." min="{!v.toMinDate}" max="{!v.toMaxDate}" onchange="{!c.onToChange}"/>
+            </div>
+        </div>
+        <div class="slds-grid card_element_top_margin">
+            <div>
+                <lightning:button label="Search" disabled="{!!v.isOpenSearch}" variant="brand" class="card_right_margin brand_button" onclick="{!c.onSearch}"/>
+                <lightning:button label="Clear" disabled="{!!v.isOpenSearch}" class="neutral_button card_right_margin" onclick="{!c.onClear}"/>
+            </div>
+            <aura:if isTrue="{!v.showSearchError}">
+                <div>
+                    <c:ACET_ErrorPopup aura:id="errorPopup" errorMessage="{!v.error.message}" topDescription="{!v.error.topDescription}"
+                                       descriptionList="{!v.error.descriptionList}" moveLeft="-17" isNubbinLeft="true"/>
+                </div>
+            </aura:if>
+        </div>
+    </div>
+    
+    <!-- Appeal Results -->
+    <aura:if isTrue="{!v.showAppealResults}">
+        <div class="slds-card card_top_margin card_bottom_padding">
+            <aura:if isTrue="{!v.showSpinner}">
+                <lightning:spinner variant="brand"/>
+            </aura:if>
+            
+            <div class="slds-grid slds-grid_align-spread card_padding">
+                <div class="slds-col component_title">
+                    Appeal Results
+                </div>
+                <div class="slds-col">
+                    <lightning:buttonGroup>
+                        <lightning:button label="Autodoc" disabled="{!and(!v.sourceCode != 'AP', !v.hasUnresolved)}" onclick="{!c.onPreviewAutodoc}"/>
+                        <lightning:button label="Add Comments" disabled="{!and(!v.sourceCode != 'AP', !v.hasUnresolved)}" onclick="{!c.onAddComments}"/>
+                        <lightning:button label="Route" disabled="{!and(!v.sourceCode != 'AP', !v.hasUnresolved)}" onclick="{!c.onRouteCase}" class="brand_button" variant="brand"/>
+                    </lightning:buttonGroup>
+                </div>
+            </div>
+            <div class="appealResults">
+                <c:ACET_AutoDocDataTable autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.policySelectedIndex}" enablePagination="false" 
+                                         tableDetails="{!v.appealTableDetails}" enableSort="true" enableSearch="true" isCheckAutodocOnRowClick="true"
+                                         hasCaseItems="{!v.sourceCode == 'AP'}" selectedRows="{!v.selectedRows}"/>
+            </div>
+        </div>
+    </aura:if>
+    
+    <!-- Appeal Comments -->
+    <aura:if isTrue="{!v.showComments}">
+        <div class="slds-card card_padding card_top_margin">
+            <c:ACET_HoverPopup aura:id="commentsId" moveRight="" description="" isNubbinLeft="true"
+                               descriptionList="['Use the comments to include a brief','description of the issue, research performed,', 'and any attempts to resolve']"/>
+
+            <p class="component_title slds-form-element__label field_label_padding" style="border-bottom:1px dashed;padding:0px"
+               data-popupId="commentsId" onmouseover="{!c.togglePopup}" onmouseout="{!c.togglePopup}">
+                Comments:
+            </p>
+            <b class="component_title slds-p-left_small">View Appeals</b>
+
+            <lightning:textarea name="commentsTextArea" value="{!v.commentsValue}" label="Commets" aura:id="commentsBoxId" variant="label-hidden"
+                                class="slds-p-top_small" onkeyup="{!c.handleKeyup}" maxlength="2000"/>
+            <span class="floatToRight valueCls slds-form-element__static">
+                Characters remaining:
+                <lightning:formattedNumber value="{!2000-v.commentsValue.length}"/>
+            </span>
+        </div>
+    </aura:if>
+    
+    <!-- Preview Autodoc -->
+    <aura:if isTrue="{!v.showPreviewAutodoc}">
+        <c:ACET_PreviewAutoDoc tableDetails_prev="{!v.tableDetails_prev}" isModalOpen="{!v.showPreviewAutodoc}" />
+    </aura:if>
+    
+    <!-- Route Case -->
+    <aura:if isTrue="{!v.showRouteCase}">
+        <c:SAE_TtsModalCaseCreation Topic="View Appeals" caseWrapper="{!v.caseWrapper}" isModalOpen="{!v.showRouteCase}" autodocUniqueId="{!v.autodocUniqueId}"
+                                    freeFormCommentsVal="{!v.commentsValue}" memberMap="{!v.memberMap}" memberPolicyNumberMap="{!v.memberPolicyNumberMap}"
+                                    flowDetails="{!v.flowDetails}" flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}" onlyRoute="true"/>
+    </aura:if>
+</aura:component>

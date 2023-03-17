@@ -1,0 +1,100 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes" access="global" controller="SAEHouseHoldController">
+	<aura:attribute name="AutodocKey" type="string" access="public"/>
+	<aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+	<aura:attribute name="selectedMemberInfo" type="Object"/>
+    <aura:attribute name="selectedGroup" type="Object"/>
+    
+    <aura:attribute name="selectedCustomerAdmin" type="Object" />
+    <aura:attribute name="houseHoldData" type="List"/>
+    <aura:attribute name="displayGroup" type="boolean"  default ="false"/>
+    <aura:attribute name="ChangedHouseHoldData" type="List"/>
+    <aura:attribute name="colorPalette" type="String[]" default="['red', 'green', 'blue']" />
+    <!--Malinda-->
+    <aura:attribute name="interactionCard" type="Object" access="public"/>
+    <aura:attribute name="contactName" type="string" access="public"/>
+    <aura:attribute name="searchOption" type="string" access="public"/>
+    <aura:attribute name="memberGrpN" type="string" access="public"/>
+    <aura:attribute name="membTabId" type="string" access="public"/>
+    <lightning:workspaceAPI aura:id="workspace"/>
+
+    <aura:attribute name="subjectCard" type="Object" access="public"/>
+
+    <aura:handler name="change" value="{!v.houseHoldData}" action="{!c.houseHoldChange}"/>
+
+    <!-- US1741579 - update Household when Policy is changed -->
+    <aura:handler event="c:ETSBE_PolicyClick" action="{!c.handlePolicyClick}" />
+    <aura:attribute name="transId" type="String" default="" access="global"/>
+    <aura:attribute name="conAddress" type="String" default="" access="global"/>
+	<aura:handler name="change" value="{!v.transId}" action="{!c.runExtendedService}"/>
+
+     <!-- US1888880 -->
+    <aura:attribute name="isFireSpinner" type="Boolean" default="false"/>
+
+     <!-- US1761826 - UHC/Optum Exclusion UI -->
+    <aura:attribute name="allowCallouts" type="Boolean" default="true"/>
+
+    <!--HOT FIX : Regression issues 10 - Interaction# not populated for the Household members when accessed from Household card (Malinda)-->
+    <aura:attribute name="interactionRecd" type="Interaction__c"/>
+
+    <!-- US2060237	Other Card Validation - Snapshot - Other (Third Party) - 10/10/2019 - Sarma -->
+    <aura:attribute name="isOtherSearch" type="Boolean"  />
+    <aura:attribute name="providerNotFound" type="Boolean"  />
+    <aura:attribute name="noMemberToSearch" type="Boolean"  />
+    <aura:attribute name="isProviderSearchDisabled" type="Boolean"  />
+    <aura:attribute name="isfindIndividualFlag" type="Boolean"  />
+    <aura:attribute name="memberCardFlag" type="Boolean"  />
+    <aura:attribute name="isAdditionalMemberSearchfindIndividual" type="Boolean" />
+    <aura:attribute name="otherCardDataObj" type="Object"/>
+
+    <!-- US1944108 - Accommodate Multiple Payer ID's - Kavinda -->
+        <aura:attribute name="payerID" type="String" />
+
+    <!-- US2137922: Page Feature Unique - Thanish - 7th Nov 2019 -->
+    <aura:attribute name="AutodocPageFeature" type="String"/>
+
+    <aura:attribute name="FlowType" type="string" />
+    <aura:attribute name="specialInstructionsInfo" type="Object"/>
+    <aura:attribute name="isMockEnabled" type="Boolean" default="false"/>
+    
+    <!-- Thanish - 15th Nov 2019 - Autodoc fix -->
+    <div id="houseHoldTable" class="slds-is-relative slds-box slds-card card_padding titleCheckBox" data-auto-doc="true" data-auto-doc-feature="{!v.AutodocPageFeature}" data-auto-doc-section-key="Household" data-auto-doc-section-column-indexes="1,2">
+        <div class="autodocNotTableView" data-auto-doc-feature="{!v.AutodocPageFeature}">
+
+        <!-- US1888880 - Malinda : Spinner -->
+    	<lightning:spinner class="slds-hide" aura:id="policy-household-spinner"
+   						alternativeText="Loading.." title="Loading.."
+   						variant="brand" size="large"/>
+
+            <h3 class="component_title card_bottom_margin slds-text-heading_small">Household</h3>
+
+            <table class="">
+                <tbody>
+            		<aura:iteration items="{!v.ChangedHouseHoldData}" var="obj">
+            			<!-- US1776651 - Malinda START --> <!--  DE281466	HouseHold issue with Twins : Adding first name to tab uniqueness - 22/11/2019 - Sarma  -->
+                        <tr  id="{!obj.memberId + obj.dob}"  data-memberId="{!obj.memberId}" data-dob="{!obj.dob}" data-GroupId="{!obj.groupNumber}"
+                            data-firstName="{!obj.firstName}" data-lastName="{!obj.lastName}" data-unique="{!obj.memberId + obj.dob + obj.firstName}" data-role='{!obj.relationship}' data-isMainMember="{!obj.isMainMember}"> <!-- US2138277 - Thanish - 29th Oct 2019 -->
+                        <!-- US1776651 - Malinda END -->
+                            <td onclick="{!c.navigateToSnapshot}" data-label="" data-memberId="{!obj.memberId}" data-dob="{!obj.dob}" data-GroupId="{!obj.groupNumber}"
+                                data-firstName="{!obj.firstName}" data-lastName="{!obj.lastName}" data-unique="{!obj.memberId + obj.dob + obj.firstName}" data-role='{!obj.relationship}' data-isMainMember="{!obj.isMainMember}"
+                                style="padding-top: 0px; padding-right: 0px; padding: bottom 8px; padding-left: 0px;"> <!-- US2138277 - Thanish - 29th Oct 2019 -->
+                                <aura:if isTrue="{!obj.isMainMember}">
+                                	<div class="slds-truncate field_value">{!obj.fullName}</div>
+                                 	<aura:set attribute="else">
+										<p class="link_field_value"><a href="javascript:void(0)">{!obj.fullName}</a></p>
+                                    </aura:set>
+                                </aura:if>
+                            </td>
+                            <td data-label="" style="padding-top: 0px; padding-right: 0px; padding: bottom 8px; padding-left: 0px;"> <!-- US2138277 - Thanish - 29th Oct 2019 -->
+                                <div class="slds-truncate field_value">{!obj.dob}</div>
+                            </td>
+                            <td data-label="" style="padding-top: 0px; padding-right: 0px; padding: bottom 8px; padding-left: 0px;"> <!-- US2138277 - Thanish - 29th Oct 2019 -->
+                                <div class="slds-truncate field_value" style="text-transform:capitalize;">{!obj.relationship}</div>
+                            </td>
+                        </tr>
+            		</aura:iteration>
+                </tbody>
+           </table>
+
+        </div>
+    </div>
+</aura:component>

@@ -1,0 +1,118 @@
+<!--US2841187: This lightning bundle making custom lightining datatable and showing the fields of Rx Medications
+custom object on Family Overview Page-->
+<!-- Author Name : Derek DuChene -->
+
+<aura:component implements="force:hasRecordId,force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" controller="SNI_FL_RxMedicationsController">
+    <aura:attribute name="recordId" type="string" />
+    <aura:attribute name="lstRxM" type="Family_Link_Rx_Medication__c[]" />
+    <aura:attribute name="shortLstRxM" type="Family_Link_Rx_Medication__c[]" />
+    <aura:attribute name="fullLstRxM" type="Family_Link_Rx_Medication__c[]" />
+    <aura:attribute name="showAllRxM" type="Boolean" default="false"/>
+    <aura:attribute name="rxMColumns" type="List"/>
+    <aura:attribute name="checkReadOnly" type="Boolean" default="true"/>
+    <aura:attribute name="showEditModal" type="Boolean" default="false"/>
+    <aura:attribute name="showRemoveModal" type="Boolean" default="false"/>
+    <aura:attribute name="selectedRxMed" type="Object"/>
+    <aura:attribute name="SelectedRxMedName" type="string" />
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute name="viewAllBool" type="Boolean" default="true"/>
+    <aura:attribute name="File_count" type="String" default="0"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doinit}"/>
+    <lightning:card iconName="custom:custom94" >
+        <aura:set attribute="title" >
+            <div class="slds-text-heading_small slds-form-element__label slds-text-title_bold"><b>Care Advisor Connect Rx Medications ({!v.File_count})</b>
+            </div>
+            
+        </aura:set>
+        <aura:set attribute="actions">
+            <aura:if isTrue="{!v.checkReadOnly}">
+                <lightning:button label="New" onclick="{!c.clickNew}"/>
+            </aura:if>
+        </aura:set>
+        <div class="slds-p-bottom_small top-border">
+            <lightning:datatable class = "tabStyle"
+                                 data="{!v.lstRxM}"
+                                 columns="{!v.rxMColumns}"
+                                 keyField="id"
+                                 hideCheckboxColumn="true"
+                                 onrowaction="{! c.handleContactRowAction }"/> </div>
+
+        	<aura:if isTrue="{!greaterthan(v.fullLstRxM.length, 5)}">
+        		<div class="centerText">
+	        		<aura:if isTrue="{!v.showAllRxM}">
+			        	<a onclick="{!c.hideRxMeds}" >Hide</a>
+			        	<aura:set attribute="else">
+			        		<a onclick="{!c.showRxMeds}" >View All</a>
+			        	</aura:set>
+		        	</aura:if>
+	        	</div>
+        	</aura:if>
+        
+        
+    </lightning:card>
+   
+    
+    <aura:if isTrue="{!v.showEditModal}">
+        <div class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <div class="slds-modal__header">
+                    <h2 class="title slds-text-heading--medium">Edit {!v.SelectedRxMedName}</h2>
+                </div>
+                <div class="slds-modal__content slds-p-around--medium">
+                    <!-- if additional fields are being added, please add a lightning Edit Form fields -->
+                    <lightning:layout multipleRows="true" >
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:input required="true" label="Name" value="{!v.selectedRxMed.Name}" maxlength="80"/>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:input label="Pill Size" value="{!v.selectedRxMed.Pill_Size__c}" maxlength="255"/>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:input label="Directions" value="{!v.selectedRxMed.Directions__c}" maxlength="255"/>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:input label="Rx Number" value="{!v.selectedRxMed.Rx_Number__c}" maxlength="255"/>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:input label="Pharmacy" value="{!v.selectedRxMed.Pharmacy__c}" maxlength="255"/>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:input type="date" dateStyle="short" label="Refill Date" value="{!v.selectedRxMed.Refill_Date__c}" maxlength="255"/>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:input aura:id="phone" label="Pharmacy Phone Number" value="{!v.selectedRxMed.Pharmacy_Phone_Number__c}" maxlength="40"/>
+                        </lightning:layoutitem>
+                    </lightning:layout>
+                    
+                </div>
+                <div class="slds-modal__footer">
+                    <lightning:button variant="neutral" label="Cancel" onclick="{!c.closeEditModal}"/>
+                    <lightning:button  label="Save" variant="brand" onclick="{!c.editRxMedInfo}"/>
+                </div>
+            </div>
+        </div>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+    
+    
+    
+    <aura:if isTrue="{!v.showRemoveModal}">
+        <div class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <div class="slds-modal__header">
+                    <h2 class="title slds-text-heading--medium">Remove Family Link Rx Medication</h2>
+                </div>
+                <div class="slds-modal__content slds-p-around--medium centerText">
+                    Are you sure you want to remove this Family Link Rx Medication?
+                </div>
+                <div class="slds-modal__footer">
+                    <lightning:button variant="neutral" label="Cancel" onclick="{!c.closeRemoveModal}"/>
+                    <lightning:button  label="Remove" variant="brand" onclick="{!c.clickRemoveRxMed}"/>
+                </div>
+            </div>
+        </div>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+    
+    
+</aura:component>

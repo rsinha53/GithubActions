@@ -1,0 +1,109 @@
+<apex:page controller="ACETConsumerAccountsController" sidebar="false">
+    <script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    <apex:includeScript value="{!$Resource.JqueryDynamicCallTypesValidation}" />
+    <apex:pageMessages />
+    <apex:form >
+        
+        <c:ACETInteractionHighlightsPanel InteractionAtt="{!wrapper.interaction}"
+            SubjectAtt="{!wrapper.Subject}"
+            AdditionalInfoAtt="{!wrapper.AdditionalInfo}" html-auto-doc="auto" selectedOriginator="{!wrapper.interaction.Originator_Name__c}"></c:ACETInteractionHighlightsPanel>
+            <apex:outputPanel id="hippapopupPanel">
+                       <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+            </apex:outputPanel>
+                        
+        <apex:outputPanel rendered="{!!isCancelCaseCreation}">
+            <apex:sectionHeader title="Consumer Accounts" />
+            <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+                attrShowSaveAndCloseButton="false" attrShowSaveButton="true"
+                attrShowMisdirectButton="true"
+                attrSourceOriginator="{!wrapper.SourceOriginator}"
+                attrInteractionId="{!wrapper.Interaction.Id}"
+                attrSubjectId="{!wrapper.Subject.Id}"
+                attrCallTopic="Consumer Accounts" rendered="{!notResearchUser}" />
+            <apex:pageBlock >
+                        <apex:outputPanel style="margin-left:30%;">
+              <c:ACETCirrusLandingPage id="cirrus" attrMemberId="{!wrapper.AdditionalInfo.MemberId}" btnName="Launch Consumer Accounts"/>    
+          </apex:outputPanel>
+                 <!-- Below component Added by Divya - US564097 -->
+                <c:ACETDynamicCallTypesDisplay attrCaseDataWrapper="{!wrapper}"
+                    attrCallTopic="{!wrapper.caseobj.Topic__c}"
+                    attrshowAccountType="true" attrShowPickListcallTypes="false"
+                    attrShowCheckBoxCallTypes="true" />
+                <apex:pageblockSection columns="1" id="inputPanel"
+                    html-auto-doc="auto">
+                    <apex:pageBlockSectionItem html-auto-doc-item="false">
+                        <apex:outputLabel value="Comments"></apex:outputLabel>
+                        <apex:inputTextArea id="comments" cols="100" rows="5"
+                            value="{!wrapper.Comments}" />
+                    </apex:pageBlockSectionItem>
+                </apex:pageblockSection>
+            </apex:pageBlock>
+        </apex:outputPanel>
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+            attrShowSaveAndCloseButton="false" attrShowSaveButton="true"
+            attrShowMisdirectButton="true"
+            attrSourceOriginator="{!wrapper.SourceOriginator}"
+            attrInteractionId="{!wrapper.Interaction.Id}"
+            attrSubjectId="{!wrapper.Subject.Id}"
+            attrCallTopic="Consumer Accounts" rendered="{!notResearchUser}"
+            attrLocation="bottom" />
+    </apex:form>
+    <script>
+    $(document).ready(function() {
+        acet.autodoc.startAutodoc(); 
+        addRequiredFieldIndicator("[id$='pbTableId']");
+        addRequiredFieldIndicator("[id$='accountTypes']");
+        checkCallTypeOther(".autodoc input[type=checkbox]");
+        checkCallTypeResolved(".autodoc-case-item-resolved input[type=checkbox]");
+        unCheckSelectAll();    
+    });
+        function checkCirrusSystem(){
+            var systemAvailable = false;
+            $.ajax({
+                type : "Get",
+                url : 'https://cirrus-dev.optum.com/index.html',
+                data : {},
+                success : function(result,status,xhr) {
+                    if(xhr.status = '200'){
+                     systemAvailable = true;
+                    }
+                    $("#cirrusPanel").css("margin-left","0%");
+                    $("#cirrusPanel").css("overflow","scroll");
+                    $("#cirrusPanel").html('');
+                },
+                error : function(xhr,status,error) {
+                    systemAvailable = false;
+                    $("#cirrusPanel").addClass("pbError").append("<div>Error : Cirrus is down.</div>");                    
+                }
+    
+            });
+            return systemAvailable ;        
+        }
+         
+    </script>
+    <style type="text/css">
+table[role="presentation"] {
+    background: #FFF;
+    padding: 0 10px;
+    width: 30%;
+}
+
+.imgclass:hover {
+    background-image: url('/img/help/helpOrbs.gif');
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 15px;
+    background-position: right;
+}
+
+.imgclass {
+    background-image: url('/img/help/helpOrbs.gif');
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 15px;
+}
+</style>
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+</apex:page>

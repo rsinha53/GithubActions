@@ -1,0 +1,170 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes" access="global" >
+    
+    <aura:attribute name="autodocUniqueId" type="String" default="srvLineId"/>
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default="srvLineCmpId"/>
+    <aura:attribute name="claimServiceLineList" type="Object"/>
+    <aura:attribute name="serviceLineList" type="List" default="[]"/>
+    <aura:attribute name="selectedRows" type="Object[]"/>
+    <aura:attribute name="clmSvcInfoList" type="Aura.Component[]"/>
+    <aura:handler name="selectedRowLink" event="c:ACET_AutoDocSelectedRow" action="{!c.getSelectedRecords}" />
+    <aura:handler name="closeServiceLineEvent" event="c:ACET_ClaimServiceLineDetailCloseEvent" action="{!c.handlecloseServiceLine}" />
+
+    <aura:attribute name="memberLN" type="string" access="public" />
+    <aura:attribute name="authNum" type="string" access="public" />
+    <aura:attribute name="referralNum" type="string" access="public" />
+    <aura:attribute name="claimInput" type="Object" />
+    <aura:attribute name="memberCardSnap" type="Object" access="public" />
+    <aura:attribute name="contactUniqueId" type="string" access="public" />
+    <aura:attribute name="caseWrapperMNF" type="SAETTSCaseWrapper" access="public" default="[]" />
+    <aura:attribute name="componentId" type="String" access="global"/>
+    <aura:attribute name="claimNo" type="String" default="" />
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0" />
+    <aura:attribute name="hipaaEndpointUrl" type="String" default=""/>
+    <aura:attribute name="houseHoldMemberId" type="String" access="public" />
+    <aura:attribute name="memberTabId" type="string" access="public" />
+    <aura:attribute name="memberDOB" type="string" access="public" />
+    <aura:attribute name="memberCardData" type="Object" />
+    <aura:attribute name="memberFN" type="string" access="public" />
+    <aura:attribute name="policy" type="SAEPolicyDetailsResult" access="public" />
+    <aura:attribute name="policyNumber" type="String" />
+    <aura:attribute name="memberPolicies" type="SAEMemberProviderSearchCoveragesResult.CoverageLine[]" />
+    <aura:attribute name="autoDocToBeDeleted" type="Object"/>
+    <aura:attribute name="autodoc" type="Boolean" default="false" />
+    <aura:attribute name="serviceFromDate" type="string" />
+    <aura:attribute name="startDate" type="string" default="2021-6-18"/>
+    <aura:attribute name="serviceToDate" type="string" default="2021-6-18"/>
+    <aura:attribute name="Type" type="String" />
+    <aura:attribute name="SubType" type="String" />
+    <aura:attribute name="IsCaseSaved" type="Boolean" default="false" />
+    <aura:attribute name="AuthAutodocPageFeature" type="String" default="authPageDetails" />
+    <aura:attribute name="authContactName" type="String" />
+    <aura:attribute name="SRNFlag" type="Boolean" default="false" />
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+    <aura:attribute name="interactionType" type="string" />
+    <aura:attribute name="AutodocPageFeatureMemberDtl" type="String" />
+    <aura:attribute name="isAutodocForMultiplePages" type="Boolean" default="false" />
+    <aura:attribute name="AutodocKeyMemberDtl" type="String"/>
+    <aura:attribute name="isHippaInvokedInProviderSnapShot" type="Boolean" default="false"/>
+    <aura:attribute name="caseNotSavedTopics" type="String[]"/>
+    <aura:attribute name="interactionOverviewTabId" type="String" access="public"/>
+    <aura:attribute name="noMemberToSearch" type="Boolean" default="false" />
+    <aura:attribute name="providerDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="interactionCard" type="Object" access="public"/>
+    <aura:attribute name="selectedTabType" type="String" access="public"/>
+    <aura:attribute name="originatorType" type="string" access="public"/>
+    <aura:attribute name="AUTHFlag" type="Boolean" default="false" />
+    <aura:attribute name="referralFlag" type="Boolean" default="false" />
+    <ltng:require styles="{!$Resource.ACETLink_MasterStyle}" />
+    <aura:attribute name="isDependent" type="boolean" default="false" access="public" />
+    <aura:attribute name="currentPayerId" type="String" access="public" />
+
+    <!-- Ketki 11/5/2020 US2338191 -->
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}" />
+    <aura:attribute name="claimServiceLineDetails" type="Object" />
+    <!-- SCRIPTS -->
+    <ltng:require scripts="{!$Resource.ACET_AutodocJS}" />
+    <!-- /SCRIPTS -->
+	<!-- Ketki 11/5/2020 US2338191 -->
+    <aura:attribute name="allSvlLineCardData" type="Object" />
+    <aura:attribute name="allSvlLnAddInfoCardData" type="Object" />
+
+    <aura:attribute name="interactionRec" type="Interaction__c"/>
+
+    <aura:attribute name="currentIndexOfOpenedTabs" type="Integer"/>
+
+    <div class="slds-card slds-m-top_small slds-m-bottom_small">
+
+        <div class="component_title card_left_padding card_top_padding"> Service Line(s) </div>
+        <div style="overflow: auto;">
+            <c:ACET_AutoDocDataTable aura:id="childComponent"
+                                     tableID="{!v.autodocUniqueId}"
+                                     autodocUniqueId="{!v.autodocUniqueId}"
+                                     tableDetails="{!v.claimServiceLineList}"
+                                     maxPageNumber="{!v.maxPageNumber}"
+                                     pageNumber="{!v.pageNumber}"
+                                     autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"
+                                     overrideLinkDisabled="false"
+                                     headerHoverEnabled="true"
+                                     enableSearch="true"/>
+
+        </div>
+    </div>
+    <div aura:id="svcdltcmp">
+        {! v.clmSvcInfoList }
+    </div>
+    <aura:if isTrue="{!v.AUTHFlag}">
+        <div id="authorizations" aura:id="AuthorizationResults-comp" class="slds-card slds-p-bottom--small  slds-m-top_small slds-s-bottom--x-small" style="{! 'order: ' +v.topicAuthNO + ' !important;' }">
+             <lightning:layout multipleRows="true" class="{! ' slds-p-bottom_small-x ' + if(equals(v.topicAuthNO, 1), ' slds-p-top_small ', '') }" >
+                <lightning:layoutItem size="12" >
+                    <c:SAE_AuthorizationResults aura:id="AuthorizationDetails"
+                                                FirstName="{!v.memberFN}" LastName="{!v.memberLN}"
+                                                Dob="{!v.memberDOB}" tabUniqueId="{!v.memberTabId}" memberCard="{!v.memberCardData}"
+                                                subjectCard="{!v.memberCardSnap}" policy="{!v.policy}" contactUniqueId="{!v.contactUniqueId}"
+                                                caseWrapper="{! v.caseWrapperMNF}" cseType="{! v.Type }" cseSubtype="{! v.SubType }"
+                                                IsCaseSaved="{! v.IsCaseSaved }" AutodocPageFeature="{!v.AuthAutodocPageFeature}"
+                                                memberTabId="{! v.memberTabId }" contactName="{!v.authContactName}"
+                                                SRNFlag="{!v.SRNFlag}" memberId="{!v.houseHoldMemberId}"
+                                                interactionType="{!v.interactionType}" AutodocKey="{!v.AutodocKey}"
+                                                interactionRec="{!v.interactionRec}"
+                                                isMedicaidPlan="{!v.policy.resultWrapper.policyRes.isMedicaidPlan}"
+                                                AutodocPageFeatureMemberDtl="{!v.AutodocPageFeatureMemberDtl}"
+                                                isAutodocForMultiplePages="{!v.isAutodocForMultiplePages}"
+                                                AutodocKeyMemberDtl="{!v.AutodocKeyMemberDtl}"
+                                                policyNumber="{!v.policyNumber}"
+                                                policySelectedIndex="{!v.policySelectedIndex}"
+                                                componentId="{!v.componentId}"
+                                                isHippaInvokedInProviderSnapShot="{!v.isHippaInvokedInProviderSnapShot}"
+                                                hipaaEndpointUrl="{!v.hipaaEndpointUrl}"
+                                                caseNotSavedTopics="{!v.caseNotSavedTopics}"
+                                                interactionOverviewTabId="{!v.interactionOverviewTabId}"
+                                                noMemberToSearch="{!v.noMemberToSearch}"
+                                                providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}"
+                                                flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}"
+                                                interactionCard = "{!v.interactionCard}"
+                                                selectedTabType = "{!v.selectedTabType}"
+                                                memberPolicies = "{!v.memberPolicies}"
+                                                originatorType = "{!v.originatorType}"
+                                                memberautodocUniqueId="{!v.autodocUniqueId}"
+                                                autodocUniqueId="{!v.autodocUniqueId}"
+                                                autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"
+                                                autoDocToBeDeleted = "{!v.autoDocToBeDeleted}"
+                                                showButtons = "false"
+                                                serviceFromDate = "{!v.startDate}"
+                                                serviceToDate = "{!v.serviceToDate}"
+                                                isClaimDetail = "true"
+                                                isClaimServiceAuth="true"
+                                                authNum="{!v.authNum}"
+                                                autodoc="{!v.autodoc}"
+                                                claimNo="{!v.claimNo}"
+                                                claimspolicyDetails="{!v.policy}"
+                                                currentIndexOfOpenedTabs ="{!v.currentIndexOfOpenedTabs}"/>
+
+                </lightning:layoutItem>
+            </lightning:layout>
+        </div>
+        <div style="padding-bottom: 10px;">
+        </div>
+    </aura:if>
+    <aura:if isTrue="{!v.referralFlag}">
+        <div id="refferals" aura:id="ReferralResults-comp" class="slds-card slds-p-bottom--small  slds-m-top_small slds-s-bottom--x-small" style="{! 'order: ' +v.topicAuthNO + ' !important;' }">
+             <lightning:layout multipleRows="true" class="{! ' slds-p-bottom_small-x ' + if(equals(v.topicAuthNO, 1), ' slds-p-top_small ', '') }" >
+                <lightning:layoutItem size="12" >
+                    <c:ACET_ViewPCPReferrals aura:id="ReferralDetails"
+                                             caseWrapper="{!v.caseWrapperMNF}"  componentId="{!v.componentId}" memberDOB="{!v.memberDOB}"
+                                                 policy="{!v.policy}" memberFN="{!v.memberFN}" memberCardData="{!v.memberCardData}" isDependent="{!v.isDependent}"
+                                                 memberCardSnap ="{!v.memberCardSnap}" policyNumber="{!v.policyNumber}" houseHoldMemberId="{!v.houseHoldMemberId}"
+                                                 memberPolicies="{!v.memberPolicies}" policySelectedIndex="{!v.policySelectedIndex}"
+                                                 currentPayerId="{!v.currentPayerId}" memberautodocUniqueId="{!v.autodocUniqueId}" autodocUniqueId="{!v.autodocUniqueId}"
+                                                 showButtons="{!v.showButtons}" serviceFromDate="{!v.serviceFromDate}" serviceToDate="{!v.serviceToDate}"
+                                                 autodoc="{!v.autodoc}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}" isClaim="true"
+                                                 claimNo="{!v.claimNo}"  currentIndexOfOpenedTabs ="{!v.currentIndexOfOpenedTabs}"
+												 interactionRec="{!v.interactionRec}"
+                                                 authNum="{!v.referralNum}"/>
+                </lightning:layoutItem>
+            </lightning:layout>
+        </div>
+        <div style="padding-bottom: 10px;">
+        </div>
+    </aura:if>
+</aura:component>

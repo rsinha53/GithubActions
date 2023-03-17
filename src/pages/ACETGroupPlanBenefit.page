@@ -1,0 +1,389 @@
+<apex:page controller="ACETGroupPlanBenefitController" docType="html-5.0" action="{!init}">
+    <script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="{!$Resource.JqueryTableSorter}"></apex:includeScript>
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js" />
+    <apex:includeScript value="/soap/ajax/30.0/connection.js" />
+    <style>
+    .headerResultStyle {
+        font-size: 15px;
+        font-weight: Bold;   
+    } 
+    .highlight
+    {
+        background: yellow;
+    }   
+     .messageTable{
+      border:none;
+    } 
+    body .helpIcon {
+        background: transparent url(/img/alohaSkin/help_orange.png) no-repeat !important;
+    }    
+    </style>
+    <script>
+        var subtabIds = new Array();
+        var policyAray = new Array();
+        var cmmentsTmp;
+    	var bookOfBusinessTypeCode = ''
+        $(document).ready(function() {
+            localStorage.removeItem("rowCheckHold");
+            localStorage.removeItem("localAccumsData");
+            bookOfBusinessTypeCode = '{!$CurrentPage.parameters.bookOfBusinessTypeCode}'; // Added By Manish
+            console.log(' >>> bookOfBusinessTypeCode '+ bookOfBusinessTypeCode);
+            acet.autodoc.startAutodoc();
+            acet.autodoc.createCommentsbox();
+            init();
+            acet.autodoc.subTabIds = []; 
+            var subjectId = '{!wrapper.Subject}';
+            
+            console.log('Subject Id');
+            console.log(subjectId);
+            acet.autodoc.getAutodocFromSubTabs = function(){
+                acet.autodoc.additionalInfo = '';
+                sforce.console.fireEvent('RequestBenefitDetail_'.concat(subjectId), subjectId);                   
+            };                      
+            
+            //sync comments between benefit search and benefit details tabs
+            //only fire at last keyup
+            var timer;
+            $("#autodocComments").keyup(function(){
+                clearTimeout(timer);  
+              //  if(cmmentsTmp !=$("#autodocComments").val()){
+                    timer = setTimeout(function(){
+                        sforce.console.fireEvent('BenefitCommentsUpdated_'.concat(subjectId), $("#autodocComments").val()); 
+                    }, 500);   
+               // }
+               // cmmentsTmp = $("#autodocComments").val();
+            }); 
+        
+            sforce.console.addEventListener('BenefitCommentsUpdated_'.concat(subjectId), function(r){
+            if(r.message != $("#autodocComments").val()){
+                $("#autodocComments").val(r.message);  
+                }              
+            }); 
+        
+            //send comments to detail page when requested
+            sforce.console.addEventListener('RequestBenefitComments_'.concat(subjectId), function(r){
+                sforce.console.fireEvent('BenefitCommentsUpdated_'.concat(subjectId), $("#autodocComments").val());                   
+            }); 
+            
+              //added by Ranjit : work in progress
+             $("[id$='btnSaveNClose']").on('click', function(){                  
+                   closeSubtabs();
+             });
+             $("[id$='btnSaveCase']").on('click', function(){                  
+                   closeSubtabs();
+             }); 
+             $("[id$='btnMisdirectCase']").on('click', function(){                  
+                 closeSubtabs();
+             });            
+
+        });
+        
+        //Function to track the number of subtabs opened from the current page
+        var openedTabs = function openedTabs(result) {
+        console.log(">>>>>> "+result.success);
+            //Report whether we succeeded in opening the subtab
+            if (result.success) {
+                subtabIds.push(result.id);
+                //alert('subtab opened'+ subtabIds);
+            } else {
+                //alert('subtab cannot be opened');
+            }
+        };
+         
+        //Function to close all subtabs
+        function closeSubtabs(){
+            console.log('Testing');
+            for(i = 0 ; i < subtabIds.length ; i++){
+                sforce.console.closeTab(subtabIds[i]);
+            }
+        }
+         
+        function init(){ 
+            //acet.autodoc.startAutodoc();
+            var highlightPanelInfo;
+            $("[id$='policyLink']").on('click', function(){
+               var $policy = $(this);        
+              // var tabName = 'Bundle' + ' - ' + $policy.attr('data-bundleID');
+               var tabName = 'Bundle' + ' - ' + $policy.attr('data-bundleID');
+               
+               var stateName = $policy.attr('data-state');
+               highlightPanelInfo = '{!JSENCODE(hpAdditionInfoStr)}';
+               console.log(highlightPanelInfo);
+               console.log('StateName');
+               console.log(stateName);
+               console.log($policy.attr('data-effectiveDate'));                                                                                                                                      
+               console.log($policy.attr('data-endDate'));
+               var contractId = '{!JSENCODE(contractId)}';
+               var status = '{!JSENCODE(status)}';
+               var effectDate = '{!JSENCODE(effectDate)}';
+             //  alert(stateName);
+            //  var url = '/apex/ACETGroupPlanBenefitDetail?InteractionId={!JSENCODE(InteractionId)}&groupId={!groupNumber}&contactId={!wrapper.Originator.Id}&policyNo=' + $policy.attr('data-bundleID') +'&stateName=' + stateName+'&additionalInfo='+highlightPanelInfo;
+              var url = '/apex/ACETGroupPlanBenefitDetailRedesign?InteractionId={!JSENCODE(InteractionId)}&groupId={!groupNumber}&planOpId={!contractID}&renewalDate={!RenewalDate}&contactId={!wrapper.Subject.Id}&policyNo=' + $policy.attr('data-bundleID') +'&stateName=' + stateName+'&additionalInfo='+encodeURIComponent(highlightPanelInfo)
+                          +'&effectiveDate='+$policy.attr('data-effectiveDate')+'&endDate='+$policy.attr('data-endDate') + '&planOptionID='+$policy.attr('data-contractId')+'&contractId=' + contractId + '&status=' + status + '&effectDate=' + effectDate + '&bookOfBusinessTypeCode=' + bookOfBusinessTypeCode;
+
+               console.log(stateName);
+               console.log(url);
+                sforce.console.getFocusedPrimaryTabId(function(result) {
+                      // sforce.console.openSubtab(result.id, url, true, tabName, null, openSuccess);
+                       sforce.console.openSubtab(result.id, url, true, tabName, null, openSuccess);
+                 
+                  });  
+            });
+            
+            $("input[type='radio'][name='showCoverage']").on("change", function(){
+                 
+                toggleShowPlanBenefits();
+                
+            });
+           
+           //Sort Effective Date and End Date 
+        var planBenefits = '{!GroupPlanBenefitResultsList.size}';
+           if(planBenefits != '0') {
+               $(".applySort").tablesorter({                   
+                   headers: {
+                        0: { sorter: false },
+                        1: { sorter: false },
+                        2: { sorter: false },
+                        3: { sorter: false },
+                        4: { sorter: false },
+                        5: { sorter: false },
+                        6: { sorter: false },
+                        7: { sorter: false },
+                        8: { sorter: false },
+                        9: { sorter: false },
+                        10: { sorter: false },
+                        11: { sorter: false },
+                        13: { sorter: false },
+                        14: { sorter: false }
+                   },
+                   sortList : [[12,1]]
+               });
+            }
+            
+            var openSuccess = function openSuccess(result) {
+                //Report whether opening the new tab was successful
+                if (result.success == true) {
+                  //alert('ttttt');
+                } else {
+                    //alert(2);
+                }
+            };
+            highlightRow();
+        }
+    </script>
+    <apex:outputPanel id="scriptPanel">
+    <script>    
+        function validate()
+        {
+            $(".errorMsg").remove();
+            var retFlag = true;
+            var size = '{!GroupPlanBenefitResultsList.size}';
+            var errorMsg = "You must make a selection.";
+            var chkArray = [];
+            $(".autodoc input[type=checkbox]").each(function() {
+                if($(this).is(':checked')) {
+                    chkArray.push($(this).is(':checked'));
+                }
+            }); 
+            var selected;
+            selected = chkArray.join(',') + ",";
+            if(size != '0')
+            {
+                if(selected.length > 1){
+                    $(".errorMsg").remove();
+                    retFlag = true;
+                }else{
+                    $("[id$='showerrormsg']").parent().append('<div class = "errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>');   
+                    retFlag = false;
+                }
+            }
+            if(retFlag == true){
+                var subjectId = '{!wrapper.Subject}';
+                sforce.console.addEventListener('ReceiveBenefitDetail_'.concat(subjectId), function(r){                   
+                    var res = JSON.parse(r.message);     
+                    policyAray.push(res.test); 
+                    acet.autodoc.subTabIds.push(res.subTabId);
+                    if(res.doc){
+                    var spaceSeperator = '<div id="seperator" style="width:100%;height:50px;"></div>';    
+                        // alert('test******' + acet.autodoc.additionalInfo + spaceSeperator + res.doc);
+                    acet.autodoc.additionalInfo = acet.autodoc.additionalInfo + spaceSeperator + res.doc;   
+                        }
+                   
+                   sforce.console.closeTab(res.subTabId);
+                                        
+                });
+                closeSubtabs();
+            }
+            return retFlag;
+        }
+        function highlightRow(){ 
+             console.log('in highlights');
+             var conId = '{!JSENCODE(contractId)}';
+             var size = '{!GroupPolicyResultsList.size}'; 
+             console.log('size ' + size + 'conId ' + conId);
+             if(size != '0') 
+             { 
+                 $("[id$='pcTableId']").find("[id$='policyContractId']").each(function() 
+                 { 
+                     //if(($(this).html() == conId )) 
+                     //{ 
+                         $(this).parent().children().addClass("highlight"); 
+                     //} 
+                 }); 
+             }  
+        }
+    </script>
+    </apex:outputPanel> 
+    <apex:form id="GroupPlanInfo">
+      <apex:actionFunction name="toggleShowPlanBenefits"
+                           action="{!toggleShowPlanBenefits}" 
+                           reRender="pbid,pgErrorMsgs,scriptPanel"
+                           oncomplete="init();highlightRow();acet.autodoc.startAutodoc('groupPlan');" status="refreshMemberStatus1"/>
+                           
+                             
+        <apex:outputPanel id="hlPanel" layout="none">
+            <apex:inputHidden id="highlightPanelInfo" />
+            <c:ACETInteractionHighlightsPanel InteractionAtt="{!Interaction}" SubjectAtt="{!Subject}" AdditionalInfoAtt="{!AdditionalInfo}" html-auto-doc="auto"/>
+        </apex:outputPanel>
+        
+        <apex:sectionHeader title="Group Plan Details"/>
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" 
+                           attrSourceOriginator="{!wrapper.SourceOriginator}" 
+                           attrInteractionId="{!wrapper.Interaction.Id}" 
+                           attrSubjectId="{!wrapper.Subject.Id}"
+                           attrCallTopic="Group Plan"
+                           attrShowMisdirectButton="true"
+                           attrShowSaveButton="true"/>
+          <apex:pageMessages id="pgErrorMsgs"/>                 
+                          
+        <apex:actionStatus id="refreshMemberStatus1">
+            <apex:facet name="start">
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                 
+            </div>
+            <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 1001; margin: 15% 50%">
+                <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                    <img src="/img/loading.gif" style="float: left; margin: 8px;" />
+                    <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                </div>
+            </div>
+            </apex:facet>
+        </apex:actionStatus>        
+        <apex:pageBlock mode="mainDetail" id="pbid">
+            <apex:pageBlockSection title="{!filterStatus} Contract Option(s)" columns="1" id="groupPolicy" collapsible="false" html-auto-doc="auto" ><!-- html-auto-doc-section-key="groupPolicy" html-auto-doc-section-column-indexes="1,2,3,4,5,6,7,8"> -->
+                
+                <apex:pageBlockTable value="{!GroupPolicyResultsList}" var="policy" captionStyle="text-align:left;margin-bottom:3px;" id="pcTableId"  >
+                   <apex:column value="{!policy.policyConId}" headerValue="Policy Number" id="policyContractId">  
+                        <apex:facet name="header">
+                            <apex:outputLabel value="Policy Number">
+                                &nbsp;<apex:image value="/s.gif" styleclass="helpIcon" id="helpText"  title="{!$Label.ACETPolicyNumberHoverText}" />
+                            </apex:outputLabel>
+                        </apex:facet>
+                   </apex:column>
+                   <apex:column >
+                         <apex:inputHidden value="{!policy.policyActualStatus}" />
+                   </apex:column>
+                   <apex:column value="{!policy.population}" headerValue="Population" /> <!--US1106872 --->
+                   <apex:column value="{!policy.policyOptId}" headerValue="Plan Option ID(s)" id="policyId"/>   <!--US1106872 --->
+                    <apex:column value="{!policy.benefitBundleId}" headerValue="Benefit Bundle Option ID(s)"  id="bundleId"/>
+                    <!--<apex:column >
+                        <apex:facet name="header">
+                            <apex:commandLink value="Benefit Bundle Option ID(s)" oncomplete="init();" />
+                        </apex:facet>
+                        <apex:outputLink id="policyLink" value="#"
+                                         html-data-bundleID="{!policy.benefitBundleId}" html-data-state="{!policy.stateOfIssueCode}">{!policy.benefitBundleId}</apex:outputLink>
+                    </apex:column>-->
+                    <apex:column value="{!policy.effectiveDate}" headerValue="Effective Date" id="colEffDate" />
+                    <apex:column value="{!policy.endDate}" headerValue="End Date" />
+                    <!-- US1744163 starts -->
+                    <apex:column headerValue="Exchange Type" rendered="{!IF(policy.exchangeType == 'Public State Exchange',true, false)}">{!policy.groupSitusState} Shop</apex:column>
+                    <apex:column headerValue="Exchange Type" rendered="{!IF(policy.exchangeType == 'Public State Exchange',false, true)}">None</apex:column>
+                    <!-- US1744163 ends -->
+                    <apex:column value="{!policy.migrated}" headerValue="Migrated" />
+                </apex:pageBlockTable>
+            </apex:pageBlockSection>
+            <apex:pageBlockSection columns="1" id="groupPlan" collapsible="false" html-auto-doc="true" html-auto-doc-case-items="true" html-auto-doc-section-key="groupPlan" html-auto-doc-section-column-indexes="3,5,6,12,13"> <!-- html-auto-doc-section-column-indexes="1,2,3,4,5,6,7"> -->
+                <apex:outputPanel id="showStatus">
+                    <apex:outputPanel rendered="{!IsShowActiveBenefitsOnly }">
+                        <input type="radio" name="showCoverage" value="Active"
+                               checked="checked" style="vertical-align: middle"/>Active
+                        <input type="radio" name="showCoverage"
+                               value="All" style="vertical-align: middle" />All
+                    </apex:outputPanel>
+                    <apex:outputPanel rendered="{!NOT(IsShowActiveBenefitsOnly )}">
+                        <input type="radio" name="showCoverage" value="Active"
+                               style="vertical-align: middle" />Active
+                        <input type="radio" name="showCoverage"
+                               value="All" checked="checked" style="vertical-align: middle" />All
+                    </apex:outputPanel>
+                </apex:outputPanel>
+                <apex:outputpanel id="showerrormsg"/>
+                <!--   <apex:outputPanel html-auto-doc-pagination="true" html-auto-doc-section-combinedkey="pbTableId"> -->
+                        <apex:pageBlockTable value="{!GroupPlanBenefitResultsList}" var="plan" captionStyle="text-align:left;margin-bottom:3px;" id="pbTableId" styleClass="applySort" rendered="{!NOT(ISNULL(GroupPlanBenefitResultsList)) && GroupPlanBenefitResultsList.size > 0}">
+                            <apex:column >
+                                <apex:outputText value="{!plan.bundleID}" style="display:none;"/>
+                            </apex:column>
+                            <apex:column >
+                                <apex:inputHidden id="clGUID" value="{!plan.GUID}" />
+                                <img
+                                    src="{!URLFOR($Resource.ACETResources, '/img/m/' +plan.Image+'.jpg')}" />
+                            </apex:column>
+                            <!-- getemp V3 starts -->
+                            <apex:column value="{!plan.contractID}" headerValue="Plan Option ID" id="contractId"/>
+                            <!-- getemp V3 ends -->
+                            <apex:column >
+                            <apex:facet name="header" >                    
+                                  <apex:outputPanel layout="block" title="Domestic Partner">
+                                         DP
+                                        </apex:outputPanel>                        
+                                </apex:facet>
+                                <apex:outputText value="{!plan.domPartner}" />
+                            </apex:column>
+                            <apex:column >                    
+                                <apex:facet name="header">
+                                    <apex:commandLink value="Benefit Bundle Option ID" oncomplete="init();" />
+                                </apex:facet>
+                                <apex:outputLink id="policyLink" value="#"
+                                                 html-data-bundleID="{!plan.bundleID}" html-data-state="{!plan.stateOfIssueCode}"
+                                                 html-data-contractID="{!plan.contractId}"
+                                                 html-data-effectiveDate="{!plan.effecDate}" html-data-endDate="{!plan.endDate}">{!plan.bundleID}</apex:outputLink>
+                            </apex:column>
+                            <apex:column value="{!plan.PlanID}" headerValue="Plan ID"/>
+                            <apex:column value="{!plan.PlanClass}" headerValue="Population" />  
+                            <apex:column headerValue="Plan Name" >
+                                <a style="text-decoration:none;color: blue;" title="{!plan.planNameHoverVal}">{!plan.planOptionDesc}</a>
+                            </apex:column>
+                            <apex:column value="{!plan.Gated}" headerValue="Gated" />
+                           <!-- <apex:column value="{!plan.PCPRequired}" headerValue="PCP" />-->
+                            <apex:column value="{!plan.Accumulator}" headerValue="Accumulator" />
+                            <apex:column value="{!plan.PlanMettalicLevel}"  headerValue="Metallic Level" />           
+                            <apex:column value="{!plan.Network}" headerValue="Network" />
+                            <apex:column value="{!plan.effecDate}" headerValue="Effective Date" id="colEffDate" />
+                            <apex:column value="{!plan.endDate}" headerValue="End Date" />
+                        </apex:pageBlockTable>
+                 <!--   </apex:outputPanel> -->
+            </apex:pageBlockSection>
+            <apex:pageBlockSection columns="1">
+                <apex:pageBlockTable value="{!GroupPlanBenefitResultsList}" var="r"
+                    rendered="{!NOT(ISNULL(GroupPlanBenefitResultsList)) && GroupPlanBenefitResultsList.size == 0}">
+                   <apex:column headerValue="No results found." styleClass="headerResultStyle"/>
+                </apex:pageBlockTable> 
+            </apex:pageBlockSection>
+            
+            
+        </apex:pageBlock>
+        
+       <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"   
+                           attrSourceOriginator="{!wrapper.SourceOriginator}" 
+                           attrInteractionId="{!wrapper.Interaction.Id}" 
+                           attrSubjectId="{!wrapper.Subject.Id}"
+                           attrCallTopic="Group Plan"
+                           attrShowSaveButton="true"
+                           attrShowMisdirectButton="true"
+                           attrLocation="bottom" />
+    </apex:form>
+   <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" /> 
+</apex:page>

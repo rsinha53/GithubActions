@@ -1,0 +1,211 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,lightning:isUrlAddressable" 
+                access="global"  controller="ACET_ViewPCPReferrralsCtrl">
+    <!-- Alert Information -->
+    <aura:attribute name="providerNotFound" type="Boolean" default="false" />
+    <aura:attribute name="noMemberToSearch" type="Boolean" default="false" />
+    <aura:attribute name="mnf" type="string" default="mnfx" access="public"/>
+    <aura:attribute name="isProviderSearchDisabled" type="Boolean" default="false" />
+    <aura:attribute name="alertTaxId" type="String" access="public"/>
+    <aura:attribute name="alertProviderId" type="String" access="public" />
+    <aura:attribute name="houseHoldMemberId" type="String" access="public"/>
+    <aura:attribute name="interactionRec" type="Interaction__c" />
+    <aura:attribute name="groupIdAuthDtl" type="String" access="public" />
+    <aura:attribute name="memberIdAuthDtl" type="String" access="public" />
+    <aura:attribute name="lstofReferralReasonEntries" type="Object" access="public"/>
+    <aura:attribute name="APSourceCodeURL" type="String" access="public" default=""/>
+     <aura:handler event="c:ACET_SetMmberIdGroupIdAuthDtl" action="{!c.setMmberIdGroupIdAuthDtl}" />
+    <aura:registerEvent name="ACET_GetMemberIdGroupIdAuthDtl" type="c:ACET_GetMemberIdGroupIdAuthDtl" />
+    <aura:handler name="change" value="{!v.memberIdAuthDtl}" action="{!c.getAlertFORReferral}" />
+    
+    <!-- HIPAA -->
+    <aura:attribute name="hipaaEndpointUrl" type="String" access="public" default=""/>
+    <aura:attribute name="isHippaInvokedInProviderSnapShot" type="Boolean" default="false"/>
+    <aura:attribute name="autodocUniqueId" type="String" access="public" />
+    <!-- MisDirect -->
+    <aura:attribute name="originatorType" type="string" access="public"/>
+     <aura:attribute name="memberTabId" type="string" access="public" />
+
+     <aura:handler name="init" value="{!this}" action="{!c.onLoad}"/>
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute name="RadioOptions" type="List" default="[{'label': 'Yes', 'value': 'Yes'},
+                                                             {'label': 'No', 'value': 'No'}]"/>
+    <aura:attribute name="ReferralEntryReasonOptions" type="List" default="[
+    {'label': 'Select', 'value': ''}
+    ]"/>
+     <aura:attribute name="refferalEntryReasonMap" type="Map" default="{}"/>
+     <aura:attribute name="selectedInCorrectPCPOption" type="String"/>
+     <aura:attribute name="selectedneedAssisatanceOption" type="String"/>
+     <aura:attribute name="selectedReasoneFORREValue" type="String" default=""/>
+     <aura:attribute name="selectedSourceCode" type="String" access="public" default=""/>
+     <aura:attribute name="showReasonforREField" type="Boolean" default="false" />
+     <aura:attribute name="showisExchangePlan" type="Boolean" default="false" />
+     <aura:attribute name="selectedExchangePlanValue" type="String"/>
+     <aura:attribute name="selectedNoteValue" type="String" default=""/>
+    <aura:attribute name="policy" type="SAEPolicyDetailsResult" access="public" />
+    <aura:attribute name="objProviderLookupDetails" type="object" access="public"/>
+    <aura:attribute name="objMemberDetails" type="object" access="public"/>
+
+    <!--String Attributes Jitendra-->
+    <aura:attribute name="strReasonForReferral" type="string" default=""/>
+
+    <!--Object Attributes Jitendra-->
+    <aura:attribute name="objPcpReferralDataHeader" type="object"/>
+    <aura:attribute name="objPcpReferralDataBody" type="object"/>
+
+    <aura:attribute name="objPcpReferralToDataHeader" type="object"/>
+    <aura:attribute name="objPcpReferralToDataBody" type="object"/>
+    <aura:attribute name="objPcpReferralDetailsHeader" type="object"/>
+    <aura:attribute name="objSelectedValidationRecord" type="object"/>
+
+    <!--Boolean Attributes Jitendra-->
+    <aura:attribute name="showReferringCards" type="Boolean" default="false"/>
+    <aura:attribute name="boolIsSubmitDisabled" type="Boolean" default="false"/>
+    <aura:attribute name="isPCPONFile" type="Boolean" default="true"/>
+
+    <!--handlers Jitendra-->
+    <aura:handler name="change" value="{!v.objPcpReferralDataBody}" action="{!c.handleReferralChanges}"/>
+    <aura:handler name="change" value="{!v.objPcpReferralToDataBody}" action="{!c.handleReferralChanges}"/>
+
+    <div class="slds-is-relative">
+        <div class="c-container">
+            <div class="slds-card card_padding" style="background: rgb(243, 242, 242);"> 
+                <div class="slds-grid">
+                    <div class="slds-col slds-has-flexi-truncate">
+                        <div class="slds-media slds-no-space slds-grow">
+                            <div class="slds-media__figure">
+                                <span class="slds-icon_container slds-icon-standard-groups" title="Create Referral">
+                                    <lightning:icon iconName="standard:groups" alternativeText="Create Referral" />
+                                </span>
+                            </div>
+                            <div class="slds-media__body">
+                                <div class="slds-page-header__name">
+                                    <div class="slds-page-header__name-title">
+                                        <h1 class="page_header_label slds-m-right_small slds-align-middle slds-truncate">Create Referral</h1>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- ACTION BUTTONS -->
+                    <lightning:buttonGroup>
+                        <button class="slds-button slds-button_neutral" style="width: 180px;" onclick="{!c.handleHippaGuideLines}">HIPAA Guidelines</button>
+                        <lightning:button variant="neutral" label="Misdirect" name="misDirectBtnName"
+                                          class="misdirect_button" onclick="{!c.openMisdirectComp}"/>
+                        <c:SAE_Alerts aura:id="alertsAI_CreateReferral"
+                                  memberId="{!v.memberIdAuthDtl}"
+                                  groupId=""
+                                  providerNotFound="{!v.providerNotFound}"
+                                  noMemberToSearch="{!v.noMemberToSearch}"
+                                  memberNotFound="{!v.mnf}"
+                                  isProviderSearchDisabled="{!v.isProviderSearchDisabled}"
+                                  taxId="{!v.alertTaxId}"
+                                  providerId ="{!v.alertProviderId}"
+                                  isMemberSnapshot="true"
+                                  houseHoldMemberId="{!v.houseHoldMemberId}"
+                                  interactionRecId="{!v.interactionRec.Id}"
+                                  policyGroupId="{!v.groupIdAuthDtl}"
+                       policyMemberId="{!v.memberIdAuthDtl}" />
+                    </lightning:buttonGroup>
+                </div>
+                <!-- PUT PAGE HEADER DETAIL ROW HERE -->
+            </div>
+             <div class="slds-card card_padding card_element_bottom_margin">
+                 <p class="component_title slds-form-element__label field_label_padding">Referral Prerequisites</p>
+                  <lightning:radioGroup name="incorrectPCPradioGroup"
+                                      label="Is the referral due to incorrect PCP information?"
+                                      options="{! v.RadioOptions }"
+                                      value="{! v.selectedInCorrectPCPOption }"
+                                      type="radio"
+                                      onchange="{! c.handleRadioChange }"
+                                      aura:id="incorrectPCP"
+                                      variant="label-inline" 
+                              style="display:inline-block !important"/>
+                  <aura:If isTrue="{! equals(v.selectedInCorrectPCPOption, 'Yes') }" >
+                      <p>Follow your normal processes for PCP updates.</p>
+                 </aura:If>
+                  <aura:If isTrue="{! equals(v.selectedInCorrectPCPOption, 'No') }" >
+                      <lightning:radioGroup name="needAssisatanceradioGroup"
+                                      label="Does the provider need assistance navigating Referral Link?"
+                                      options="{! v.RadioOptions }"
+                                      value="{! v.selectedneedAssisatanceOption }"
+                                      type="radio"
+                    onchange="{! c.handleRadioChange }"
+                                      aura:id="needAssisatance"
+                                      variant="label-inline" 
+                              style="display:inline-block !important"/>
+                       <aura:If isTrue="{! equals(v.selectedneedAssisatanceOption, 'Yes') }" >
+                          <span >Access the </span> <!--style="margin-left: 11px;font-weight:normal !important;font-size: 16px;" -->
+                        <span>
+                            <a title="http://knowledgecentral.uhc.com/SPA/LinkEducationTool/index.html#/" target="_blank" href="http://knowledgecentral.uhc.com/SPA/LinkEducationTool/index.html#/"
+                               > LINK Education Tool</a><!--style="font-weight:normal !important; font-size: 16px;" -->
+                        </span>
+                      </aura:If>
+                      <aura:if isTrue="{!v.showisExchangePlan}">
+                           <lightning:radioGroup name="isExchangePlan"
+                                      label="Is this an Exchange plan?"
+                                      options="{! v.RadioOptions }"
+                                      value="{! v.selectedExchangePlanValue }"
+                                      type="radio"
+                       onchange="{! c.handleRadioChange }"
+                                      aura:id="isExchangePlan"
+                                      variant="label-inline" 
+                              style="display:inline-block !important"/>
+                      </aura:if>
+                      <aura:if isTrue="{!v.showReasonforREField}">
+                           <div class="slds-grid">
+                       <div class="slds-col slds-size_6-of-12 slds-p-right_small" >
+                                  <lightning:combobox aura:id="reasonFORRE" name="reasonFORRE" label="Reason for referral entry" value="{!v.selectedReasoneFORREValue}" 
+                             options="{! v.ReferralEntryReasonOptions }" onchange="{! c.handleRadioChange }"
+                                                      required="true"/>
+                       </div>
+                       <div class="slds-col slds-size_6-of-12" >
+                              </div>
+                    </div>
+                    <div class="slds-p-top_small slds-p-right_small">
+                       {!v.selectedNoteValue ? v.selectedNoteValue : ''}
+                          </div>
+                      </aura:if>
+                 </aura:If>
+              <aura:if isTrue="{!v.selectedSourceCode == 'AP'}">
+                 <div class="slds-p-top_small slds-p-bottom_small slds-p-right_small">
+                    <b> <span >For additional information on referral entry requirements please review the </span>
+                    <span>
+                    <a title="{!v.APSourceCodeURL}" target="_blank"
+                       href="{!v.APSourceCodeURL}"
+                       > C&amp;S - Provider Pre-Service and Post-Service Authorizations SOP </a>
+                    </span></b>
+                 </div>
+              </aura:if>
+              <aura:if isTrue="{!v.selectedSourceCode == 'CS'}">
+                 <div class="slds-p-top_small slds-p-bottom_small slds-p-right_small">
+                    <b> <span >For additional information on referral entry requirements please review the</span>
+                    <span>
+                    <a title="http://knowledgecentral.uhc.com/SPA/provider_service_advocate_dedicated_onesource/index.html#/procedure/PAC_el_referral_entry" target="_blank"
+                       href="http://knowledgecentral.uhc.com/SPA/provider_service_advocate_dedicated_onesource/index.html#/procedure/PAC_el_referral_entry"
+                       >  PAC EI Referral Entry SOP. </a>
+                    </span></b>
+                 </div>
+              </aura:if>
+              <aura:if isTrue="{!v.selectedSourceCode == 'CO'}">
+                 <div class="slds-p-top_small slds-p-bottom_small slds-p-right_small">
+                    <b> <span >For additional information on referral entry requirements please review the</span>
+                    <span>
+                    <a title="http://knowledgecentral.uhc.com/SPA/ProviderServiceAdvocateCallHandlingSOP/Index.html#/procedure/MR_Loading_Referral_to_Cosmos" target="_blank"
+                       href="http://knowledgecentral.uhc.com/SPA/ProviderServiceAdvocateCallHandlingSOP/Index.html#/procedure/MR_Loading_Referral_to_Cosmos"
+                       >   M&amp;R  Loading Referrals to COSMOS SOP. </a>
+                    </span></b>
+                 </div>
+              </aura:if>
+            </div>
+        </div>
+    </div>
+     <aura:if isTrue="{!v.showReferringCards}">
+        <c:ACET_ReferringProviderDetailsCard objPcpDataHeader="{!v.objPcpReferralDataHeader}" objPcpBodyData="{!v.objPcpReferralDataBody}" objProviderLookupDetails="{!v.objProviderLookupDetails}"/>
+        <c:ACET_ReferringProviderDetailsCard objPcpDataHeader="{!v.objPcpReferralToDataHeader}" objPcpBodyData="{!v.objPcpReferralToDataBody}" objProviderLookupDetails="{!v.objProviderLookupDetails}"/>
+        <c:ACET_ReferralCardDetails objPcpReferralDetailsHeader="{!v.objPcpReferralDetailsHeader}" boolIsSubmitDisabled="{!v.boolIsSubmitDisabled}"
+                                    isExchangePlan ="{!v.selectedExchangePlanValue}" strSourceCode="{!v.selectedSourceCode}" isPcpOnFile="{!v.isPCPONFile}"
+                                    memberData="{!v.objMemberDetails}" referringProviderData="{!v.objPcpReferralDataBody}" referredToProviderData="{!v.objPcpReferralToDataBody}"
+                                    strReasonForReferral ="{!v.selectedReasoneFORREValue}"
+                                    memberTabId = "{!v.memberTabId}"/>
+     </aura:if>
+</aura:component>

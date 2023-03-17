@@ -1,0 +1,616 @@
+<apex:page controller="ACETViewMemberListingController" sidebar="False" readOnly="false">
+<script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>   
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="{!$Resource.JqueryTableSorter}"></apex:includeScript>    
+    <script src="/soap/ajax/20.0/connection.js" type="text/javascript"></script>
+    <apex:stylesheet value="{!URLFOR($Resource.ACETResources, '/css/m/memberdetail.css')}" />
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"/>   
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"/>
+    <apex:includeScript value="/soap/ajax/30.0/connection.js"/>    
+    <apex:includeScript value="/support/console/30.0/integration.js"/>
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}"/>
+    <script language="JavaScript1.2" src="/js/functions.js"></script>
+    <style>
+        .datePicker{
+            position: absolute;
+            z-index:10001;
+        }
+        .ui-widget-header {
+            border: 1px solid #dddddd;
+            background: #e9e9e9;
+            color: #333333;
+            font-weight: bold;
+        }
+        
+        .ui-widget {
+            font-family: Arial,Helvetica,sans-serif;
+            font-size: 1em ;
+        }
+        .ui-dialog .ui-dialog-buttonpane button {
+            margin: .5em .4em .5em 0;
+            cursor: pointer;
+        }
+        .ui-widget .ui-widget {
+            font-size: 1em;
+        }
+        .ui-button {
+            padding: .4em 1em;
+            display: inline-block;
+            position: relative;
+            line-height: normal;
+            vertical-align: middle;
+            text-align: center;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            overflow: visible;
+        }
+        .ui-dialog-titlebar-close {
+          background: url("http://code.jquery.com/ui/1.12.1/themes/smoothness/images/ui-icons_888888_256x240.png") repeat scroll -95px -127px rgba(250, 250, 250, 0);
+        }
+         .highlight
+        {
+            background: yellow;
+        }  
+        .messageTable
+        {
+         border: none;
+        }
+        body .helpIcon {
+            background: transparent url(/img/alohaSkin/help_orange.png) no-repeat !important;
+        }          
+    </style>
+    
+    <script type="text/javascript">
+         
+        var subtabIds = new Array();
+        $(document).ready(function() { 
+              
+            datePickerOnload();
+            getMemberListingOnLoad();
+            acet.autodoc.startAutodoc();
+            acet.autodoc.createCommentsbox();
+           
+            $("[id$='btnSaveNClose']").on('click', function(){                  
+                closeSubtabs();
+            });
+            $("[id$='btnSaveCase']").on('click', function(){                  
+                closeSubtabs();
+             });
+            $("[id$='btnMisdirectCase']").on('click', function(){                  
+                closeSubtabs();
+            });
+            var retFlag = true;
+                        
+           $("[id$='policyDateTxt']").keypress(function (e) {
+                var $selectedDate = $("[id$='policyDateTxt']");
+                $selectedDate.removeClass("error").parent().find(".errorMsg").remove();
+            });
+            
+             $("[id$='policyDateTxt']").on('change', function(e) {
+                var $selectedDate = $("[id$='policyDateTxt']");
+                $selectedDate.removeClass("error").parent().find(".errorMsg").remove();
+            });
+            
+        });
+        
+        function pressEnter() {
+            if (window.event && window.event.keyCode == 13 || ev.which == 13) {
+                searchValidation();
+                return false;
+            }
+        }   
+        function datePickerOnload() {
+            $("[id$='policyDateTxt']").datepicker({
+                changeMonth: true,
+                    changeYear: true
+            });
+            $("[id$='policyDateTxt']").datepicker('setDate', new Date());
+        }
+        
+        function initt() { 
+            $("[id$='memberSearchID']").on('click', function(){
+                var $lastName =  $("[id$='memberSearchID']");;
+                var tabName = 'Detail - ' + $lastName.attr('data-lastName');
+                var vccdParams =  '{!$CurrentPage.parameters.vccdParams}';
+                var url = '/apex/ACETMemberDetail?lastName=' + $lastName.attr('data-lastName') + '&firstName=' + $lastName.attr('data-firstName') +'&fromGroupDetail=true'+ '&Id=' + $lastName.attr('data-Id') + '&SRK=SRK' + $lastName.attr('data-Id')+'&subjectdob=' + $lastName.attr('data-dob') + '&sourceOriginator=Chat';
+                sforce.console.getFocusedPrimaryTabId(function(result){ 
+                    sforce.console.openSubtab(result.id, url, true, tabName, null, openedTabs);
+                });
+                return false;
+            });
+            
+            
+            
+        }
+        
+         function openPDF() {    
+            var inquiryDate = $("[id$='policyDateTxt']").val();
+            var values = $("[id$='View']").val();
+            var status = $("[id$='Status']").val();
+            var bundleId = $("[id$='bundleeID']").val();
+            var selPop = $("[id$='populationId']").val();
+            var groupName = '{!JSENCODE(AdditionalInfo.groupFlowGroupName)}';
+            var groupnumber = '{!JSENCODE(AdditionalInfo.groupFlowGroupNumber)}';
+            var bundles = $("[id$='bundleids']").val();
+            var allPop = $("[id$='popids']").val();
+            var contractId ='{!contractId}';
+            var contType ='{!continuationType}';
+            var cobCount = $("[id$='cobraid']").val();
+            var hasPop;
+            if(selPop == '' || selPop == 'undefined' || selPop == null){
+                hasPop = 'false';
+            } else {
+                hasPop = 'true';
+            }
+            sforce.console.getFocusedPrimaryTabId(function(result) {
+                var url = '/apex/ACETViewMemberListPDF?view='+values+'&status='+status+'&inqDate='+inquiryDate+'&contractId='+contractId+'&bundles='+bundles+'&bundleId='+bundleId+'&allPop='+encodeURIComponent(allPop)+'&population='+encodeURIComponent(selPop)+'&hasPop='+hasPop+'&groupName='+groupName+'&groupnumber='+groupnumber+'&contType='+contType+'&cobCount='+cobCount;
+                sforce.console.openSubtab(result.id, url, true, 'PDF', null,openedTabs);
+            }); 
+                     
+        }
+        function exportExcel() {
+            var inquiryDate = $("[id$='policyDateTxt']").val();
+            var values = $("[id$='View']").val();
+            var status = $("[id$='Status']").val();
+            var bundleId = $("[id$='bundleeID']").val();
+            var groupName = '{!JSENCODE(AdditionalInfo.groupFlowGroupName)}';
+            var groupnumber = '{!JSENCODE(AdditionalInfo.groupFlowGroupNumber)}';            
+            var bundles = $("[id$='bundleids']").val();
+            var allPop = $("[id$='popids']").val();
+            var selPop = $("[id$='populationId']").val();
+            var contractId ='{!contractId}';
+            var contType ='{!continuationType}';
+            var cobCount = $("[id$='cobraid']").val();
+            var hasPop;
+            if(selPop == '' || selPop == 'undefined' || selPop == null){
+                hasPop = 'false';
+            } else {
+                hasPop = 'true';
+            }
+            
+            
+            sforce.console.getFocusedPrimaryTabId(function(result) {
+                var url = '/apex/ACETViewMemberListingExcel?view='+values+'&status='+status+'&inqDate='+inquiryDate+'&contractId='+contractId+'&bundles='+bundles+'&bundleId='+bundleId+'&allPop='+encodeURIComponent(allPop)+'&population='+encodeURIComponent(selPop)+'&hasPop='+hasPop+'&groupName='+groupName+'&contType='+contType+'&cobCount='+cobCount+'&groupnumber='+groupnumber;
+                sforce.console.openSubtab(result.id, url, true, 'Export', null,openedTabs);
+            });
+        }
+        var showTabId = function showSubtabs(result) {
+            //Display the subtab IDs
+            alert('Subtab IDs: ' + result.ids);
+            };
+        
+        function exportExcel1() {
+            alert('enter excel');
+            }
+            
+        var openedTabs = function openedTabs(result) {
+            if (result.success == true) {
+                subtabIds.push(result.id);
+            } else {
+            }
+        }; 
+        
+        function closeSubtabs() {
+            for(i = 0 ; i < subtabIds.length ; i++){
+                sforce.console.closeTab(subtabIds[i]);
+            }
+        }
+ 
+        var policyDate = $("[id$='policyDateTxt']");
+        function locateInputFields(){ 
+            policyDate = $("[id$='policyDateTxt']");
+        }
+        
+
+        function searchValidation() {
+            locateInputFields();
+            if(validateNew('','true') == true){
+             searchResults();
+            }            
+            return true;
+        }
+        
+        function isValidDate(dateStr) {
+            var datePat = /^(\d{1,2})(\/|-)(\d{1,2})\2(\d{2}|\d{4})$/;
+            var matchArray = dateStr.match(datePat);
+            if (matchArray == null) {
+                return false;
+            }
+            month = matchArray[1]; // parse date into variables
+            day = matchArray[3];
+            year = matchArray[4];
+            if (month < 1 || month > 12) { // check month range
+                return false;
+            }
+            if (day < 1 || day > 31) {
+                return false;
+            }
+            if ((month==4 || month==6 || month==9 || month==11) && day==31) {
+                return false
+            }
+            if (month == 2) { // check for february 29th
+            var isleap = (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+            if (day>29 || (day==29 && !isleap)) {
+                return false;
+               }
+            }
+            return true;  // date is valid
+        }
+    
+        window.onload = function(){
+            window.scrollTo(0,0);
+        };
+      
+        //apply post datatable init logic here
+        //do not change the function name, first param is datatable settings, second param is data source
+        function initDatatableComplete(settings, json){
+            console.log('Print JSON:::::');
+            console.log(json);                       
+            if(json.recordsFiltered == undefined || json.recordsFiltered == "" || parseInt(json.recordsFiltered) == 0){
+                $("[id$='createPDFbtn']").hide();
+                $("[id$='exportExcelbtn']").hide(); 
+            }
+        }
+        var GroupDetailPrimaryTabId = '';        
+        var MemberSearchSubTabId = '';
+        var vccdParams = '{!JSENCODE($CurrentPage.parameters.vccdParams)}'; 
+        var hightlightPanelInfo;
+        var isMemberListing = '';
+        var MemberId = '';
+        var dob= '';
+        function memberSearchClick(hlpInfo)
+         {
+            hightlightPanelInfo = hlpInfo;
+            setMemberListingData('', '', true);
+        }
+        
+        
+    function navigateToSearch(interactionId, memId, dob){
+        console.log('>>>>'+memId);
+        console.log('>>>>'+dob);
+        var MemberId = memId;
+        //var FirstName = fName;
+        var dateOfBirth = dob;
+        
+        $("[id$='mlTableId']").find('.highlight').each(function(){
+            $(this).removeClass("highlight");
+        }); 
+                     
+        $("[id$='mlTableId']").find("[id$='memberId']").each(function() 
+        { 
+             if(($(this).html() == MemberId )) 
+             { 
+                 $(this).parent().children().addClass("highlight"); 
+             } 
+         });
+         
+        setMemberListingData(MemberId, dateOfBirth , false);
+        
+        return false; 
+     }  
+     function openTab()
+     {
+        sforce.console.getEnclosingPrimaryTabId(OpenMemberSearchSubTab);
+     }
+     function apply_sort(){
+
+        $("[id$='mlTableId']").tablesorter({
+        headers: { 0: { sorter: false}, 1: {sorter: false},0: { sorter: false}, 1: {sorter: false},2: { sorter: false}, 3: {sorter: false},4: { sorter: false}, 5: {sorter: false},6: { sorter: false}, 7: {sorter: false},8: { sorter: false}, 9: {sorter: false},11: {sorter: false} } 
+        });  
+
+     }  
+   </script>
+     
+     <apex:outputPanel id="script">
+    
+     <script type="text/javascript">   
+              function generatePDF() {  
+            var inquiryDate = $("[id$='policyDateTxt']").val();
+            var values = $("[id$='View']").val();
+            var status = $("[id$='Status']").val();
+            var bundleId = $("[id$='bundleeID']").val();
+            var selPop = $("[id$='populationId']").val();
+            var bundles = $("[id$='bundleids']").val();
+            var allPop = $("[id$='popids']").val();
+            var contractId ='{!contractId}';
+            var contType ='{!continuationType}';
+            var cobCount = $("[id$='cobraid']").val();
+            var groupName = '{!JSENCODE(AdditionalInfo.groupFlowGroupName)}';
+            var groupnumber = '{!JSENCODE(AdditionalInfo.groupFlowGroupNumber)}';
+            var hasPop;
+            if(selPop == '' || selPop == 'undefined' || selPop == null){
+                hasPop = 'false';
+            } else {
+                hasPop = 'true';
+            }
+           
+        
+        sendemailacctionfun(values ,status,inquiryDate,contractId,bundles,bundleId,allPop,selPop,hasPop,groupName,groupnumber,contType,cobCount,'PDF');          
+                     
+        }
+        function generateExcel() {  
+            var inquiryDate = $("[id$='policyDateTxt']").val();
+            var values = $("[id$='View']").val();
+            var status = $("[id$='Status']").val();
+            var bundleId = $("[id$='bundleeID']").val();
+            var selPop = $("[id$='populationId']").val();
+            var groupIdName = '{!JSENCODE(AdditionalInfo.GroupN)}';
+            var bundles = $("[id$='bundleids']").val();
+            var allPop = $("[id$='popids']").val();
+            var contractId ='{!contractId}';
+            var contType ='{!continuationType}';
+            var cobCount = $("[id$='cobraid']").val();
+            var hasPop;
+            if(selPop == '' || selPop == 'undefined' || selPop == null){
+                hasPop = 'false';
+            } else {
+                hasPop = 'true';
+            }
+           
+        
+        sendemailacctionfun(values ,status,inquiryDate,contractId,bundles,bundleId,allPop,selPop,hasPop,groupIdName,contType,cobCount,'EXCEL');          
+                     
+        }
+     var pushSubjectToArray = function pushSubjectToArray(result) {
+            if (result.success == true) {
+                subjectTabArray.push(result.id);
+                subjectTabArrayStr = JSON.stringify(subjectTabArray);
+                localStorage.setItem('subjectTabArray', subjectTabArrayStr);
+            }
+        };
+     var MemberSearchSubTabId ='';
+               
+     var OpenMemberSearchSubTab = function OpenMemberSearchSubTab(result) {
+            //Now that we have the primary tab ID, we can open a new subtab in it
+            GroupDetailPrimaryTabId = result.id;
+            isMemberListing = true;
+            var hightlightPanelInfo = '{!JSENCODE(hpAdditionInfoStr)}';
+            var GoToLink = '{!GoToLink}';
+            var MemberId = '{!MemberId}';
+            var dob = '{!JSENCODE(dateOfBirth)}';
+            var tabIdUsngClntId= MemberId;
+            var groupID = '{!JSENCODE(groupID)}';
+            console.log('$$$'+groupID);
+            if (MemberSearchSubTabId == '')
+            {  
+                sforce.console.getFocusedPrimaryTabId(function(result) {
+                  if(vccdParams != null && vccdParams != ''){
+                    sforce.console.openSubtab(GroupDetailPrimaryTabId , '/apex/ACETMemberSearch?' +'InteractionId={!interaction.Id}&vccdParams=' + JSON.stringify(vccdParams)+'&additionalInfo='+hightlightPanelInfo+'&fromGroupDetail=true'+'&MemberListing='+isMemberListing+'&MemberId='+MemberId+'&dob='+dob+'&GoToLink='+GoToLink+'&groupId='+groupID+'&primTabId='+GroupDetailPrimaryTabId, true, 'Member Search' , null, OpenMemberSearchSubTabSuccess, 'GroupMemberSearch');
+                  }
+                  else{
+                    sforce.console.openSubtab(GroupDetailPrimaryTabId , '/apex/ACETMemberSearch?' +'InteractionId={!interaction.Id}&additionalInfo='+hightlightPanelInfo+'&fromGroupDetail=true'+'&MemberListing='+isMemberListing+'&MemberId='+MemberId+'&dob='+dob+'&GoToLink='+GoToLink+'&groupId='+groupID+'&primTabId='+GroupDetailPrimaryTabId, true, 'Member Search' , null, OpenMemberSearchSubTabSuccess, 'GroupMemberSearch'); 
+                  }
+                
+                
+                });
+            }
+        };
+        var OpenMemberSearchSubTabSuccess = function OpenMemberSearchSubTab(result, data) {
+            MemberSearchSubTabId = result.id;
+        }
+        function highlightRow(){ 
+             var conId = '{!contractId}'; 
+             var size = '{!GroupPolicyResultsList.size}'; 
+             if(size != '0') 
+             { 
+                 $("[id$='pbTableId']").find("[id$='contractId']").each(function() 
+                 { 
+                     if(($(this).html() == conId )) 
+                     { 
+                         $(this).parent().children().addClass("highlight"); 
+                     } 
+                 }); 
+             }  
+            
+        }
+        function checkLargeGroup(){
+            if($("[id$='isLargeGroup']").val() == 'true'){
+                $("[id$='createPDFbtn']").addClass("btnDisabled").removeClass("btn").attr("disabled","disabled");
+                $("[id$='exportExcelbtn']").addClass("btnDisabled").removeClass("btn").attr("disabled","disabled");
+                $("[id$='mlTableId']").hide();
+                $("[id$='mlTableFooter']").hide();
+            } else {
+                $("[id$='createPDFbtn']").addClass("btn").removeClass("btnDisabled").removeAttr("disabled",false);
+                $("[id$='exportExcelbtn']").addClass("btn").removeClass("btnDisabled").removeAttr("disabled",false);
+                $("[id$='mlTableId']").show();
+                $("[id$='mlTableFooter']").show();
+            }
+        }
+    </script>
+    </apex:outputPanel>
+    <apex:form id="memberListingForm">
+     <apex:actionFunction name="sendemailacctionfun" action="{!startMemberListing}" rerender="script,messagePanel"  status="myStatus">
+<apex:param name="values"  value="" />
+<apex:param name="status"  value="" />
+<apex:param name="inquiryDate"  value="" />
+<apex:param name="contractId"  value="" />
+<apex:param name="bundles"  value="" />
+<apex:param name="bundleId"  value="" />
+<apex:param name="allPop"  value="" />
+<apex:param name="selPop"  value="" />
+<apex:param name="hasPop"  value="" />
+<apex:param name="groupName"  value="" />
+<apex:param name="groupnumber"  value="" />
+<apex:param name="contType"  value="" />
+<apex:param name="cobCount"  value="" />
+<apex:param name="contenttype" value=""/>
+
+</apex:actionFunction>
+        <apex:actionFunction action="{!search}" name="searchResults"  rerender="pgMessage,btnPanel,memberListingPanel,pageResults,messagePanel,isLargeGroupHidden" status="refreshMemberStatus1" oncomplete="apply_sort();checkLargeGroup();"/>
+        <apex:actionFunction action="{!getMemberListingOnLoad}" name="getMemberListingOnLoad" oncomplete="datePickerOnload();highlightRow();apply_sort();checkLargeGroup();" rerender="policyConTable,memberListingBlock,memberListingPanel,pageResults,bundleeID,messagePanel,isLargeGroupHidden" status="refreshMemberStatus1" />
+        <apex:actionFunction action="{!setMemberListingData}" name="setMemberListingData" rerender="script,messagePanel" oncomplete="openTab();" status="refreshMemberStatus1">
+            <apex:param name="MemberId" value=""/>
+            <apex:param name="dateOfBirth" value=""/>
+            <apex:param name="GoToLink" value=""/>
+        </apex:actionFunction>    
+        
+        <apex:outputPanel id="hlPanel" layout="none">
+                <apex:inputHidden id="highlightPanelInfo" />
+                <c:ACETInteractionHighlightsPanel InteractionAtt="{!Interaction}" SubjectAtt="{!Subject}" AdditionalInfoAtt="{!AdditionalInfo}" html-auto-doc="auto"/>
+        </apex:outputPanel>
+        <apex:sectionHeader title="Member Listing" />
+        <apex:outputPanel id="isLargeGroupHidden">
+            <input type="hidden" id="isLargeGroup" value="{!isLargeGroup}"/>    
+        </apex:outputPanel>
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveButton="true" attrShowMisdirectButton="true" 
+            attrSourceOriginator="{!wrapper.SourceOriginator}" attrInteractionId="{!wrapper.Interaction.Id}" attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="{!wrapper.caseobj.Topic__c}"/>
+            
+        <apex:actionStatus id="refreshMemberStatus1">
+            <apex:facet name="start">
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                &nbsp;
+            </div>
+            <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 1001; margin: 15% 50%">
+                <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                    <img src="/img/loading.gif" style="float: left; margin: 8px;" />
+                    <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                </div>
+            </div>
+            </apex:facet>
+        </apex:actionStatus>
+
+        <apex:outputPanel id="messagePanel" layout="none">
+           <apex:pageMessages />
+        </apex:outputPanel>
+        <apex:pageBlock id="policyConTable" mode="mainDetail">
+            <apex:pageBlockSection title="{!filterStatus} Contract Option(s)" columns="1" id="groupPolicy" collapsible="false" html-auto-doc="auto">
+                <apex:outputpanel id="showerrormsg"/>
+                <apex:pageBlockTable value="{!GroupPolicyResultsList}" var="policy" captionStyle="text-align:left;margin-bottom:3px;" id="pbTableId"  >
+                  <apex:column value="{!policy.policyConId}" headerValue="Policy Number" id="contractId">  
+                        <apex:facet name="header">
+                            <apex:outputLabel value="Policy Number">
+                                &nbsp;<apex:image value="/s.gif" styleclass="helpIcon" id="helpText"  title="{!$Label.ACETPolicyNumberHoverText}" />
+                            </apex:outputLabel>
+                        </apex:facet>
+                   </apex:column>
+                   <apex:column >
+                         <apex:inputHidden value="{!policy.policyActualStatus}" />
+                   </apex:column>
+                     <apex:column value="{!policy.population}" headerValue="Population" /> <!--US1106872 --->
+                   <apex:column value="{!policy.policyOptId}" headerValue="Plan Option ID(s)" id="policyId"/>   <!--US1106872 --->
+                    <apex:column value="{!policy.benefitBundleId}" headerValue="Benefit Bundle Option ID(s)"  id="bundleId"/>
+                    <!--<apex:column >
+                        <apex:facet name="header">
+                            <apex:commandLink value="Benefit Bundle Option ID(s)" oncomplete="init();" />
+                        </apex:facet>
+                        <apex:outputLink id="policyLink" value="#"
+                                         html-data-bundleID="{!policy.benefitBundleId}" html-data-state="{!policy.stateOfIssueCode}">{!policy.benefitBundleId}</apex:outputLink>
+                    </apex:column>-->
+                    <apex:column value="{!policy.effectiveDate}" headerValue="Effective Date" id="colEffDate" />
+                    <apex:column value="{!policy.endDate}" headerValue="End Date" />
+                    <!-- US1744183 starts -->
+                    <apex:column headerValue="Exchange Type" rendered="{!IF(policy.exchangeType == 'Public State Exchange',true, false)}">{!policy.groupSitusState} Shop</apex:column>
+                    <apex:column headerValue="Exchange Type" rendered="{!IF(policy.exchangeType == 'Public State Exchange',false, true)}">None</apex:column>
+                    <!-- US1744183 ends -->
+                    <apex:column value="{!policy.migrated}" headerValue="Migrated" />
+                </apex:pageBlockTable>
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+        <apex:pageBlock id="memberListingBlock">
+            <c:ValidateData typeVal="View Member Listing"/>
+            <apex:outputPanel id="memberSearchPanel">
+                <apex:pageBlockSection id="memberSearchSection" columns="5">
+                    <apex:pageBlockSectionItem dataStyle="width:auto">
+                        <apex:outputLabel value="View"/>
+                         <apex:outputPanel styleClass="requiredInput" layout="block"> 
+                             <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                            <apex:selectList id="View" label="View" value="{!view}" size="1" onkeypress="return pressEnter()">
+                                <apex:selectOptions value="{!viewList}"/>
+                            </apex:selectList>
+                         </apex:outputPanel>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:auto">
+                        <apex:outputLabel value="Status"/>
+                        <apex:outputPanel styleClass="requiredInput" layout="block"> 
+                            <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                            <apex:selectList id="Status" label="Status" value="{!status}" size="1" onkeypress="return pressEnter()">
+                                <apex:selectOptions value="{!statusList}"/>
+                            </apex:selectList>
+                        </apex:outputPanel>
+                    </apex:pageBlockSectionItem>
+                     <apex:pageBlockSectionItem dataStyle="width:auto">
+                        <apex:outputlabel id="policyDate" value="Date"/>
+                        <apex:outputPanel styleClass="requiredInput" layout="block"> 
+                            <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                            <apex:inputText value="{!inquiryDate}" id="policyDateTxt" onkeypress="return pressEnter()"/>
+                        </apex:outputPanel>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem rendered="{!hasPop}" dataStyle="width:auto">
+                        <apex:outputlabel id="popId" value="Populations"/>
+                        <apex:selectList id="populationId" value="{!selectedPop}" size="1" onkeypress="return pressEnter()">
+                                <apex:selectOptions value="{!populationsList}"/>
+                            </apex:selectList>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:auto">
+                        <apex:outputlabel id="bundleId" value="Benefit Bundle Option ID"/>
+                        <apex:selectList id="bundleeID" value="{!bundleId}" size="1" onkeypress="return pressEnter()">
+                                <apex:selectOptions value="{!getbenefitBundle}"/>
+                            </apex:selectList>
+                    </apex:pageBlockSectionItem>
+
+                </apex:pageBlockSection>              
+            </apex:outputPanel>
+            <apex:pageblockbuttons location="Bottom">
+                <apex:outputpanel id="btnPanel">
+                    <apex:commandButton value="Search" onclick="return searchValidation();" action="{!search}" rerender="pgMessage,btnPanel,memberListingPanel" status="refreshMemberStatus1"/>
+                    <apex:commandButton value="Clear" action="{!clear}"/>
+                    <apex:outputPanel rendered="{!finalList.size != 0}">
+                        <input type="submit" class="btn" value="Create PDF" rerender="btnPanel" onclick="openPDF();" id="createPDFbtn" /> 
+                        <input type="submit" class="btn" value="Export to Excel" rerender="btnPanel7"  onclick="exportExcel();" id="exportExcelbtn" />
+                    </apex:outputPanel>
+                    <apex:outputPanel rendered="{!finalList.size == 0}">
+                        <input type="submit" disabled="true" class="btnDisabled" value="Create PDF" rerender="btnPanel" onclick="openPDF();" id="createPDFbtn" /> 
+                        <input type="submit" disabled="true" class="btnDisabled" value="Export to Excel" rerender="btnPanel7"  onclick="exportExcel();" id="exportExcelbtn" />
+                    </apex:outputPanel>
+                                                                        
+                    <apex:commandButton value="Email PDF" rerender="btnPanel8" onclick="generatePDF();" id="EmailPdfBtn" disabled="{!!isLargeGroup}"/> 
+                                      
+                                 <!--  <apex:commandButton value="Email Excel" rerender="btnPanel" onclick="generateExcel();" id="emailExcelExcelbtn" disabled="{!!isLargeGroup}"/> -->
+
+
+                </apex:outputpanel>   
+            </apex:pageblockbuttons>
+        </apex:pageBlock>
+                <apex:outputpanel id="linkpanel">
+                    <apex:commandLink id="openMemSearch" value="Go To Member Search" style="color:Blue;margin-left:33%;" onclick="return memberSearchClick('{!hpAdditionInfoStr}');" rerender="linkpanel"/> 
+                </apex:outputpanel><br></br><br></br>         
+        <apex:outputPanel id="memberListingPanel">
+           
+            <apex:pageBlock id="pbSearchResult" title="Member Listing Search Results" rendered="{!NOT(ISNULL(finalList))}" >
+                <apex:inputHidden id="bundleids" value="{!bundles}"/>       
+                <apex:inputHidden id="popids" value="{!allPops}"/>       
+                <apex:inputHidden id="cobraid" value="{!cobraCount}"/>       
+                <apex:pageBlockSection columns="1" id="listingResults">
+               
+               <apex:pageBlockTable value="{!finalList}" var="list" id="mlTableId">
+                   <apex:column headerValue="Last Name">
+                        <apex:outputLink onclick="navigateToSearch('{!JSENCODE(interaction.id)}','{!list.memberID}','{!list.memberDOB}'); return false;" value="#" style="color:Blue;"  >{!list.lastName}</apex:outputLink>
+                   </apex:column>    
+                   <apex:column value="{!list.firstName}" headerValue="First Name" />
+                   <apex:column value="{!list.memberID}" headerValue="Member ID" id="memberId"/>
+                   <apex:column value="{!list.age}" headerValue="Age" />
+                   <apex:column value="{!list.relationShip}" headerValue="Relation Type" />
+                   <apex:column value="{!list.bundleId}" headerValue="Benefit Bundle Option ID" title="{!list.bundleDescription}" style="color:blue"/>
+                   <apex:column value="{!list.effectiveDate}" headerValue="Effective Date" />
+                   <apex:column value="{!list.terminationDate}" headerValue="Termination Date" />
+                   <apex:column value="{!list.contractType}" headerValue="Contract Type" />
+                   <apex:column value="{!list.billingGroup}" headerValue="Bill Group Number" title="{!list.billingGroupDesc}" style="color:blue"/>
+                   <apex:column value="{!list.continuationType}" headerValue="Continuation Type" />
+                   <apex:column value="{!list.population}" headerValue="Population" rendered="{!hasPop}" />
+                   <apex:column value="{!list.status}" headerValue="Status" />
+                   <apex:column value="{!list.memberDOB }" headerValue="DOB" rendered="false" id="dob"/>
+                   
+               </apex:pageBlockTable>
+                   <apex:outputText rendered="{!if(cobraCount == 0,true,false)}">Showing {!finalList.size} Member(s) </apex:outputText>
+                   <apex:outputText rendered="{!if(cobraCount > 0,true,false)}">Showing {!finalList.size} Member(s) ({!cobraCount} on {!continuationType})</apex:outputText>  
+            </apex:pageBlockSection>
+            </apex:pageBlock>
+        </apex:outputPanel>
+       
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveButton="true" attrShowMisdirectButton="true" 
+            attrSourceOriginator="{!wrapper.SourceOriginator}" attrInteractionId="{!wrapper.Interaction.Id}" attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="{!wrapper.caseobj.Topic__c}" attrLocation="bottom"/>
+    </apex:form>
+   
+</apex:page>

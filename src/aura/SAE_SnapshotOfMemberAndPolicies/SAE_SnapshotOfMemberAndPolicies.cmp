@@ -1,0 +1,1102 @@
+<aura:component
+    implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,lightning:isUrlAddressable"
+    access="global" controller="SAEMemberProviderDetail">
+
+    <!-- US2045625 - Thanish - 2nd Oct 2019 -->
+    <ltng:require styles="{!$Resource.ACET_MasterStyle}" />
+    <!-- US2808743 - Thanish - 4th Sep 2020 - New Autodoc Framework -->
+    <aura:attribute name="autodocUniqueId" type="String" default="policySnapshot" />
+    <!-- DE364195 - Avish -->
+    <ltng:require scripts="{!$Resource.ACET_SAESessionData}" />
+    <aura:attribute name="currentTabId" type="String" />
+    <aura:handler event="lightning:tabFocused" action="{! c.onTabFocused }" />
+    <aura:attribute name="interactionOverviewTabId" type="String" />
+    <aura:attribute name="isClosedTab" type="boolean" access="public" />
+    <aura:handler event="lightning:tabClosed" action="{! c.onTabClosed }" />
+    <!-- DE364195 - Ends -->
+    <aura:attribute name="memberPolicies" type="SAEMemberProviderSearchCoveragesResult.CoverageLine[]" />
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:attribute name="houseHoldData" type="Object[]" />
+    <aura:attribute name="memberCardData" type="Object" />
+    <aura:attribute name="cobData" type="Object" />
+    <aura:attribute name="interactionCard" type="Object" access="public" />
+    <aura:attribute name="tranId" type="String" access="public" />
+    <aura:attribute name="contactAddress" type="String" access="public" />
+    <aura:attribute name="city" type="String" access="public" />
+    <aura:attribute name="state" type="String" access="public" />
+    <aura:attribute name="zip" type="String" access="public" />
+    <aura:attribute name="contactName" type="string" access="public" />
+    <aura:attribute name="memberId" type="string" access="public" />
+    <aura:attribute name="memberDOB" type="string" access="public" />
+    <aura:attribute name="mnfDOB" type="string" access="public" />
+    <aura:attribute name="memberFN" type="string" access="public" />
+    <aura:attribute name="memberLN" type="string" access="public" />
+    <aura:attribute name="memberMiddleInitial" type="string" access="public" />
+    <!--US2784325 - TECH: Case Details - Caller ANI/Provider Add'l Elements Mapped to ORS - Durga-->
+    <aura:attribute name="memberGrpN" type="string" access="public" />
+    <aura:attribute name="searchOption" type="string" access="public" />
+    <aura:attribute name="memState" type="string" access="public" />
+    <aura:attribute name="memPhone" type="string" access="public" />
+    <aura:attribute name="mnfMemberFN" type="string" access="public" />
+    <aura:attribute name="providerUniqueId" type="String" access="public" />
+    <aura:attribute name="contactUniqueId" type="String" access="public" />
+    <aura:attribute name="currentTransactionId" type="String" access="public" />
+    <!--US2855833 -->
+    <aura:attribute name="currentPayerId" type="String" access="public" />
+    <!--US2855833 -->
+    <aura:attribute name="isTierOne" type="boolean" access="public" default="false" />
+    <!--US2973232-->
+    <aura:attribute name="CSPProviderId" type="string" access="public" default="" />
+    <aura:attribute name="selectedIPAValue" type="String" default="" />
+    <aura:attribute name="callCSContractsAPI" type="boolean" access="public" default="false" />
+
+    <!-- Financials -->
+    <aura:attribute name="selectedPolicy" type="SAEMemberProviderSearchCoveragesResult.FinancialsWrapper"
+        access="public" />
+    <aura:attribute name="selectedTabType" type="String" access="public" />
+    <aura:attribute name="eligibleDate" type="String" access="public" />
+    <aura:attribute name="isSelectedPHS" type="boolean" access="public" />
+    <aura:attribute name="showFinanceComponent" type="boolean" access="public" default="false" />
+    <aura:handler name="networkStatus" event="c:SAE_NetworkStatus" action="{!c.handleNetworkEvent}" />
+    <aura:handler name="phsevent" event="c:SAE_PHSEvent" action="{!c.handlePHSEvent}" />
+    <aura:handler name="topicClick" event="c:SAE_TopicClickEvent" action="{!c.handleTopicClick}" />
+    <aura:attribute name="memberTabId" type="string" access="public" />
+    <aura:attribute name="selectedLookUpRecords" type="sObject[]" default="[]" />
+
+    <!-- DE285334 - Sarma - Adding missing Attr  -->
+    <aura:attribute name="guid" type="String" access="public" />
+
+    <!-- US 1813580 - Error Message Translation-->
+    <aura:attribute name="errorMessage" type="string" default="Error" />
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute name="interactionRec" type="Interaction__c" />
+    <!-- US1835149 - Malinda :  Snapshot member not found -->
+    <aura:attribute name="mnf" type="string" default="mnfx" access="public" />
+
+    <!-- US1761826 - UHC/Optum Exclusion UI : START -->
+    <aura:attribute name="isShowComponentBasedOnExclusions" type="Boolean" default="true" />
+    <aura:attribute name="lstExlusions" type="List" access="public" />
+    <aura:handler event="c:SAE_HideComponentsForExclusions" action="{!c.handleShowHideComponents}" />
+    <!-- US1761826 - UHC/Optum Exclusion UI : END -->
+
+    <!-- US1825205 - TECH - Case Creation Framework -->
+    <aura:attribute name="caseWrapper" type="SAETTSCaseWrapper" default="[]" />
+    <aura:attribute name="IsCaseSaved" type="Boolean" default="false" />
+    <aura:handler name="change" value="{! v.IsCaseSaved }" action="{!c.saveCase}" />
+
+    <!-- US1933887 - UHG Access - Sanka D. -->
+    <aura:attribute name="uhgAccess" type="boolean" default="false" />
+
+    <!-- US1875495 - Malinda : Case Creation MNF -->
+    <aura:attribute name="caseWrapperMNF" type="SAETTSCaseWrapper" access="public" default="[]" />
+
+    <!-- US1895939 - Avish : Snapshot - Provider Not Found -->
+    <aura:attribute name="providerNotFound" type="Boolean" default="false" />
+    <aura:attribute name="noMemberToSearch" type="Boolean" default="false" />
+    <aura:attribute name="isProviderSearchDisabled" type="Boolean" default="false" />
+    <aura:attribute name="memberCardFlag" type="Boolean" default="false" />
+
+    <!-- US1866429 - Sarma : Search Claim  Number UI -->
+    <!--US1918611 - Claim Search Results UI -->
+    <aura:attribute name="isShowClaimInfo" type="Boolean" default="false" />
+    <aura:attribute name="climsSearchSelectedOption" type="String" />
+    <aura:handler name="openTopicBtnClick" event="c:SAE_openTopicBtnClick" action="{!c.handleOpenTopicBtnClick}" />
+
+    <!--US1958804 - Bharat : View Payments UI Changes -->
+    <aura:attribute name="isShowPaymentInfo" type="Boolean" default="false" />
+    <aura:attribute name="PaymentSearchSelectedOption" type="String" />
+    <aura:handler name="PaymentSearchEvent" event="c:SAEPaymentSearchEvent" action="{!c.handleOpenTopicBtn}" />
+
+    <!-- US1901028 - Sarma - Member CDHP Integration - 29/08/2019  -->
+    <aura:attribute name="policyDetails" type="SAEPolicyDetailsResult" />
+    <aura:attribute name="rcedResponse" type="ADBLoyaltyResponseWrapper" />
+
+    <!-- US1909380 - Malinda : Snapshot Other (Thirdparty) -->
+    <aura:attribute name="isOtherSearch" type="Boolean" default="false" />
+    <aura:attribute name="otherCardDataObj" type="Object" />
+
+    <!-- US1954477 Removing attr -->
+    <!-- US1730955 - Targeted COB - Details UI: Kavinda  -->
+    <aura:attribute name="showCOBHistory" type="Boolean" default="false" />
+    <aura:attribute name="isfindIndividualFlag" type="Boolean" default="false" />
+    <!--US2070352  added by Avish on 09/25/2019 -->
+    <aura:attribute name="memberContactName" type="string" access="public" />
+    <aura:attribute name="memberContactNumber" type="string" access="public" />
+
+    <!-- US1730906: Benefit Details Component UI: Kavinda -->
+    <aura:attribute name="showBenefitDetails" type="Boolean" default="false" />
+
+    <!-- US1954477	Targeted COB Details - Integration - 27/09/2019 - Sarma-->
+    <aura:attribute name="isShowCobHistory" type="Boolean" default="false" />
+    <!-- US2167806	Error Message - 11/11/2019 - Nikhil-->
+    <aura:handler event="c:SAE_COBHistoryEvent" action="{!c.viewCOBHistory}" />
+    <aura:attribute name="originatorType" type="string" access="public" />
+    <aura:attribute name="detailPage" type="string" access="public" />
+
+    <!--US2020384 : Updates to Additional Member Search Integration - Malinda-->
+    <aura:attribute name="isAdditionalMemberSearchfindIndividual" type="Boolean" default="false" />
+    <!--Added by Vinay for Alerts -->
+    <aura:attribute name="alertProviderId" type="String" access="public" />
+    <aura:attribute name="alertMemberId" type="String" access="public" />
+    <aura:attribute name="alertGroupId" type="String" access="public" />
+    <aura:attribute name="alertTaxId" type="String" access="public" />
+    <aura:attribute name="memberCardSnap" type="Object" access="public" />
+    <aura:attribute name="policyGroupId" type="String" access="public" />
+    <aura:attribute name="policyMemberId" type="String" access="public" />
+    <aura:handler name="SAE_PolicyClickforAlerts" event="c:SAE_PolicyClickforAlerts"
+        action="{!c.getAlertFromPolices}" />
+    <aura:attribute name="houseHoldMemberId" type="String" access="public" />
+
+    <!-- US1828097 - Nikhil : PCP History -->
+    <aura:attribute name="showPCPHistory" type="Boolean" default="false" />
+    <aura:handler event="c:SAE_PCPHistoryEvent" action="{!c.viewPCPHistory}" />
+
+    <!--US2137922: Added by Ravindra-->
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0" />
+    <aura:attribute name="transactionId" type="String" />
+
+    <!-- US1944108 - Accommodate Multiple Payer ID's - Kavinda -->
+    <aura:attribute name="payerID" type="String" default="87726" />
+    <!--US2669563-MVP- Member Snapshot - Policy Details - Populate Payer ID-Durga -->
+    <aura:attribute name="policywithPayerIdMap" type="object" />
+    <aura:attribute name="searchQueryPayerId" type="string" />
+    <aura:attribute name="isDependent" type="Boolean" default="false" />
+    <!--View Referrals PCP US -->
+    <aura:attribute name="showViewReferralsPCP" type="boolean" default="false" />
+
+    <!-- US3802608 - Thanish - 25th Aug 2021 -->
+    <aura:attribute name="showViewAppeals" type="boolean" default="false" />
+
+    <!--Autodoc-->
+    <c:ACETLGT_AutoDoc></c:ACETLGT_AutoDoc>
+
+    <!--US2137922: Page Feature Unique - Sanka -->
+    <aura:attribute name="AutodocPageFeature" type="String" default="memberDetails" />
+
+    <!--US1970508 - Ravindra - start -->
+    <aura:attribute name="xRefId" type="String" default="" />
+    <aura:attribute name="memberPersonAccount" type="Account" />
+    <!--US1970508 - Ravindra - end -->
+
+    <!-- US2041555 -Avish -->
+    <!--<aura:attribute name="caseHistoryList" type="Case[]"/> -->
+    <aura:attribute name="caseHistoryList" type="ACETGetCases.CaseWrapper[]" />
+    <aura:registerEvent name="SAE_CaseHistoryEvent" type="c:SAE_CaseHistoryEvent" />
+    <!-- US2041555 -Avish End-->
+
+    <!-- US2192945 - Sanka -->
+    <aura:attribute name="showProviderLookup" type="boolean" default="false" />
+
+    <!-- US1772936 - View Authorizations and Notifications -  Results and Status UI - Kavinda: START -->
+    <aura:attribute name="isShowAuthorizationResults" type="Boolean" default="false" />
+
+    <!--US2061713 Open Topic View Authorization - 9/12/2019 - Sarma -->
+    <aura:handler name="OpenAuthorizationResultsClick" event="c:SAE_OpenAuthorizationResultsEvent"
+        action="{!c.handleOpenAuthorizationResultsClick}" />
+
+    <!-- US2061732 - Added by Avish -->
+    <aura:handler event="c:SAE_AuthSRNCreateEvent" action="{!c.showSRNCreateMsg}" />
+    <aura:attribute name="SRNFlag" type="Boolean" default="false" />
+    <aura:attribute name="policyNumber" type="String" />
+    <aura:attribute name="authContactName" type="String" />
+    <aura:attribute name="interactionType" type="string" />
+
+    <!-- DE301090 -->
+    <aura:attribute name="AuthAutodocPageFeature" type="String" default="authPageDetails" />
+    <aura:attribute name="AutodocPageFeatureMemberDtl" type="String" />
+
+    <!-- US1955585 -->
+    <aura:attribute name="callTopicOrder" type="Object" />
+
+    <!-- US2396655 - Make Autodoc available for multiple pages -->
+    <aura:attribute name="isAutodocForMultiplePages" type="Boolean" default="false" />
+
+    <!-- US2320729 - Thanish - 2nd Mar 2020 - to toggle auto doc multiple pages attribute in provider search results programatically -->
+    <aura:attribute name="providerSearchResultsADMultiplePages" type="boolean" default="false" />
+
+    <!-- US2429199: MVP - Navigation of Multiple Topics on a Snapshot Page (Part 2) -->
+    <aura:attribute name="topicClicksCount" type="Integer" default="0" />
+
+    <!-- US2543737 - Thanish - 22nd Apr 2020 -->
+    <aura:attribute name="AutodocKeyMemberDtl" type="String" />
+    <aura:attribute name="isMockEnabled" type="Boolean" default="false" />
+
+    <aura:attribute name="contactCard" type="Object" /> <!-- US2416377 Avish-->
+
+    <!-- Added By Lahiru - Optimize Extended Coverage -->
+    <!-- US2579637 -->
+    <aura:attribute name="extendedCOBData" type="Object" />
+    <aura:attribute name="extendedHouseholdData" type="Object" />
+    <aura:attribute name="secondaryCoverageList" type="Object[]" />
+    <aura:attribute name="isSecondaryCoverageAvailable" type="Boolean" default="false" />
+    <aura:attribute name="isPrimaryCoverageAvailable" type="Boolean" default="false" />
+    <aura:attribute name="primaryCoverageDetails" type="Object" />
+    <aura:attribute name="ChangedHouseHoldData" type="List" />
+    <aura:handler name="change" value="{!v.extendedHouseholdData}" action="{!c.deployHouseHoldValues}" />
+
+    <!--US2570805 - Sravan -->
+    <aura:attribute name="isVCCD" type="Boolean" default="false" />
+    <aura:attribute name="VCCDQuestionType" type="String" default="" />
+    <aura:registerEvent name="postVCCD" type="c:ACET_PostVCCD" />
+<!-- USUS2858385 -Rizwan-->
+     <aura:attribute name="iVRDetails" type="Object" access="public" />
+
+    <!-- US3717591 -Mani-->
+    <aura:handler event="c:ACET_claimDetailsCOBEvent" action="{!c.getClaimEngineCode}"/>
+    <aura:attribute name="claimEngineCodeObj" type="Object[]"/>
+
+    <!--US2076634 - HIPAA Guidelines Button - Sravan-->
+    <aura:attribute name="hipaaEndpointUrl" type="String" default="" />
+    <aura:attribute name="isHippaInvokedInProviderSnapShot" type="Boolean" default="false" />
+
+    <!--US2478836 - Member Not Found Plan Type Card Link to OneSource - Sravan-->
+    <aura:attribute name="oneSourceLink" type="String" default=" " />
+
+    <!--US3068299 - Sravan-->
+    <aura:attribute name="autoDocToBeDeleted" type="Object" />
+
+    <aura:attribute name="componentId" type="String" />
+
+    <!-- US2667560 -  Sanka - ORS Family Filtering -->
+    <aura:attribute name="xRefIdORS" type="String" />
+
+    <!-- US2618180 -->
+    <aura:attribute name="patientInfo" type="Object" access="public" />
+    <aura:attribute name="ADKeyMemberDtlCallTopic" type="String" access="public" />
+    <aura:attribute name="ADPageFeatureMemberDtlCallTopic" type="String" access="public" />
+    <aura:handler event="c:ACET_CallTopicAutodoc" action="{!c.handleCallTopicAutodoc}" />
+    <aura:attribute name="providerDetails" type="Object" access="public" />
+    <aura:attribute name="planLevelBenefitsRes" type="ACET_ExtendedServiceController.PlanLevelBenefits"
+        access="Public" />
+
+    <!--US3583813 - Sravan-->
+    <aura:attribute name="showDelegation" type="Boolean" default="false"/>
+    <aura:attribute name="delegationValue" type="String" default=" "/>
+
+    <!-- Policy Switching -->
+    <aura:handler name="xrefChange" event="c:ACET_XrefChange" action="{!c.handleXrefChange}" />
+
+    <!-- US2718112 - Thanish - 2nd Jul 2020 -->
+    <aura:attribute name="caseNotSavedTopics" type="String[]"/>
+    <!--DE347387: ORS Issue - Provider information is missing in ORS routing Screen - Praveen  -->
+    <aura:attribute name="providerDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+
+    <!-- Alert Group Number from extended-->
+    <aura:attribute name="higlightGrpNumber" type="String" />
+    <aura:handler name="change" value="{!v.higlightGrpNumber}" action="{!c.handlehiglightGrpNumber}" />
+
+    <aura:attribute name="isNoPolicies" type="boolean" access="public" />
+
+    <!-- New Autodoc MNF -->
+    <aura:attribute name="mnfMemberDetails" type="object" access="public" />
+    <aura:attribute name="highlightedPolicySourceCode" type="String" default="" />
+    <aura:attribute name="isSourceCodeChanged" type="Boolean" default="false" />
+    <aura:attribute name="policyStatus" type="Boolean" default="false" />
+    <!-- US2812137 -->
+    <aura:attribute name="relationShipcode" type="String" />
+
+    <!-- US2931847 -->
+    <aura:handler name="headerClick" event="c:ACET_ProviderHeaderClickEvt" action="{!c.handleheaderClick}" />
+    <aura:attribute name="populatedFromHeader" type="boolean" default="false" />
+    <!-- DE380979 - Thanish - call topic spinner - 6th Nov 2020 -->
+    <aura:attribute name="policySpinner" type="Boolean" default="true" />
+
+    <!-- Routing Capability-->
+    <aura:attribute name="isRoutingAllowed" type="boolean" default="true" />
+
+    <!-- US2917421 - Sanka -->
+    <aura:attribute name="searchObject" type="Object" />
+
+    <aura:attribute name="callTopicLstSelected" type="sObject[]" />
+    <aura:attribute name="callTopicName" type="String" default="" />
+    <aura:handler event="c:ACET_navigateToCallTopic" action="{!c.navigateToCallTopicEventHandler}" />
+    <aura:attribute name="callTopicTabId" type="String" />
+    <aura:attribute name="showHighlightsPanel" type="Boolean" default="true" />
+    <aura:attribute name="isSandbox" type="Boolean" default="false" />
+    <aura:attribute name="benefitPlanId" type="String" />
+    <!--US2925631 - Tech: Member Alerts Convert Member ID to EEID and Include the Business Segment - Sravan-->
+    <aura:attribute name="memberSubscriberId" type="String" default="SubscriberId" />
+    <aura:handler name="change" value="{!v.memberSubscriberId}" action="{!c.handleEEIDChange}" />
+
+    <!--DE393490 - Sravan-->
+    <aura:attribute name="memberMap" type="Map" access="public" />
+
+    <!--US3117073 - Multiple Policies -  Creating Multiple Unique ORS Records Check In ISET - Sravan-->
+    <aura:attribute name="memberPolicyNumberMap" type="Map" default="" />
+    <!--Jitendra-->
+    <aura:attribute name="strEmails" type="String" default=""/>
+
+
+    <aura:handler event="c:ACET_AuthFacilityHeaderClickEvt" action="{!c.handleAuthProviderClick}" />
+
+    <aura:attribute name="insuranceTypeCode" type="String" default="" />
+    <c:ACET_OrgType isSandbox="{!v.isSandbox}" />
+    <!--US2705857 - Sravan-->
+    <aura:attribute name="addressId" type="String" default="" />
+    <!--US3259671 - Sravan-->
+    <aura:attribute name="flowDetails" type="Object" access="public" />
+    <!--Ketki RCED begin-->
+    <aura:attribute name="rcedResultWrapper" type="Object" />
+    <!--Ketki RCED end-->
+    <!-- US3269760 - Thanish - 16th Feb 2021 -->
+    <aura:attribute name="regionCode" type="String" />
+    <aura:attribute name="cobMNRCommentsTable" type="Object"/>
+
+    <!-- US2890614: COB History Integration M&R - Krishnanshu - 16 Feb 2021 -->
+    <aura:attribute name="dependentCode" type="String" />
+    <!-- US2585035: COB History Integration E&I - Krish - 16th Feb 2021 -->
+    <aura:attribute name="cobENIHistoryTable" type="Object"/>
+
+    <!--Ketki open member snapshot for claim -->
+    <aura:attribute name="policyDateRange" type="String"/>
+    <aura:attribute name="policyNbr" type="String"/>
+    <aura:attribute name="isClaim" type="boolean" access="public" default="false"/>
+    <aura:attribute name="claimInput" type="Object" />
+    <!--Ketki open member snapshot for claim end -->
+
+    <!-- Save Case Consolidation - US3424763 -->
+    <aura:attribute name="tableDetails_prev" type="Object" />
+    <aura:attribute name="showpreview" type="Boolean" default="false" />
+    <aura:attribute name="openSaveCase" type="Boolean" default="false" />
+    <aura:attribute name="freeFormCommentsVal" type="String" default="" />
+    <aura:attribute name="resolvedCommentsValue" type="String" default="" />
+    <aura:attribute name="showWarning" type="Boolean" default="false" />
+    <aura:attribute name="warningMessage" type="String" default="" />
+    <aura:attribute name="disableButtons" type="boolean" default="true" />
+
+    <!-- US3507751 - Save Case Consolidation -->
+    <aura:attribute name="openedTopicUniqueIds" type="String[]" default="[]" />
+    <aura:registerEvent name="caseEvent" type="c:ACET_HandleCaseWrapperEvent" />
+
+    <!-- Blinker -->
+    <aura:attribute name="FISourceCode" type="String" default="" />
+
+    <!-- US3536342 - Thanish - 3rd Jun 2021 -->
+    <aura:attribute name="showComments" type="boolean" default="true"/>
+
+    <!-- Save Case Disabled for Non Medical Policies -->
+    <aura:attribute name="isSaveCaseDisabled" type="Boolean" default="true" />
+
+    <!--US3612768 - Sravan-->
+    <aura:attribute name="explorePageSourceCode" type="String" default=""/>
+
+    <!-- DE491765 -->
+    <aura:handler name="change" value="{!v.policySpinner}" action="{!c.handlePolicySnipperChange}" />
+
+    <!-- US1857687 - Malinda : Spinner - Adding DIV TAG -->
+    <div class="slds-is-relative">
+        <div class="c-container">
+
+            <!-- PAGE HEADER -->
+            <div id="{!v.currentTabId + 'pageHeader'}" class="slds-card pageHeaderTransition" style="background: rgb(243, 242, 242);">
+                <div class="slds-grid card_padding">
+                    <div class="slds-col slds-has-flexi-truncate">
+                        <div class="slds-media slds-no-space slds-grow">
+                            <div class="slds-media__figure">
+                                <span class="slds-icon_container slds-icon-custom-custom38" title="Snapshot">
+                                    <lightning:icon iconName="custom:custom38" alternativeText="Snapshot" />
+                                </span>
+                            </div>
+                            <div class="slds-media__body">
+                                <div class="slds-page-header__name">
+                                    <div class="slds-page-header__name-title">
+                                        <h1
+                                            class="page_header_label slds-m-right_small slds-align-middle slds-truncate">
+                                            Snapshot</h1>
+                                        <p class="page_header_link">
+                                            <a href="javascript:void(0)" data-intId="{!v.interactionRec.Id}"
+                                                onclick="{!c.navigateToDetail}">{!v.interactionRec.Name}</a>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- ACTION BUTTONS -->
+                    <!--US2058123 - Pilot - Sanka D.-->
+                    <lightning:buttonGroup>
+                        <!--US2076634 - HIPAA Guidelines Button - Sravan-->
+                        <c:ACET_HippaGuidelines hipaaEndpointUrl="{!v.hipaaEndpointUrl}" showButton="true" autodocUniqueId="{!v.autodocUniqueId}" policySelectedIndex="{!v.policySelectedIndex}"/>
+                        <!--US2705857 - Sravan-->
+                        <lightning:button variant="neutral" label="Misdirect" name="misDirectBtnName"
+                            class="misdirect_button" onclick="{!c.openMisdirectComp}" />
+
+                        <c:SAE_Alerts aura:id="alertsAI" memberId="{!v.alertMemberId}" groupId="{!v.alertGroupId}"
+                            providerNotFound="{!v.providerNotFound}" noMemberToSearch="{!v.noMemberToSearch}"
+                            memberNotFound="{!v.mnf}" isProviderSearchDisabled="{!v.isProviderSearchDisabled}"
+                            taxId="{!v.alertTaxId}" providerId="{!v.alertProviderId}" isMemberSnapshot="true"
+                            houseHoldMemberId="{!v.houseHoldMemberId}" interactionRecId="{!v.interactionRec.Id}"
+                            policyGroupId="{!v.policyGroupId}" policyMemberId="{!v.policyMemberId}" />
+                        <!-- Save Case Consolidation - US3424763 -->
+                        <lightning:button variant="neutral" label="Autodoc" name="autoDocAll"
+                            onclick="{!c.getAllAutoDoc}" disabled="{!v.mnf == 'mnf' ? false : v.isSaveCaseDisabled }" />
+                        <lightning:button variant="brand" label="Save Case" name="saveCaseWrap"
+                            onclick="{!c.openSaveCase}" disabled="{!v.mnf == 'mnf' ? false : v.isSaveCaseDisabled }" />
+                    </lightning:buttonGroup>
+                </div>
+
+                <!-- US3536342 - Thanish - 3rd Jun 2021 - moving highlits panel and comments location -->
+                <aura:If
+                    isTrue="{!or((or((or(or(v.providerNotFound,v.isProviderSearchDisabled), !v.noMemberToSearch)), or(v.isOtherSearch,v.isfindIndividualFlag))), or(!v.isAdditionalMemberSearchfindIndividual, and(!v.isProviderSearchDisabled,v.isAdditionalMemberSearchfindIndividual)))}">
+                    <aura:If isTrue="{!v.mnf != 'mnf'}">
+                        <div class="slds-card" style="padding-top: 8px; padding-bottom: 8px; border: 1px solid rgb(221, 219, 218); border-radius: 4px;">
+                        <aura:If isTrue="{!v.isShowComponentBasedOnExclusions}">
+                            <div class="highlightPanelPositionNewT"
+                                id="{!v.autodocUniqueId+'highlightPanelMemberSnapshot'}">
+                                <!-- Provider Details and Topic Selection -->
+                                    <div class="slds-border_bottom">
+                                        <div class="{!v.showHighlightsPanel ? 'slds-is-open' : 'slds-is-close'}" aura:id="highLightSection">
+                                            <h3 class="slds-section__title">
+                                            <div class="slds-grid slds-size_12-of-12">
+                                                    <div id="{!v.currentTabId + 'highlightPanelToggle'}" class="slds-col slds-m-left_x-small slds-size_5-of-12 isOpened" onclick="{!c.toggleHighlightPanel}" data-auraId="highLightSection" style="font-weight: bold;">
+                                                        <lightning:icon iconName="{!v.showHighlightsPanel ? 'utility:chevrondown' : 'utility:chevronright'}" size="x-small" class="slds-button__icon_left pointer" alternativeText="button icon"/>
+                                                        <span class="component_title">Highlight Panel: {!v.contactName}</span>
+                                                </div>
+                                                <div class="slds-col  slds-size_7-of-12">
+                                                    <div class="{!v.showHighlightsPanel == true ? 'slds-hide' : 'slds-show'}"
+                                                        style="font-weight: bold;">
+                                                        <div class="slds-grid slds-m-right_medium slds-grid_align-end slds-wrap"
+                                                            style="font-weight: bold;">
+                                                            <div class="slds-col" style="padding-top: 3px;">Topic:</div>
+
+                                                            <aura:iteration items="{!v.callTopicLstSelected}" var="sr">
+                                                                <div class="slds-col">
+                                                                    <lightning:pill class="slds-m-around_xx-small"
+                                                                        label="{!sr.Name}" name="{!sr.Id}"
+                                                                        onclick="{! c.navigateToCallTopic }">
+                                                                        <aura:set attribute="media">
+                                                                            <lightning:icon iconName="standard:account"
+                                                                                size="x-small" alternativeText="icon" />
+                                                                        </aura:set>
+                                                                    </lightning:pill>
+                                                                </div>
+                                                            </aura:iteration>
+
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!--</button>-->
+                                        </h3>
+                                        <div class="{!v.showHighlightsPanel == true ? 'slds-show' : 'slds-hide'}">
+                                            <lightning:layout verticalAlign="stretch"
+                                                class="slds-p-bottom_small slds-p-top_small">
+                                                <lightning:layoutItem size="8">
+                                                    <c:ACET_HighlightPanel displayChevron="false"
+                                                        interactionOverviewTabId="{!v.interactionOverviewTabId}"
+                                                        memberId="{!v.houseHoldMemberId}" displayName="true"
+                                                        NetworkStatus="{!v.selectedTabType}"
+                                                        changeMemberAlignment="true"
+                                                        policyDetails="{!v.policyDetails}" />
+                                                </lightning:layoutItem>
+                                                <div class="slds-border_right">
+                                                    <br />
+                                                </div>
+
+                                                <lightning:layoutItem size="4" class="slds-card">
+                                                    <c:SAE_CallTopicComponent aura:id="calltopiccmp"
+                                                        objectAPIName="Call_Topic_Access__c" IconName="standard:account"
+                                                        lstSelectedRecords="{!v.selectedLookUpRecords}" label="Topic"
+                                                        detailPgName="{!v.detailPage}"
+                                                        originatorName="{!v.originatorType}"
+                                                        providerNotFound="{!v.providerNotFound}"
+                                                        noMemberToSearch="{!v.noMemberToSearch}" mnf="{!v.mnf}"
+                                                        alertMemberId="{!v.alertMemberId}"
+                                                        alertGroupId="{!v.alertGroupId}" alertTaxId="{!v.alertTaxId}"
+                                                        alertProviderId="{!v.alertProviderId}"
+                                                        isProviderSearchDisabled="{!v.isProviderSearchDisabled}"
+                                                        callTopicOrder="{!v.callTopicOrder}"
+                                                        topicClicksCount="{!v.topicClicksCount}" enableVCCD="true"
+                                                        isNoPolicies="{!v.isNoPolicies}"
+                                                        interactionOverviewTabId="{!v.interactionOverviewTabId}"
+                                                        policySpinner="{!v.policySpinner}"
+                                                        callTopicLstSelected="{!v.callTopicLstSelected}" />
+                                                    <!-- US2570805 -->
+                                                    <!-- US2429199 -->
+                                                    <!-- DE380979 - Thanish - call topic spinner - 6th Nov 2020 -->
+
+                                                </lightning:layoutItem>
+
+                                            </lightning:layout>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </aura:If>
+
+                            <div class="{!v.showComments ? 'slds-is-open' : 'slds-is-close'}" id="{!v.autodocUniqueId+'commentsSection'}" aura:id="commentsSection" style="width: 100%;">
+                                <h3 class="slds-section__title">
+                                    <div class="slds-grid">
+                                        <div id="{!v.currentTabId + 'commentsToggle'}" class="slds-col slds-m-left_x-small pointer isOpened" onclick="{!c.toggleComments}" data-auraId="{!v.autodocUniqueId+'commentsSection'}">
+                                            <lightning:icon iconName="{!v.showComments ? 'utility:chevrondown' : 'utility:chevronright'}" size="x-small" class="slds-button__icon_left" alternativeText="button icon"/>
+                                        </div>
+                                        <div class="slds-col slds-truncate">
+                                            <c:ACET_HoverPopup aura:id="overAllCommentsPopup" moveRight="" description="" isNubbinLeft="true"
+                                                descriptionList="[ 'Use the comments to include a brief','description of the issue, research performed,', 'and any attempts to resolve' ]" />
+                                            <p class="component_title slds-form-element__label field_label_padding" style="border-bottom:1px dashed;padding:0px;line-height: normal;"
+                                               data-popupId="overAllCommentsPopup" onmouseover="{!c.toggleCommentsPopup}" onmouseout="{!c.toggleCommentsPopup}">
+                                                Comments:
+                                            </p>
+                                            <b class="component_title slds-p-left_small">Resolved Case Items</b>
+                                        </div>
+                                    </div>
+                                </h3>
+                                <div class="{!v.showComments ? 'slds-show' : 'slds-hide'}" style="padding: 0;margin: 0 10px 0 10px;">
+                                    <lightning:textarea name="commentsTextArea" value="{!v.resolvedCommentsValue}"
+                                        label="Commets" aura:id="commentsBoxId" variant="label-hidden"
+                                        class="slds-p-top_small" maxlength="2000" onkeyup="{!c.handleKeyup }"/>
+                                    <span class="floatToRight valueCls slds-form-element__static">
+                                        Characters remaining:
+                                        <lightning:formattedNumber value="{!2000-v.resolvedCommentsValue.length}" />
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </aura:If>
+                </aura:If>
+            </div>
+            <!-- / PAGE HEADER -->
+
+            <!-- DE373867 - Thanish - 8th Oct 2020 - removed old hippa autodoc code -->
+            <aura:If isTrue="{!v.mnf == 'mnf'}">
+                <lightning:layout verticalAlign="stretch" class="slds-p-top_small" multipleRows="true">
+                    <lightning:layoutItem size="12">
+                    <c:ACET_HighlightPanel interactionOverviewTabId="{!v.interactionOverviewTabId}" memberId="{!v.houseHoldMemberId}" isMemberFlow="false" displayName="true" isProviderFlow="false"/>
+                    </lightning:layoutItem>
+                </lightning:layout>
+            </aura:If>
+            <!-- US1895939 - Avish : Snapshot - Provider Not Found -->
+            <aura:If isTrue="{!and(v.providerNotFound,v.noMemberToSearch)}">
+                <lightning:layout verticalAlign="stretch" class="slds-p-bottom_small slds-p-top_small">
+                <lightning:layoutItem class="provider slds-card slds-p-top_small">
+                        <c:SAE_ProviderSnapshotCard interactionCard="{!v.interactionCard}"
+                            providerNotFound="{!v.providerNotFound}" snapshotLink="false" />
+                    </lightning:layoutItem>
+                    <lightning:layoutItem class="space" />
+                </lightning:layout>
+
+                <lightning:layout multipleRows="true">
+                    <lightning:layoutItem class="provider slds-card">
+                        <c:ACET_ProviderNotFoundSnapshot caseWrapper="{! v.caseWrapperMNF}" />
+                    </lightning:layoutItem>
+                </lightning:layout>
+            </aura:If>
+            <!--US1909380-->
+
+            <!-- DE285779 - Added new conditions for additional member search from IO - 12/05/2019 -  Sarma  -->
+            <aura:If
+                isTrue="{!or((or((or(or(v.providerNotFound,v.isProviderSearchDisabled), !v.noMemberToSearch)), or(v.isOtherSearch,v.isfindIndividualFlag))), or(!v.isAdditionalMemberSearchfindIndividual, and(!v.isProviderSearchDisabled,v.isAdditionalMemberSearchfindIndividual)))}">
+                <!--US2070352  added by Avish on 09/25/2019 -->
+                <aura:If isTrue="{!v.mnf != 'mnf'}">
+
+                    <div class="slds-spinner_container slds-show" style="z-index: 1;"
+                        id="{!v.currentTabId + 'global-spinner'}"></div>
+
+                    <!-- US3536342 - Thanish - 3rd Jun 2021 - moved highlights panel and comments under page header -->
+
+                    <!-- Provider Details and Topic Selection -->
+                    <lightning:layout verticalAlign="stretch" class="">
+                        <aura:If isTrue="{!v.providerNotFound}">
+                            <lightning:layoutItem size="12" class="slds-p-top_small ">
+                                <c:SAE_ProviderSnapshotCard interactionCard="{!v.interactionCard}"
+                                    providerNotFound="{!v.providerNotFound}" snapshotLink="false" />
+                            </lightning:layoutItem>
+                            <aura:set attribute="else">
+                                <!--US1909380 : START-->
+                                <aura:If isTrue="{!v.isOtherSearch}">
+                                    <lightning:layoutItem size="12" class="slds-p-top_small">
+                                        <c:SAE_OtherCard DataObj="{!v.otherCardDataObj}" />
+                                    </lightning:layoutItem>
+                                    <aura:set attribute="else">
+                                        <aura:If isTrue="{!and(v.isfindIndividualFlag,v.isProviderSearchDisabled)}">
+                                            <aura:set attribute="else">
+                                                <aura:If isTrue="{!and(v.memberCardFlag,v.isProviderSearchDisabled)}">
+                                                    <aura:set attribute="else">
+                                                        <lightning:layoutItem size="12" class="slds-p-top_small">
+                                                            <c:SAE_InteractionOverviewCard
+                                                                interactionCard="{!v.interactionCard}"
+                                                                contactName="{!v.contactName}"
+                                                                providerStatus="{!v.selectedTabType}"
+                                                                CSPProviderId="{!v.CSPProviderId}"
+                                                                isShowComponentBasedOnExclusions="{!v.isShowComponentBasedOnExclusions}"
+                                                                policySelectedIndex="{!v.policySelectedIndex}"
+                                                                autodocUniqueId="{!v.autodocUniqueId}"
+                                                                policyDetails="{!v.policyDetails}"
+                                                                memberCardData="{!v.memberCardData}"
+                                                                caseNotSavedTopics="{!v.caseNotSavedTopics}"/> <!-- DE492760 - Thanish - 23rd Sept 2021 -->
+                                                            <!-- US3691233: Add missing fields/components to autodoc reporting - Krish - 11th Aug 2021 -->
+                                                                <!-- US2728364: Auto Doc: Member Snapshot - Have Provider Card Included in Eligibility Auto Doc Automatically - Krish - 6th July 2021 -->
+                                                            <!-- US3504373	Unable to Determine  Policy - Save Case - Sarma - 05th May 2021 -->
+                                                        </lightning:layoutItem>
+                                                    </aura:set>
+                                                </aura:If>
+                                            </aura:set>
+                                        </aura:If>
+                                    </aura:set>
+                                </aura:If>
+                            </aura:set>
+
+                        </aura:If>
+                    </lightning:layout>
+                </aura:If>
+                <!-- End of Provider Details and Topic Selection -->
+
+                <!-- Member Not Found Section -->
+                <aura:If isTrue="{!v.mnf == 'mnf'}">
+                    <!--US1835149 Malinda-->
+                    <!-- DE250948 - Thanish - Fixed alignment of member not found snapshot as per to the mockup -->
+                    <div>
+
+                        <!-- Member Not Found Provider Card -->
+                        <!-- US2060237	Other Card Validation - Snapshot - Other (Third Party) - 11/10/2019 - Sarma
+                                                                Changing conditions & Add other card during MNF flow -->
+                        <aura:if isTrue="{!v.isProviderSearchDisabled}">
+                            <lightning:layout verticalAlign="stretch" class="slds-p-top_small">
+                                <!-- US2119569 - Thanish - 21st Nov 2019 -->
+                                <lightning:layoutItem size="8">
+                                    <c:SAE_ContactCard contactName="{!v.contactName}" autodocEnabled="true"
+                                        AutodocPageFeature="{!v.AutodocPageFeature}" contactCard="{!v.contactCard}" />
+                                    <!-- US2119569 - Thanish - 21st Nov 2019 -->
+                                </lightning:layoutItem>
+                                <lightning:layoutItem class="space" />
+                            </lightning:layout>
+                            <aura:set attribute="else">
+                                <aura:if isTrue="{!v.isOtherSearch}">
+                                    <lightning:layoutItem size="8" class="slds-p-top_small">
+                                        <c:SAE_OtherCard DataObj="{!v.otherCardDataObj}" autodocEnabled="true"
+                                            AutodocPageFeature="{!v.AutodocPageFeature}" />
+                                        <!-- US2119569 - Thanish - 23rd Nov 2019 -->
+                                    </lightning:layoutItem>
+
+                                    <aura:set attribute="else">
+                                        <lightning:layoutItem size="8" class="slds-p-top_small">
+                                            <c:SAE_ProviderSnapshotCard interactionCard="{!v.interactionCard}"
+                                                providerNotFound="{!v.providerNotFound}" snapshotLink="false"
+                                                autodocEnabled="true" AutodocPageFeature="{!v.AutodocPageFeature}"
+                                                CSPProviderId="{!v.CSPProviderId}" />
+                                            <!-- US2119569 - Thanish - 23rd Nov 2019 -->
+                                        </lightning:layoutItem>
+                                    </aura:set>
+                                </aura:if>
+                            </aura:set>
+                        </aura:if>
+
+                        <!-- End of Member Not Found Provider Card -->
+
+                        <!-- Member Not Found Subject Card -->
+                        <div class="slds-p-top_small slds-size_8-of-12">
+                            <div aura:id="card" class="slds-box slds-card card_padding" data-auto-doc="auto"
+                                data-auto-doc-feature="{!v.AutodocPageFeature}"
+                                data-auto-doc-section-key="{! 'Subject: ' + v.mnfMemberFN + ' ' + v.memberLN}"
+                                data-auto-doc-section-column-indexes="1,2">
+                                <div class="autodocNotTableView" data-auto-doc-feature="{!v.AutodocPageFeature}">
+
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-size_6-of-12 card_bottom_margin">
+                                            <lightning:layoutitem size="12">
+                                                <span class="slds-text-heading_small component_title">
+                                                    <input type="checkbox" class="autodoc" checked="true"
+                                                        disabled="true" /> Subject:
+                                                </span>
+                                                <span class="component_title">
+                                                    <b>
+                                                        <aura:if
+                                                            isTrue="{!or(v.mnfMemberFN != null, v.memberLN != null)}">
+                                                            <span style="text-transform: uppercase;">{!v.mnfMemberFN + ' ' + v.memberLN}</span><!-- DE446352 - Krish - 25th May 2021-->
+                                                            <aura:set attribute="else">
+                                                                --
+                                                            </aura:set>
+                                                        </aura:if>
+                                                    </b>
+                                                </span>
+                                            </lightning:layoutitem>
+                                        </div>
+
+                                        <div class="slds-size_6-of-12" style="margin-bottom: 20px;">
+                                            <span class="field_label">DOB: </span>
+                                            <span class="field_value">{!v.mnfDOB}</span>
+                                        </div>
+
+                                        <div class="slds-size_6-of-12">
+                                            <p class="field_label field_label_padding">State</p>
+                                            <p class="field_value" style="text-transform:capitalize">
+                                                <aura:if isTrue="{!v.memState}">
+                                                    {!v.memState}
+                                                    <aura:set attribute="else">
+                                                        --
+                                                    </aura:set>
+                                                </aura:if>
+                                            </p>
+                                        </div> <!-- US2018128	Enhancement - Update Number to # - Sarma -->
+                                        <div class="slds-size_6-of-12">
+                                            <p class="field_label field_label_padding">Phone #</p>
+                                            <p class="field_value">
+                                                <aura:if isTrue="{!v.memPhone}">
+                                                    {!v.memPhone}
+                                                    <aura:set attribute="else">
+                                                        --
+                                                    </aura:set>
+                                                </aura:if>
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                        <!-- End of Member Not Found Subject -->
+
+                        <!-- Member Not Found Plan Type -->
+                        <lightning:layoutItem size="8" class="slds-p-top_small">
+                            <div>
+                                <c:SAE_MemberNotFoundPlanType aura:id="memberNotFoundPlanType" caseWrapper="{! v.caseWrapperMNF}"
+                                    AutodocKey="{!v.AutodocKey}" AutodocPageFeature="{!v.AutodocPageFeature}"
+                                    isHippaInvokedInProviderSnapShot="{!v.isHippaInvokedInProviderSnapShot}"
+                                    contactDetails="{!v.contactCard}" providerDetails="{!v.interactionCard}"
+                                    otherDetails="{!v.otherCardDataObj}" memberDetails="{!v.mnfMemberDetails}"
+                                    isOther="{!v.isOtherSearch}" autodocUniqueId="{!v.autodocUniqueId}"
+                                    CSPProviderId="{!v.CSPProviderId}"
+                                    isProviderSearchDisabled="{!v.isProviderSearchDisabled}"
+                                    oneSourceLink="{!v.oneSourceLink}" flowDetails="{!v.flowDetails}"
+                                    flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}"/>
+                                <!--US2478836 - Sravan -->
+                                <!-- US2119569 - Thanish - 21st Nov 2019 -->
+                                <!-- US3692809: Added aura id - Krish - 2nd August 2021-->
+                            </div>
+                        </lightning:layoutItem>
+                        <!-- End of Member Not Found Plan Type -->
+
+                        <aura:if isTrue="{!v.showpreview}">
+                        <c:ACET_PreviewAutoDoc tableDetails_prev="{!v.tableDetails_prev}"
+                            isModalOpen="{!v.showpreview}" />
+                    </aura:if>
+
+                    </div>
+                </aura:If>
+                <!-- End of Member Not Found Section -->
+
+                <aura:If isTrue="{!v.mnf != 'mnf'}">
+                    <!-- Policies Table -->
+                    <div class="card_bottom_outer_padding slds-p-top_small">
+                        <c:ACET_PolicyParent policyList="{!v.memberPolicies}" caseWrapper="{!v.caseWrapperMNF}"
+                            planLevelBenefitsRes="{!v.planLevelBenefitsRes}"
+                            extendedHouseholdData="{!v.extendedHouseholdData}" extendedCOBData="{!v.extendedCOBData}"
+                            isShowCobHistory="{!v.isShowCobHistory}" policyDetails="{!v.policyDetails}"
+                            AutodocPageFeature="{!v.AutodocPageFeature}" uhgAccess="{!v.uhgAccess}"
+                            showPCPHistory="{!v.showPCPHistory}" lstExlusions="{!v.lstExlusions}"
+                            originatorType="{!v.originatorType}" providerDetails="{!v.providerDetails}"
+                            higlightGrpNumber="{!v.higlightGrpNumber}" autodocUniqueId="{!v.autodocUniqueId}"
+                            policySelectedIndex="{!v.policySelectedIndex}"
+                            highlightedPolicySourceCode="{!v.highlightedPolicySourceCode}"
+                            isSourceCodeChanged="{!v.isSourceCodeChanged}" policyStatus="{!v.policyStatus}"
+                            memberTabId="{!v.memberTabId}" currentTransactionId="{!v.currentTransactionId}"
+                            relationShipcode="{!v.relationShipcode}" isTierOne="{!v.isTierOne}"
+                            interactionOverviewTabId="{!v.interactionOverviewTabId}" memberId="{!v.memberId}"
+                            showSpinner="{!v.policySpinner}" autoDocToBeDeleted="{!v.autoDocToBeDeleted}"
+                            memberSubscriberId="{!v.memberSubscriberId}" strBenefitPlandId="{!v.benefitPlanId}"
+                            memberMap="{!v.memberMap}" memberCardData="{!v.memberCardData}"
+                            selectedIPAValue="{!v.selectedIPAValue}" callCSContractsAPI="{!v.callCSContractsAPI}"
+                            memberPolicyNumberMap = "{!v.memberPolicyNumberMap}"
+                            rcedResultWrapper="{!v.rcedResultWrapper}" isNoPolicies="{!v.isNoPolicies}"
+                            flowDetails="{!v.flowDetails}"
+                            flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}"
+                            isShowComponentBasedOnExclusions="{!v.isShowComponentBasedOnExclusions}"
+                            iVRDetails ="{!v.iVRDetails}"
+                            isVCCD="{!v.isVCCD}"
+                            disableButtons="{!v.disableButtons}" isSaveCaseDisabled="{!v.isSaveCaseDisabled}"
+                            highlightedPolicyNumber="{!v.highlightedPolicyNumber}" /><!-- Save Case Consolidation - US3424763 -->
+                        <!--DE393490 - Sravan-->
+                        <!--US2925631 - Sravan -->
+                        <!-- DE380979 - Thanish - call topic spinner - 6th Nov 2020 -->
+                        <!--Jitendra-->
+                    </div>
+
+                    <!-- End of Policies Table -->
+
+                    <!-- Save Case Consolidation - US3424763 -->
+                    <aura:if isTrue="{!v.showpreview}">
+                        <c:ACET_PreviewAutoDoc tableDetails_prev="{!v.tableDetails_prev}"
+                            isModalOpen="{!v.showpreview}" />
+                    </aura:if>
+
+                    <aura:If isTrue="{!v.isShowComponentBasedOnExclusions}">
+                        <div class="slds-wrap slds-grid slds-grid_vertical-stretch">
+                            <!-- Member Details -->
+                            <div class="slds-col slds-size_4-of-12 card_right_outer_padding"
+                                style="{!((and(!v.showPCPHistory, v.isShowCobHistory)) ? 'order: 3;' : 'order: 1;')}">
+                                <span>
+                                    <c:SAE_MemberDetails aura:id="memberDetailsAI"
+                                        policySelectedIndex="{!v.policySelectedIndex}"
+                                        autodocUniqueId="{!v.autodocUniqueId}" memberCardData="{!v.memberCardData}"
+                                        AutodocPageFeature="{!v.AutodocPageFeature}"
+                                        policyMemberId="{!v.policyMemberId}" AutodocKey="{!v.AutodocKey}"
+                                        subjectCard="{!v.memberCardSnap}"
+                                        isAutodocForMultiplePages="{!v.isAutodocForMultiplePages}"
+                                        caseWrapper="{! v.caseWrapperMNF}" extendedCoverage="{!v.policyDetails}"
+                                        memberTabId="{!v.memberTabId}" patientInfo="{!v.patientInfo}"  strEmails="{!v.strEmails}"/>
+                                </span>
+                            </div>
+                            <!-- Policy Details -->
+                            <div class="slds-col slds-size_4-of-12 card_right_outer_padding"
+                                style="{!((and(!v.showPCPHistory, v.isShowCobHistory)) ? 'order: 4;' : ((and(v.showPCPHistory, !v.isShowCobHistory)) ? 'order: 4;' : 'order: 2;'))}">
+                                <c:SAE_PolicyDetails conAddress="{!v.contactAddress}"
+                                    autodocUniqueId="{!v.autodocUniqueId}" policyDetails="{!v.policyDetails}"
+                                    AutodocPageFeature="{!v.AutodocPageFeature}" AutodocKey="{!v.AutodocKey}"
+                                    policySelectedIndex="{!v.policySelectedIndex}" city="{!v.city}" state="{!v.state}"
+                                    zip="{!v.zip}" policyList="{!v.memberPolicies}"
+                                    policywithPayerIdMap="{!v.policywithPayerIdMap}"
+                                    searchQueryPayerId="{!v.searchQueryPayerId}" subjectCard="{!v.memberCardSnap}"
+                                    policyNumber="{!v.policyNumber}" isDependent="{!v.isDependent}"
+                                    caseWrapper="{! v.caseWrapperMNF}" payerId="{!v.currentPayerId}"
+                                    currentTransactionId="{!v.currentTransactionId}" patientInfo="{!v.patientInfo}"
+                                    rcedResultWrapper="{!v.rcedResultWrapper}" memberCardData="{!v.memberCardData}"
+                                    showDelegation="{!v.showDelegation}"
+                                    delegationValue="{!v.delegationValue}"/><!--US3583813 - Sravan-->
+                            </div>
+                            <!-- Coordination of Benifits and Household -->
+                            <div class="slds-col slds-size_4-of-12"
+                                style="{!((and(!v.showPCPHistory, v.isShowCobHistory)) ? 'order: 2;' : ((and(v.showPCPHistory, !v.isShowCobHistory)) ? 'order: 5;' : 'order: 2;'))}">
+                                <div class="slds-grid slds-grid_vertical" style="height:100%">
+                                    <!-- US3269760 - Thanish - 15th Feb 2021 -->
+                                    <div class="slds-card slds-col">
+                                        <span>
+                                            <c:SAE_CoordinationOfBenefits cobData="{!v.cobData}"
+                                                autodocUniqueId="{!v.autodocUniqueId}"
+                                                isShowCobHistory="{!v.isShowCobHistory}"
+                                                COBExtendedData="{!v.extendedCOBData}"
+                                                secondaryCoverageList="{!v.secondaryCoverageList}"
+                                                isSecondaryCoverageAvailable="{!v.isSecondaryCoverageAvailable}"
+                                                primaryCoverageDetails="{!v.primaryCoverageDetails}"
+                                                isPrimaryCoverageAvailable="{!v.isPrimaryCoverageAvailable}"
+                                                memberTabId="{!v.memberTabId}"
+                                                policySelectedIndex="{!v.policySelectedIndex}"
+                                                policyDetails="{!v.policyDetails}"
+                                                cobMNRCommentsTable="{!v.cobMNRCommentsTable}"
+                                                regionCode="{!v.regionCode}" dependentCode="{!v.dependentCode}"
+                                                cobENIHistoryTable="{!v.cobENIHistoryTable}"
+                                                memberPolicies="{!v.memberPolicies}" houseHoldData="{!v.houseHoldData}"
+                                                currentTabId="{!v.currentTabId}" />
+                                            <!-- US3269760 - Thanish - 16th Feb 2021 -->
+                                            <!-- US2585035: COB History Integration E&I - Krish - 16th Feb 2021 -->
+                                            <!-- US2890614: COB History Integration M&R - Krishnanshu - 16 Feb 2021 -->
+                                        </span>
+                                    </div>
+                                    <div class="slds-card slds-col card_top_margin">
+                                        <span>
+                                            <c:SAE_Household houseHoldData="{!v.houseHoldData}"
+                                                interactionCard="{!v.interactionCard}" subjectCard="{!v.memberCardSnap}"
+                                                autodocUniqueId="{!v.autodocUniqueId}" contactName="{!v.contactName}"
+                                                searchOption="{!v.searchOption}" memberGrpN="{!v.memberGrpN}"
+                                                membTabId="{!v.memberTabId}" interactionRecd="{!v.interactionRec}"
+                                                policySelectedIndex="{!v.policySelectedIndex}"
+                                                isOtherSearch="{!v.isOtherSearch}"
+                                                otherCardDataObj="{!v.otherCardDataObj}"
+                                                providerNotFound="{!v.providerNotFound}"
+                                                noMemberToSearch="{!v.noMemberToSearch}"
+                                                isProviderSearchDisabled="{!v.isProviderSearchDisabled}"
+                                                isfindIndividualFlag="{!v.isfindIndividualFlag}"
+                                                memberCardFlag="{!v.memberCardFlag}"
+                                                isAdditionalMemberSearchfindIndividual="{!v.isAdditionalMemberSearchfindIndividual}"
+                                                payerID="{! v.payerID }" AutodocPageFeature="{!v.AutodocPageFeature}"
+                                                AutodocKey="{!v.AutodocKey}"
+                                                ChangedHouseHoldData="{!v.ChangedHouseHoldData}"
+                                                policywithPayerIdMap="{!v.policywithPayerIdMap}"
+                                                searchQueryPayerId="{!v.searchQueryPayerId}"
+                                                providerDetails="{!v.providerDetails}" contactCard="{!v.contactCard}"
+                                                providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}"
+                                                flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}"
+                                                interactionOverviewTabId="{!v.interactionOverviewTabId}" />
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="{!'slds-col slds-size_8-of-12 card_bottom_margin card_right_outer_padding ' + ((and(!v.showPCPHistory, v.isShowCobHistory)) ? 'slds-show' : 'slds-hide')}"
+                                style="{!((and(!v.showPCPHistory, v.isShowCobHistory)) ? 'order: 1;' : 'order: 5;')}">
+                                <span>
+                                    <c:SAE_COBHistory isShowCobHistory="{!v.isShowCobHistory}" cobData="{!v.cobData}"
+                                        secondaryCoverageList="{!v.secondaryCoverageList}"
+                                        autodocUniqueId="{!v.autodocUniqueId}"
+                                        policySelectedIndex="{!v.policySelectedIndex}"
+                                        policyDetails="{!v.policyDetails}"
+                                        cobMNRCommentsTable="{!v.cobMNRCommentsTable}" regionCode="{!v.regionCode}"
+                                        dependentCode="{!v.dependentCode}" cobENIHistoryTable="{!v.cobENIHistoryTable}"
+                                        memberPolicies="{!v.memberPolicies}" />
+                                    <!-- US3269760 - Thanish - 16th Feb 2021 -->
+                                    <!-- US2585035: COB History Integration E&I - Krish - 16th Feb 2021 -->
+                                    <!-- US2890614: COB History Integration M&R - Krishnanshu - 16 Feb 2021 -->
+                                </span>
+                            </div>
+
+                            <div class="{!'slds-col slds-size_8-of-12 card_bottom_margin ' + ((and(v.showPCPHistory, !v.isShowCobHistory)) ? 'slds-show' : 'slds-hide')}"
+                                style="{!((and(v.showPCPHistory, !v.isShowCobHistory)) ? 'order: 1;' : 'order: 6;')}">
+                                <span>
+                                    <!--US2356250 - PCP History Integration - Sanka -->
+                                    <c:SAE_PCPHistory isShowPCPHistory="{!v.showPCPHistory}"
+                                        autodocUniqueId="{!v.autodocUniqueId}" extendedCoverage="{!v.policyDetails}"
+                                        transactionId="{!v.transactionId}" memberTabId="{!v.memberTabId}"
+                                        policySelectedIndex="{!v.policySelectedIndex}"
+                                        rcedResultWrapper="{!v.rcedResultWrapper}" memberGrpN="{!v.memberGrpN}" 
+                                        memberCardData="{!v.memberCardData}"/> <!-- US3691233: Add missing fields/components to autodoc reporting - Krish - 11th Aug 2021 -->
+                                </span>
+                            </div>
+
+                            <!-- empty space needed under member details when PCP history is visible -->
+                            <div class="{!'slds-col slds-size_4-of-12 ' + ((and(v.showPCPHistory, !v.isShowCobHistory)) ? 'slds-show' : 'slds-hide')}"
+                                style="{!((and(v.showPCPHistory, !v.isShowCobHistory)) ? 'order: 3;' : 'order: 7;')}">
+                            </div>
+                        </div>
+                    </aura:If>
+                    <!-- US2802160	Restricted Policies:  Open Topic Should Not Display - Sarma - 14-08-2020 -->
+                    <aura:If isTrue="{!v.isShowComponentBasedOnExclusions}">
+                        <!-- US1955585: MVP - Opening Multiple Topics on a Snapshot Page: KAVINDA - START -->
+                        <!-- DE315213 -->
+                        <!-- US1918629:Populate TaxId In  Claim search Page Venkat - START -->
+
+                        <c:ACET_CallTopicContainer aura:id="callcontainer" selectedPolicy="{!v.selectedPolicy}"
+                            selectedTabType="{!v.selectedTabType}" showBenefitDetails="{!v.showBenefitDetails}"
+                            policyDetails="{!v.policyDetails}" AutodocPageFeature="{!v.AutodocPageFeature}"
+                            memberTabId="{!v.memberTabId}" caseWrapperMNF="{!v.caseWrapperMNF}" mnf="{!v.mnf}"
+                            contactUniqueId="{!v.contactUniqueId}" showProviderLookup="{!v.showProviderLookup}"
+                            interactionRec="{!v.interactionRec}" noMemberToSearch="{!v.noMemberToSearch}"
+                            caseWrapper="{!v.caseWrapper}" memberCardSnap="{!v.memberCardSnap}"
+                            memberPolicies="{!v.memberPolicies}" policySelectedIndex="{!v.policySelectedIndex}"
+                            isShowAuthorizationResults="{!v.isShowAuthorizationResults}" memberFN="{!v.memberFN}"
+                            memberLN="{!v.memberLN}" memberDOB="{!v.memberDOB}" memberCardData="{!v.memberCardData}"
+                            Type="{!v.Type}" SubType="{!v.SubType}" authContactName="{!v.authContactName}"
+                            SRNFlag="{!v.SRNFlag}" policyNumber="{!v.policyNumber}"
+                            houseHoldMemberId="{!v.houseHoldMemberId}" interactionType="{!v.interactionType}"
+                            AutodocKey="{!v.AutodocKey}" AutodocPageFeatureMemberDtl="{!v.AutodocPageFeatureMemberDtl}"
+                            IsCaseSaved="{!v.IsCaseSaved}" AuthAutodocPageFeature="{!v.AuthAutodocPageFeature}"
+                            isShowClaimInfo="{!v.isShowClaimInfo}" isShowPaymentInfo="{!v.isShowPaymentInfo}"
+                            callTopicOrder="{!v.callTopicOrder}" interactionCard="{!v.interactionCard}"
+                            showFinanceComponent="{!v.showFinanceComponent}"
+                            isAutodocForMultiplePages="{!v.isAutodocForMultiplePages}"
+                            providerSearchResultsADMultiplePages="{!v.providerSearchResultsADMultiplePages}"
+                            topicClicksCount="{!v.topicClicksCount}" AutodocKeyMemberDtl="{!v.AutodocKeyMemberDtl}"
+                            componentId="{!v.componentId}"
+                            isHippaInvokedInProviderSnapShot="{!v.isHippaInvokedInProviderSnapShot}"
+                            hipaaEndpointUrl="{!v.hipaaEndpointUrl}" caseNotSavedTopics="{!v.caseNotSavedTopics}"
+                            planLevelBenefitsRes="{!v.planLevelBenefitsRes}"
+                            providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}"
+                            flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}"
+                            showViewReferralsPCP="{!v.showViewReferralsPCP}" autodocUniqueId="{!v.autodocUniqueId}"
+                            eligibleDate="{!v.eligibleDate}"
+                            highlightedPolicySourceCode="{!v.highlightedPolicySourceCode}"
+                            isSourceCodeChanged="{!v.isSourceCodeChanged}" policyStatus="{!v.policyStatus}"
+                            currentPayerId="{!v.currentPayerId}" isTierOne="{!v.isTierOne}"
+                            originatorType="{!v.originatorType}" isDependent="{!v.isDependent}"
+                            interactionOverviewTabId="{!v.interactionOverviewTabId}"
+                            populatedFromHeader="{!v.populatedFromHeader}" isRoutingAllowed="{!v.isRoutingAllowed}"
+                            autoDocToBeDeleted="{!v.autoDocToBeDeleted}" searchObject="{!v.searchObject}"
+                            callTopicName="{!v.callTopicName}" callTopicLstSelected="{!v.callTopicLstSelected}"
+                            callTopicTabId="{!v.callTopicTabId}" strPlanBenefitId="{!v.benefitPlanId}"
+                            memberId="{!v.memberId}" memberPolicyNumberMap="{!v.memberPolicyNumberMap}"
+                            selectedIPAValue="{!v.selectedIPAValue}" insuranceTypeCode="{!v.insuranceTypeCode}"
+                            providerDetails="{!v.providerDetails}" dependentCode="{!v.dependentCode}"
+                            flowDetails="{!v.flowDetails}" iVRDetails="{!v.iVRDetails}" isVCCD="{!v.isVCCD}"
+                            contactName="{!v.contactName}" isOtherSearch="{!v.isOtherSearch}"
+                            providerNotFound="{!v.providerNotFound}"
+                            isProviderSearchDisabled="{!v.isProviderSearchDisabled}"
+                            memberCardFlag="{!v.memberCardFlag}" contactCard="{!v.contactCard}"
+                            claimInput="{!v.claimInput}" houseHoldData="{!v.houseHoldData}" cobData="{!v.cobData}"
+                            secondaryCoverageList="{!v.secondaryCoverageList}"
+                            cobMNRCommentsTable="{!v.cobMNRCommentsTable}" regionCode="{!v.regionCode}"
+                            cobENIHistoryTable="{!v.cobENIHistoryTable}" transactionId="{!v.currentTransactionId}"
+                            currentTabId="{!v.currentTabId}" subjectCard="{!v.memberCardSnap}"
+                            delegationValue ="{!v.delegationValue}" patientInfo="{!v.patientInfo}"
+                            claimEngineCodeObj="{!v.claimEngineCodeObj}" showViewAppeals="{!v.showViewAppeals}"/> <!-- US3802608 - Thanish - 25th Aug 2021 -->
+                             <!-- DE456362 -->
+                        <!-- US3177995 - Thanish - 22nd Jun 2021 -->
+                        <!--Jitendra-->
+                        <!-- US2330408 - Avish; US2718112 - Thanish - 2nd Jul 2020 -->
+                        <!-- US2618180 -->
+                        <!--US2584896 and -US2584899 - Sravan-->
+                        <!--DE393490 - Sravan-->
+                    </aura:If>
+                </aura:If>
+
+                <!--US3583813 - Sravan-->
+                <aura:if isTrue="{!v.showDelegation}">
+                    <div class="slds-col slds-size_8-of-12 card_right_outer_padding card_top_margin"  style="{!((and(!v.showPCPHistory, v.isShowCobHistory)) ? 'order: 7;' : ((and(v.showPCPHistory, !v.isShowCobHistory)) ? 'order: 8;' : 'order: 7;'))}">
+                        <c:ACET_DelegationCard autodocUniqueId="{!v.autodocUniqueId}" policySelectedIndex="{!v.policySelectedIndex}" showDelegation="{!v.showDelegation}" delegatedValue="{!v.delegationValue}"/>
+                    </div>
+                </aura:if>
+
+                <!-- US2041555 - Add Case History to Member Snapshot UI : Kavinda - START -->
+                <aura:If isTrue="{!v.mnf != 'mnf'}">
+                    <lightning:layout multipleRows="true" class="">
+                        <lightning:layoutItem size="12">
+                            <div class="card_top_margin">
+                                <div class="slds-p-bottom_small slds-card">
+                                    <!-- US2465288 - Avish -->
+                                    <!-- US2667560 -  Sanka - ORS Family Filtering -->
+									<!-- US3511613 - Raviteja -Team Blinkers Added few attributes for alert functionality-->
+                                    <c:ACET_CaseHistoryCard aura:id="caseHistoryCard" showFamilyCases="true"
+                                        xRefId="{!v.xRefId}" memberID="{!v.memberId}" memberTabId="{!v.memberTabId}"
+                                        xRefIdORS="{!v.xRefIdORS}" memberFN="{!v.memberFN}" memberLN="{!v.memberLN}"
+                                        memberDOB="{!v.memberDOB}" memberGrpN="{!v.memberGrpN}"
+                                        relationShipcode="{!v.relationShipcode}" refreshUnique="{!v.memberTabId}"
+                                        memberSubscriberId="{!v.memberSubscriberId}" alertMemberId="{!v.alertMemberId}"
+                                        alertGroupId="{!v.alertGroupId}" providerNotFound="{!v.providerNotFound}"
+                                        noMemberToSearch="{!v.noMemberToSearch}" mnf="{!v.mnf}"
+                                        isProviderSearchDisabled="{!v.isProviderSearchDisabled}"
+                                        alertTaxId="{!v.alertTaxId}" alertProviderId="{!v.alertProviderId}"
+                                        houseHoldMemberId="{!v.houseHoldMemberId}"
+                                        interactionRecId="{!v.interactionRec.Id}" policyGroupId="{!v.policyGroupId}"
+                                        policyMemberId="{!v.policyMemberId}" autodocUniqueId="{!v.autodocUniqueId}"
+                                        FISourceCode="{!v.highlightedPolicySourceCode}" subjectCard="{!v.memberCardSnap}"
+                                                            policyList="{!v.memberPolicies}"
+                                                            policySelectedIndex="{!v.policySelectedIndex}"
+                                                            caseWrapper="{!v.caseWrapperMNF}"/> <!-- US3177995 - Thanish - 22nd Jun 2021 -->
+                                </div>
+                            </div>
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                </aura:If>
+
+                <!-- US2041555 - Add Case History to Member Snapshot UI : Kavinda - END -->
+
+            </aura:If>
+
+            <!-- Save Case Consolidation - US3424763 - Edited -->
+            <aura:if isTrue="{!v.openSaveCase}">
+                <c:SAE_TtsModalCaseCreation disableTopic="false" omitRoute="true" caseWrapper="{!v.caseWrapperMNF}"
+                    isModalOpen="{!v.openSaveCase}" autodocUniqueId="{!v.autodocUniqueId}"
+                    freeFormCommentsVal="{!v.resolvedCommentsValue}" memberMap="{!v.memberMap}"
+                    memberPolicyNumberMap="{!v.memberPolicyNumberMap}" flowDetails="{!v.flowDetails}"
+                    flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}" state="{!v.state}"
+                    aura:id="casePopup" topicOptions="{!v.caseNotSavedTopics}"
+                    openedTopicUniqueIds="{!v.openedTopicUniqueIds}" enableAutodocWarningMessage="true" />
+            </aura:if>
+
+            <aura:if isTrue="{!v.showWarning}">
+                <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true"
+                    aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                    <div class="slds-modal__container">
+                        <div class="slds-modal__content slds-is-relative slds-theme--warning centerTexts warningFont card_padding"
+                            style="border-top-right-radius: 0.25rem; border-top-left-radius: 0.25rem;">
+                            <lightning:icon iconName="utility:warning" variant="inverse" class="autodocWarningIcon" />
+                            <!-- Do proper styling when doing the functional story -->
+                            The following topics have unresolved case items. Please resolve or route before saving a resolved case. <br />
+                            <div style="align-items: center;width: 70%;margin-left: auto;">
+                                <aura:unescapedHtml value="{!v.warningMessage}" />
+                            </div>
+                        </div>
+                        <footer class="slds-modal__footer slds-theme--warning noTopBorder centerTexts">
+                            <lightning:button variant="neutral" label="Close" class="noUnderline"
+                                onclick="{!c.closeWarning}" />
+                        </footer>
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open"></div>
+            </aura:if>
+        </div>
+        <br />
+
+        <!-- US3533564 - Thanish - 5th Jul 2021 -->
+        <c:acet_ScrollToTop/>
+    </div>
+</aura:component>

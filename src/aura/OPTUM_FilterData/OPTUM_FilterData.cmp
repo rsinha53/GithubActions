@@ -1,0 +1,131 @@
+<!--
+ Name           : OPTUM_FilterData
+ Created By     : Sanjay Pandey
+ Created Date   : Oct 22nd, 2020
+ Description    : US2881453: Apply Sort and Filter on Claims
+-->
+<aura:component>
+    <aura:attribute name="dateOfService" type="String" access="global" default="Date of Service" />
+    <aura:attribute name="fromDate" type="String" access="global" default="From" />
+    <aura:attribute name="toDate" type="String" access="global" default="To Date" />
+    <aura:attribute name="submittedAmount" type="String" access="global" default="Submitted Amount" />
+    <aura:attribute name="minAmount" type="String" access="global" default="Min Amount" />
+    <aura:attribute name="maxAmount" type="String" access="global" default="Max Amount" />
+    <aura:attribute name="minAmountVal" type="Integer" default="" />
+    <aura:attribute name="maxAmountVal" type="Integer" default="" />
+    <aura:attribute name="status" type="String" access="global" default="Select a value" />
+    <aura:attribute name="receiptStatus" type="String" access="global" default="Select a value" />
+    <aura:attribute name="cStatus" type="String" access="global" default="Status" />
+    <aura:attribute name="rStatus" type="String" access="global" default="Receipt Status" />
+    <aura:attribute name="Start_Date" type="String" access="global" default="" />
+    <aura:attribute name="End_Date" type="String" access="global" default="" />
+    <aura:attribute name="statusValues" type="List" />
+    <aura:attribute name="receiptstatusValues" type="List" />
+    <aura:attribute name="claimList" type="List" />
+    <aura:attribute name="selectedValue" type="String" />
+    <aura:attribute name="receiptStatusselectedValue" type="String" />
+    <aura:attribute name="showfilter" type="boolean" default="false" />
+    <aura:attribute name="showError" type="boolean" default="false" />
+    <aura:attribute name="resData" type="boolean" default="true" />
+    <aura:attribute name="hFilter" type="boolean" />
+    <aura:attribute name="cStatusList" type="List" />
+    <aura:attribute name="rStatusList" type="List" />
+    <aura:attribute name="isVisible" type="Boolean" default="true" />
+    <aura:registerEvent name="OPTUM_FilterDataEvent" type="c:OPTUM_FilterDataEvent" />
+    <aura:registerEvent name="OPTUM_ResetDataEvent" type="c:OPTUM_ResetDataEvent" />
+    <aura:method name="messageMethod" action="{!c.clear}" access="public">
+    </aura:method>
+    <div>
+        <div class="slds-p-top_x-large slds-p-left_xx-large">
+            <lightning:button label="Filter" iconName="utility:filterList" iconPosition="right" onclick="{! c.callShowfilter }" class="white" />
+        </div>
+        <aura:if isTrue="{!v.isVisible}">
+            <aura:if isTrue="{!v.showfilter}">
+                <div class="slds-box">
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-size_1-of-12">
+                            <div class="slds-text-align_center slds-m-around_x-small">{!v.dateOfService}
+                            </div>
+                        </div>
+                        <div class="slds-size_2-of-12">
+                            <div class="slds-text-align_center slds-m-around_x-small">
+                                <lightning:input type="date" name="Start_Date" value="{!v.Start_Date}" label="{!v.fromDate}" placeholder="Start Date" variant="label-hidden" aura:id="Start_Date_Auraid" dateStyle="short" max="{!v.End_Date}" class="dateRangeWidth" />
+                            </div>
+                        </div>
+                        <div class="slds-size_1-of-12" style="width: 2%;">
+                            <div class="slds-text-align_center slds-m-around_x-small">
+                            </div>
+                        </div>
+                        <div class="slds-size_2-of-12">
+                            <div class="slds-text-align_center slds-m-around_x-small">
+                                <lightning:input type="date" name="End_Date" value="{!v.End_Date}" label="{!v.toDate}" placeholder="End Date" variant="label-hidden" aura:id="End_Date_Auraid" dateStyle="short" min="{!v.Start_Date}" class="dateRangeWidth" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-size_1-of-12">
+                            <div class="slds-text-align_center slds-m-around_x-small">{!v.submittedAmount}</div>
+                        </div>
+                        <div class="slds-size_2-of-12">
+                            <div class="slds-text-align_center slds-m-around_x-small">
+                                <lightning:input aura:id="minAmount" type="number" step=".01" name="min" messageWhenRangeOverflow="Min Amount is more than Max Amount" label="{!v.minAmount}" value="{!v.minAmountVal}" max="{!v.maxAmountVal}" placeholder="Min Amount" variant="label-hidden" />
+                            </div>
+                        </div>
+                        <div class="slds-size_1-of-12" style="width: 2%;">
+                            <div class="slds-text-align_center slds-m-around_x-small"> -
+                            </div>
+                        </div>
+                        <div class="slds-size_2-of-12">
+                            <div class="slds-text-align_center slds-m-around_x-small">
+                                <lightning:input aura:id="maxAmount" type="number" step=".01" name="max" messageWhenRangeUnderflow="Max Amount is less than Min Amount" label="{!v.maxAmount}" value="{!v.maxAmountVal}" min="{!v.minAmountVal}" placeholder="Max Amount" variant="label-hidden" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-size_1-of-12">
+                            <div class="slds-text-align_center slds-m-around_x-small">{!v.cStatus}
+                            </div>
+                        </div>
+                        <div class="slds-size_2-of-12">
+                            <div class="slds-text-align_center slds-m-around_x-small">
+                                <lightning:select aura:id="status" name="Status" label="{!v.cStatus}" value="{!v.selectedValue}" variant="label-hidden">
+                                    <aura:iteration items="{!v.statusValues}" var="sv">
+                                        <option text="{!sv}" selected="{!sv.selected}"></option>
+                                    </aura:iteration>
+                                </lightning:select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-size_1-of-12">
+                            <div class="slds-text-align_center slds-m-around_x-small">{!v.rStatus}
+                            </div>
+                        </div>
+                        <div class="slds-size_2-of-12">
+                            <div class="slds-text-align_center slds-m-around_x-small">
+                                <lightning:select aura:id="receiptStatus" name="ReceiptStatus" label="{!v.rStatus}" value="{!v.receiptStatusselectedValue}" variant="label-hidden">
+                                    <aura:iteration items="{!v.receiptstatusValues}" var="rsv">
+                                        <option text="{!rsv}" selected="{!rsv.receiptStatusselectedValue}"></option>
+                                    </aura:iteration>
+                                </lightning:select>
+                            </div>
+                        </div>
+                    </div>
+                    <lightning:layout>
+                        <lightning:layoutitem class="slds-grid slds-align_absolute-center">
+                            <div id="searchbuttons" class="slds-button-group">
+                                <lightning:button label="Apply" onclick="{!c.showResults}" class="header-text buttonBorderRadius slds-m-top--large slds-col slds-m-right--small" variant="brand" aura:id="searchbtn" type="submit" />
+                                <lightning:button label="Reset" onclick="{!c.reset}" class="header-text buttonBorderRadius slds-m-top--large slds-m-left--small slds-col" variant="brand" />
+                            </div>
+                        </lightning:layoutitem>
+                    </lightning:layout>
+                    <aura:if isTrue="{!and(empty(v.claimList), v.showError)}">
+                        <div class="cls-cart slds-p-top_xx-large slds-text-align_center slds-m-left_medium slds-m-bottom_medium">
+                            <p class="cls-cart">No Claims are available based on the selected criteria.</p>
+                        </div>
+                    </aura:if>
+                </div>
+            </aura:if>
+        </aura:if>
+    </div>
+</aura:component>

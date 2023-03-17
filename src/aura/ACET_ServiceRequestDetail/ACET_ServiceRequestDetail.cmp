@@ -1,0 +1,467 @@
+<!-- US2041480 - Thanish - 26th Mar 2020 -->
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,lightning:isUrlAddressable" access="global" controller="ACET_ServiceRequestDetailCtrl">
+
+    <!-- SCRIPTS -->
+    <ltng:require styles="{!$Resource.ACET_MasterStyle}"/>
+    <!-- /SCRIPTS -->
+
+    <!-- ATTRIBUTES -->
+    <aura:attribute name="tabId" type="string"/>
+    <aura:attribute name="caseId" type="string"/>
+    <aura:attribute name="caseHistoryList" type="Case[]"/>
+    <aura:attribute name="externalIdRecs" type="List"/>
+    <aura:attribute name="issueDetails" type="Object"/>
+    <aura:attribute name="filteredHistoryList" type="Object"/>
+    <aura:attribute name="isIssueDetailsLoaded" type="Boolean" default="false"/>
+    <aura:attribute name="historySortColumn" type="string" default="none"/>
+    <aura:attribute name="sortingIcon" type="string" default="none"/>
+    <aura:attribute name="parentUniqueId" type="string" default=""/>
+    <aura:attribute name="commentsValue" type="String" default=""/>
+    <aura:attribute name="sfCaseId" type="string"/>
+    <aura:attribute name="RefereshTab" type="boolean" default="false"/>
+    <aura:attribute name="DisplayCommentSec" type="boolean" default="false"/>
+    <aura:attribute name="isFacetsEnabled" type="String" access="public" default="{!$Label.c.ACET_FacetsEngineTrigger}"/>
+    <aura:attribute name="idType" type="string" default=""/>
+    <!--US3145625 - Sravan -->
+    <aura:attribute name="recordId" type="String" default="" />
+    <aura:attribute name="claimNumber" type="String" default="" />
+    <aura:attribute name="isExternalIdsLoaded" type="Boolean" default="false" />
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute name="cmpUniqueId" type="string" default="SAE_CaseServiceRequestInfo" />
+    <aura:attribute name="openedTabs" type="List" default="[]" />
+    <!-- US3480373: Service Request Detail Page Alignment - Krish - 5 May 2021 -->
+    <aura:attribute name="filteredExternalIdRecs" type="List" />
+    <aura:attribute name="memberId" type="String" default=""/>
+    <aura:attribute name="taxId" type="String" default=""/>
+    <aura:attribute name="providerId" type="String" default=""/>
+    <aura:attribute name="groupId" type="String" default=""/>
+    <aura:attribute name="memberEEID" type="String"/> <!-- US3177995 - Thanish - 22nd Jun 2021 -->
+    <aura:attribute name="surveyMap" type="Map" default="{
+            'NAN':'No adjustment needed',
+			'AIN':'Additional information needed',
+			'RAI':'Requesting new or additional information',
+			'CRE':'Any adjustment that is considered a reopening',
+			'PEM':'Provider expectation met',
+			'PEN':'Provider expectation not met'
+        }"/>
+     <aura:attribute name="surveyHover" type="String" default="--"/>
+    <!-- /ATTRIBUTES -->
+
+    <!-- EVENTS -->
+    <aura:registerEvent name="ACET_SRICloseTabEvent" type="c:ACET_SRICloseTabEvent"/>
+    <!-- /EVENTS -->
+
+    <!-- HANDLERS -->
+    <aura:handler name="init" value="{!this}" action="{!c.init}"/>
+    <aura:handler event="lightning:tabClosed" action="{!c.onTabClosed }"/>
+    <aura:handler event="lightning:tabFocused" action="{! c.onTabFocused }"/>
+    <aura:handler name="change" value="{!v.RefereshTab}" action="{!c.init}"/>
+    <aura:handler name="change" value="{!v.claimNumber}" action="{!c.getRelatedExternalIds}" />
+    <aura:handler event="c:ACET_SRICloseTabEvent" action="{!c.enableORSIdLink}" />
+    <!-- /HANDLERS -->
+
+    <div class="slds-card card_padding" style="background: rgb(243, 242, 242);">
+        <div class="slds-grid">
+            <div class="slds-col slds-has-flexi-truncate">
+                <div class="slds-media slds-no-space slds-grow">
+                    <div class="slds-media__figure">
+                        <span class="slds-icon_container">
+                            <lightning:icon iconName="action:record" alternativeText="Service Request Details" />
+                        </span>
+                    </div>
+                    <div class="slds-media__body">
+                        <div class="slds-page-header__name">
+                            <div class="slds-page-header__name-title" style="position:absolute;">
+                                <h1 class="page_header_label slds-m-right_small  slds-truncate">Service Request Details</h1>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            <!-- ACTION BUTTONS -->
+            <lightning:buttonGroup>
+                <c:SAE_Alerts aura:id="alertsAI"
+                              providerId="{!v.providerId}"
+                              taxId="{!v.taxId}"
+                              providerNotFound="{!v.providerNotFound}"
+                              noMemberToSearch="{!v.noMemberToSearch}"
+                              memberNotFound="{!v.mnf}"
+                              isProviderSearchDisabled="{!v.isProviderSearchDisabled}"
+                        isProviderSnapshot="true"
+                        memberId="{!v.memberId}"
+                        groupId="{!v.groupId}"
+                        caseRecordId="{!v.sfCaseId}"/><!-- US3480373: Service Request Detail Page Alignment - Krish - 5 May 2021 -->
+            </lightning:buttonGroup>
+        </div>
+    </div>
+
+    <!-- EXTERNAL ID DETAILS SECTION -->
+    <div class="slds-card card_padding">
+        <aura:if isTrue="{!!v.isIssueDetailsLoaded}">
+            <lightning:spinner alternativeText="Loading" variant="brand"/>
+        </aura:if>
+
+        <div class="component_title slds-text-heading_small card_bottom_margin">External ID Details: {!v.caseId}</div>
+
+        <div class="slds-grid slds-wrap slds-grid_align-spread">
+            <!-- US3480373: Service Request Detail Page Alignment - Krish - 5 May 2021 Start-->
+            <div class="slds-col">
+                <p class="field_label field_label_padding">Create</p>
+                <aura:if isTrue="{!v.issueDetails.strDate}">
+                    {!v.issueDetails.strDate}
+                    <aura:set attribute="else">
+                        --
+                    </aura:set>
+                </aura:if>
+            </div>
+            <div class="slds-col">
+                <p class="field_label field_label_padding">ID Type</p>
+                <aura:if isTrue="{!v.issueDetails.externalIdDetails.status}">
+                    {!v.issueDetails.externalIdDetails.IDType}
+                    <aura:set attribute="else">
+                    --
+                    </aura:set>
+                </aura:if>
+            </div>
+            <div class="slds-col">
+                <p class="field_label field_label_padding">Status</p>
+                <p>
+                    <aura:if isTrue="{!v.issueDetails.externalIdDetails.status}">
+                        {!v.issueDetails.externalIdDetails.status}
+                        <aura:set attribute="else">
+                            --
+                        </aura:set>
+                    </aura:if>
+                </p>
+            </div>
+            <div class="slds-col">
+                <p class="field_label field_label_padding">Method</p>
+                <p>
+                    <aura:if isTrue="{!v.issueDetails.externalIdDetails.method}">
+                        {!v.issueDetails.externalIdDetails.method}
+                        <aura:set attribute="else">
+                            --
+                        </aura:set>
+                    </aura:if>
+                </p>
+            </div>
+            <div class="slds-col">
+                <p class="field_label field_label_padding">Orig Type</p>
+                <p>
+                    <aura:if isTrue="{!v.issueDetails.externalIdDetails.origType}">
+                        {!v.issueDetails.externalIdDetails.origType}
+                        <aura:set attribute="else">
+                            --
+                        </aura:set>
+                    </aura:if>
+                </p>
+            </div>
+            <div class="slds-col">
+                <p class="field_label field_label_padding">Claim Number</p>
+                <p>
+                    <aura:if isTrue="{!v.issueDetails.externalIdDetails.claimNumber}">
+                        {!v.issueDetails.externalIdDetails.claimNumber}
+                        <aura:set attribute="else">
+                            --
+                        </aura:set>
+                    </aura:if>
+                </p>
+            </div>
+            <div class="slds-col">
+                <p class="field_label field_label_padding">Claim Service Date</p>
+                <p>
+                    <aura:if isTrue="{!v.issueDetails.externalIdDetails.claimServiceDate}">
+                        {!v.issueDetails.externalIdDetails.claimServiceDate}
+                        <aura:set attribute="else">
+                            --
+                        </aura:set>
+                    </aura:if>
+                </p>
+            </div>
+            <div class="slds-col">
+                <p class="field_label field_label_padding">Org MPIN/Provider ID</p>
+                <p>
+                    <aura:if isTrue="{!v.issueDetails.externalIdDetails.origMPIN}">
+                        {!v.issueDetails.externalIdDetails.origMPIN}
+                        <aura:set attribute="else">
+                            --
+                        </aura:set>
+                    </aura:if>
+                </p>
+            </div>
+            <div class="slds-col">
+                <p class="field_label field_label_padding">Orig Tax ID</p>
+                <p>
+                    <aura:if isTrue="{!v.issueDetails.externalIdDetails.origTaxId}">
+                        {!v.issueDetails.externalIdDetails.origTaxId}
+                        <aura:set attribute="else">
+                            --
+                        </aura:set>
+                    </aura:if>
+                </p>
+            </div>
+            <div class="slds-col">
+                <p class="field_label field_label_padding">Orig Name</p>
+                <p>
+                    <aura:if isTrue="{!v.issueDetails.externalIdDetails.origName}">
+                        {!v.issueDetails.externalIdDetails.origName}
+                        <aura:set attribute="else">
+                            --
+                        </aura:set>
+                    </aura:if>
+                </p>
+            </div>
+            <aura:If isTrue="{!v.idType == 'ORS'}">
+                <div class="slds-col">
+                    <p class="field_label field_label_padding">Survey Code</p>
+                    <p title="{!v.surveyHover}">
+                        <aura:if isTrue="{!v.issueDetails.externalIdDetails.surveyCode}">
+                            {!v.issueDetails.externalIdDetails.surveyCode}
+                            <aura:set attribute="else">
+                                --
+                            </aura:set>
+                        </aura:if>
+                    </p>
+                </div>
+            </aura:If>
+            <div class="slds-col">
+                <p class="field_label field_label_padding">Reason</p>
+                <p>
+                    <aura:if isTrue="{!v.issueDetails.externalIdDetails.reason}">
+                        {!v.issueDetails.externalIdDetails.reason}
+                        <aura:set attribute="else">
+                            --
+                        </aura:set>
+                    </aura:if>
+                </p>
+            </div>
+        </div>
+    </div>
+    <!-- /EXTERNAL ID DETAILS SECTION -->
+
+    <!-- HISTORY SECTION -->
+    <div class="slds-card card_padding card_element_bottom_margin">
+        <aura:if isTrue="{!!v.isIssueDetailsLoaded}">
+            <lightning:spinner alternativeText="Loading" variant="brand"/>
+        </aura:if>
+
+        <div class="slds-grid slds-grid_align-spread card_bottom_margin">
+            <div class="slds-col component_title">History</div>
+            <div class="slds-col"><lightning:input aura:id="searchBox" variant="label-hidden" placeholder="Search" onchange="{!c.onSearch}"/></div>
+        </div>
+
+        <table class="slds-table slds-table_bordered historyTable">
+            <thead>
+                <tr>
+                    <th scope="col" style="width: 20%; cursor: pointer;" data-column="dateAndTime" data-sortOrder="des" onclick="{!c.onColumnSort}">
+                        <div class="slds-truncate table_column_header" style="float: left; padding-right: 5px;">Date/Time</div>
+                        <aura:if isTrue="{!v.historySortColumn == 'dateAndTime'}">
+                            <div style="float: left; margin-top: -4px;"><lightning:buttonIcon iconName="{!v.sortingIcon}" variant="bare"/></div>
+                        </aura:if>
+                    </th>
+                    <th scope="col" style="width: 10%; cursor: pointer;" data-column="addedBy" data-sortOrder="des" onclick="{!c.onColumnSort}">
+                        <div class="slds-truncate table_column_header" style="float: left; padding-right: 5px;">Added By</div>
+                        <aura:if isTrue="{!v.historySortColumn == 'addedBy'}">
+                            <div style="float: left; margin-top: -4px;"><lightning:buttonIcon iconName="{!v.sortingIcon}" variant="bare"/></div>
+                        </aura:if>
+                    </th>
+                    <th scope="col" style="width: 10%; cursor: pointer;" data-column="owner" data-sortOrder="des" onclick="{!c.onColumnSort}">
+                        <div class="slds-truncate table_column_header" style="float: left; padding-right: 5px;">Owner</div>
+                        <aura:if isTrue="{!v.historySortColumn == 'owner'}">
+                            <div style="float: left; margin-top: -4px;"><lightning:buttonIcon iconName="{!v.sortingIcon}" variant="bare"/></div>
+                        </aura:if>
+                    </th>
+                    <th scope="col" style="width: 60%; cursor: pointer;" data-column="comments" data-sortOrder="des" onclick="{!c.onColumnSort}">
+                        <div class="slds-truncate table_column_header" style="float: left; padding-right: 5px;">Comments</div>
+                        <aura:if isTrue="{!v.historySortColumn == 'comments'}">
+                            <div style="float: left; margin-top: -4px;"><lightning:buttonIcon iconName="{!v.sortingIcon}" variant="bare"/></div>
+                        </aura:if>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                <aura:iteration items="{!v.filteredHistoryList}" var="item">
+                    <tr>
+                        <td style="width: 20%;">
+                            <div class="slds-truncate table_cell_value" >
+                                <aura:if isTrue="{!item.dateAndTime}">
+                                    {!item.dateAndTime}
+                                    <aura:set attribute="else">
+                                        --
+                                    </aura:set>
+                                </aura:if>
+                            </div>
+                        </td>
+                        <td style="width: 10%;">
+                            <div class="slds-truncate table_cell_value">
+                                <aura:if isTrue="{!item.addedBy}">
+                                    {!item.addedBy}
+                                    <aura:set attribute="else">
+                                        --
+                                    </aura:set>
+                                </aura:if>
+                            </div>
+                        </td>
+                        <td style="width: 10%;">
+                            <div class="slds-truncate table_cell_value">
+                                <aura:if isTrue="{!item.owner}">
+                                    {!item.owner}
+                                    <aura:set attribute="else">
+                                        --
+                                    </aura:set>
+                                </aura:if>
+                            </div>
+                        </td>
+                        <td style="width: 60%;">
+                            <div class="slds-cell-wrap table_cell_value"
+                                style="{! (item.addedBy == 'SYSTEM') ? '' : 'font-weight: bold;'}">
+                                <aura:if isTrue="{!item.comments}">
+                                    <lightning:formattedtext value="{!item.comments}" />
+                                    <aura:set attribute="else">
+                                        --
+                                    </aura:set>
+                                </aura:if>
+                            </div>
+                        </td>
+                    </tr>
+                </aura:iteration>
+            </tbody>
+        </table>
+    </div>
+    <!-- /HISTORY SECTION -->
+    <!-- US3480373: Service Request Detail Page Alignment - Krish - 5 May 2021 Start-->
+    <!-- RELATED EXTERNAL ID SECTION -->
+    <div class="slds-card card_padding card_element_bottom_margin">
+        <aura:if isTrue="{!!v.isExternalIdsLoaded}">
+            <lightning:spinner alternativeText="Loading" variant="brand" />
+        </aura:if>
+        <div class="slds-section slds-is-close" aura:id="externalId" style="width: 100%;">
+            <div class="slds-section__title">
+                <section aria-controls="activeAffs" class="slds-section__title-action">
+                    <span data-auraId="externalId" onclick="{!c.toggleSection}">
+                        <lightning:icon iconName="utility:switch" size="x-small"
+                                        class="slds-section__title-action-icon slds-button__icon_left" alternativeText="button icon" />
+                    </span>
+                    <span class="slds-truncate" title="Related External IDs">
+                        <div class="component_title slds-text-heading_small slds-m-top_xx-small">Related External IDs: {!v.caseId}</div>
+                    </span>
+                </section>
+            </div>
+            <div class="slds-section__content slds-is-relative" style="">
+                <div class="slds-grid slds-grid_align-spread card_bottom_margin">
+                    <div class="slds-col slds-size_9-of-12 component_title"></div>
+                    <div class="slds-col slds-size_1-of-12 slds-p-top_small">
+                        <lightning:input type="checkbox" label="Purged" onchange="{!c.onPurgedCheck}"/> <!-- US3177995 - Thanish - 22nd Jun 2021 -->
+                    </div>
+                    <div class="slds-col slds-size_2-of-12">
+                        <lightning:input aura:id="externalIdSearchBox" variant="label-hidden" placeholder="Search" onchange="{!c.onExternalIdSearch}"/>
+                    </div>
+                </div>
+                <div class="slds-scrollable_y" style="height: auto; overflow:auto; max-height:200px;">
+                    <table class="slds-table slds-table_bordered">
+                        <thead>
+                            <tr class="slds-line-height_reset">
+                                <th scope="col" style="width: 20%;">
+                                    <div class="slds-truncate table_column_header">Date created</div>
+                                </th>
+                                <th scope="col" style="width: 20%;">
+                                    <div class="slds-truncate table_column_header">Id Type</div>
+                                </th>
+                                <th scope="col" style="width: 60%;">
+                                    <div class="slds-truncate table_column_header">External Id</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:iteration items="{!v.filteredExternalIdRecs}" var="item">
+                                <tr class="slds-hint-parent">
+                                    <!-- US3177995 - Thanish - 22nd Jun 2021 -->
+                                    <aura:if isTrue="{!and((item.IdType == 'Purged ORS'), (item.isEmptyPurgedORS))}">
+                                        <th colspan="3">
+                                            <div class="slds-truncate" style="text-align: center;">{!item.ExternalId}</div>
+                                        </th>
+                                        <aura:set attribute="else">
+                                            <td data-label="" style="width: 20%;">
+                                                <div class="slds-truncate table_cell_value">
+                                                    <aura:if isTrue="{!item.DateCreated}">
+                                                        {!item.DateCreated}
+                                                        <aura:set attribute="else">
+                                                            --
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                            <td data-label="" style="width: 20%;">
+                                                <div class="slds-truncate table_cell_value">
+                                                    <aura:if isTrue="{!item.IdType}">
+                                                        {!item.IdType}
+                                                        <aura:set attribute="else">
+                                                            --
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                            <td data-label="" style="width: 60%;">
+                                                <aura:if isTrue="{!item.isLink}">
+                                                    <a href="javascript:void(0);" style="cursor: pointer;" data-orsId="{!item.ExternalId}"
+                                                        data-IdType="{!item.IdType}" data-objectId="{!item.purgedORSID}"
+                                                        onclick="{!(item.IdType == 'Purged ORS') ? c.openPurgedDetails : c.openClaimServiceRequestDetail}">{!item.ExternalId}</a>
+                                                    <aura:set attribute="else">
+                                                        <div class="slds-truncate table_cell_value">{!item.ExternalId}</div>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </td>
+                                        </aura:set>
+                                    </aura:if>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- /RELATED EXTERNAL ID SECTION -->
+    <!-- US3480373: Service Request Detail Page Alignment - Krish - 5 May 2021 End-->
+    <!-- Additional Comments Section -->
+    <aura:if isTrue="{!v.DisplayCommentSec}">
+    <div>
+         <aura:if isTrue="{!!v.isIssueDetailsLoaded}">
+            <lightning:spinner alternativeText="Loading" variant="brand"/>
+        </aura:if>
+        <div class="slds-card card_padding card_element_bottom_margin slds-size_6-of-12">
+            <p class="component_title slds-form-element__label field_label_padding"
+               style="border-bottom:1px dashed;padding:0px"
+               data-popupId="commentsId">
+                Comments:
+            </p>
+            <lightning:textarea name="commentsTextArea"
+                                value="{!v.commentsValue}"
+                                label="Comments"
+                                aura:id="commentsBoxId"
+                                variant="label-hidden"
+                                class="slds-p-top_small"
+                                onkeyup="{!c.handleKeyup }"
+                                maxlength="2000" required="true"/>
+            <span class="floatToRight valueCls slds-form-element__static">Characters remaining: <lightning:formattedNumber value = "{!2000-v.commentsValue.length}" />
+
+            </span>
+            <span>
+                 <lightning:button variant="brand" class="slds-float_right"
+                              label="Add Comment"
+                              aura:id="AddComentId"
+                              title="Add Comment"
+                              onclick="{!c.addcomments}"
+                              />
+            </span>
+            <div class="slds-p-bottom_large"></div><!-- Exact div for additional space -->
+        </div>
+    </div>
+        </aura:if>
+    <!-- /Additional Comments Section -->
+    <!-- extra div at the end to add extra space for utility bar -->
+    <div/>
+    <!-- US3533564 - Thanish - 5th Jul 2021 -->
+    <c:acet_ScrollToTop/>
+</aura:component>

@@ -1,0 +1,140 @@
+<aura:component access="global">
+    
+    <!-- String Attributes -->
+    <aura:attribute name="strComments" type="String" default=""/>
+    <aura:attribute name="strSelectedEsclatedRequest" type="String" default="No"/>
+    <aura:attribute name="strPaymentAmount" type="String" />
+    <aura:attribute name="strActualPaymentAmount" type="String" />
+
+    <!-- Boolean Attributes -->
+    <aura:attribute name="isAmountChange" type="Boolean" default="false" />
+    <aura:attribute name="isPaymentAmountDisabled" type="Boolean" default="true" />
+    <aura:attribute name="isDoesNotKnowChecked" type="Boolean" default="false" />
+    <aura:attribute name="IsDelegatedSpeciality" type="Boolean" default="false"/>
+    <aura:attribute name="isApPolicy" type="Boolean" default="false" />
+    <aura:attribute name="showExceptedPaymentAmount" type="Boolean" default="true" />
+    <aura:attribute name="isCal" type="Boolean" default="{!!v.showExceptedPaymentAmount}" />
+    <aura:attribute name="strTatProvided" type="String" default=""/>
+    <aura:attribute name="isCalender" type="Boolean" default="true"/>
+    <aura:attribute name="showSpinnerForFacetsSubmit" type="Boolean" default="false" />
+    <aura:attribute name="showContactName" type="Boolean" default="false" />
+    <!--US3182779 - Sravan-->
+    <aura:attribute name="additionalFieldsValidation" type="Boolean" default="false"/>
+    <aura:attribute name="showDefaultLength" type="Boolean" default="true"/>
+     <aura:attribute name="objCOBInfo" type="Object"/>
+    <aura:attribute name="facetsReasonCategory" type="String" default=""/>
+ 
+	<!-- Object Attributes -->
+    <aura:attribute name="objHeader" type="object" default="{}"/>
+
+    <!-- List Attributes -->
+    <aura:attribute name="lstEsclatedOptions" type="List" default="[
+    {'label': 'Yes', 'value': 'Yes'},
+    {'label': 'No', 'value': 'No'}
+    ]"/>
+    <!--Handlers-->
+    <aura:handler name="init" value="{!this}" action="{!c.onLoad}" />
+
+    <!--Event-->
+   <aura:registerEvent name="createFacetsCase" type="c:ACET_CreateFacetsRoutingCase" />
+
+    <div class="slds-p-bottom_small">
+        <div class="slds-box">
+            <div class="slds-card">
+                <aura:if isTrue="{!v.showSpinnerForFacetsSubmit}">
+                    <lightning:spinner  alternativeText="Loading.." title="Loading.." variant="brand" size="large" />
+                </aura:if>
+                <c:ACET_ReferringProviderDetailsCardHeader objPcpDataHeader="{!v.objHeader}"/>
+                <div class="slds-card_body slds-card__body_inner">
+                    <div class="slds-grid slds-grid_vertical">
+                        <div class="slds-col">
+                            <div class="slds-grid slds-p-top_small">
+                                <div class="slds-size_2-of-8">
+                                	Is this an escalated request ?
+                                </div>
+                                <div class="slds-size_1-of-7">
+                                	<lightning:radioGroup name="EsclatedRequest"
+                                          label="Is this an escalated request ?"
+                                          options="{! v.lstEsclatedOptions }"
+                                          value="{! v.strSelectedEsclatedRequest }"
+                                          type="radio"
+                                          variant="label-hidden"
+                                          class="customRadioCls"
+                                          disabled="true"/>
+                                </div>
+                            </div>
+                        </div>
+                        <aura:if isTrue="{!v.showExceptedPaymentAmount}">
+                        <div class="slds-col slds-p-top_small">
+                            <div class="slds-grid">
+                                <div class="slds-size_2-of-8">
+                                    <label class="slds-form-element__label">
+                                        <abbr class="slds-required" title="required">*</abbr>Expected Payment Amount</label>
+                                        <div onkeypress="{!c.allowOnlyNumbers}" onchange= "{!c.allowOnlyNumbers}">
+                                    <lightning:input name="strPaymentAmount" label="Expected Payment Amount"
+                                        value="{!v.strPaymentAmount}" disabled="{!v.isPaymentAmountDisabled || v.IsDelegatedSpeciality}"
+                                        variant="label-hidden" aura:id="idPaymentAmount" required="{!!v.isPaymentAmountDisabled}"  messageWhenValueMissing ="This field is required"
+                                        onchange="{!c.onchngValue}" onblur="{!c.checkValue}"/>
+                                        </div>
+                                </div>
+                                <div class="slds-size_1-of-7 slds-p-top_large slds-p-left_small">
+                                    <lightning:input type="checkbox" label="Does not Know" name="strDoesnotKnow"
+                                        value="{!v.isDoesNotKnowChecked}" onchange="{!c.handleDoesNotChange}" checked="true"
+                                        aura:id="idDoesNotKnowCheckbox" />
+                                </div>
+                            </div>
+                        </div>
+                        </aura:if>
+                        <div class="slds-col slds-p-top_small">
+                            <div class="slds-grid">
+                                <div class="slds-size_1.5-of-8 slds-grid">
+                                    <!--<lightning:input name="strTatProvided" label="TAT Provided (Days)"
+                                        pattern="^[a-zA-Z0-9_ ]*$" required="true" disabled="{! !v.isApPolicy || v.IsDelegatedSpeciality}" value="{!v.strTatProvided}" aura:id="tatId"/>-->
+                                         <lightning:input name="strTatProvided" label="TAT Provided"
+                                            value="{!v.strTatProvided}"
+                                            aura:id="tatId" required="true" pattern="^(0*[1-9][0-9]*(\.[0-9]+)?|0+\.[0-9]*[1-9][0-9]*)$"
+                                            messageWhenPatternMismatch="Invalid value." messageWhenValueMissing ="This field is required"/>
+                                </div>
+                                <lightning:layoutItem flexibility="auto" padding="around-small" size="5">
+                                    <p class="field_label field_label_padding"></p>
+                                    Days&nbsp;
+                                    <c:ACET_ToggleButton width="70" checked="{!v.isCalender}" checkedText="Cal" uncheckedText="Bus" />
+                                </lightning:layoutItem>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-p-top_small slds-size_3-of-5">
+                            <c:ACET_HoverPopup aura:id="commentsId"
+                                                moveRight=""
+                                                description=""
+                                                isNubbinLeft="true"
+                                                descriptionList="[ 'Use the comments to include a brief','description of the issue, research performed,', 'and any attempts to resolve' ]" />
+                            <abbr style="color:#C23934">*</abbr>&nbsp;<p class="field-title slds-form-element__label field_label_padding"
+                                                                            style="border-bottom:1px dashed;padding:0px"
+                                                                            data-popupId="commentsId"
+                                                                            onmouseover="{!c.togglePopup}"
+                                                                            onmouseout="{!c.togglePopup}">
+                            Comments
+                            </p>
+                        	<lightning:textarea name="comments" value="{!v.strComments}" label="Comments"
+                                onkeyup="{!c.handleKeyup }" maxlength="2000" aura:id="commentsBoxId" variant="label-hidden" required="true" disabled="{!v.IsDelegatedSpeciality}" messageWhenValueMissing ="This field is required"/>
+                                <aura:if isTrue="{!v.showDefaultLength}">
+                                    <span class="floatToRight valueCls slds-form-element__static">Characters remaining: <lightning:formattedNumber value = "2000" /> </span>
+                                </aura:if>
+                                <aura:if isTrue="{!!v.showDefaultLength}">
+                                    <span class="floatToRight valueCls slds-form-element__static">Characters remaining: <lightning:formattedNumber value = "{! 2000 - v.strComments.length }" /> </span>
+                                </aura:if>
+                        </div>
+                        <aura:if isTrue="{!v.isApPolicy &amp;&amp; !v.IsDelegatedSpeciality }">
+                            <div class="slds-col slds-p-top_small">
+                                <lightning:button label="Submit"
+                                    class="slds-button slds-button_brand btnAlign"
+                                    onclick="{!c.createCase}"/>
+                            </div>
+                        </aura:if>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</aura:component>

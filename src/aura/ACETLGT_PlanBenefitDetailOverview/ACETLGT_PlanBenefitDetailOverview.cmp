@@ -1,0 +1,300 @@
+<aura:component controller="ACETLGT_PlanBenefitController" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId" access="global">
+	<ltng:require styles="{! $Resource.datatable + '/DataTables-1.10.16/media/css/jquery.dataTables.min.css'}" 
+                  scripts="{!join(',', 
+                           $Resource.jquery224 , 
+                           $Resource.datatable + '/DataTables-1.10.16/media/js/jquery.dataTables.min.js')
+                           }" />
+	<aura:attribute name="AutodocKey" type="String"/>
+	<aura:attribute name="benefitDate" type="String"/>
+	<aura:attribute name="attrcoverageBenefits" type="Object" />
+	<!--<aura:handler name="init" value="{!this}" action="{!c.showBenefits}"/>-->
+	<aura:attribute name="todayDate" type="String"/>
+	<aura:attribute name="benefitOptions" type="List" default="[
+                                                                   {'label': 'All', 'value': 'All'},
+                                                                   {'label': 'Benefit Code', 'value': 'Benefit Code'},
+                                                                   {'label':'Category', 'value' : 'Category'},
+                                                                   {'label' : 'Specialty', 'value' : 'Specialty'}
+                                                                   ]"/>
+	<aura:attribute name="benefitFilter" type="String"/>
+	<aura:method name="showBenefits" action="{!c.showBenefits}"/>
+	<aura:method name="showBenefitCodeKeyMap" action="{!c.showBenefitCodeKeyMap}">
+		<aura:attribute name="childParam" type="List" default="[]"/>
+	</aura:method>
+	<aura:attribute name="benefitCodeKeyMap" type="List" default="[]"/>
+	<aura:attribute name="benefitCodeKeyMap1" type="List" default="[]"/>
+	<aura:attribute name="SearchKeyWord" type="string"/>
+	<aura:attribute name="isBenefitSelected" type="Boolean" default="false"/>
+	<aura:attribute name="benefitError" type="String" default=""/>
+	<aura:attribute name="benefitEffectiveDate" type="String"/>
+	<aura:attribute name="benefitEndDate" type="String"/>
+	<aura:attribute name="selectedLookUpRecords" type="List" default="[]"/>
+	<aura:attribute name="selectedSearchRecords" type="List" default="[]"/>
+	<aura:attribute name="allSearchRecords" type="List" default="[]"/>
+	<aura:attribute name="selectedRadio" type="String" default="All"/>
+	<aura:attribute name="DOBErrorMessage" type="String"/>
+	<aura:attribute name="benefitLanguageWrapperList" type="ACETLGT_PlanBenefitLanguageWrapper.BenefitWrapper[]"/>
+	<aura:attribute name="SitusState" type="String"/>
+	<aura:attribute name="GUIkey" type="String"/>
+	<aura:attribute name="varriableCoverageMap" type="List" default="[]"/>
+	<aura:attribute name="benefitDisplayMap" type="Map"/>
+	<aura:attribute name="Spinner" type="boolean" default="false"/>
+	<aura:attribute name="timePeriodQualifier" type="String" />
+	<aura:attribute name="tierTypeCodeList" type="String"/>
+	<aura:attribute name="tierTypeIdentifierList" type="String"/>
+	<aura:attribute name="benefitLanguageIndicatorArray" type="List"/>
+	<aura:attribute name="benefitLanguageIndicator" type="boolean" default="false"/>
+	<aura:handler name="SelectedBenefitKeyEvent" event="c:ACETLGT_SelectedBenefitKeyEvent" action="{!c.handleBenefitKeyEvent}"/>
+	<aura:attribute name="radioGroupName" type="String"/>
+	<aura:attribute name="existsOnRiderPlanMap" type="String"/>
+	 <aura:attribute name="selectedBenefitDate" type="String"/>														  
+	<aura:attribute name="selectedBundleId" type="String" />														
+	<aura:method name="showBenefitRadioGroup" action="{!c.showBenefitRadioGroup}">
+		<aura:attribute name="childParam" type="String" default=""/>
+	</aura:method>
+	<div id="{!v.AutodocKey + v.GUIkey}" class="{!v.AutodocKey}">
+		<lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="BenefitDetailsSection" class="titleBold">
+			<lightning:accordionSection name="BenefitDetailsSection" label="Benefit Details">
+				<lightning:layout class="slds-form--inline" >
+					<lightning:layoutItem>
+						<div class="slds-p-right_none slds-p-top_medium  slds-p-left_x-small">
+							<abbr title="required" class="slds-required">*</abbr>
+							<label class="slds-form-element__label" style="font-size:10pt;" for="form-element-01">
+								<b>Benefit As Of</b>
+							</label>
+						</div>
+					</lightning:layoutItem>
+					<lightning:layoutItem  size="2" >
+						<div class="slds-p-top_medium slds-p-left_none slds-m-bottom_small">
+							<ui:inputDate aura:id="benefitId"  format="MM/DD/YYYY" displayDatePicker="true" value="{!v.benefitDate}" class="slds-input inputDateWidth"/>
+						</div>
+						<div aura:id="msgTxtDOB" class="slds-text-color_error slds-hide" style="padding-left:0px !important;">
+                    {!v.DOBErrorMessage}
+             </div>
+					</lightning:layoutItem>
+					<lightning:layoutItem  size="1" >
+						<div class="slds-p-top_small  slds-p-left_small  ">
+							<p class="slds-form-element__label" style="padding-top:12px;padding-left: 20px;  font-size:10pt; " >
+								<a href="javascript:void(0)" onclick="{!c.populateBenefitDate}">
+									<b>{!v.todayDate}</b>
+								</a>
+							</p>
+						</div>
+					</lightning:layoutItem>
+					<lightning:layoutItem size="6" padding="around-large">
+						<fieldset class="slds-form-element benefitOptionRadioCls">
+							<div class="slds-form-element__control">
+								<input type="radio" id="radio-All" value="All" name="{!v.radioGroupName}" checked="true" onchange="{!c.onChangeRadio}"/>
+								<label class="slds-radio__label" for="radio-All">
+									<span class="slds-radio_faux"></span>
+									<span class="slds-form-element__label">All</span>
+								</label>
+								<input type="radio" id="radio-Benefit Code" value="Benefit Code" name="{!v.radioGroupName}"  onchange="{!c.onChangeRadio}" />
+								<label class="slds-radio__label" for="radio-Benefit Code">
+									<span class="slds-radio_faux"></span>
+									<span class="slds-form-element__label">Benefit Code</span>
+								</label>
+								<input type="radio" id="radio-Category" value="CATEGORY" name="{!v.radioGroupName}"  onchange="{!c.onChangeRadio}"/>
+								<label class="slds-radio__label" for="radio-Category">
+									<span class="slds-radio_faux"></span>
+									<span class="slds-form-element__label">CATEGORY</span>
+								</label>
+								<input type="radio" id="radio-Specialty" value="Specialty" name="{!v.radioGroupName}"  onchange="{!c.onChangeRadio}"/>
+								<label class="slds-radio__label" for="radio-Specialty">
+									<span class="slds-radio_faux"></span>
+									<span class="slds-form-element__label">Specialty*</span>
+								</label>
+							</div>
+						</fieldset>
+					</lightning:layoutItem>
+				</lightning:layout>
+				<div  class="slds-size_4-of-10 benefitDateCls slds-p-right_small slds-p-left_medium slds-p-top_small">
+					<span onkeypress="{!c.onClickOfEnter}">
+						<c:ACETLGT_PlanBenefitAutocomplete aura:id="PlanBenefitGlobalAutocomplete"
+                                                       lstSelectedRecords="{!v.selectedLookUpRecords}"
+                                                       label="Choose Benefit (Max 20)"
+                                                       benefitError="{!v.benefitError}"
+                                                       listOfSearchRecords="{!v.selectedSearchRecords}"
+                                                       listOfAllRecords="{!v.allSearchRecords}"
+                                                       selectedRadio="{!v.selectedRadio}"
+                                                        />
+						<div class="{!v.isBenefitSelected? 'slds-show': 'slds-hide'}">
+							<label class="slds-text-color_error">{!v.benefitError}</label>
+						</div>
+						<!-- US2237162 - removed br -->
+						<div class="slds-align_absolute-center" style="width:200px;">
+							<!-- US2237162 - added card_element_top_margin class -->
+							<lightning:button label="View Benefits" class="card_element_top_margin slds-col" aura:id="showDetButtonId"
+                                          variant="brand" iconName="utility:search" iconPosition="left" onclick="{!c.showDetails}" />
+							<lightning:spinner aura:id="mySpinner" alternativeText="Loading, Please Wait..." title="Loading, Please Wait..." variant="brand" size="small" class="slds-hide"/>
+						</div>
+					</span>
+				</div>
+			</lightning:accordionSection>
+		</lightning:accordion>
+		<aura:if isTrue="{!!empty(v.benefitLanguageWrapperList)}">
+			<div id="benefitcontainerdiv" class="autodocTableView" data-auto-doc="true" data-auto-doc-case-items="true" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-section-key="Benifit Details">
+				<table id="benifitdetailresultstable" class="slds-table slds-table_bordered slds-table_cell-buffer slds-no-row-hover accordionTables planbenifitstable scroll">
+					<thead >
+						<tr>
+							<th  class="clmhide">Benifits as Of {!v.benefitDate}</th>
+						</tr>
+					</thead>
+					<tbody>
+						<aura:iteration items="{!v.benefitLanguageWrapperList}" var="benWrap">
+							<tr class="slds-hint-parent " id ="{!benWrap.BenefitKey + 'benefitKeyId'}">
+								<td class="slds-cell-wrap clmhide"  >
+                                                                 {!benWrap.benefitLanguageCode} - {!benWrap.benefitDisplay}
+                                  </td>
+								<td class="slds-cell-wrap hidetdcls" >
+									<div  class="slds-box slds-box_xx-small slds-show" >
+										<aura:if isTrue="{!!empty(benWrap.BenefitKey)}">
+											<span>
+												<lightning:accordion  allowMultipleSectionsOpen="true" activeSectionName="benefitLanguageSection" >
+													<div class="slds-box slds-box_xx-small">
+														<lightning:accordionSection name="benefitLanguageSection" label="{!benWrap.benefitDisplay}" class="accsecbackgroundcls1">
+															<aura:set attribute="actions">
+																<aura:if isTrue="{!benWrap.benefitLanguageIndicator}">
+																	<img src="{!$Resource.BenefitCodeFlag}" style='height:20px;'/>
+                               &nbsp;&nbsp; 
+																	<a href="javascript:void(0);" onmouseover="{!c.copycode_event}" tabindex="-1" title="{!benWrap.benefitLanguageCode}" style="margin-right: 979px !important;" data-codetocopy="{!benWrap.benefitLanguageCode}">Copy Code</a>
+																	<aura:set attribute="else">
+																		<a href="javascript:void(0);" onmouseover="{!c.copycode_event}" tabindex="-1" title="{!benWrap.benefitLanguageCode}" data-codetocopy="{!benWrap.benefitLanguageCode}">Copy Code</a>
+																	</aura:set>
+																</aura:if>
+															</aura:set>
+															<span>
+																<lightning:accordion  allowMultipleSectionsOpen="true" >
+																	<aura:iteration items="{!benWrap.parStatusList}" var="benWrapperParStatus" indexVar="indexno">
+																		<li class="slds-accordion__list-item">
+																			<div class="slds-border_top slds-box slds-box_xx-small">
+																				<section class="slds-accordion__section slds-is-open accsecbackgroundcls">
+																					<div class="slds-accordion__summary">
+																						<h3 class="slds-accordion__summary-heading">
+																							<div >
+																								<button aria-controls="accordion-details-01"  aria-expanded="true" class="slds-button slds-button_reset slds-accordion__summary-action" data-acciconid_close="{!benWrap.benefitLanguageCode+indexno+'acciconid_close'}" data-acciconid_open="{!benWrap.benefitLanguageCode+indexno+'acciconid_open'}" data-compid="{!benWrap.benefitLanguageCode+indexno+'accordcontentid'}" onclick="{!c.sectionopenandcloase}" >
+																									<div class="slds-float--left ">
+																										<div id="{!benWrap.benefitLanguageCode+indexno+'acciconid_close'}" class="slds-show">
+																											<lightning:icon  aura:id="articleOne" iconName="utility:chevronright" size="x-small" alternativeText="close"/>
+																										</div>
+																										<div id="{!benWrap.benefitLanguageCode+indexno+'acciconid_open'}" class="slds-hide">
+																											<lightning:icon  aura:id="articleOne" iconName="utility:chevrondown" size="x-small" alternativeText="open"/>
+																										</div>
+																									</div>
+																									<span  class="slds-accordion__summary-content " title="Accordion summary">{!benWrapperParStatus.parStatusKey}</span>
+																								</button>
+																							</div>
+																						</h3>
+																					</div>
+																					<div  class="slds-accordion__content ">
+																						<div class="slds-hide"   id="{!benWrap.benefitLanguageCode+indexno+'accordcontentid'}">
+																							<div class="autodocTableView" data-auto-doc="false" data-auto-doc-case-items="false" data-auto-doc-feature="" data-auto-doc-section-key="">
+																								<table id="benifitdetailWrappertable" class="sldscopytable slds-table_bordered slds-table_cell-buffer slds-no-row-hover">
+																									<aura:iteration items="{!benWrapperParStatus.generalCodeList}" var="benWrapperGeneralCode">
+																										<aura:if isTrue="{!and(benWrapperGeneralCode.benefitLevelCode  != null,benWrapperGeneralCode.benefitLevelCode  == 1)}">
+																											<thead>
+																												<tr class="slds-line-height_reset">
+																													<th class="slds-truncate fontTable">
+																														<ui:outputText   value="Level Code"/>
+																													</th>
+																													<th class="slds-truncate fontTable">Covered</th>
+																													<th class="slds-truncate fontTable">General Language</th>
+																													<th class="slds-truncate fontTable">Language</th>
+																													<div class="slds-form_horizontal">
+																														<lightning:layout >
+																															<lightning:layoutItem >
+																																<th class="slds-truncate fontTable">Age Range</th>
+																															</lightning:layoutItem>
+																															<lightning:layoutItem >
+																																<lightning:helptext content="D= Days , M= Months , Y= Years" />
+																															</lightning:layoutItem>
+																														</lightning:layout>
+																													</div>
+																													<th class="slds-truncate fontTable">Place Of Service</th>
+																												</tr>
+																											</thead>
+																										</aura:if>
+																										<tbody>
+																											<aura:if isTrue="{!and(benWrapperGeneralCode.benefitLevelCode == 1,or(benWrapperGeneralCode.coverageIndicator == 'Yes',benWrapperGeneralCode.coverageIndicator == 'No'))}">
+																												<tr class="slds-hint-parent">
+																													<td>
+																														<ui:outputText   value="{!benWrapperGeneralCode.benefitLevelCode}"/>
+																													</td>
+																													<td>
+																														<div class="slds-truncate slds-text-align_left">{!benWrapperGeneralCode.coverageIndicator}</div>
+																													</td>
+																													<td>
+																														<div class="textwrap slds-text-align_left">{!benWrapperGeneralCode.benefitCodeGeneralLanguage}</div>
+																													</td>
+																													<td>
+																														<div class="textwrap slds-text-align_left">{!benWrapperGeneralCode.benefitCodeLanguage}</div>
+																													</td>
+																													<td>
+																														<div class="slds-truncate slds-text-align_left">{!benWrapperGeneralCode.ageFrom} {!benWrapperGeneralCode.ageFromDuration} - {!benWrapperGeneralCode.ageThrough} {!benWrapperGeneralCode.ageThroughDuration}</div>
+																													</td>
+																													<td>
+																														<aura:iteration items="{!benWrapperGeneralCode.billTypeSetCategory}" var="billTypeSetCategory">
+																															<div class="slds-truncate slds-text-align_left">{!billTypeSetCategory}</div>
+																														</aura:iteration>
+																													</td>
+																												</tr>
+																												<aura:set attribute="else">
+																													<aura:if isTrue ="{!and(greaterthan(benWrapperGeneralCode.benefitLevelCode,1),benWrapperGeneralCode.coverageIndicator == 'Yes')}">
+																														<tr class="slds-hint-parent">
+																															<td>
+																																<ui:outputText   value="{!benWrapperGeneralCode.benefitLevelCode}"/>
+																															</td>
+																															<td>
+																																<div class="slds-truncate slds-text-align_left">{!benWrapperGeneralCode.coverageIndicator}</div>
+																															</td>
+																															<td>
+																																<div class="textwrap slds-text-align_left">{!benWrapperGeneralCode.benefitCodeGeneralLanguage}</div>
+																															</td>
+																															<td>
+																																<div class="textwrap slds-text-align_left">{!benWrapperGeneralCode.benefitCodeLanguage}</div>
+																															</td>
+																															<td>
+																																<div class="slds-truncate slds-text-align_left">{!benWrapperGeneralCode.ageFrom} {!benWrapperGeneralCode.ageFromDuration} - {!benWrapperGeneralCode.ageThrough} {!benWrapperGeneralCode.ageThroughDuration}</div>
+																															</td>
+																															<td>
+																																<aura:iteration items="{!benWrapperGeneralCode.billTypeSetCategory}" var="billTypeSetCategory">
+																																	<div class="slds-truncate slds-text-align_left">{!billTypeSetCategory}</div>
+																																</aura:iteration>
+																															</td>
+																														</tr>
+																													</aura:if>
+																												</aura:set>
+																											</aura:if>
+																										</tbody>
+																									</aura:iteration>
+																								</table>
+																							</div>
+																						</div>
+																					</div>
+																				</section>
+																			</div>
+																		</li>
+																	</aura:iteration>
+																	<div class="slds-border_top slds-box slds-box_xx-small" onclick="{!c.AccumulatorsOnclick}" data-accumulatorId="{!benWrap.BenefitKey}"  >
+																		<span>
+																			<lightning:accordionSection name="Accumulators" label="Accumulators"  aura:id="accordiancmp" class="accsecbackgroundcls">
+																				<div id="{!benWrap.BenefitKey + 'accumeLevel'}"></div>
+																			</lightning:accordionSection>
+																		</span>
+																	</div>
+																</lightning:accordion>
+															</span>
+														</lightning:accordionSection>
+													</div>
+												</lightning:accordion>
+											</span>
+										</aura:if>
+									</div>
+								</td>
+							</tr>
+						</aura:iteration>
+					</tbody>
+				</table>
+			</div>
+		</aura:if>
+	</div>
+</aura:component>

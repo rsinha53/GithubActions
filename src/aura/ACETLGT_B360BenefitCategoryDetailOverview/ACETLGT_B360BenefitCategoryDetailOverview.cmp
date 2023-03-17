@@ -1,0 +1,445 @@
+<aura:component controller="ACETLGT_PlanBenefitController" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId" access="global">
+	<ltng:require styles="{! $Resource.datatable + '/DataTables-1.10.16/media/css/jquery.dataTables.min.css'}" 
+                  scripts="{!join(',', 
+                           $Resource.jquery224 , 
+                           $Resource.datatable + '/DataTables-1.10.16/media/js/jquery.dataTables.min.js')
+                           }" />
+    <aura:attribute name="AutodocKey" type="String"/>
+    <aura:attribute name="GUIkey" type="String"/>
+    <aura:attribute name="attrcoverageBenefits" type="Object" />
+    <aura:attribute name="benefitDate" type="String"/> 
+    <aura:attribute name="DOBErrorMessage" type="String"/>
+    <aura:attribute name="todayDate" type="String"/>
+    <aura:attribute name="selectedBenefitDate" type="String"/>
+    <aura:attribute name="groupNumber" type="String" />
+	<aura:attribute name="selectedBundleId" type="String" />
+    <aura:attribute name="b360BenefitPlanId" type="String" /> <!-- To Pass in B360 API Request -->
+    <aura:attribute name="benefitEffectiveDate" type="String"/>
+	<aura:attribute name="benefitEndDate" type="String"/>
+    <aura:attribute name="SitusState" type="String"/>
+    <aura:attribute name="timePeriodQualifier" type="String" />
+    <aura:attribute name="selectedLookUpRecords" type="List" default="[]"/>
+	<aura:attribute name="selectedSearchRecords" type="List" default="[]"/>
+	<aura:attribute name="allSearchRecords" type="List" default="[{ label: 'Surgery', value: 'Surgery' },{ label: 'Therapy', value: 'Therapy'}]"/>
+    <aura:attribute name="benefitError" type="String" default=""/>
+    <aura:attribute name="benefitCategoryOptionList" type="List" access="public" default="[]"/> <!--US3582935 : Added By Manish -->
+    <aura:attribute name="benefitCategoryChildrenMap" type="Map" access="public" default="{}"/> <!--US3582935 : Added By Manish -->
+    <aura:attribute name="allSelChildBenefitList" type="List" access="public" default="[]"/>
+    <aura:attribute name="isBenefitAvailable" type="boolean" default="false"/>
+    <aura:handler  name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="benefitSearchPhase" type="string" default="" />    
+    <aura:attribute name="searchBenefitsResults" type="List" access="public" default="[]"/>
+    <aura:attribute name="searchResultBenefitData" type="Object" access="public" default="{}"/>
+    <aura:attribute name="selectedSectionId" type="string" default="" />  
+    <aura:attribute name="benefitNetworkSectionList" type="List" access="public" default="[]"/>
+    <aura:attribute name="showError" type="Boolean" default="false"/>
+    <aura:attribute name="renderSpinner" type="Boolean" default="false"/>
+    <aura:attribute name="benefitCodeKeyMap" type="List" default="[]"/>
+	<aura:attribute name="benefitCodeKeyMap1" type="List" default="[]"/>
+	<aura:attribute name="SearchKeyWord" type="string"/>
+	<aura:attribute name="isBenefitSelected" type="Boolean" default="false"/>
+    <aura:attribute name="selectedLookUpRecordsFrBA" type="List" default="[]"/>
+	
+	<aura:attribute name="selectedRadio" type="String" default="All"/>
+	<aura:attribute name="benefitLanguageWrapperList" type="ACETLGT_PlanBenefitLanguageWrapper.BenefitWrapper[]"/>
+	
+	
+	<aura:attribute name="varriableCoverageMap" type="List" default="[]"/>
+	<aura:attribute name="benefitDisplayMap" type="Map"/>
+	<aura:attribute name="Spinner" type="boolean" default="false"/>
+	<aura:attribute name="tierTypeCodeList" type="String"/>
+	<aura:attribute name="tierTypeIdentifierList" type="String"/>
+	<aura:attribute name="benefitLanguageIndicatorArray" type="List"/>
+	<aura:attribute name="benefitLanguageIndicator" type="boolean" default="false"/>
+	<aura:handler name="SelectedBenefitKeyEvent" event="c:ACETLGT_SelectedBenefitKeyEvent" action="{!c.handleBenefitKeyEvent}"/>
+	<aura:attribute name="radioGroupName" type="String"/>
+	<aura:attribute name="existsOnRiderPlanMap" type="String"/>
+    <aura:attribute name="showDOBErrorMessage" type="boolean" default="false"/>
+    <aura:attribute name="showBenCatSelError" type="boolean" default="false"/>
+    <aura:attribute name="showKeywordInputError" type="boolean" default="false"/>
+    <aura:attribute name="showBenCatServError" type="boolean" default="false"/>
+    <aura:attribute name="benCatServErrorMessage" type="String" default=""/>
+    
+    <aura:method name="showBenefits" action="{!c.showBenefits}"/>
+	<aura:method name="showBenefitCodeKeyMap" action="{!c.showBenefitCodeKeyMap}">
+		<aura:attribute name="childParam" type="List" default="[]"/>
+	</aura:method>
+    <aura:attribute name="selectedBenefits" type="List" default="[]"/>
+    <aura:attribute name="isBenefitHoverVisible" type="Boolean" default="false"/>
+    <aura:attribute name="benefitDateForAccums" type="String"/> 
+    <aura:attribute name="showDOBErrorMessageForAccums" type="Boolean" default="false"/>
+    <aura:attribute name="DOBErrorMessageForAccums" type="String"/>
+    <aura:attribute name="renderSpinnerForBA" type="Boolean" default="false"/>
+    <aura:attribute name="errorMsgViewAccums" type="String" default=""/>
+    <aura:attribute name="showErrorViewAccums" type="Boolean" default="false"/>
+    <aura:attribute name="activeSections" type="List" default="[]"/>
+    
+    <div id="{!v.AutodocKey + v.GUIkey}" class="{!v.AutodocKey}">
+      
+     <!--   <div class="slds-box slds-p-around_none slds-theme_default slds-m-top_small">-->
+		<lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="BenefitDetailsSection" class="titleBold">
+            <lightning:accordionSection name="BenefitDetailsSection" label="Benefit Details">
+			<lightning:layout class="slds-form--inline" >
+					<lightning:layoutItem>
+						<div class="slds-p-right_none slds-p-top_medium  slds-p-left_x-small">
+							<abbr title="required" class="slds-required">*</abbr>
+							<label class="slds-form-element__label" style="font-size:10pt;" for="form-element-01">
+								<b>Benefit As Of</b>
+							</label>
+						</div>
+					</lightning:layoutItem>
+					<lightning:layoutItem  size="2" >
+						<div class="slds-p-top_medium slds-p-left_none slds-m-bottom_small">
+							<ui:inputDate aura:id="benefitId"  format="MM/DD/YYYY" displayDatePicker="true" value="{!v.benefitDate}" class="slds-input inputDateWidth" change="{!c.updateCategoryList}"/>
+						</div>
+						<div class="{!v.showDOBErrorMessage ? 'slds-show':'slds-hide'}">
+                            <label class="slds-text-color_error">{!v.DOBErrorMessage}</label>
+             			</div>
+             </lightning:layoutItem>
+					<lightning:layoutItem  size="1" >
+						<div class="slds-p-top_small  slds-p-left_small  ">
+							<p class="slds-form-element__label" style="padding-top:12px;padding-left: 20px;  font-size:10pt; " >
+								<a href="javascript:void(0)" onclick="{!c.populateBenefitDate}">
+									<b>{!v.todayDate}</b>
+								</a>
+							</p>
+						</div>
+					</lightning:layoutItem>
+            </lightning:layout>
+              <aura:if isTrue="{!v.renderSpinner}">
+               <div class="loadingSpinner" >
+                      <lightning:spinner alternativeText="Loading" size="small" />
+                </div>  
+                  </aura:if>  
+             <lightning:layout>
+                 <lightning:layoutItem size="1">
+                     <div class="slds-p-top_small  slds-p-left_small">
+						 <label>Select Category</label>
+                         <div>
+                             <lightning:button label="Search" class="card_element_top_margin" aura:id="categorySearchBtn"
+                                               variant="brand" iconName="utility:search" iconPosition="left" onclick="{!c.showBenefitCategory}"/>
+                             <lightning:spinner aura:id="mySpinner" alternativeText="Loading, Please Wait..." title="Loading, Please Wait..." variant="brand" size="small" class="slds-hide"/>
+                         </div>
+				     </div>
+                 </lightning:layoutItem>
+                 <lightning:layoutItem size="5">
+                     <div class="slds-p-top_large  slds-p-left_small">
+                         <div  class="slds-size_12-of-12 benefitDateCls slds-p-left_small slds-p-top_small">
+                                <span onkeypress="{!c.onClickOfEnter}">
+                                    <c:ACETLGT_B360BenefitAutoComplete aura:id="B360BenefitGlobalAutocomplete"
+                                                                   lstSelectedRecords="{!v.selectedLookUpRecords}"
+                                                                   label=""
+                                                                   benefitError="{!v.benefitError}"
+                                                                   listOfSearchRecords="{!v.selectedSearchRecords}"
+                                                                   listOfAllRecords="{!v.benefitCategoryOptionList}"
+                                                                    />
+                                    
+                                    <div class="{!v.showBenCatServError ? 'slds-show' : 'slds-hide'}">
+                                        <label class="slds-p-left_small slds-text-color_error">{!v.benCatServErrorMessage}</label>
+                                    </div>
+                                    <div class="{!v.showBenCatSelError ? 'slds-show' : 'slds-hide'}">
+                                        <label class="slds-p-left_small slds-text-color_error">{!v.benefitError}</label>
+                                    </div>
+                                </span>
+                            </div>
+                       </div>
+                 </lightning:layoutItem>
+                 <lightning:layoutItem size="1">
+                     <div class="slds-p-top_small  slds-p-left_small">
+						 <label>Benefit Search</label>
+                         <div>
+                             <lightning:button label="Search" class="card_element_top_margin" aura:id="keywordSearchBtn"
+                                               variant="brand" iconName="utility:search" iconPosition="left" onclick="{!c.benefitSearch}"/>
+                         </div>
+                         
+                        
+				     </div>
+                 </lightning:layoutItem>
+                 <lightning:layoutItem size="5" class="slds-p-top_small">
+   
+                     <div class="slds-p-top_small slds-p-left_small">
+							<lightning:input type="text" class="input-noborder" placeholder="Search Benefit" search="false" value="{!v.benefitSearchPhase}">
+                         	</lightning:input>
+				     </div>
+          
+                      <div class="{!v.showKeywordInputError ? 'slds-show' : 'slds-hide'}">
+                           <label class="slds-p-left_small slds-text-color_error">{!v.benefitError}</label>
+                      </div>
+                 </lightning:layoutItem>
+                 
+             </lightning:layout>
+			<aura:if isTrue="{!v.showError}">
+                <div class="slds-p-left_large slds-p-top_large" style="color:red"> No results found based on the category/search key </div>    
+            </aura:if>
+                
+            <aura:if isTrue="{!and(v.allSelChildBenefitList, v.allSelChildBenefitList.length > 0)}">
+           <div id="b360Benefitcontainerdiv" class="autodocTableView slds-p-top_small  slds-p-left_small slds-size_12-of-12" data-auto-doc="true" data-auto-doc-case-items="true" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-section-key="Benefit Details">
+              <table id="b360benifitCategoryresultstable" class="slds-table slds-table_bordered slds-table_cell-buffer slds-no-row-hover accordionTables planbenifitstable scroll">
+					<thead >	
+						<tr>
+							<th  class="clmhide">Benifits as Of {!v.benefitDate}</th>
+						</tr>
+					</thead>
+					
+					<tbody>
+                        <aura:iteration items="{!v.allSelChildBenefitList}" var="benefit">
+                         <tr class="slds-hint-parent" id="{!benefit.benefitId}">
+                            <td>
+                             
+                            <div class="slds-section slds-is-close" id="{!benefit.categoryName}" >
+                                <!--section header-->
+                                <h3 class="slds-section__title" onclick="{!c.showBenefitSection}" data-auraId="{!benefit.categoryName}" data-benefitId="{!benefit.benefitId}">
+                                    <button aria-controls="VegetablesId" class="slds-button slds-section__title-action accordianStyle">
+                                        <div>
+                                        <span>
+                                            <lightning:icon iconName="utility:switch"
+                                                            alternativeText="button icon"
+                                                            size="x-small"
+                                                            class="slds-section__title-action-icon slds-button__icon_left"/>
+                                        </span>
+                                        <span class="slds-truncate" title="{!benefit.categoryName}" >{!benefit.categoryName}</span>
+                                        </div>
+                                    </button>
+                                </h3>
+                                <!--<div class="loadingSpinner" style="display:none;">
+                                    <lightning:spinner alternativeText="Loading" size="small" />
+                                </div>-->
+                                <!--section body-->
+                                <div class="slds-section__content slds-p-left_x-large" id="">
+                                    <div class="benefitSectionName slds-text-title_bold"></div>
+                                    <br/>
+                                   <div class="benefitNetworkSection">
+                                    <lightning:accordion allowMultipleSectionsOpen="true" >
+                                            <aura:iteration items="{!v.benefitNetworkSectionList}"  var="network">
+                                                <aura:if isTrue="{! network.benefitId == benefit.benefitId}">
+													
+                                                    <aura:if isTrue="{!network.value != ''}">
+                                                        
+                                                        <aura:iteration items="{!network.value}"  var="nt">
+                                                            <br/>        
+                                                        <div class="benefitSectionName slds-text-title_bold">{!nt.benefitName}</div>
+                                    				<br/>    
+                                                    <aura:iteration items="{!nt.benefitNetworkSection}"  var="val">
+                                                 	<div class = "slds-p-left_small slds-p-right_small slds-p-top_xsmall">
+                                                    <div class = "slds-box slds-box_xx-small">
+                                                        <lightning:accordionSection name="{!val.networkTypeDescription[0]}" label="{!val.networkTypeDescription[0]}">
+                                                                <section class="slds-accordion__section slds-is-open accsecbackgroundcls">
+                                                                    <div id="networkLangDiv" class="networkLangDiv" >{!val.networkLanguageDescription} </div>
+                                                                </section>
+                                                        </lightning:accordionSection>
+                                                    </div>
+                                                	</div>
+                                                    </aura:iteration>
+                                                        <br/>
+                                                		<div class="benefitLanguageDescription slds-p-left_small networkLangDiv"   id="networkLangDiv">{!nt.benefitLanguageDescription}</div>
+                                                        <br/>
+                                                            <aura:if isTrue="{!nt.benefitLimitAndException[0] != null }">
+                                                        <span class="slds-text-title_bold limitAndExceptionHdr slds-p-left_small">Limit and Exception</span>
+                                                        <br/>
+                                                        <span class="limitAndException slds-p-left_small networkLangDiv"  id="networkLangDiv">{!nt.benefitLimitAndException[0].details}</span> 
+                                                                </aura:if>
+                                                        </aura:iteration>
+                                                    </aura:if>
+                                                    
+                                                    
+                                                </aura:if>
+                                                
+                                            </aura:iteration>
+                                    </lightning:accordion>
+                                        </div>
+                                    <br/> 
+                                </div>
+    						</div>
+                        </td></tr>
+                             </aura:iteration>
+                  </tbody>
+               </table>
+            </div>
+        </aura:if>
+                
+                
+   <aura:if isTrue="{!and(v.searchBenefitsResults, v.searchBenefitsResults.length > 0)}">
+           <div id="b360Benefitcontainerdiv" class="autodocTableView slds-p-top_small  slds-p-left_small  slds-size_12-of-12" data-auto-doc="true" data-auto-doc-case-items="true" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-section-key="Benefit Details">
+                <table id="b360benifitdetailresultstable" class="slds-table slds-table_bordered slds-table_cell-buffer slds-no-row-hover accordionTables planbenifitstable scroll">
+					<thead >	
+						<tr>
+							<th  class="clmhide">Benifits as Of {!v.benefitDate}</th>
+						</tr>
+					</thead>
+					
+					<tbody>
+                        <aura:iteration items="{!v.searchBenefitsResults}" var="benefit">
+                         <tr class="slds-hint-parent" id="{!benefit.benefitId}">
+                             <td>
+                            <div class="slds-section slds-is-close" id="{!benefit.benefitName}" >
+                                <!--section header-->
+                                <h3 class="slds-section__title" onclick="{!c.showBenefitSection}" data-auraId="{!benefit.benefitName}" data-benefitId="{!benefit.benefitId}">
+                                    <button aria-controls="VegetablesId" class="slds-button slds-section__title-action accordianStyle">
+                                        <div>
+                                        <span>
+                                            <lightning:icon iconName="utility:switch"
+                                                            alternativeText="button icon"
+                                                            size="x-small"
+                                                            class="slds-section__title-action-icon slds-button__icon_left"/>
+                                        </span>
+                                        <span class="slds-truncate" title="{!benefit.benefitName}">{!benefit.benefitName}</span>
+                                        </div>
+                                    </button>
+                                </h3>
+                              
+																								
+										 
+                                <!--section body-->
+                                <div class="slds-section__content slds-p-left_x-large" id="">
+                                    
+										 
+                                    <div class="benefitNetworkSection">
+                                    <lightning:accordion allowMultipleSectionsOpen="true" >
+                                            <aura:iteration items="{!v.benefitNetworkSectionList}"  var="network">
+                                                <aura:if isTrue="{! network.benefitId == benefit.benefitId}">
+                                                    <aura:if isTrue="{!network.value != ''}">
+                                                        
+                                                        <aura:iteration items="{!network.value}"  var="nt">
+                                                            <br/>        
+                                                        <div class="benefitSectionName slds-text-title_bold">{!nt.benefitName}</div>
+                                    				<br/>    
+                                                    <aura:iteration items="{!nt.benefitNetworkSection}"  var="val">
+                                                 	<div class = "slds-p-left_small slds-p-right_small slds-p-top_xsmall">
+                                                    <div class = "slds-box slds-box_xx-small">
+                                                        <lightning:accordionSection name="{!val.networkTypeDescription[0]}" label="{!val.networkTypeDescription[0]}">
+                                                                <section class="slds-accordion__section slds-is-open accsecbackgroundcls">
+                                                                    <div id="networkLangDiv"  class="networkLangDiv">{!val.networkLanguageDescription} </div>
+                                                                </section>
+                                                        </lightning:accordionSection>
+                                                    </div>
+                                                	</div>
+                                                    </aura:iteration>
+                                                        <br/>
+                                                		<div class="benefitLanguageDescription networkLangDiv"   id="networkLangDiv">{!nt.benefitLanguageDescription}</div>
+                                                        <br/>
+                                                            <aura:if isTrue="{!nt.benefitLimitAndException[0] != null }">
+                                                        <span class="slds-text-title_bold limitAndExceptionHdr">Limit and Exception</span>
+                                                        <br/>
+                                                        <span class="limitAndException networkLangDiv" id="networkLangDiv" >{!nt.benefitLimitAndException[0].details}</span>    
+                                                            </aura:if>
+                                                        </aura:iteration>
+                                                    </aura:if>
+                                                    
+                                                    
+                                                </aura:if>
+                                                
+                                            </aura:iteration>
+                                    </lightning:accordion>
+                                        </div>
+                                    <br/> 
+   																	   
+                                </div>
+    						</div>
+                                 </td>
+                             </tr>
+                        </aura:iteration>
+                    </tbody>
+               </table>
+            </div>
+        </aura:if>
+             <div class="outer-div slds-align_absolute-center">
+            <lightning:spinner aura:id="mySpinner" alternativeText="Loading, Please Wait..." title="Loading, Please Wait..." variant="brand" size="small" class="slds-hide"/>
+   		 </div>    
+                
+            </lightning:accordionSection>
+        </lightning:accordion>
+        <!--</div>-->
+            
+         
+       
+        </div>
+    
+    <div class="slds-box slds-p-around_none slds-theme_default slds-p-top_small">
+    <lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="BenefitDetailsSection" class="titleBold">
+        
+        <aura:if isTrue="{!v.renderSpinnerForBA}">
+               <div class="loadingSpinner" >
+                      <lightning:spinner alternativeText="Loading" size="small" />
+                </div>  
+                  </aura:if> 
+        
+            <lightning:accordionSection name="BenefitDetailsSection" label="Benefit Accumulations">    
+        
+               <lightning:layout class="slds-form--inline" > 
+                <lightning:layoutItem>
+						<div class="slds-p-right_none slds-p-top_medium  slds-p-left_x-small">
+							<abbr title="required" class="slds-required">*</abbr>
+							<label class="slds-form-element__label" style="font-size:10pt;" for="form-element-01">
+								<b>Benefit As Of</b>
+							</label>
+						</div>
+					</lightning:layoutItem>
+					<lightning:layoutItem  size="2" >
+						<div class="slds-p-top_medium slds-p-left_none slds-m-bottom_small">
+							<ui:inputDate aura:id="benefitId"  format="MM/DD/YYYY" displayDatePicker="true" value="{!v.benefitDateForAccums}" class="slds-input inputDateWidth" change="{!c.validateBenefitDtForBA}"/>
+						</div>
+						<div class="{!v.showDOBErrorMessageForAccums ? 'slds-show':'slds-hide'}">
+                            <label class="slds-text-color_error">{!v.DOBErrorMessageForAccums}</label>
+             			</div>
+             </lightning:layoutItem>
+                   <lightning:layoutItem  size="1" >
+						<div class="slds-p-top_small  slds-p-left_small  ">
+							<p class="slds-form-element__label" style="padding-top:12px;padding-left: 20px;  font-size:10pt; " >
+								<a href="javascript:void(0)" onclick="{!c.populateBenefitDateForBA}">
+									<b>{!v.todayDate}</b>
+								</a>
+							</p>
+						</div>
+					</lightning:layoutItem>
+                </lightning:layout>
+                
+        <div  class="slds-size_4-of-10 benefitDateCls slds-p-right_small slds-p-left_medium slds-p-top_small">
+					<span onkeypress="{!c.onClickOfEnter}">
+						<c:ACETLGT_PlanBenefitAutocomplete aura:id="PlanBenefitGlobalAutocomplete"
+                                                       lstSelectedRecords="{!v.selectedLookUpRecordsFrBA}"
+                                                       label="Choose Benefit (Max 20)"
+                                                       benefitError="{!v.benefitError}"
+                                                       listOfSearchRecords="{!v.selectedSearchRecords}"
+                                                       listOfAllRecords="{!v.allSearchRecords}"
+                                                       selectedRadio="{!v.selectedRadio}"
+                                                           
+                                                        />
+						<div class="{!v.isBenefitSelected? 'slds-show': 'slds-hide'}">
+							<label class="slds-text-color_error">{!v.benefitError}</label>
+						</div>
+                        <div class="{!v.showErrorViewAccums? 'slds-show slds-size_2-of-12 slds-align_absolute-center': 'slds-hide'}" style="width: 65rem;">
+							<label class="slds-text-color_error">{!v.errorMsgViewAccums}</label>
+						</div>
+						<!-- US2237162 - removed br -->
+						<div class="slds-align_absolute-center" style="width:200px;">
+							<!-- US2237162 - added card_element_top_margin class -->
+							<lightning:button label="View Accumulations" class="card_element_top_margin" aura:id="showDetButtonId"
+                                          variant="brand" iconName="utility:search" iconPosition="left" onclick="{!c.showAccumsSections}" />
+							<lightning:spinner aura:id="mySpinner" alternativeText="Loading, Please Wait..." title="Loading, Please Wait..." variant="brand" size="small" class="slds-hide"/>
+						</div>
+					</span>
+				</div>
+        
+        	<lightning:accordion activeSectionName="{!v.activeSections}" allowMultipleSectionsOpen="true">
+                <aura:iteration items="{!v.selectedBenefits}" var="benefit">
+                <div class="slds-border_top slds-box slds-box_xx-small" onclick="{!c.AccumulatorsOnclick}" data-accumulatorId="{!benefit.value}"  >
+                    <span>
+                        <lightning:accordionSection   name="{!benefit.value}" label="{!benefit.label}"   aura:id="accordiancmp" class="accsecbackgroundcls">
+                            <aura:set attribute="actions">
+                                <a href="javascript:void(0);" onmouseover="{!c.copycode_event}" tabindex="-1" title="{!benefit.value}" style="margin-right: 979px !important;" data-codetocopy="{!benefit.value}">Copy Code</a>
+                            </aura:set>
+                            <div id="{!benefit.value + 'accumeLevel'}"></div>
+                        </lightning:accordionSection>
+                    </span>
+				</div>
+   
+				</aura:iteration>
+        </lightning:accordion>
+            
+        </lightning:accordionSection>
+        </lightning:accordion>
+   </div>    
+    
+		  
+		  
+</aura:component>

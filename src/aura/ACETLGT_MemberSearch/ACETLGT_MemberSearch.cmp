@@ -1,0 +1,183 @@
+<aura:component implements="force:appHostable" controller="ACETLGT_MemberSearchController" access="global">
+    <aura:attribute name="Spinner" type="boolean" default="false"/>
+    <aura:attribute name="memberId" type="string"/>
+    <aura:attribute name="InteractionType" type="String" access="public" default="Phone Call"/>
+    <aura:attribute name="dob" type="Date" default=""/>
+    <aura:attribute name="firstName"  type="string" default=""/>
+    <aura:attribute name="lastName" type="string" default=""/>
+    <aura:attribute name="memstate" access="public" type="string" default=""/>
+    <aura:attribute name="zip" type="string" default=""/>
+    <aura:attribute name="lstmembers" type="ACETLGT_MemberSearchCoveragesResult[]"/>
+    <aura:attribute name="options" type="List" />
+    
+    <aura:attribute name="advancedValidation" type="Boolean" default="false"/>
+    <aura:attribute name="FirstNameErrorMessage" type="String" />
+    <aura:attribute name="LastNameErrorMessage" type="String" />
+    <aura:attribute name="ZipCodeErrorMessage" type="String"/>
+    <aura:attribute name="DOBErrorMessage" type="String"/>
+    <aura:attribute name="hasFirstNameError" type="Boolean" default="false"/>
+    <aura:attribute name="hasLastNameError" type="Boolean" default="false"/>
+    <aura:attribute name="otherValueAdded" type="Boolean" default="false"/>
+    
+    <!--<aura:attribute name="isDisabled" type="Boolean" default="false"/>-->
+    <aura:handler name="misdirectEvent" event="c:ACETLGT_MisdirectClearSearch" action="{!c.handleMisdirectEvent}"/>
+    
+    <!--US1935707:Sandbox research user -->
+    <aura:attribute name="userInfo" type="user" access="public"/>  
+    <aura:attribute name="isResearchUser" type="Boolean" access="public" default="false"/>
+    <aura:attribute name="searchclicked" type="Boolean" default="false"/>
+    <aura:attribute name="vccdParams" type="String" access="public" />
+        
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+        <aura:handler event="c:ACETLGT_VCCDBridgeSuppEvent" action="{!c.handleVCCDBridgeSuppEvent}"/>
+    <lightning:workspaceAPI aura:id="workspace"/>
+
+    <div id="normalsearch" class="slds-box" style="background-color:whitesmoke;margin-top: -14px;margin-left: -1%;
+                                                   margin-right: -1%;border-top-left-radius: 0rem;border-top-right-radius: 0rem;border-bottom-right-radius: 0.55rem;border-bottom-left-radius: 0.55rem;
+                                                   box-shadow: 0 7px 7px 0 rgba(0, 0, 0, 0.41);border: 0px solid rgb(221, 219, 218);" >
+        
+        <lightning:layout class="slds-grid slds-grid_vertical" aura:id="searchForm"  >
+            <div id="baseSearch" style="margin-top: -34px;margin-bottom: -44px;">
+                <lightning:layoutitem padding="around-small" size="6" class="slds-col slds-align_absolute-center">        
+     				<!-- US2237162 - added card_element_top_margin card_element_bottom_margin, removed margin-bottom:8px; -->
+                    <div aria-labelledby="findmember" class="card_top_margin card_bottom_margin" style="width:50%;margin-top: 28px;" onkeypress="{!c.onClickOfEnter}" >
+                    <!-- <div aria-labelledby="findmember" style="margin-bottom:8px; width:50%;" > -->
+                        <fieldset class="slds-box slds-theme--default slds-form-element slds-form-element_compound">
+                            <ul role="navigation" class="slds-has-block-links" style="">
+                                <!-- US2237162 - card_element_bottom_margin -->
+                                <li class="card_element_bottom_margin">
+                                    <div class="slds-form-element__row">  
+                                        <div class="slds-col slds-has-flexi-truncate">
+                                            <h1 class="slds-page-header__title slds-m-right__small slds-align-middle slds-truncate" >Find a Member</h1>
+                                        </div>
+                                    </div>
+                                    <div id="pbSearch"></div>
+                                </li>
+                                <!-- US2237162 - card_element_bottom_margin -->
+                                <li class="card_element_bottom_margin">     
+                                    <div class="slds-form-element">  
+                                        <lightning:select aura:id="selectInt" name="selectInt" label="Interaction Type" value="{!v.InteractionType}" >
+                                            <aura:iteration items="{!v.options}" var="opt">
+                                                <option value="{!opt}">{!opt}</option>
+                                            </aura:iteration>	
+                                        </lightning:select>  
+                                    </div> 
+                                </li>
+                                <!-- US2237162 - card_element_bottom_margin -->
+                                <li class="card_element_bottom_margin">     
+                                    <div class="slds-form-element">  
+                                        <!--US1685067-->
+                                        <span onkeypress="{!c.restrictExtraCharacters}">
+                                        	<lightning:input type="search" aura:id="memid" label="ID" name="ID" html-autocomplete="off" value="{!v.memberId}" />
+                                        </span>  
+                                    </div> 
+                                </li>
+                                <li>
+                                	<!-- US2237162 - card_element_bottom_margin -->
+                                    <a href="#" class="card_element_bottom_margin" id="toggleSearch" onclick="{!c.toggleSearch}">Advanced Search</a>  
+                                    <div id="advsearch" style="display:none;" >
+                                        <ul id="list" style="margin-bottom:0;">
+                                            <!-- US2237162 - card_element_bottom_margin -->
+                                            <li class="card_element_bottom_margin">
+                                                <div  class="slds-form-element">  
+                                                    <lightning:input type="search" aura:id="firstName" label="First Name" name="firstname" html-autocomplete="off" value="{!v.firstName}"/>
+                                                </div>
+                                                <!--US1685067-->
+                                                <div aura:id="msgTxtFname" name="msgTxtFname" class="slds-text-color_error slds-hide">
+                                                    {!v.FirstNameErrorMessage}
+                                                </div>
+                                            </li>
+                                            <!-- US2237162 - card_element_bottom_margin -->
+                                            <li class="card_element_bottom_margin">
+                                                <div class="slds-form-element">  
+                                                    <!--<lightning:input aura:id="lastName" label="Last Name" name="lastname" html-autocomplete="off" value="{!v.lastName}" required="{!v.advancedValidation}"/>-->
+                                                    <lightning:input type="search" aura:id="lastName" label="Last Name" name="lastname" data-autocomplete="off" value="{!v.lastName}" />
+                                                </div> 
+                                                <!--US1685067-->
+                                                <div aura:id="msgTxtLname" name="msgTxtLname" class="slds-text-color_error slds-hide">
+                                                    {!v.LastNameErrorMessage}
+                                                </div>
+                                                
+                                            </li>
+                                            <!-- US2237162 - card_element_bottom_margin -->
+                                            <li class="card_element_bottom_margin">
+                                                <div class="slds-form-element">
+                                                    <ui:inputDate aura:id="dob" label="DOB" format="MM/DD/YYYY" displayDatePicker="true" value="{!v.dob}" class="slds-input" />
+                                                </div>
+                                                <!--US1685067-->
+                                                <div aura:id="msgTxtDOB" class="slds-text-color_error slds-hide">
+                                                    {!v.DOBErrorMessage}
+                                                </div>
+                                            </li>
+                                            <!-- US2237162 - card_element_bottom_margin -->
+                                            <li class="card_element_bottom_margin">
+                                                <div class="slds-form-element">
+                                                    <c:ACETLGT_States aura:id="selOption"  isDisabled="{! ( greaterthan(v.memberId.length, 0) ) }" ></c:ACETLGT_States>
+                                                </div>
+                                            </li>
+                                            <!-- US2237162 - card_element_bottom_margin -->
+                                            <li class="card_element_bottom_margin">
+                                                <!--US1685067-->
+                                                <span onkeypress="{!c.restrictCharacters}">                                                    
+                                                    <div class="slds-form-element">  
+                                                        
+                                                        <lightning:input type="search" aura:id="zip" label="Zip Code" name="memberzipcode" html-autocomplete="off" value="{!v.zip}"  disabled="{! ( greaterthan(v.memberId.length, 0) ) }"/> 
+                                                	</div>
+                                                    <!--US1685067-->
+                                                    <div aura:id="msgTxtZip" class="slds-text-color_error slds-hide">
+                                                    	{!v.ZipCodeErrorMessage}
+                                                	</div>
+                                                </span>
+                                            </li>
+                                        </ul>
+                                    </div>    
+                                </li>
+                            </ul>        
+                        </fieldset>
+                    </div>
+                </lightning:layoutitem>
+            </div>            
+            <lightning:layoutitem class="slds-grid slds-align_absolute-center">
+                <div id="searchbuttons" class="slds-button-group">
+                    <!-- US2237162 - added buttonBorderRadius -->
+                    <lightning:button label="Search" onclick="{!c.showResults}" class="buttonBorderRadius slds-m-top--large slds-col slds-m-right--small" 
+                                      variant="brand" iconName="utility:search" iconPosition="left" aura:id="searchbtn" type="submit"/>   
+                    <!-- US2237162 - added buttonBorderRadius -->
+                    <lightning:button label="Clear" onclick="{!c.clearResults}" class="buttonBorderRadius slds-m-top--large slds-m-right--small slds-col"
+                                      variant="brand" iconName="utility:clear" iconPosition="left"/>
+                    <div id="buttons" style="display:none;" class="slds-m-top--large slds-col">
+                		<c:ACETLGT_TTSModal aura:id="TTSSearch" showEZCommAndContactHistoryButton="false" showSave="false" showMisdirect="false" showMisdirectSearch="true" showCirrus="false" showMemAlerts="false" sourceOrig="{!v.InteractionType}"/> 
+                    </div>
+                    <div class=" slds-p-left--small">
+                   	<aura:if isTrue="{!v.searchclicked}">
+                        <!-- US2237162 - added buttonBorderRadius -->
+                        <lightning:button label="Member Not Found" class="buttonBorderRadius slds-m-top--large slds-col slds-m-right--small " 
+                               onclick="{!c.openMembNotFoundTab}" variant="brand" aura:id="membnotfoundbtn"/>   
+                    </aura:if> 
+					</div>
+                </div>
+            </lightning:layoutitem>
+        </lightning:layout>
+    </div>  
+    
+    <div id="results" style="display:none;">
+        <lightning:layout class="slds-grid" >
+            <lightning:layoutitem flexibility="auto"> 
+                <div id="results" >
+                    <aura:if isTrue="{!v.Spinner}">
+                        <lightning:spinner alternativeText="Loading, Please Wait..." title="Loading, Please Wait..." variant="brand" size="medium"/>
+                    </aura:if>
+                    <aura:if isTrue="{!!empty(v.lstmembers)}">
+                        <!--USUS1935707 Research user-->
+                        <c:ACETLGT_MemberSearchResults dataList="{!v.lstmembers}" usInfo="{!v.userInfo}" vccdParams="{!v.vccdParams}"></c:ACETLGT_MemberSearchResults>
+                        <aura:set attribute="else">
+                            <div class="slds-box slds-theme--default slds-align_absolute-center" style="height: 5rem;">Search criteria returned no matches.</div>
+                        </aura:set>
+                    </aura:if> 
+                </div>
+            </lightning:layoutitem>
+            
+        </lightning:layout>
+        
+    </div>
+</aura:component>

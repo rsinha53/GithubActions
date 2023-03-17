@@ -1,0 +1,92 @@
+<!-- 
+Component Name    : SNI_FL_AgentView
+Description       : Main messaging view which holds the sub components
+Created By        : Sameera De Silva
+Created Date      : 8/11/2020
+
+Modification Log:
+ 
+Developer                   Date                   Description
+1.Sameera De Silva			8/11/2020			Created the skeleton structure(UI) of the main messaging view
+2.Pavithra Fernando			8/13/2020			Added message navigation parts
+3.Sameera De Silva			8/19/2020			Updated padding px in commonmessaging div
+4.Sameera De Silva			8/31/2020 			Passing pagination attributes to messaging list component
+5.Nanthavarman Lingeswaran	9/03/2020			Messaging list sort order
+-->
+
+
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction,lightning:isUrlAddressable"
+                controller="SNI_FLDirectMessageUtil"
+                access="global">
+    <aura:attribute name="CustomTab" type="Boolean"  default="false"/>
+    
+    <aura:attribute name="isConnectAPI" type="Boolean" default="false" />
+    <aura:attribute name="titleName" type="String" />
+    <aura:attribute name="accountOwner" type="String" description="Store owner of the family when navigating to messages through family account page"/> <!-- AC/DC (Nanthu) - US3219701 -->
+    <aura:attribute name="openBackupAgentModal" type="Boolean"/>
+    <aura:attribute name="isBackupAgentView" type="Boolean" default="true" />
+    <aura:attribute name="userViewId" type="Id" default=""/>
+    <aura:attribute name="backupAgents" type="sObject[]" default="[]" />
+    <aura:attribute name="familyId" type="String" />
+    <aura:attribute name="pageReference" type="Object"/>
+    <aura:attribute name="AccountName" type="String" />
+    <aura:attribute name="showToggle" type="Boolean"/>    
+    <aura:attribute name="isFamilyLevel" type="Boolean" default="false"/>
+    <aura:attribute name="lstDirectMessages" type="List"></aura:attribute>
+    <aura:attribute name="recordStart" type="Integer" default="0"></aura:attribute>
+    <aura:attribute name="recordEnd" type="Integer" default="0"></aura:attribute> 
+    <aura:attribute name="totalRecords" type="Integer" default="0"></aura:attribute>
+    <aura:attribute name="pageNumber" type="Integer" default="1"></aura:attribute>
+    <aura:attribute name="totalPages" type="Integer" default="0"></aura:attribute>
+    <aura:attribute name="pageSize" type="Integer" default="10"></aura:attribute> 
+    <aura:attribute name="commentPageSize" type="Integer" default="10"></aura:attribute>
+    <aura:attribute name="commentPageNumber" type="Integer" default="2"></aura:attribute>
+    <aura:attribute name="isClearSelectedMessages" type="Boolean" default="false"></aura:attribute>
+    <aura:attribute name="selectedFeedIdValue" type="String" />
+    <aura:attribute name="replyValue" type="String" />
+    <aura:attribute name="attachId" type="String" />
+    <aura:attribute name="selectedDirectMessage" type="SNI_FLDirectMessageWrapper"></aura:attribute>
+    <aura:attribute name="selectedTabId" type="String"/>
+    <aura:attribute name="selectedTabName" type="String"/>
+    <aura:attribute name="userIdValue" type="String"/>
+    <aura:attribute name="isFlagged" type="Boolean" default="false" />
+ 	<aura:attribute name="isProviderMsgLevel" type="Boolean" default="false"></aura:attribute>
+    <aura:attribute name="isSpecificView" type="Boolean"  />
+    <aura:attribute name="isProviderMessage" type="Boolean" default="false"></aura:attribute>
+    <aura:attribute name="isProvider" type="Boolean"  default="false" /> 
+    <aura:attribute name="isHistProvider" type="Boolean" default="false"/>
+
+    <aura:handler name="pagination" event="c:SNI_FL_PaginationEvt" action="{!c.paginationHandler}"></aura:handler>
+    <aura:handler name="selectedMessage" event="c:SNI_FL_SelectedMessageEvt" action="{!c.getDirectMessageForSelectedMessage}"></aura:handler>
+    <aura:handler name="init" value="this" action="{!c.doInit}" />
+    <aura:handler name="lstFlaggedMessgs" event="c:SNI_FL_FlaggedEvt" action="{!c.getLstFlgedMsgs}"></aura:handler>
+    <aura:handler event="c:SNI_FL_TabSelectedEvent" action="{!c.handleTabSelectEvent}"></aura:handler>
+     <!--Catches event from SNI_FL_FamilyNewMessagePopup comonent and get data again-->
+    <aura:handler name="retrieveAllMessages" event="c:SNI_FL_NewMessageCreatedEvt" action="{!c.retrieveAllMessages}"></aura:handler>
+    <lightning:workspaceAPI aura:id="workspace" />
+    
+    <div class="slds-p-around_xx-small slds-theme_default">
+        <div>  
+            <c:SNI_FL_MessagingHeader selectedTabName="{!v.selectedTabName}" selectedTabId="{!v.selectedTabId}" backupAgents="{!v.backupAgents}" isBackupAgentView="{!v.isBackupAgentView}" isOpenNewMsg="{!v.isOpenNewMsg}" titleName="{!v.titleName}" openBackupAgentModal="{!v.openBackupAgentModal}" AccountName="{!v.AccountName}" isHistProvider="{!v.isHistProvider}"   
+             familyId="{!v.familyId}" accountOwner="{!v.accountOwner}" isProvider="{!v.isProvider}" isFamilyLevel="{!v.isFamilyLevel}" isFlagged="{!v.isFlagged}" lstDirectMessages="{!v.lstDirectMessages}"  totalRecords="{!v.totalRecords}" recordEnd="{!v.recordEnd}" recordStart="{!v.recordStart}" totalPages="{!v.totalPages}" pageNumber="{!v.pageNumber}" isProviderMsgLevel="{!v.isProviderMsgLevel}" isSpecificView="{!v.isSpecificView}"/> <!--last line added for filtering-->
+        </div>
+        
+        <div class="slds-p-bottom_x-small"></div>
+        <div class="slds-grid slds-wrap"> 
+            
+            <div class="slds-col  slds-size_1-of-1 slds-medium-size_1-of-4 slds-large-size_1-of-4 slds-theme_shade" >
+                
+                <c:SNI_FL_MessagingList isClearSelectedMessages="{!v.isClearSelectedMessages}" isConnectAPI="{!v.isConnectAPI}" selectedDirectMessage="{!v.selectedDirectMessage}" lstDirectMessages="{!v.lstDirectMessages}" totalRecords="{!v.totalRecords}" recordEnd="{!v.recordEnd}" recordStart="{!v.recordStart}" totalPages="{!v.totalPages}" pageNumber="{!v.pageNumber}" isFamilyLevel="{!v.isFamilyLevel}" isFlagged="{!v.isFlagged}"/>
+                
+            </div>
+            
+            <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-4 slds-large-size_3-of-4 slds-theme_default commonmsg " style="padding: 10px 0 10px 10px;">
+                
+                <!--Updated by Sameera-->
+                <c:SNI_FL_CommonMessagingView aura:id="msgContent" accountOwner="{!v.accountOwner}" commentPageSize="{!v.commentPageSize}" commentPageNumber="{!v.commentPageNumber}" lstDirectMessages="{!v.lstDirectMessages}" selectedDirectMessage="{!v.selectedDirectMessage}" isBackupAgentView="{!v.isBackupAgentView}" isConnectAPI="{!v.isConnectAPI}" showToggle="{!v.showToggle}" selectedFeedIdValue="{!v.selectedFeedIdValue}" isFamilyLevel="{!v.isFamilyLevel}" replyValue="{!v.replyValue}" attachId="{!v.attachId}" isProviderMessage="{!v.isProviderMessage}" isProviderMsgLevel="{!v.isProviderMsgLevel}"/>
+                
+            </div>
+            
+        </div>
+    </div>
+</aura:component>

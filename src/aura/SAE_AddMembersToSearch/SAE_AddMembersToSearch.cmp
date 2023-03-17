@@ -1,0 +1,446 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,lightning:isUrlAddressable"
+                controller="SAE_AddMembersToSearchCtrl" access="global">
+    <aura:handler name="init" value="{!this}" action="{!c.onLoad}" />
+	<ltng:require styles="{!$Resource.multilineToastCSS}" />
+    <aura:attribute name="showSections" type="Boolean" />
+    <aura:attribute name="addMembers" type="List" default="[]" />
+    <aura:attribute name="numbers" type="List" default="[]" />
+    <aura:attribute name="showMembersSelction" type="Boolean" />
+    <aura:attribute name="showSubjectCard" type="Boolean" />
+    <aura:attribute name="selectedCard" type="Boolean" />
+    <aura:attribute name="showAdvaceSearchFields" type="Boolean" />
+    <aura:attribute name="subjectCard" type="Object" />
+    <aura:attribute name="options" type="Object" />
+    <!-- US1744570 : Malinda -->
+    <aura:attribute name="mandatorySearchMsgError" type="String"
+                    default="This search requires one of the following search combinations: (Member ID)  or (Member ID+DOB) or (Member ID or DOB and First Name + Last Name) or (First Name or Last Name and Member ID + DOB)."/>
+    <aura:attribute name="uniqueMembersList" type="List" access="public" default="[]"/> <!-- US2076569 Avish -->
+    <!--<aura:registerEvent name="SAE_SearchedMembersAE" type="c:SAE_SearchedMembersAE"/>-->
+    <aura:attribute name="interactionRec" type="Interaction__c" />
+    <aura:attribute name="interactionCard" type="Object" access="public" />
+    <aura:attribute name="contactName" type="string" access="public" default="" />
+	<!-- US1889740 - Sarma (Date: 6th Aug 2019) - Misdirect Case creation : Attr for MMS-->
+    <aura:attribute name="isMms" type="Boolean" default="false" />
+
+    <aura:attribute name="providerNotFound" type="Boolean" default="false"/>
+    <aura:attribute name="noMemberToSearch" type="Boolean" default="false"/>
+    <aura:attribute name="isProviderSearchDisabled" type="Boolean" default="false"/>
+
+    <aura:registerEvent name="SAE_SearchedMembersAE" type="c:SAE_SearchedMembersAE"/>
+    <aura:handler event="c:SAE_SetAddMembersAE" action="{!c.setAddMembers}" />
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute name="providerUniqueId" type="String"/>
+
+    <!--US2020384 : Updates to Additional Member Search Integration - Malinda-->
+    <aura:attribute name="isIndividualSearch" type="Boolean" default="false"/>
+    <aura:attribute name="isIndividualSearchOpenSnapshotPage" type="Boolean" default="false" />
+    <aura:handler event="c:SAE_AddMembersStandaloneSearchSelectedMemberEvent" action="{!c.openSubjectCard}"/>
+
+    <!--US2060237	Other Card Validation - Snapshot - Other (Third Party) - 14/10/2019 - Sarma -->
+    <aura:attribute name="isOtherSearch" type="Boolean"  />
+    <aura:attribute name="memberCardFlag" type="Boolean"  />
+    <aura:attribute name="otherCardDataObj" type="Object"/>
+    <aura:attribute name="providerFlow" type="String"/>
+
+    <!-- US1944108 - Accommodate Multiple Payer ID's - Kavinda -->
+    <aura:attribute name="defaultPayerValue" type="String" default="87726" />
+    <aura:attribute name="defaultPayerLabel" type="String" default="87726 - UnitedHealthcare" />
+
+    <!--DE289226 - Avish -->
+    <aura:attribute name="showResults" type="Boolean" default="true" />
+    <aura:attribute name="searchValue" type="String"/>
+    <aura:attribute name="selMemberChild" type="Object" />
+
+    <aura:attribute name="findIndividualSearchResults" type="Object" />
+    <aura:attribute name="memberUniqueId" type="string" access="public"/>
+
+    <!--US1738577 - Thanish (15th July 2019) - Changed the layout to satify the mockup-->
+    <div class="slds-grid slds-gutters">
+        <div class="slds-col slds-size_12-of-12">
+            <span>
+                <div class="slds-card card_padding">
+                    <div> <!-- US2045625 - Thanish - 30th Sept 2019 -->
+                        <lightning:button label="Add Members to Search" variant="neutral" class="neutral_button card_right_margin"
+                                          onclick="{!c.openMembersSelection}" />
+                        <lightning:button label="Reset" variant="neutral" class="neutral_button"
+                                          onclick="{!c.resetMembers}" />
+                    </div>
+                    <aura:If isTrue="{!v.showMembersSelction}">
+                        <!-- US2045625 - Thanish - 30th Sept 2019 -->
+                        <div aura:id="hideNumberSelctions">
+                            <lightning:layout verticalAlign="center" class="card_top_margin">
+                                <lightning:layoutItem>
+                                    <span>
+                                        <p class="slds-m-right_small">How many members to search?</p>
+                                    </span>
+                                </lightning:layoutItem>
+                                <lightning:layoutItem>
+                                    <span>
+                                        <lightning:combobox dropdownAlignment="left" value="1" aura:id="numbersId"
+                                                            variant="label-hidden" options="{!v.numbers}" class="excludeInput card_right_margin" />
+                                    </span>
+                                </lightning:layoutItem>
+                                <lightning:layoutItem>
+                                    <span>
+                                        <lightning:button variant="brand" label="Go" class="brand_button" onclick="{!c.showMembers}" />
+                                    </span>
+                                </lightning:layoutItem>
+                            </lightning:layout>
+                        </div>
+                        <!-- End of Code - US2045625 - Thanish - 30th Sept 2019 -->
+                    </aura:If>
+                </div>
+            </span>
+        </div>
+    </div>
+    <div class="slds-grid slds-wrap slds-grid--align-spread">
+        <aura:iteration items="{!v.addMembers}" var="item" indexVar="index">
+            <aura:If isTrue="{!v.showSections}">
+                <!-- US2045625 - Thanish - 30th Sept 2019 -->
+                <div class="slds-col memberCardWidth slds-card card_padding slds-m-top_medium"> <!-- US2034056 : adding slds-card , changing the padding to margin -->
+                    <aura:If isTrue="{!!item.showCard}">
+                        <div class="cardHeight"> <!-- US2045625 - Thanish - 30th Sept 2019 -->
+                            <span>
+                                <!-- US1944108 - Accommodate Multiple Payer ID's - Kavinda : START -->
+                                <div class="slds-grid slds-wrap">
+                                    <!--loading spinner start-->
+                                    <lightning:spinner class="slds-hide" aura:id="memberSearchIO-spinner"
+                                                       alternativeText="Loading.." title="Loading.."
+                                                       variant="brand" size="medium"/>	
+                                    <!-- Loading spinner end--> 
+                                    <div class="slds-col slds-size_3-of-12">
+                                        <div class="card_bottom_margin"><!-- US2045625 - Thanish - 30th Sept 2019 -->
+                                            <span class="boxHeadings component_title">Member</span>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_7-of-12" style="margin-top: -6.5%;" >
+                                        <c:SAE_PayerID payerValue="{! item.payerObj.payerValue }" payerLabel="{!  item.payerObj.payerLabel }"
+                                         disabled="{! item.mnfCheckBox }" display="{! item.payerObj.displayPayer }"
+                                          typeText="{! item.payerObj.typeText }" iconStyle="downArrowCls" cardNumber="{!item.addMemberCard}"/>
+                                    </div>
+                                    <div class="slds-col slds-size_2-of-12">
+                                            <lightning:button variant="neutral" label="Clear"
+                                            name="{!item.row}" class="clearBtn neutral_button" onclick="{!c.clearMemberCardInputs}" />
+                                    </div>
+                                </div>
+                                <!-- US1944108 - Accommodate Multiple Payer ID's - Kavinda : END -->
+                                <div>
+                                    <div class="slds-form-element slds-lookup card_bottom_margin" data-select="single">
+                                        <label for="memberName" class="field_label">
+                                            <div>
+                                                <abbr title="required" class="slds-required">
+                                                    <aura:renderIf isTrue="{!!item.showAdvance}">*</aura:renderIf>
+                                                </abbr>Member ID
+                                                <lightning:helptext iconName="utility:info"
+                                                                    content="Options include the following: Alt ID, Member ID, SSN, EE ID, Medicare ID, Medicaid ID, HCIN ID, MBI ID" />
+                                            </div>
+                                        </label>
+                                        <div class="slds-form-element__control">
+                                            <div class="slds-input-has-icon slds-input-has-icon--left">
+                                                <!--lightning:buttonIcon iconName="utility:search" variant="bare"
+                                                                      alternativeText="Search" class="slds-input__icon" />
+
+                                                <span-->
+                                                    <lightning:input aura:id="memberId" required="{!or(!item.showAdvance,!item.mnfCheckBox)}"
+                                                                    label="Member ID"
+                                                                     variant="label-hidden" type="Search"
+                                                                     name="{!item.row}" class="inputsMemID"
+                                                                     value="{!item.memberName}"
+                                                                     disabled="{!item.mnfCheckBox}"
+                                                                     minlength="9"
+                                                                     messageWhenTooShort="Enter at least 9 digits."
+                                                                     onchange="{!c.onChangeMemberID}">
+                                                    </lightning:input>
+                                                <!--/span-->
+                                            </div>
+                                        </div>
+                                    </div> <!-- US2045625 - Thanish - 30th Sept 2019 - removed br -->
+                                    <!-- US1744570 : Removing DOB Required - Malinda -->
+                                    <lightning:input aura:id="inputDOB" type="date" label="DOB" class="dobErrorAllign errorMsg card_bottom_margin"
+                                                     dateStyle="short" name="{!item.row}"
+                                                     pattern="/^([0-9]{4})\-([0-9]{2})\-([0-9]{2})$/"
+                                                     messageWhenBadInput="Error: Invalid Date"
+                                                     messageWhenPatternMismatch="Error: Invalid Date" value="{!item.dob}" /><!-- US2045625 - Thanish - 30th Sept 2019 - removed br -->
+
+                                    <div class="slds-grid slds-gutters card_bottom_margin" style="margin-top: 0%;"> <!-- US2045625 - Thanish - 30th Sept 2019 -->
+                                        <div class="slds-col slds-size_1-of-2">
+                                            <div class="slds">
+                                                <aura:If isTrue="{!!item.showAdvance}">
+                                                    <a href="javascript:void(0)" class="link_field_value" name="memAdvanceSearchName"
+                                                       onclick="{!c.clickAdvanceSearch}" tabindex="{!item.row}">Show Advanced
+                                                        Search
+                                                    </a>
+                                                    <aura:set attribute="else">
+                                                        <a href="javascript:void(0)" class="link_field_value" name="memAdvanceSearchName"
+                                                           onclick="{!c.hideAdvanceSearch}" tabindex="{!item.row}">Hide Advanced Search
+                                                        </a>
+                                                    </aura:set>
+                                                </aura:If>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-2">
+                                            <div class="slds-grid slds-grid_vertical">
+                                                <div class="slds-col">
+                                                    <aura:If isTrue="{!item.mnf == 'mnf'}">
+                                                        <lightning:input type="checkbox" name="{!item.row}"
+                                                                         aura:id="memNotFoundID" label="Member not found"
+                                                                         checked="{!item.mnfCheckBox}" onchange="{!c.handleChangeMNF}"/> <!-- onchange="{!c.handleChangeMNF}" -->
+                                                    </aura:If>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- US2045625 - Thanish - 30th Sept 2019 - removed br -->
+                                    <aura:If isTrue="{!item.showAdvance}">
+                                        <div class="" name="{!'advanceSearch_'+item.row}">
+                                            <lightning:input type="text" aura:id="memFirstNameId" value="{!item.firstName}" name="{!item.row}" class="errorMsg card_bottom_margin"
+                                                             label="First Name" required="{!item.mnfCheckBox}"/><!-- US2045625 - Thanish - 30th Sept 2019 - removed br -->
+                                            <lightning:input type="text" aura:id="memLastNameId" value="{!item.lastName}" name="{!item.row}" class="errorMsg card_bottom_margin"
+                                                             label="Last Name" required="{!item.mnfCheckBox}"/><!-- US2045625 - Thanish - 30th Sept 2019 - removed br -->
+                                            <lightning:input type="text" value="{!item.groupNumber}" name="groupNumberName" class="card_bottom_margin"
+                                                             label="Group Number" disabled="{!item.mnfCheckBox}"/><!-- US2045625 - Thanish - 30th Sept 2019 - removed br -->
+                                            <lightning:combobox label="State" aura:id="stateMemId" value="{!item.state}" placeholder="{!$Label.c.ph_State}"
+                                                                class="valuesAlignCls errorMsg card_bottom_margin" name="{!item.row}"
+                                                                options="{!v.options}" required="{!item.mnfCheckBox}"/><!-- US2045625 - Thanish - 30th Sept 2019 - removed br -->
+                                            <lightning:input type="text" value="{!item.zip}" name="{!item.row}" aura:id="zipCodeId"
+                                                             label="Zip Code" disabled="{!item.mnfCheckBox}" maxlength="5" minlength="5"
+                                            				 messageWhenTooShort="To search by Zip Code, enter five digits" class="card_bottom_margin"
+                                                             onchange="{!c.onChangeZipCode}"/><!-- US2045625 - Thanish - 30th Sept 2019 - removed br -->
+                                            <lightning:input type="text" value="{!item.phone}" name="{!item.row}" aura:id="phoneId" class="errorMsg card_bottom_margin"
+                                                             label="Phone Number" required="{!item.mnfCheckBox}" maxlength="10"
+                                                             minlength="10" pattern="[0-9]*" messageWhenTooShort="Enter 10 digits only"
+                                                             autocomplete="off" onchange="{!c.onChangePhone}"/><!-- US2045625 - Thanish - 30th Sept 2019 - removed br -->
+                                        </div>
+                                    </aura:If> <!-- US2045625 - Thanish - 30th Sept 2019 - removed br -->
+
+                                    <!-- US2045625 - Thanish - 1st Oct 2019 -->
+                                    <div class="slds-grid slds-gutters">
+                                        <div class="slds-col slds-size_1-of-2">
+                                            <div class="slds-grid slds-grid_vertical">
+                                                <aura:IF isTrue="{!and(and(!item.fieldValidationFlag,!item.validationFlag),!item.mnfCheckBox)}">
+                                                    <div class="card_bottom_margin"> <!-- US2045625 - Thanish - 30th Sept 2019 -->
+                                                        <lightning:button label="Search" class="brand_button" name="{!item.row}" variant="brand"
+                                                                          onclick="{!c.openSubjectCard}" /> <!-- US2045625 - Thanish - 30th Sept 2019 - removed br -->
+                                                    </div>
+                                                </aura:IF>
+                                                <aura:IF isTrue="{!and(or(item.fieldValidationFlag,item.validationFlag),!item.mnfCheckBox)}">
+                                                    <lightning:layout verticalAlign="center" class="card_bottom_margin">
+                                                        <lightning:layoutItem class="card_right_margin">
+                                                            <lightning:button label="Search" class="brand_button" name="{!item.row}" variant="brand"
+                                                                                onclick="{!c.openSubjectCard}" /> <!-- US2045625 - Thanish - 30th Sept 2019 - removed br -->
+                                                        </lightning:layoutItem>
+                                                        <lightning:layoutItem>
+                                                            <c:ACETLinkErrorUtility mapError="{!item.mapError}" fieldValidationFlag="{!item.fieldValidationFlag}" validationFlag="{!item.validationFlag}"/>
+                                                        </lightning:layoutItem>
+                                                    </lightning:layout>
+                                                </aura:IF>
+                                                <aura:IF isTrue="{!and(!item.fieldValidationFlag,item.mnfCheckBox)}">
+                                                    <lightning:layout class="card_bottom_margin">
+                                                        <lightning:layoutItem>
+                                                            <lightning:button label="Add Member" class="brand_button" name="{!item.row}" variant="brand"
+                                                                              onclick="{!c.openMNFCard}"/> <!-- US2045625 - Thanish - 30th Sept 2019 - removed br -->
+                                                        </lightning:layoutItem>
+                                                    </lightning:layout>
+                                                </aura:IF>
+                                                <aura:IF isTrue="{!and(item.fieldValidationFlag,item.mnfCheckBox)}">
+                                                    <lightning:layout verticalAlign="center" class="card_bottom_margin">
+                                                        <lightning:layoutItem class="card_right_margin">
+                                                            <lightning:button label="Add Member" class="brand_button" name="{!item.row}" variant="brand"
+                                                                                onclick="{!c.openMNFCard}"/> <!-- US2045625 - Thanish - 30th Sept 2019 - removed br -->
+                                                        </lightning:layoutItem>
+                                                        <lightning:layoutItem>
+                                                            <c:ACETLinkErrorUtility mapError="{!item.mapError}" fieldValidationFlag="{!item.fieldValidationFlag}" validationFlag="{!item.validationFlag}"/>
+                                                        </lightning:layoutItem>
+                                                    </lightning:layout>
+                                                </aura:IF>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- End of Code - US2045625 - Thanish - 1st Oct 2019 -->
+
+                                    <!-- US2034056	UI - 12/09/2019 - Updates to Additional Member Search Integration - Sarma : Start -->
+                                    
+                                    <!-- USS2221006 -->
+                                    <c:SAE_AddMembersToSearchMemberFilter findIndividualSearchResults="{!v.findIndividualSearchResults}" addMembers="{!v.addMembers}" 
+                                                                            searchedMembers="{!v.uniqueMembersList}" isOtherFlow="{!v.isOtherSearch}" 
+                                                                            interactionRecord="{!v.interactionCard}" row="{!item.row}" membersORG="{! item.multipleMemberResponses }" 
+                                                                            memberId="{!item.memberName}" showResults="{!v.showResults}" members="{! item.multipleMemberResponses }"  
+                                                                            SelectedMember="{!v.selMemberChild}" searchValue="{!v.searchValue}" memberUniqueId="{!v.memberUniqueId}"/>
+                                
+                                    <!-- US2034056 : End -->
+                                </div>
+                            </span>
+                        </div>
+                    </aura:If>
+                    <aura:If isTrue="{!and(item.showCard,!item.mnfSubjectCard)}">
+                        <!-- US2034056 : Commenting following line to change the UI -->
+                        <!--  <lightning:card title="{!item.subjectCard.subjectName}" aura:id="card" class="slds-card_boundary cardHeight"> -->
+                        <!-- US2034056 : Adding Button & Change UI : Start -->
+
+                        <!-- US2045625 - Thanish - 1st Oct 2019 -->
+                        <div aura:id="card" class="slds-card cardHeight"><!-- US2021743 - Thanish - 24th Sept 2019 - changed ui according to mockup -->
+                            <lightning:layout class="card_bottom_margin">
+                                <lightning:layoutItem size="6">
+                                    <h2 class="component_title">Subject :
+                                        <a href="javascript:void(0)" class="hyperlink" style="font-weight: normal;" onclick="{!c.navigateToSnapshot}" data-index="{!index}" data-memberType="Searched Member">
+                                            {!item.subjectCard.firstName + ' ' + item.subjectCard.lastName} <!-- US2021743 - Thanish - 30th Sept 2019 - changed ui according to mockup -->
+                                        </a>
+                                    </h2>
+                                </lightning:layoutItem>
+                                <aura:If isTrue="{!item.isdelete}">
+                                    <lightning:layoutItem size="6">
+                                        <div style="float: right;">
+                                            <lightning:button variant="neutral" label="Delete"
+                                                    name="{!item.row}" class="neutral_button" onclick="{!c.deleteCard}" />
+                                        </div>
+                                    </lightning:layoutItem>
+                                </aura:If>
+                            </lightning:layout>
+                            <!-- US2034056 : Adding Button & Change UI : End -->
+                            <lightning:layout multipleRows="true">
+                                <lightning:layoutitem size="6" class="card_bottom_margin">
+                                    <div>
+                                        <p class="field_label">DOB</p>
+                                        <p class="field_value">
+                                            <aura:if isTrue="{!item.subjectCard.memberDOB != null}">
+                                                {!item.subjectCard.memberDOB}
+                                                <aura:set attribute="else">
+                                                    <div class="slds-truncate">--</div>
+                                                </aura:set>
+                                            </aura:if>
+
+                                        </p>
+                                    </div>
+                                </lightning:layoutitem>
+
+                                <lightning:layoutitem size="6" class="card_bottom_margin">
+                                    <div>
+                                        <p class="field_label">Member ID</p>
+                                        <p class="field_value">
+                                            <aura:if isTrue="{!item.subjectCard.memberId}">
+                                                <lightning:formattedText value="{!item.subjectCard.memberId}" />
+                                                <aura:set attribute="else">
+                                                    <div class="slds-truncate">--</div>
+                                                </aura:set>
+                                            </aura:if>
+                                        </p>
+                                    </div>
+                                </lightning:layoutitem>
+                                <lightning:layoutitem size="6" class="card_bottom_margin">
+                                    <div>
+                                        <p class="field_label">Relationship</p>
+                                        <p class="field_value" style="text-transform: capitalize;"> <!-- US2045625 - Thanish - 4th Oct 2019 -->
+                                            <aura:if isTrue="{!item.subjectCard.relationship}">
+                                                <lightning:formattedText value="{!item.subjectCard.relationship}" />
+                                                <aura:set attribute="else">
+                                                    <div class="slds-truncate">--</div>
+                                                </aura:set>
+                                            </aura:if>
+                                        </p>
+                                    </div>
+                                </lightning:layoutitem>
+                                <lightning:layoutitem size="6" class="card_bottom_margin">
+                                    <div>
+                                        <p class="field_label">Group #</p>
+                                        <p class="field_value">
+                                            <aura:if isTrue="{!item.subjectCard.groupNumber}">
+                                                <lightning:formattedText value="{!item.subjectCard.groupNumber}" />
+                                                <aura:set attribute="else">
+                                                    <div class="slds-truncate">--</div>
+                                                </aura:set>
+                                            </aura:if>
+                                        </p>
+                                    </div>
+                                </lightning:layoutitem>
+                                <lightning:layoutitem size="6">
+                                    <div>
+                                        <p class="field_label">EEID</p>
+                                        <p class="field_value">
+                                            <aura:if isTrue="{!item.subjectCard.EEID}">
+                                                <lightning:formattedText aura:Id="maskedEEID" value="{!item.subjectCard.maskedEEID}" />
+                                                <lightning:formattedText class="slds-hide" aura:Id="unMaskedEEID" value="{!item.subjectCard.EEID}" />
+                                                
+                                                <lightning:buttonMenu variant="container" aura:id="menu" class="slds-p-left_small" onselect="{! c.handleSelect }" alternativeText="Show menu">
+                                                    <lightning:menuItem value="UnMaskEEID" label="UnMask" />
+                                                    <lightning:menuItem value="CopyEEID" label="Copy" />
+                                                </lightning:buttonMenu>
+                                                <aura:set attribute="else">
+                                                    <div class="slds-truncate">--</div>
+                                                </aura:set>
+                                            </aura:if>
+                                        </p>
+                                    </div>
+                                </lightning:layoutitem>
+                                <lightning:layoutitem size="6">
+                                    <div>
+                                        <p class="field_label">SSN</p>
+                                        <p class="field_value">
+                                            <aura:if isTrue="{!item.subjectCard.SSN}">
+                                                <lightning:formattedText aura:Id="maskedSSN" value="{!item.subjectCard.maskedSSN}" />
+                                                <lightning:formattedText class="slds-hide" aura:Id="formattedSSN" value="{!item.subjectCard.formattedSSN}" />
+                                                <lightning:formattedText class="slds-hide" aura:Id="unMaskedSSN" value="{!item.subjectCard.SSN}" />
+                                                <lightning:buttonMenu variant="container" aura:id="menu" name="{!item.row}" class="slds-p-left_small adjHeight" onselect="{! c.handleSelect }" alternativeText="Show menu">
+                                                    <lightning:menuItem value="UnMaskSSN" label="UnMask" />
+                                                    <lightning:menuItem value="CopySSN" label="Copy" />
+                                                </lightning:buttonMenu>
+                                                <aura:set attribute="else">
+                                                    <div class="slds-truncate">--</div>
+                                                </aura:set>
+                                            </aura:if>
+                                        </p>
+                                    </div>
+                                </lightning:layoutitem>
+                            </lightning:layout>
+                            <!-- US2045625 - Thanish - 24th Sept 2019 - End of Code -->
+                            <!-- US2021743 - Thanish - 24th Sept 2019 - End of Code -->
+                        </div>
+                    </aura:If>
+
+
+                    <aura:If isTrue="{!item.mnfSubjectCard}">
+                        <!-- US2045625 - Thanish - 30th Sept 2019 -->
+                        <div aura:id="card" class="cardWidth cardHeight slds-card">
+                            <div class="card_bottom_margin">
+                                <span class="component_title">Subject :
+                                <a href="javascript:void(0)" style="text-transform: uppercase; font-weight: normal;" class="hyperlink" onclick="{!c.navigateToSnapshot}" data-index="{!index}" data-memberType="Member not found">
+                                    <aura:if isTrue="{!or(item.firstName != null,
+                                                        item.lastName != null)}">
+                                        {!item.firstName + ' ' + item.lastName}
+                                        <aura:set attribute="else">
+                                            <div class="slds-truncate">--</div>
+                                        </aura:set>
+                                    </aura:if>
+                                </a>
+                                </span>
+                            </div>
+                            <div>
+                                <lightning:layout multipleRows="true">
+                                    <lightning:layoutitem size="6" class="card_bottom_margin">
+                                        <div class="slds-p-right_small">
+                                            <p class="field_label">DOB </p>
+                                            <p class="field_value">{!item.dob}</p>
+                                        </div>
+                                    </lightning:layoutitem>
+                                    <lightning:layoutitem size="6" class="card_bottom_margin">
+                                        <div>
+                                            <p class="field_label">State</p>
+                                            <p class="field_value">{!item.state}</p>
+                                        </div>
+                                    </lightning:layoutitem>
+                                    <lightning:layoutitem size="6">
+                                        <div>
+                                            <p class="field_label">Phone #</p>
+                                            <p class="field_value">{!item.phoneAfterUpdate}</p>
+                                        </div>
+                                    </lightning:layoutitem>
+                                </lightning:layout>
+                            </div>
+                        </div>
+                        <!-- End of Code - US2045625 - Thanish - 30th Sept 2019 -->
+                    </aura:If>
+                </div>
+            </aura:If>
+        </aura:iteration>
+    </div>
+</aura:component>

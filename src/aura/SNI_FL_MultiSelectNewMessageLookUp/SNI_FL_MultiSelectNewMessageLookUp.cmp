@@ -1,0 +1,103 @@
+<!-- 
+Component Name    : SNI_FL_MultiSelectNewMessageLookUp
+Description       : Lookup component 
+Created By        : Vamsi
+Created Date      : 26-08-2020
+
+Modification Log: 
+Developer                   Date                   Description
+Nanthu                  15/10/2020          Backupadvisor new message To dropdown
+-->
+
+<aura:component controller="SNI_FLReUsableMultiSelectLookUpCtrl">
+    <aura:attribute name="removedSelectedRecords" type="sObject[]" default="[]" description="Use from parent,for store SELECTED sObject Records"/>
+    <aura:attribute name="lstSelectedRecords" type="sObject[]" default="[]" description="Use,for store SELECTED sObject Records"/>
+    <aura:attribute name="evtSelectedRecords" type="sObject"  description="Use,for store SELECTED sObject Records"/>
+    <aura:attribute name="listOfSearchRecords" type="sObject" description="Use,for store the list of search records which returns from apex class"/>
+    <aura:attribute name="recordCount" 	type="string" default="5" description="Records visible at once"/>
+    <aura:attribute name="SearchKeyWord" type="string"/>
+    <aura:attribute name="objectAPIName" type="string" default=""/>
+    <aura:attribute name="IconName" type="string" default=""/>
+    <aura:attribute name="label" type="string" default=""/>
+    <aura:attribute name="familyId" type="String"/>
+    <aura:attribute name="isFlg" type="boolean" default="false"/>
+    <aura:attribute name="isFL" type="boolean" /> 
+    <aura:attribute name="placeholderValue" type="string" default=""/>
+    <aura:attribute name="showlabel" type="boolean" default="true"/>
+    <aura:attribute name="isBackupAgentView" type="boolean" />
+    <aura:attribute name="isFamilyLevel" type="Boolean"></aura:attribute>
+    <aura:attribute name="isFamilyLink" type="Boolean" default="false"></aura:attribute>
+    <aura:attribute name="toolTipList" type="List"/>
+    <aura:attribute name="mapRoleNameToolTip" type="List"/>
+    <!--Nanthu--> 
+    <aura:attribute name="selectedTabId" type="String"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <!--declare events hendlers-->  
+    <aura:handler name="oSelectedRecordEvent" event="c:SNI_FL_SelectedsObjectRecordsEvt" action="{!c.handleComponentEvent}" />
+    <aura:attribute name="Message" type="String" default=""/>
+    <aura:method name="clearFunction" action="{!c.handleClear}" access="public"/>
+    <aura:method name="initFunction" action="{!c.handleDefaultUser}" access="public"/>
+    <aura:attribute name="showOnclickCurtain" type="boolean" default="false"/>
+    <aura:attribute name="showDropdown" type="boolean" default="false"/>
+    <aura:handler name="change" value="{!v.showOnclickCurtain}" action="{!c.onblur}"/>
+    <aura:registerEvent name="SNI_FL_MessageOnclickCurtainEvent" type="c:SNI_FL_MessageOnclickCurtainEvent"/>
+   <!-- <aura:method name="childMultiSelect" action="{!c.onblur}" access="public"/>-->
+
+    <!-- div realted tag - onmouseleave = "{!c.onblur}" -->  
+    <div aura:id="searchRes"  class="slds-form-element slds-lookup slds-is-close" style="{!(v.showOnclickCurtain == true)?(v.showDropdown == true)?'z-index:20;position:relative;': '':''}">        
+       <aura:if isTrue="{!v.showlabel == true}"> 	
+        <label class="slds-form-element__label"> <abbr class="slds-required" title="required">* </abbr> {!v.label}</label>
+       </aura:if>    
+        <!--This part is for display search bar for lookup-->  
+        <div class="slds-form-element__control">
+            <div class="slds-input-has-icon slds-input-has-icon--right">
+                <!-- This markup is for when an record is selected -->
+                <div aura:id="lookup-pill" class="slds-pill-container">
+                    <div aura:id="lookupField" class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right"  style="width: 100%;">
+                        
+                        <ui:inputText click="{!c.onfocus}"
+                                      updateOn="keyup"
+                                      keyup="{!c.keyPressController}"
+                                      class="slds-lookup__search-input slds-input inputSize"
+                                      value="{!v.SearchKeyWord}"
+                                      placeholder="{!v.placeholderValue}"/>
+                        
+                        <span class="{! if(v.isFamilyLink == true,'divCss slds-icon_container slds-icon-utility-search slds-input__icon slds-input__icon_right','slds-icon_container slds-icon-utility-search slds-input__icon slds-input__icon_right') }">
+                            <lightning:icon iconName="utility:search" size="x-small" alternativeText="icon"/>
+                        </span>
+                    </div> 
+                    <!--Selected Records Pills Section-->
+                    <aura:iteration items="{!v.lstSelectedRecords}" var="sr">
+                            <lightning:pill class="{! if(v.isFamilyLink == true,'styling slds-m-around_xx-small','slds-m-around_xx-small') }" label="{!sr.Name}" name="{!sr.Id}" onremove="{! c.clear }">
+                                <aura:set attribute="media">
+                                    <lightning:icon class="{! if(v.isFamilyLink == true,'styling','') }" iconName="{!v.IconName}" size="x-small" alternativeText="icon"/>
+                                </aura:set>
+                            </lightning:pill>
+                    </aura:iteration>
+                </div>
+            </div>
+        </div>
+        
+        <!--This part is for Display typehead lookup result List--> 
+        
+        <ul style="max-width:100%; min-height:40px;margin-top:0px !important" class="recordListBox slds-listbox slds-listbox_vertical slds-dropdown slds-dropdown_length-5 slds-dropdown_fluid slds-lookup__menu slds" role="listbox">
+            <lightning:spinner class="slds-hide" variant="brand" size="small" aura:id="mySpinner"/>
+            <li class="slds-listbox__item">
+                <span class="slds-media slds-listbox__option_entity">{!v.Message}</span>
+            </li>
+            <div style="margin-top:-17px;">
+            <aura:iteration items="{!v.listOfSearchRecords}" var="singleRec">
+                <!--Child Component--> 
+                
+                <aura:iteration items="{!v.mapRoleNameToolTip}" var ="roleName" indexVar="key"> 
+                      <aura:if isTrue="{!singleRec.Name == roleName.key}">
+                         <c:SNI_FL_MultiSelectBackupAdvisorResult oRecord="{!singleRec}" IconName="{!v.IconName}" selectedListRecords="{!v.lstSelectedRecords}" toolTipDescription="{!roleName.value}" isFamilyLink = "{!v.isFamilyLink}"/>
+                      </aura:if>   
+                </aura:iteration>
+              </aura:iteration> 
+                     <!-- <c:SNI_FL_ReUsableMultiSelectLookupResult oRecord="{!singleRec}" IconName="{!v.IconName}" selectedListRecords="{!v.lstSelectedRecords}"/> -->
+            
+        </div>
+        </ul>
+    </div>
+</aura:component>

@@ -1,0 +1,312 @@
+<aura:component controller="ACETLGT_ReferralSearchController" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,lightning:isUrlAddressable" access="global">
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:attribute name="Loadingspinner" type="Boolean" default="false" />
+    <aura:attribute name="ChangeSearch" default="false" type="Boolean" />
+    <aura:attribute name="isfieldrequired" default="true" type="string" />
+    <aura:attribute name="AdditionalInfo_DOB" type="Date" />
+    <aura:attribute name="isValidSearch" default="true" type="Boolean" />
+    <aura:attribute name="showResults" default="false" type="Boolean" />
+    <aura:attribute name="showDetails" default="false" type="Boolean" />
+    <aura:attribute name="tableComplete" default="false" type="Boolean" />
+    <aura:attribute name="resetEndDateError" default="true" type="Boolean" />
+    <aura:attribute name="responce" type="list" />
+    <aura:attribute name="eid" type="String" />
+    <aura:attribute name="memberid" type="String" />
+    <aura:attribute name="service_error" default="true" type="Boolean" />
+    <aura:attribute name="lgt_dt_DT_Object" type="string" access="public" />
+    <aura:attribute name="usInfo" type="user" access="public" />
+    <aura:attribute name="highlightPanel" type="ACETLGT_HighlightPanelInfo" access="global" />
+    <aura:attribute name="highlightPanelString" type="String" access="global" />
+    <aura:attribute name="paymentNumberSearch" type="String" default="" />
+    <aura:attribute name="seriesDesignatorSearch" type="String" />
+    <aura:attribute name="memberIDSearch" type="String" />
+    <aura:attribute name="PayeeInfo" type="List" default="" />
+    <aura:attribute name="paymentDetails" type="Map" default="{}" />
+    <aura:attribute name="ProvidersActiveSections" type="List" default="['Providers']" />
+    <aura:attribute name="NotesActiveSections" type="List" default="['Notes']" />
+    <aura:attribute name="PaymentDetailsActiveSections" type="List" default="['PaymentDetails']" />
+    <aura:attribute name="PaidClaimsActiveSections" type="List" default="['PaidClaims']" />
+    <aura:attribute name="PaymentsResp" type="String" />
+    <aura:attribute name="PaymentsSize" type="Integer" />
+    <aura:attribute name="displayCheckButton" type="Boolean" default="false" />
+    <aura:attribute name="isPaymentResultsTable" type="Boolean" default="false" />
+    <aura:attribute name="notesNotBlank" type="Boolean" default="false" />
+    <aura:attribute name="selectedRow" type="Integer" />
+    <aura:attribute name="rowZeroID" type="String" />
+    <aura:attribute name="grpNum" type="String" access="public" />
+    <aura:attribute name="int" type="Interaction__c" access="public" />
+    <aura:attribute name="intId" type="String" access="public" />
+    <aura:attribute name="srk" type="String" access="global" />
+    <aura:attribute name="Referral_Number" type="String" access="global" default="" />
+    <aura:attribute name="Referral_Type" type="String" access="global" default="None" />
+    <aura:attribute name="Referral_Status" type="String" access="global" default="None" />
+    <aura:attribute name="Start_Date" type="String" access="global" default="" />
+    <aura:attribute name="End_Date" type="String" access="global" default="" />
+    <aura:attribute name="AutodocKey" type="string" access="public" default="viewPCPReferrals" />
+    <aura:attribute name="GUIkey" type="string" access="public" />
+    <aura:attribute name="filtersActiveSections" type="List" default="['Filters']" />
+    <aura:attribute name="firstName" type="String" access="global" default="" />
+    <aura:attribute name="lastName" type="String" access="global" default="" />
+    <aura:attribute name="birthDate" type="String" access="global" default="" />
+    <aura:attribute name="lgt_dt_table_ID" type="String" />
+    <aura:attribute name="refData" type="map" default="{}" />
+    <aura:attribute name="refId" type="String" default="" />
+    <aura:attribute name="referralDetail" type="String" />
+    <aura:attribute name="providerList" type="List" />
+    <aura:attribute name="diagnosisList" type="List" />
+    <aura:attribute name="serviceList" type="List" />
+    <div id="{!v.AutodocKey + v.GUIkey}" class="{!v.AutodocKey}">
+        <div id="{!v.AutodocKey}">
+            <c:ACETLGT_AutoDoc></c:ACETLGT_AutoDoc>
+            <lightning:card variant="Narrow" title="{!'Referral ' + v.refData.resultreferralExternalID}" iconName="standard:record" class="slds-theme--default">
+                <aura:set attribute="actions">
+                    <div class="slds-grid slds-form-element slds-m-right_large">
+                        <lightning:buttonGroup>
+                            <c:ACETLGT_TTSModal aura:id="cComp" cseTopic="{!v.cseTopic}" int="{!v.int}" intId="{!v.intId}" srk="{!v.srk}" showCirrus="true" showMemAlerts="true" showSave="false" showMisdirect="false" comments="{!v.comments}" memberId="{!v.memberid}" groupId="{!v.grpNum}"
+                                userInfo="{!v.usInfo}" />
+                        <c:ACETLGT_RepeatCallViewRelatedCases   highlightPanel_String="{!v.highlightPanelString}" InteractionId="{!v.intId}" SurrogateKey="{!v.srk}"  Calltopic="View PCP Referrals" interactiontype="Phone Call" ExternalIDs="{!v.refData.resultreferralExternalID}"  />
+                        </lightning:buttonGroup>
+                    </div>
+                </aura:set>
+                <c:ACETLGT_HighlightPanel highlightPanelValues="{!v.highlightPanel}" pageFeature="{!v.AutodocKey}" AutodocKey="{!v.AutodocKey + v.GUIkey}" />
+            </lightning:card>
+            <div class="slds-box slds-p-around_none slds-theme_default slds-m-top_x-small slds-m-bottom_x-small">
+                <lightning:card title="Referral Search Results">
+                    <div class="slds-scrollable_x paddingTop">
+                        <div class="autodocTableView" data-auto-doc="true" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-case-items="true" data-auto-doc-section-key="Referral Search Results">
+                            <table class="slds-table autodocPreselect slds-table_bordered slds-table_cell-buffer slds-no-row-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Referral Number</th>
+                                        <th>Referral Type</th>
+                                        <th>Start Date</th>
+                                        <th>End Date</th>
+                                        <th>Referral Status</th>
+                                        <th>Requesting TIN</th>
+                                        <th>Requesting Provider</th>
+                                        <th>Servicing TIN</th>
+                                        <th>Servicing Provider</th>
+                                        <th>Dx Code</th>
+                                        <th>Dx Description</th>
+
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="slds-cell-wrap">{!v.refData.resultreferralExternalID}</td>
+                                        <td class="slds-cell-wrap">{!v.refData.resultReferaltype}</td>
+                                        <td class="slds-cell-wrap">{!v.refData.resultStartdate}</td>
+                                        <td class="slds-cell-wrap">{!v.refData.resultEnddate}</td>
+                                        <td class="slds-cell-wrap">{!v.refData.resultReferralstatus}</td>
+                                        <td class="slds-cell-wrap">{!v.refData.resultRequestingtin}</td>
+                                        <td class="slds-cell-wrap">{!v.refData.resultRequestingprovider}</td>
+                                        <td class="slds-cell-wrap">{!v.refData.resultServicingtin}</td>
+                                        <td class="slds-cell-wrap">{!v.refData.resultServicingprovider}</td>
+                                        <td class="slds-cell-wrap">{!v.refData.resultDxcode}</td>
+                                        <td class="slds-cell-wrap">{!v.refData.resultDXDescription}</td>
+
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </lightning:card>
+            </div>
+            <div class="slds-box slds-p-around_none slds-theme_default slds-m-top_x-small">
+
+                <lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="{!v.ProvidersActiveSections }">
+
+                    <lightning:accordionSection name="Providers" label="Providers">
+                        <div class="autodocTableView" data-auto-doc="true" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-case-items="false" data-auto-doc-section-key="Providers">
+
+                            <table class="slds-table accordionTables slds-table_bordered slds-table_cell-buffer slds-no-row-hover scroll detailList">
+                                <thead>
+                                    <tr>
+                                        <!--                             <th><ui:inputCheckbox aura:id="checkbox"  /></th> -->
+                                        <th>Provider Role</th>
+                                        <th>Provider ID</th>
+                                        <th>Name</th>
+                                        <th>TIN</th>
+                                        <th>Address</th>
+                                        <th>City</th>
+                                        <th>State</th>
+                                        <th>Zip</th>
+                                        <th>Specialty</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.providerList}" var="P" aura:id="item">
+
+                                        <tr class="slds-hint-parent">
+                                            <!--                                 <td class="slds-cell-wrap"><ui:inputCheckbox aura:id="checkbox"  /></td> -->
+                                            <td class="slds-cell-wrap">{!P.resultProviderRole}</td>
+                                            <td class="slds-cell-wrap">{!P.resultMPIN}</td>
+                                            <td class="slds-cell-wrap">{!P.resultName}</td>
+                                            <td class="slds-cell-wrap">{!P.resultTIN}</td>
+                                            <td class="slds-cell-wrap">{!P.resultAddress}</td>
+                                            <td class="slds-cell-wrap">{!P.resultCity}</td>
+                                            <td class="slds-cell-wrap">{!P.resultState}</td>
+                                            <td class="slds-cell-wrap">{!P.resultZip}</td>
+                                            <td class="slds-cell-wrap">{!P.speciality}</td>
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                        </div>
+                    </lightning:accordionSection>
+                </lightning:accordion>
+            </div>
+            <div class="slds-grid slds-gutters_xxx-small slds-wrap slds-m-top_x-small">
+                <!--style="margin-left: -12px;margin-right: -10px;"-->
+                <div class="slds-col slds-size_1-of-1">
+                    <lightning:card>
+                        <aura:set attribute="title">
+                            <div class="slds-text-heading_small"><b>Summary Information</b></div>
+                        </aura:set>
+                        <div style="padding-left: 12px">
+                        <div data-auto-doc="true" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-section-key="Summary Information" data-auto-doc-section-column-indexes="1,2">
+                            <div class="autodocNotTableView" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-case-items="false">
+
+                                <div class="slds-grid slds-form-element">
+                                    <div class="slds-p-around_xx-small  slds-size_1-of-5 autodocField">
+                                        <div class="header-column">
+                                            <p class="field-title slds-form-element__label autodocFieldName" title="Created Date/Time">Created Date/Time</p>
+                                            <p class="valueCls autodocValue">
+                                                <div class="slds-form-element__static">{!v.referralDetail.resultCreatedDate}</div>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="slds-p-around_xx-small  slds-size_1-of-5 autodocField">
+                                        <div class="header-column">
+                                            <p class="field-title slds-form-element__label autodocFieldName" title="Referral Type">Referral Type</p>
+                                            <p class="valueCls autodocValue">
+                                                <div class="slds-form-element__static">{!v.referralDetail.resultReferaltype}</div>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="slds-p-around_xx-small  slds-size_1-of-5 autodocField">
+                                        <div class="header-column">
+                                            <p class="field-title slds-form-element__label autodocFieldName" title="Number of Visits">Number of Visits</p>
+                                            <p class="valueCls autodocValue">
+                                                <div class="slds-form-element__static">{!v.referralDetail.numberofvisit}</div>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="slds-p-around_xx-small  slds-size_1-of-5 autodocField">
+                                        <div class="header-column">
+                                            <p class="field-title slds-form-element__label autodocFieldName" title="Start Date">Start Date</p>
+                                            <p class="valueCls autodocValue">
+                                                <div class="slds-form-element__static">{!v.referralDetail.resultStartdate}</div>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="slds-p-around_xx-small  slds-size_1-of-5 autodocField">
+                                        <div class="header-column">
+                                            <p class="field-title slds-form-element__label autodocFieldName" title="End Date">End Date</p>
+                                            <p class="valueCls autodocValue">
+                                                <div class="slds-form-element__static">{!v.referralDetail.resultEnddate}</div>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+                    </lightning:card>
+
+                </div>
+                <div class="slds-col slds-size_1-of-2 slds-m-top_x-small">
+                    <lightning:card>
+                        <aura:set attribute="title">
+                            <div class="slds-text-heading_small"><b>Diagnosis</b></div>
+                        </aura:set>
+                        <div class="slds-form-element">
+                            <div class="autodocTableView" data-auto-doc="true" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-case-items="false" data-auto-doc-section-key="Diagnosis">
+                                <table class="slds-table slds-table_bordered slds-table_cell-buffer slds-no-row-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Dx Code</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    <aura:iteration items="{!v.diagnosisList}" var="diag">
+                                        
+                                            <tr class="slds-hint-parent">
+                                                <td class="slds-cell-wrap">{!diag.resultdiagCode}</td>
+                                                <td class="slds-cell-wrap">{!diag.resultdiadDesc}</td>
+                                            </tr>
+                                        
+                                    </aura:iteration>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </lightning:card>
+                </div>
+                <div class="slds-col slds-size_1-of-2 slds-m-top_x-small">
+                    <lightning:card>
+                        <aura:set attribute="title">
+                            <div class="slds-text-heading_small"><b>Procedure</b></div>
+                        </aura:set>
+                        <div class="slds-form-element">
+                            <div class="autodocTableView" data-auto-doc="true" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-case-items="false" data-auto-doc-section-key="Procedure">
+                                <table class="slds-table slds-table_bordered slds-table_cell-buffer slds-no-row-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Procedure Type</th>
+                                            <th>Procedure Code</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    <aura:iteration items="{!v.serviceList}" var="service">
+                                        
+                                            <tr class="slds-hint-parent">
+                                                <td class="slds-cell-wrap">{!service.resultProcedureType}</td>
+                                                <td class="slds-cell-wrap">{!service.resultProcedureCode}</td>
+                                                <td class="slds-cell-wrap">{!service.resultDescription}</td>
+                                            </tr>
+                                        
+                                    </aura:iteration>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </lightning:card>
+                </div>
+            </div>
+            <div class="slds-box slds-p-around_none slds-theme_default slds-m-top_x-small">
+                <lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="{!v.NotesActiveSections }">
+                    <lightning:accordionSection name="Notes" label="Notes">
+                        <div class="autodocTableView" data-auto-doc="true" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-case-items="false" data-auto-doc-section-key="Notes">
+                            <table class="slds-table slds-table_bordered slds-table_cell-buffer slds-no-row-hover">
+                                <thead>
+                                    <tr>
+                                        <!--                             <th><ui:inputCheckbox aura:id="checkbox"  /></th> -->
+                                        <th>Notes</th>
+                                        <!--<th>Added By</th> -->
+                                    </tr>
+                                </thead>
+                                <!--                                 <aura:if isTrue="{!v.notesNotBlank}"> -->
+                                <tbody>
+                                    <tr class="slds-hint-parent">
+                                        <!--                                 <td class="slds-cell-wrap"><ui:inputCheckbox aura:id="checkbox"  /></td> -->
+                                        <!--                                         <td class="slds-cell-wrap"> -->
+                                        <td class="slds-cell-wrap">{!v.referralDetail.noteText}</td>
+                                        <!--<ui:outputText value="{!N.noteAddedBy}" /> -->
+                                        <!--                                         </td> -->
+                                    </tr>
+
+                                </tbody>
+                                <!--                                 </aura:if> -->
+                            </table>
+                        </div>
+                    </lightning:accordionSection>
+                </lightning:accordion>
+            </div>
+        </div>
+    </div>
+
+</aura:component>

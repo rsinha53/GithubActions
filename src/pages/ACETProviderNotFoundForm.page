@@ -1,0 +1,205 @@
+<apex:page controller="ACETProviderNotFoundController" sidebar="false" tabStyle="Provider_Search__tab">
+    <apex:includeScript value="/support/console/37.0/integration.js"/>
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="{!$Resource.JqueryPhoneMask}"/>
+    <apex:sectionHeader title="Enter Provider Information"/>
+    <apex:form >
+        <apex:pageMessages id="pmMessages"/>
+        <apex:pageBlock Id="pbProviderNotFound" >
+            <apex:pageblockSection columns="2">
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="{!$Label.ACETProviderSearchContactNameLabel}"></apex:outputLabel>
+                    <apex:inputText value="{!ContactName}" id="ContactName"  maxlength="100"/>                        
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="{!$Label.ACETProviderSearchTaxIdLabel}"></apex:outputLabel>
+                    <apex:inputText value="{!TaxId}" id="TaxId" maxlength="9"/>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="{!$Label.ACETProviderSearchFilterTypeLabel}"></apex:outputLabel>
+                    <apex:outputPanel layout="none">
+                        <div class="requiredInput">
+                            <div class="requiredBlock"/>
+                            <apex:selectList id="FilterBy" label="Provider Type" value="{!FilterBy}" size="1" onchange="FNameDisable();">
+                                <apex:selectOption id="BothOpt" itemValue="Both" itemLabel="--None--" />
+                                <apex:selectOption id="faclOpt" itemValue="FACL" itemLabel="Facility/Group" />
+                                <apex:selectOption id="profOpt" itemValue="PROF" itemLabel="Physician" />
+                            </apex:selectList> 
+                        </div>
+                    </apex:outputPanel>                    
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="{!$Label.ACETProviderSearchNPILabel}"></apex:outputLabel>
+                    <apex:inputText value="{!NPI}" id="NPI" maxlength="10"/>                        
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="{!$Label.ACETProviderSearchLastNameLabel}"></apex:outputLabel>
+                    <apex:outputPanel >
+                        <div class="requiredInput">
+                            <div class="requiredBlock"/><apex:inputText value="{!LastName}" id="LastName" maxlength="80"/> 
+                        </div>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >        
+                    <apex:outputLabel value="{!$Label.ACETProviderSearchFirstNameLabel}"></apex:outputLabel>
+                    <apex:outputPanel id="FirstName">
+                            <div class="requiredInput">
+                                <div class="requiredBlock"/><apex:inputText value="{!FirstName}"  id="FirstNameReq" maxlength="40">
+                                </apex:inputText>
+                            </div> 
+                    </apex:outputPanel>                                         
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="{!$Label.ACETProviderSearchPhoneNumberLabel}"></apex:outputLabel>
+                    <apex:outputPanel >
+                        <div class="requiredInput">
+                            <div class="requiredBlock"/><apex:inputText value="{!phoneNumber}" id="PhoneNumber" styleClass="phoneNumbMask"/>
+                        </div>
+                    </apex:outputPanel>                    
+                </apex:pageBlockSectionItem>                         
+            </apex:pageblockSection>
+            <apex:pageBlockButtons location="bottom" style="align:center;">
+                <apex:commandButton value="Submit" action="{!RedirectFromProviderNotFound}" onclick="return validate()"/>
+                <apex:commandButton value="Cancel" onclick="testCloseTab()"/>
+            </apex:pageBlockButtons>      
+        </apex:pageBlock>
+    </apex:form>
+    <script type="text/javascript">
+    
+    var j$ = jQuery.noConflict();
+    var $ProviderNotFound = j$("[id$='pbProviderNotFound']");
+    var $ContactName = j$("[id$='ContactName']");
+    var $FirstName   = j$("[id$='FirstNameReq']");
+    var $LastName    = j$("[id$='LastName']");
+    var $TaxId       = j$("[id$='TaxId']");
+    var $NPI         = j$("[id$='NPI']");
+    var $PhoneNumber = j$("[id$='PhoneNumber']");
+    var $FilterBy    = j$("[id$='FilterBy']");
+    
+    
+    function validate() 
+    {  
+        $FirstName   = j$("[id$='FirstNameReq']");
+        $ProviderNotFound.find(".pbError").remove(); 
+        $FirstName.removeClass("error").parent().find(".errorMsg").remove();
+        $LastName.removeClass("error").parent().find(".errorMsg").remove();
+        $TaxId.removeClass("error").parent().find(".errorMsg").remove();
+        $NPI.removeClass("error").parent().find(".errorMsg").remove();
+        $PhoneNumber.removeClass("error").parent().find(".errorMsg").remove();
+        $FilterBy.removeClass("error").parent().find(".errorMsg").remove();
+        console.log('--------FilterBy-----------'+$FilterBy.val()+'------'+$FilterBy.find(":selected").val());
+
+        var ValidationResult = true;
+        if($TaxId.val()) {
+         if($TaxId.val().length < 9) { 
+             $TaxId.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong>&nbsp;{!$Label.ACETProviderNotFoundTaxIDMaxLength}</div>'); 
+             ValidationResult = false;
+         }          
+        }
+        if($NPI.val()) {
+         if($NPI.val().length < 10) {                   
+             $NPI.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong>&nbsp;{!$Label.ACETProviderNotFoundNPIMaxLength}</div>');
+             ValidationResult = false;
+         }
+        }
+        if($PhoneNumber.val()) {
+         if($PhoneNumber.val().length < 10) {                 
+             $PhoneNumber.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong>&nbsp;{!$Label.ACETProviderNotFoundPhoneNumberMaxLength}</div>');  
+             ValidationResult = false;
+         }
+        }
+        if(!$PhoneNumber.val()) {
+         $PhoneNumber.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong>&nbsp;{!$Label.ACETProviderNotFoundPhoneNumberRequired}</div>'); 
+         ValidationResult = false;
+        }
+        if(!$LastName.val()) {
+         $LastName.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong>&nbsp;{!$Label.ACETProviderNotFoundLastNameRequired}</div>'); 
+         ValidationResult = false;  
+        }
+        if(!$FirstName.val() && ($FilterBy.find(":selected").val() !="FACL" || $FilterBy.val()!="FACL")) {
+         $FirstName.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong>&nbsp;{!$Label.ACETProviderNotFoundFirstNameRequired}</div>'); 
+         ValidationResult = false;
+        }
+        if($FilterBy.find(":selected").val()=="Both" || $FilterBy.val()=="Both") {
+         $FilterBy.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong>&nbsp;{!$Label.ACETProviderNotFoundFilterTypeRequired}</div>'); 
+         ValidationResult = false;
+        }
+        if (!ValidationResult)
+        {
+         $ProviderNotFound.prepend('<div class="pbError">{!$Label.ACETProviderSearchInvalidDataErrorMessage}<br/>{!$Label.ACETProviderSearchReviewErrorMessage}</div>');
+        }
+        return ValidationResult;    
+    }
+    
+    function filterTypeChange() {
+        if (j$("[id$='FirstNameReq']").val() =='') {
+            j$("[id$='FilterBy']").val('Both');
+            j$("[id$='FilterBy'] option[value='Both']").prop('selected',true);
+        } else {
+            j$("[id$='FilterBy']").val('PROF');
+            j$("[id$='FilterBy'] option[value='PROF']").prop('selected',true);
+        }
+    } 
+
+    function FNameDisable() {
+        if (j$("[id$='FilterBy']").val()=='FACL')    {
+            j$("[id$='FirstNameReq']").val("");
+            j$("[id$='FirstNameReq']").attr("disabled","true");
+            //j$("[id$='FirstNameReq']").val(null);
+        }
+        else{
+         j$("[id$='FirstNameReq']").removeAttr("disabled");
+        }
+    }
+    
+    function init()
+    {
+        $TaxId.keypress(AllowDigitsOnly); 
+        $NPI.keypress(AllowDigitsOnly); 
+        $PhoneNumber.keypress(AllowDigitsOnly);   
+    }
+    
+    function AllowDigitsOnly(InputElement) 
+    {
+        //Allow delete, tab, enter and escape keys through
+        if (/^(8|9|13|27)$/.test("" + InputElement.keyCode)) 
+        {
+            return true;
+        }
+        
+        var regex = new RegExp("^[0-9]+$");
+        var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+        if (regex.test(str)) 
+        {
+            return true;
+        }
+        
+        InputElement.preventDefault();
+        return false;
+    }
+    
+    
+    j$(document).ready(function() {          
+        init();
+        j$('.phoneNumbMask').mask('000-000-0000',{
+                        translation : {
+                            'N' : {
+                                pattern : /[0-9]/,
+                                optional : false
+                            }
+                        }   
+         });               
+        
+    }); 
+    
+    function testCloseTab() {
+        sforce.console.getEnclosingTabId(closeSubtab);
+    }
+    
+    var closeSubtab = function closeSubtab(result) {
+        //Now that we have the tab ID, we can close it
+        var tabId = result.id;
+        sforce.console.closeTab(tabId);
+    };
+    </script>
+</apex:page>

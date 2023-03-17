@@ -1,0 +1,1270 @@
+<aura:component controller="ACET_ExplorePageCtrl" implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,lightning:isUrlAddressable"  access="global">
+    <ltng:require styles="{!$Resource.ACETLink_MasterStyle}" />
+    <aura:attribute name="yesOrNoOptions" type="List"/>
+    <aura:attribute name="category" type="String" default="--"/>
+    <aura:attribute name="reasonCode" type="String" default="--"/>
+    <aura:attribute name="sendToListInputs" type="Object"/>
+    <aura:attribute name="viewClaimsSubType" type="string" />
+    <aura:attribute name="claimAutodocValues" type="List" />
+    <aura:attribute name="IssueValue" type="string" />
+    <aura:attribute name="stateOptions" type="List" />
+    <aura:attribute name="typesValue" type="string" />
+   <!--    <aura:attribute name="cashedValue" type="string" />-->
+    <aura:attribute name="showError" type="boolean" default="false" />
+    <aura:attribute name="IssueDropDown" type="List" />
+    <aura:attribute name="reasonCodesList" type="Object"/>
+    <aura:attribute name="reasonCodesMap" type="Map"/>
+    <aura:attribute name="viewClaims" type="string" />
+    <aura:attribute name="text" type="string" default="Add benefit/issue details in the comments box below."/>
+    <aura:attribute name="noUnderLine" type="boolean" default="true" />
+    <aura:attribute name="selectedUnresolvedClaims" type="List" access="public" default=""/>
+    <aura:attribute name="isPaperType" type="Boolean" default="false" />
+    <aura:attribute name="isStopapy" type="Boolean" default="false" />
+    <aura:attribute name="isCashed" type="Boolean" default="false" />
+    <aura:attribute name="isMethofDelValue" type="boolean" />
+    <aura:attribute name="index" type="Integer" />
+    <aura:attribute name="warning" type="string" default="" />
+     <aura:attribute name="caseWrapper" type="Object" />
+    <aura:attribute name="flowDetails" type="Object" access="public" />
+    <aura:attribute name="contactNo" type="string" default="" />
+    <aura:attribute name="typesOoptions" type="List" default="[
+                                                              {'label': 'Electronic', 'value': 'Electronic'},
+                                                              {'label': 'Paper', 'value': 'Paper'},
+                                                              {'label': 'VCP', 'value': 'VCP'},
+                                                              ]"/>
+    <aura:attribute name="cashedOptions" type="List" default="[
+                                                              {'label': 'Yes', 'value': 'Yes'},
+                                                              {'label': 'No', 'value': 'No'},
+                                                              ]"/>
+     <aura:attribute name="addInRcdOptions" type="List" default="[
+                                                              {'label': 'Anesthesia Time Units', 'value': 'Anesthesia Time Units'},{'label': 'COB Update', 'value': 'COB Update'},
+                                                              {'label': 'Date of Service (DOS)', 'value': 'Date of Service (DOS)'},{'label': 'Description of Service', 'value': 'Description of Service'},
+                                                              {'label': 'Diagnosis Code (Including 4th or 5th digit)', 'value': 'Diagnosis Code (Including 4th or 5th digit)'},{'label': 'EOB / PRA Requested', 'value': 'EOB / PRA Requested'},
+                                                              {'label': 'Itemized Bill', 'value': 'Itemized Bill'},{'label': 'Medical Records', 'value': 'Medical Records'},
+                                                              {'label': 'Member Name', 'value': 'Member Name'},{'label': 'Modifier', 'value': 'Modifier'},{'label': 'Place of Service (POS)', 'value': 'Place of Service (POS)'},
+                                                              {'label': 'Proof of Timely Filing', 'value': 'Proof of Timely Filing'},{'label': 'Provider Information (Tax ID, Name etc.)', 'value': 'Provider Information (Tax ID, Name etc.)'},
+                                                              {'label': 'Semi-private room rate', 'value': 'Semi-private room rate'},{'label': 'W-9', 'value': 'W-9'},{'label': 'Other', 'value': 'Other'},
+                                                                 ]"/>
+    <aura:attribute name="eReasonOptions" type="List" default="[
+                                                               {'label': 'Member Eligible for Date of Service', 'value': 'Member Eligible for Date of Service'},
+                                                               {'label': 'Newborn Eligible per Newborn Process', 'value': 'Newborn Eligible per Newborn Process'},
+                                                               ]"/>
+    <aura:attribute name="reasonOptions" type="List" default="[
+                                                              {'label': 'Balance Billing Letter', 'value': 'Balance Billing Letter'},
+                                                              {'label': 'EOB/PRA Request', 'value': 'EOB/PRA Request'},
+                                                              {'label': 'Letter Request', 'value': 'Letter Request'},
+                                                              ]"/>
+    <aura:attribute name="MethofDelOptions" type="List" default="[
+                                                                 {'label': 'Faxed', 'value': 'Faxed'},
+                                                                 {'label': 'Mailed', 'value': 'Mailed'},
+                                                                 ]"/>
+    <aura:attribute name="sourceOptions" type="List" default="[
+                                                              {'label': 'Call', 'value': 'Call'},
+                                                              {'label': 'Link', 'value': 'Link'},
+                                                              ]"/>
+    <aura:attribute name="RODOptions" type="List" default="[
+                                                                 {'label': 'Disputing Overpayment/Bulk Recovery', 'value': 'Disputing Overpayment/Bulk Recovery'},
+                                                                 {'label': 'Submitted Check for Overpayment', 'value': 'Submitted Check for Overpayment'},
+                                                                 ]"/>
+    <aura:attribute name="policyOptions" type="List" default="[
+                                                               {'label': 'Criteria Met to Allow Services', 'value': 'Criteria Met to Allow Services'},
+                                                               {'label': 'No Policy Listed', 'value': 'No Policy Listed'},
+                                                               ]"/>
+    <aura:attribute name="psReasonOptions" type="List" default="[
+                                                               {'label': 'Claim Pended Over TAT', 'value': 'Claim Pended Over TAT'},
+                                                               ]"/>
+
+                                                               
+    <aura:attribute name="enableMemberInfoInput" type="Boolean" default="false" />
+    <aura:attribute name="stopChngTab" type="string" default="" />
+    <aura:attribute name="demographicInfo" type="Object" />
+    <aura:registerEvent name="ClaimRoutingTabChangeEvent" type="c:ACET_ClaimRoutingTabChangeEvent"/>
+    <aura:handler event="c:ACET_SubmitButtonValidation" action="{!c. validation}"/>
+    <aura:handler name="init" value="{!this}" action="{!c.onLoad}" />
+    <aura:method name="validation" action="{!c.validation}" />
+    <aura:attribute name="isEnableContact" type="Boolean" default="false" />
+    <aura:attribute name="isRequiredContact" type="Boolean" default="false" />
+	<aura:attribute name="isFLN" type="Boolean" default="false" />
+    <aura:attribute name="isEngine" type="Boolean" default="false" />																							   
+
+
+    <aura:attribute name="availableTimeType" type="List" default="[{'label': 'AM', 'value': 'AM'},{'label': 'PM', 'value': 'PM'}]"/>
+    <aura:attribute name="availableTimeZone" type="List" default="[{'label': 'Eastern - EST', 'value': 'Eastern - EST'},
+                                                                  {'label': 'Central - CST', 'value': 'Central - CST'},
+                                                                  {'label': 'Mountain - MST', 'value': 'Mountain - MST'},
+                                                                  {'label': 'Pacific - PST', 'value': 'Pacific - PST'},
+                                                                  {'label': 'Alaska - AKST', 'value': 'Alaska - AKST'},
+                                                                  {'label': 'Hawaii - HST', 'value': 'Hawaii - HST'}
+                                                                 ]"/>
+    <aura:attribute name="conStartTime" type="String" default="" />
+    <aura:attribute name="conStartType" type="String" default="" />
+    <aura:attribute name="conEndTime" type="String" default="" />
+    <aura:attribute name="conEndType" type="String" default="" />
+    <aura:attribute name="conTimeZone" type="String" default="" />
+
+    <!--US3463210 - Sravan-->
+    <aura:attribute name="email" type="String" default=""/>
+    <aura:attribute name="showEmail" type="Boolean" default="false"/>
+    <aura:attribute name="adjustPadding" type="String" default=""/>
+    <aura:attribute name="showClaimTable" type="Boolean" default="false"/>
+    <aura:attribute name="policyType" type="String" default=""/>
+    <aura:attribute name="claimProjectManagement" type="String" default=""/>
+    <aura:attribute name="beginningDOS" type="Date" default=""/>
+    <aura:attribute name="endingDOS" type="Date" default=""/>
+    <aura:attribute name="showDos" type="Boolean" default="false"/>
+    <aura:attribute name="enableIssue" type="Boolean" default="true"/>
+    <aura:attribute name="enableBeginningDos" type="Boolean" default="true"/>
+    <aura:attribute name="enableEndingDos" type="Boolean" default="true"/>
+    <aura:attribute name="enableEmail" type="Boolean" default="true"/>
+    <aura:attribute name="disableSubmit" type="Boolean" default="false"/>
+	<aura:attribute name="mapClaimSummaryDetails" type="Object" default="[]"/>
+    <aura:attribute name="TPMSLevel" type="String" default="" />
+
+
+    <div  class="slds-card card_padding" style="border:1px solid rgba(221, 219, 218, 1)">
+        <div >
+            <span class="component_title ">Service Request Requirement</span>
+        </div>
+        <div aura:id="ServiceRequest" class="slds-grid slds-p-top_small card_bottom_margin">
+            <div class="slds-col slds-size_2-of-12 slds-p-right_small"  >
+                <lightning:combobox aura:id="Issue" name="Issue " label="Issue" placeholder="Select" options="{!v.IssueDropDown}" disabled="{!!v.enableIssue}" value="{!v.IssueValue}" onchange="{!c.onchngIssue}" />
+            </div>
+              <div class="slds-size_5-of-12" style=" padding-top: 4px; padding-right: 15px;">
+                                 <div class="slds-size_5-of-7">
+                                       <span style="color:grey;"><span style="color: rgb(194, 57, 52)">*</span>Hours of Operation</span>
+                                 </div>
+								 <div class="slds-grid">
+                                 <div  class="slds-col">
+                                    <div class="slds-size_6-of-7">
+                                       <c:ComboboxField aura:id="startTimeId"
+                                       fieldName=" "
+                                       objectName="ACET_Hours_of_operation__mdt"
+                                       searchFieldName="Time_Value__c"
+                                       whereCondition=""
+                                       orderBy="Order__c"
+                                       selectedRecord="{!v.conStartTime}"
+                                       searchKeyword="{!v.conStartTime}"
+                                       isLabel= "false"/>
+                                    </div>
+                                 </div>
+                                 <div  class="slds-col">
+                                    <div class="slds-size_7-of-7">
+                                       <div class="slds-grid">
+                                          <div  class="slds-col">
+                                             <lightning:combobox variant="label-hidden" required="true" class="slds-m-right_x-small" name="startTimeType" label="" value="{!v.conStartType}" options="{!v.availableTimeType }" />
+                                          </div>
+                                          <div  class="slds-col" style=" padding-top: 5px; padding-right: 5px;">
+                                             To
+                                          </div>
+                                       </div>
+                                    </div>
+                                 </div>
+                                 <div  class="slds-col">
+                                    <div class="slds-size_6-of-7">
+                                          <c:ComboboxField aura:id="endTimeId"
+                                          fieldName=" "
+                                          objectName="ACET_Hours_of_operation__mdt"
+                                          searchFieldName="Time_Value__c"
+                                          whereCondition=""
+                                          orderBy="Order__c"
+                                          selectedRecord="{!v.conEndTime}"
+                                          searchKeyword="{!v.conEndTime}"
+                                          isLabel= "false"/>
+                                    </div>
+                                 </div>
+                                 <div  class="slds-col">
+                                    <div class="slds-size_7-of-7">
+                                          <lightning:combobox variant="label-hidden" required="true" class="slds-m-right_x-small" name="endTimeType" label="" value="{!v.conEndType}"  options="{!v.availableTimeType }" />
+                                    </div>
+                                 </div>
+                                 <div  class="slds-col">
+                                    <div class="slds-size_6-of-7">
+                                          <lightning:combobox variant="label-hidden" required="true"  name="timeZone" label="" value="{!v.conTimeZone}"  options="{!v.availableTimeZone}"  />
+                                    </div>
+                                 </div>
+                              </div>
+							  </div>
+           <div class="{!v.adjustPadding}" >
+                <lightning:input aura:id="Contact"
+                                 type="text"
+                                 Name = "Contact Number"
+                                 label= "Contact Number"                                 
+                                 value="{!v.contactNo}"
+                                 messageWhenValueMissing ="This field is required"
+                                 required="{!v.isRequiredContact}"
+                                 readonly="{!v.isEnableContact}"
+                                 onchange="{!c.onChangeContact}" 
+                                 onblur = "{!c.onLeaveContact}"/>
+            </div>
+            <!--US3463210 - Sravan - Start-->
+            <aura:if isTrue="{!v.showEmail}">
+
+            <div class="slds-col slds-size_2-of-12 slds-p-left_small slds-p-right_small" >
+                <lightning:input aura:id="Email"
+                                 type="email"
+                                 Name = "Email"
+                                 label= "Email"
+                                 disabled="{!!v.enableEmail}"
+                                 value="{!v.email}"
+                                 onchange="{!c.onChangeOfValue}"
+                                 required="true"/>
+            </div>
+            </aura:if>
+            <!--US3463210 - Sravan - End-->
+            <div class="slds-col slds-size_1-of-12 slds-p-left_small slds-p-right_small" >
+                <div class="header-column">
+                    <p class="field-title slds-form-element__label field_label_padding">Category</p>
+                    <p class="valueCls" name="name">
+                        <div class="slds-form-element__static">
+                            <!--US3463210 - Sravan-->
+                            <aura:if isTrue="{!!equals(v.policyType,'AP')}">
+                            {!v.category}
+                                <aura:set attribute="else">
+                                        Claim Status
+                                </aura:set>
+                            </aura:if>
+                        </div>
+                    </p>
+                </div>
+            </div>
+            <div class="slds-col slds-size_1-of-12 slds-p-left_small slds-p-right_small" >
+                <div class="header-column">
+                    <p class="field-title slds-form-element__label field_label_padding">Reason Code</p>
+                    <p class="valueCls" name="name">
+                        <div class="slds-form-element__static">
+                            <aura:if isTrue="{!!equals(v.policyType,'AP')}">
+                            {!v.reasonCode}
+                                <aura:set attribute="else">
+                                        Claims Inquiry
+                                </aura:set>
+                            </aura:if>
+                        </div>
+                    </p>
+                </div>
+            </div>
+        </div>
+        <!--US3463210 - Sravan  Start-->
+        <aura:if isTrue="{!v.showDos}">
+        <div class="slds-grid slds-wrap slds-p-top_large card_bottom_margin">
+            <div class="slds-col slds-size_12-of-12 slds-p-left_small slds-p-right_small">
+            	<lightning:formattedUrl value="{!v.claimProjectManagement}" label="Claim Project Management SOP"  target="_blank" />
+            </div>
+            <div class="slds-col slds-size_2-of-12 slds-p-top_large slds-p-left_small slds-p-right_small">
+                Date Range for all Claims Affected.
+            </div>
+            <div class="slds-col slds-size_2-of-12 slds-p-left_small slds-p-right_small">
+                <lightning:input aura:id="beginningDos" type="date" name="beginningDos" label="Beginning DOS" disabled="{!!v.enableBeginningDos}" value="{!v.beginningDOS}" onchange="{!c.onChangeOfValue}" required="true" dateStyle="short" pattern="/^([0-9]{4})\-([0-9]{2})\-([0-9]{2})$/" messageWhenBadInput="Error: Invalid Date" messageWhenPatternMismatch="Error: Invalid Date" autocomplete="off"/>
+            </div>
+            <div class="slds-col slds-size_2-of-12 slds-p-left_small slds-p-right_small">
+                <lightning:input aura:id="endingDos" type="date" name="endingDos" label="Ending DOS" disabled="{!!v.enableEndingDos}" value="{!v.endingDOS}" onchange="{!c.onChangeOfValue}" required="true" dateStyle="short" pattern="/^([0-9]{4})\-([0-9]{2})\-([0-9]{2})$/" messageWhenBadInput="Error: Invalid Date" messageWhenPatternMismatch="Error: Invalid Date" autocomplete="off"/>
+            </div>
+        </div>
+        </aura:if>
+        <!--US3463210 - Sravan  End-->
+        <div class="slds-grid slds-wrap slds-p-top_large card_bottom_margin">
+             <aura:if  isTrue="{!v.showClaimTable}" > <!--US3463210 - Sravan -->
+        <div class="slds-col slds-size_12-of-12 slds-has-flexi-truncate" style="width:35%">
+                    <table class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered claimsTbl ">
+                        <thead>
+                            <tr >
+                                <th scope="col" style="width:260px">
+                                    <div class="slds-truncate" title="">CLAIM #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">SERVICE DATES</div>
+                                </th>
+								<aura:if  isTrue="{!v.isEngine}" >
+                                 <th scope="col">
+                                    <div class="slds-truncate" title="">PAY LOC/ENGINE</div>
+                                </th>
+                                </aura:if>
+                                <aura:if  isTrue="{!v.isFLN }" >
+                                 <th scope="col">
+                                    <div class="slds-truncate" title="">FLN/DCC</div>
+                                    </th></aura:if>																   
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:iteration items="{!v.selectedUnresolvedClaims}" var="claim" >
+                                <tr style="height: 45px;">
+                                    <td data-label="CLAIM #" class="slds-p-top_none" >
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.claimId}</div>
+                                    </td>
+                                    <td data-label="SERVICE DATES" class="slds-p-top_none" >
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.serviceDates}</div>
+                                    </td>
+                                    <aura:if  isTrue="{!v.isEngine}" >
+                                        <td data-label="PAY LOC/ENGINE" class="slds-p-top_none" >
+                                            <aura:if isTrue="{!not(empty(claim.engCode))}">
+                                                <div class="slds-truncate slds-text-align_left" title="">{!claim.engCode}</div>
+                                                <aura:set attribute="else">
+                                                    <div class="slds-truncate slds-text-align_left" title="">--</div>
+                                                </aura:set>
+                                            </aura:if>
+                                        </td>
+                                    </aura:if>
+                                    <aura:if  isTrue="{!v.isFLN }" >
+                                        <td data-label="FLN/DCC" class="slds-p-top_none" >
+                                            <aura:if isTrue="{!not(empty(claim.flndcc))}">
+                                                <div class="slds-truncate slds-text-align_left" title="">{!claim.flndcc}</div>
+                                                <aura:set attribute="else">
+                                                    <div class="slds-truncate slds-text-align_left" title="">--</div>
+                                                </aura:set>
+                                            </aura:if>
+                                        </td></aura:if>																	 
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                    <p class="slds-text-heading_small slds-p-top_medium" style="font-weight: bold;"> {!v.text}</p>
+            </div>
+               </aura:if>
+             <aura:if isTrue="{!equals(v.viewClaimsSubType,'Recovery, Overpayment Dispute')}">
+                 <div class="slds-col slds-size_12-of-12 slds-has-flexi-truncate" style="width: 95%">
+                    <table width="100%" class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered claimsTbl " style="cursor:pointer;">
+                        <thead>
+                            <tr class="slds-text-heading--label">
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CLAIM #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">SERVICE DATES</div>
+                                </th>
+                                 <th scope="col">
+                                    <div class="slds-truncate" title="">REASON</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CHECK #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">DATE CHECK SENT</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">OVERPAYMENT REASON GIVEN</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">REASON FOR REVIEW BEING REQUESTED</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:iteration items="{!v.selectedUnresolvedClaims}" var="claim" indexVar="index" >
+                                <tr onkeyup="{!c.getIndex}" onmouseover="{!c.getIndex}" data-index="{!index}">
+                                    <td data-label="CLAIM #" class="slds-p-top_none"  >
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.claimId}</div>
+                                    </td>
+                                    <td data-label="SERVICE DATES" class="slds-p-top_none">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.serviceDates}</div>
+                                    </td>
+                                    <td data-label="Reason" class="slds-p-top_none"  >
+                                        <div  class="slds-text-align_left slds-var-m-bottom_large" title=""  >
+                                            <lightning:combobox aura:id="RODReason"
+                                                                name="RODReason"
+                                                                placeholder="Select"
+                                                                class="priorityAlign"
+                                                                options="{!v.RODOptions}"
+                                                                value="{!claim.RODreason}"
+                                                                onchange="{!c.onchngReason}"
+                                                                messageWhenValueMissing ="This field is required"
+                                                                required="true"/>
+                                        </div>
+                                    </td>
+                                    <td data-label="CHECK #" class="slds-p-top_none" style="width: 200px;">
+                                        <div class="slds-text-align_left slds-var-m-bottom_large" title="">
+                                            <lightning:input aura:id="CHECK#" messageWhenValueMissing ="This field is required" type="text" disabled="{!claim.disCheckField}" required="{! !claim.disCheckField}" Name ="CHECK #" value="{!claim.CheckValue}" onchange="{!c.onchngValue}"/>
+                                        </div>
+                                    </td>
+                                    <td data-label="DATE CHECK SENT" class="slds-p-top_none" >
+                                        <div class="slds-text-align_left slds-var-m-bottom_large" title="">
+                                            <lightning:input aura:id="DATECHECKSENT" messageWhenValueMissing ="This field is required" dateStyle="short" messageWhenBadInput="Your entry does not match the allowed format mm/dd/yyyy." type="date" disabled="{!claim.disDateLField}" required="{! !claim.disDateLField}" Name ="DATE CHECK SENT" value="{!claim.DateValue}"  onchange="{!c.onchngValue}"/>
+                                        </div>
+                                    </td>
+                                     <td data-label="OVERPAYMENT REASON GIVEN" class="slds-p-top_none" >
+                                        <div class="slds-text-align_left slds-var-m-bottom_large" title="">
+                                            <lightning:input aura:id="OVERPAYMENTREASONGIVEN" messageWhenValueMissing ="This field is required"  type="text" disabled="{!claim.disOverField}" required="{! !claim.disOverField}" Name ="OVERPAYMENT REASON GIVEN" value="{!claim.overPayValue}" onchange="{!c.onchngValue}"/>
+                                        </div>
+                                    </td>
+                                    <td data-label="REASON FOR REVIEW BEING REQUESTED" class="slds-p-top_none" >
+                                        <div class="slds-text-align_left slds-var-m-bottom_large" title="">
+                                            <lightning:input aura:id="REASONFORREVIEWBEINGREQUESTED" messageWhenValueMissing ="This field is required" disabled="{!claim.disableReasonReview}"  required="{! !claim.disableReasonReview}" type="text" Name ="REASON FOR REVIEW BEING REQUESTED" value="{!claim.ReasonValue}" onchange="{!c.onchngValue}"/>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                 </div>
+                </aura:if>
+                <aura:if isTrue="{!equals(v.viewClaimsSubType,'Dispute Allowed Amount')}">
+                 <div class="slds-col slds-size_12-of-12 slds-has-flexi-truncate" style="width: 90%">
+                    <table width="100%" class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered claimsTbl " style="cursor:pointer;">
+                        <thead>
+                            <tr class="slds-text-heading--label">
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CLAIM #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">SERVICE DATES</div>
+                                </th>
+                                 <th scope="col">
+                                    <div class="slds-truncate" title="">PROVIDER STATUS</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">BENEFIT LEVEL</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">EXPECTED ALLOWED $</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:iteration items="{!v.selectedUnresolvedClaims}" var="claim" indexVar="index" >
+                                <tr onkeyup="{!c.getIndex}" onmouseover="{!c.getIndex}" data-index="{!index}">
+                                    <td data-label="CLAIM #" class="slds-p-top_none"  >
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.claimId}</div>
+                                    </td>
+                                    <td data-label="SERVICE DATES" class="slds-p-top_none">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.serviceDates}</div>
+                                    </td>
+                                    <td data-label="PROVIDER STATUS" class="slds-p-top_none" >
+                                        <div class="slds-text-align_left slds-var-m-bottom_large" title="" style="width: 330px">
+                                            <aura:if  isTrue="{!equals(claim.status,'')}" >
+                                            <lightning:input aura:id="PROVIDERSTATUS"  messageWhenValueMissing ="This field is required" type="text" disabled="{!claim.disProviderStatus}" required="{! !claim.disProviderStatus}" Name ="PROVIDER STATUS" value="{!claim.providerStatus}" onchange="{!c.onchngValue}"/>
+                                                <aura:set attribute="else">
+                                                 <lightning:input aura:id="PROVIDERSTATUS"  type="text" disabled="{!claim.disProviderStatus}" readonly="{!!claim.disProviderStatus}" value="{!claim.providerStatus}"/>
+                                                 </aura:set>
+                                                  </aura:if> 
+                                        </div>
+                                    </td>
+                                    <td data-label="BENEFIT LEVEL" class="slds-p-top_none" >
+                                        <div class="slds-text-align_left slds-var-m-bottom_large" title="">
+                                             <aura:if  isTrue="{!equals(claim.benefitLevel,'')}" >
+                                            <lightning:input aura:id="BENEFITLEVEL" messageWhenValueMissing ="This field is required" type="text" disabled="{!claim.disBenefitLevel}" required="{! !claim.disBenefitLevel}" Name ="BENEFIT LEVEL" value="{!claim.benfitLevel}" onchange="{!c.onchngValue}"/>
+                                                <aura:set attribute="else">
+                                            <lightning:input aura:id="BENEFITLEVEL"  type="text" disabled="{!claim.disBenefitLevel}" readonly="{!!claim.disBenefitLevel}" value="{!claim.benfitLevel}" />
+                                                 </aura:set>
+                                                  </aura:if> 
+                                        </div>
+                                    </td>
+                                    <td data-label="EXPECTED ALLOWED $" class="slds-p-top_none" >
+                                        <div class="slds-text-align_left slds-var-m-bottom_large" title="">
+                                            <lightning:input aura:id="EXPECTEDALLOWED" messageWhenValueMissing ="This field is required" type="text" disabled="{!claim.disExpectedAllowed}" required="{! !claim.disExpectedAllowed}" Name ="EXPECTED ALLOWED $" value="{!claim.expectedAllowed}" onchange="{!c.onchngValue}"/>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                 </div>
+              </aura:if>
+             <aura:if isTrue="{!equals(v.viewClaimsSubType,'Additional Information Received')}">
+                 <div class="slds-col slds-size_12-of-12 slds-has-flexi-truncate" style="width: 95%">
+                    <table width="100%" class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered claimsTbl " style="cursor:pointer;">
+                        <thead>
+                            <tr class="slds-text-heading--label">
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CLAIM #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">SERVICE DATES</div>
+                                </th>
+                                 <th scope="col">
+                                    <div class="slds-truncate" title="">REASON</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="Enter the FLN# where the provider has submitted proof ex. screenshot/printout." style="border-bottom: dashed 0.15em black;width: fit-content;">FLN #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">RECEIVED DATE OF FLN</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">LAST UPDATED DATE</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">PROCESSED DATE</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:iteration items="{!v.selectedUnresolvedClaims}" var="claim" indexVar="index" >
+                                <tr onkeyup="{!c.getIndex}" onmouseover="{!c.getIndex}" data-index="{!index}">
+                                    <td data-label="CLAIM #" class="slds-p-top_none"  >
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.claimId}</div>
+                                    </td>
+                                    <td data-label="SERVICE DATES" class="slds-p-top_none">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.serviceDates}</div>
+                                    </td>
+                                    <td data-label="Reason" class="slds-p-top_none"  >
+                                        <div  class="slds-text-align_left slds-var-m-bottom_large" title=""  >
+                                            <lightning:combobox aura:id="AIRReason"
+                                                                name="AIRReason"
+                                                                placeholder="Select"
+                                                                class="comboboxAlign"
+                                                                options="{!v.addInRcdOptions}"
+                                                                value="{!claim.AIRreason}"
+                                                                onchange="{!c.onchngAIRReason}"
+                                                                messageWhenValueMissing ="This field is required"
+                                                                required="true"/>
+                                        </div>
+                                    </td>
+                                    <td data-label="FLN #" class="slds-p-top_none" style="width: 200px;">
+                                        <div class="slds-text-align_left slds-var-m-bottom_large" title="">
+                                            <lightning:input aura:id="FLN#" messageWhenValueMissing ="This field is required" type="text" disabled="{!claim.disAIRFLNField}" required="{! !claim.disAIRFLNField}" Name ="AIRFLN #" value="{!claim.AIRFLNValue}" onchange="{!c.onchngValue}"/>
+                                        </div>
+                                    </td>
+                                    <td data-label="RECEIVED DATE OF FLN" class="slds-p-top_none" >
+                                        <div class="slds-text-align_left slds-var-m-bottom_large" title="">
+                                            <lightning:input aura:id="RECEIVEDDATEOFFLN" messageWhenValueMissing ="This field is required" dateStyle="short" messageWhenBadInput="Your entry does not match the allowed format mm/dd/yyyy." type="date" disabled="{!claim.disAIRFLNDateLField}" required="{! !claim.disAIRFLNDateLField}" Name ="RECEIVED DATE OF FLN" value="{!claim.AIRFLNDateValue}"  onchange="{!c.onchngValue}"/>
+                                        </div>
+                                    </td>
+                                     <td data-label="LAST UPDATED DATE" class="slds-p-top_none" >
+                                        <div class="slds-text-align_left slds-var-m-bottom_large" title="">
+                                            <aura:if  isTrue="{!equals(claim.lastUpdateDateValue,'')}" >
+                                                <lightning:input aura:id="LASTUPDATEDDATE" messageWhenValueMissing ="This field is required" dateStyle="short" messageWhenBadInput="Your entry does not match the allowed format mm/dd/yyyy." type="date" disabled="{!claim.disAIRLUDateLField}" required="{!!claim.disAIRLUDateLField}" Name ="LAST UPDATED DATE" value="{!claim.AIRLUDateValue}"  onchange="{!c.onchngValue}"/>
+                                                <aura:set attribute="else">
+                                                 <lightning:input aura:id="LASTUPDATEDDATE" readonly="{!!claim.disAIRLUDateLField}" disabled="{!claim.disAIRLUDateLField}" type="text" value="{!claim.AIRLUDateValue}" />
+                                                 </aura:set>
+                                                  </aura:if> 
+                                         </div>
+                                    </td>
+                                    <td data-label="PROCESSED DATE" class="slds-p-top_none" >
+                                        <div class="slds-text-align_left slds-var-m-bottom_large" title="">
+                                            <lightning:input aura:id="PROCESSEDDATE" readonly="{!!claim.disAIRPDDateLField}" type="text" disabled="{!claim.disAIRPDDateLField}"  Name ="PROCESSED DATE" value="{!claim.AIRPDNDateValue}"  />
+                                        </div>
+                                    </td>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                 </div>
+                </aura:if>
+			 <aura:if isTrue="{!equals(v.viewClaimsSubType,'Paid Correctly, Pre-Appeal Reconsideration')}">
+                  <div class="slds-col slds-size_12-of-12 slds-has-flexi-truncate" style="width:35%">
+                    <table class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered claimsTbl ">
+                        <thead>
+                            <tr >
+                                <th scope="col" style="width:260px">
+                                    <div class="slds-truncate" title="">CLAIM #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">SERVICE DATES</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:iteration items="{!v.selectedUnresolvedClaims}" var="claim" >
+                                <tr style="height: 45px;">
+                                    <td data-label="CLAIM #" class="slds-p-top_none" >
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.claimId}</div>
+                                    </td>
+                                    <td data-label="SERVICE DATES" class="slds-p-top_none" >
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.serviceDates}</div>
+                                    </td>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+           		 </div>
+                  	
+               </aura:if>
+            
+			<div class="slds-col slds-size_12-of-12 slds-has-flexi-truncate" style="width: 95%">
+                <aura:if isTrue="{!equals(v.viewClaimsSubType,'Stop Pay and Reissue')}">
+                    <table width="100%" class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered claimsTbl " style="cursor:pointer;">
+                        <thead>
+                            <tr class="slds-text-heading--label">
+                                <th scope="col">
+                                    <div class="slds-truncate"  title="">PAYMENT #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CLAIM #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">SERVICE DATES</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">TYPE</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CASHED</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CHECK AMOUNT</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CHECK DATE</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CASHED DATE</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:iteration items="{!v.selectedUnresolvedClaims}" var="claim" indexVar="index" >
+                                <tr onkeyup="{!c.getIndex}" onmouseover="{!c.getIndex}" data-index="{!index}">
+                                    <td data-label="PAYMENT #" class="slds-p-top_none"  >
+                                        <aura:if  isTrue="{! equals(claim.paymentNo,'')}">
+                                            <div class="slds-truncate slds-text-align_left" title="" >
+                                                <lightning:input aura:id="PAYMENTNUMBER" type="text" messageWhenValueMissing ="This field is required" Name ="PAYMENT NUMBER" value="{!claim.paymentNoInput}"  onchange="{!c.onchngValue}" required="true"/>
+                                            </div>
+                                        </aura:if>
+                                        <aura:if  isTrue="{! !equals(claim.paymentNo,'')}">
+                                            <div class="slds-truncate slds-text-align_left" title="" >
+                                                <lightning:input aura:id="PAYMENTNUMBER" type="text" messageWhenValueMissing ="This field is required" Name ="PAYMENT NUMBER" value="{!claim.paymentNo}"  disabled="true"    required="true"/>
+                                            </div>
+                                            <!--	<div aura:id="PAYMENTNUMBER" class="slds-truncate slds-text-align_left" title="">{!claim.paymentNo}</div>-->
+                                        </aura:if>
+                                    </td>
+                                    <td data-label="CLAIM #" class="slds-p-top_none">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.claimId}</div>
+                                    </td>
+                                    <td data-label="SERVICE DATES" class="slds-p-top_none">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.serviceDates}</div>
+                                    </td>
+                                    <td data-label="TYPES" class="slds-p-top_none" >
+                                        <aura:if  isTrue="{! equals(claim.types,'')}">
+                                            <div class="slds-text-align_left slds-var-m-bottom_large" title="" >
+                                                <lightning:combobox aura:id="TYPES"
+                                                                    name="TYPES"
+                                                                    placeholder="Select"
+                                                                    options="{!v.typesOoptions}"
+                                                                    value="{!claim.typesValue}"
+                                                                    messageWhenValueMissing ="This field is required"
+                                                                    onchange="{!c.handleTypesChange }"
+                                                                    disabled="{!claim.disableTypes}"
+                                                                    required = "{! !claim.disableTypes}"/>
+                                            </div>
+                                        </aura:if>
+                                        <aura:if  isTrue="{! !equals(claim.types,'')}">
+                                            <!--<div aura:id="TYPES" class="slds-truncate slds-text-align_left" title="">{!claim.types}</div>-->
+                                            <div class="slds-text-align_left slds-var-m-bottom_large" title="" >
+                                                <lightning:combobox aura:id="TYPES"
+                                                                    name="TYPES"
+                                                                    placeholder="Select"
+                                                                    options="{!v.typesOoptions}"
+                                                                    value="{!claim.types}"
+                                                                    messageWhenValueMissing ="This field is required"
+                                                                    disabled="true"  />
+                                            </div>
+                                        </aura:if>
+                                    </td>
+                                    <td data-label="CASHED" class="slds-p-top_none">
+                                        <div class="slds-text-align_left slds-var-m-bottom_large" title="" >
+                                            <lightning:combobox aura:id="CASHED"
+                                                                name="CASHED"
+                                                                placeholder="Select"
+                                                                value="{!claim.cashedValue}"
+                                                                options="{!v.cashedOptions }"
+                                                                disabled="{!claim.disableCashed}"
+                                                                messageWhenValueMissing ="This field is required"
+                                                                onchange="{!c.handleCashedChange }"
+                                                                required = "{! !claim.disableCashed}"/>
+                                        </div>
+                                    </td>
+                                    <td data-label="CHECK AMOUNT" class="slds-p-top_none" >
+                                        <div class="slds-text-align_left slds-var-m-bottom_large" title="" onkeypress="{!c.allowOnlyDecimalNumbers}" onchange= "{!c.allowOnlyDecimalNumbers}">
+                                            <lightning:input aura:id="CHECKAMOUNT" messageWhenValueMissing ="This field is required"  type="text" Name ="CHECK AMOUNT" value="{!claim.checkAmount}" disabled="{!claim.disableAmount}" onchange="{!c.onchngValue}" required ="{! !claim.disableAmount}"/>
+                                        </div>
+                                    </td>
+                                    <td data-label="CHECK DATE" class="slds-p-top_none" >
+                                        <div class="slds-text-align_left slds-var-m-bottom_large" title="">
+                                            <lightning:input aura:id="CHECKDATE" messageWhenValueMissing ="This field is required" dateStyle="short" messageWhenBadInput="Your entry does not match the allowed format mm/dd/yyyy." type="date" Name ="CHECK DATE" value="{!claim.CheckDate}" disabled="{!claim.disableAmount}"  onchange="{!c.onchngValue}" required="{! !claim.disableAmount}"/>
+                                        </div>
+                                    </td>
+                                    <td data-label="CASHED DATE" class="slds-p-top_none" >
+                                        <div class="slds-text-align_left slds-var-m-bottom_large" title="">
+                                            <lightning:input aura:id="CASHEDDATE" messageWhenValueMissing ="This field is required" dateStyle="short" messageWhenBadInput="Your entry does not match the allowed format mm/dd/yyyy." type="date" Name ="CASHED DATE" value="{!claim.ChashDate}" disabled="{!claim.disableAmount}"  onchange="{!c.onchngValue}"/>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </aura:if>
+                <aura:if isTrue="{!equals(v.viewClaimsSubType,'Authorization Discrepancy')}">
+                    <table width="70%" class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered claimsTbl " style="cursor:pointer;width: 60%;">
+                        <thead>
+                            <tr class="slds-text-heading--label">
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CLAIM #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">SERVICE DATES</div>
+                                </th>
+                                <th scope="col">
+                                    <div style="float:left;">
+                                        <c:ACET_HoverPopup aura:id="commentsId"
+                                                           moveRight=""
+                                                           isNubbinLeft="true"
+                                                           noUnderLine="{!v.noUnderLine}"
+                                                           descriptionList="[ 'Matching Criteria:','• SRN is Approved', '• Member ID, Name, and DOB','• Provider TAX ID and Name','• Date(s) of Service','• CPT/HCPC Codes (if applicable)','• Has remaining units/visits' ]" />
+                                        <span style="display:inline;"> MATCHING SRN</span>
+                                        <span style="display:inline;"
+                                              data-popupId="commentsId"
+                                              onmouseover="{!c.togglePopup}"
+                                              onmouseout="{!c.togglePopup}">
+                                            <lightning:icon class="slds-icon-text-default ms-help-icon" size="xx-small"  iconName="utility:info" style="display: inline-block;"/>
+                                        </span>
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:iteration items="{!v.selectedUnresolvedClaims}" var="claim" indexVar="index" >
+                                <tr>
+                                    <td data-label="CLAIM #">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.claimId}</div>
+                                    </td>
+                                    <td data-label="SERVICE DATES">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.serviceDates}</div>
+                                    </td>
+                                    <td data-label="MATCHINGSRN">
+                                        <div class="slds-truncate slds-text-align_left" title="" onkeyup="{!c.getIndex}" onmouseover="{!c.getIndex}" data-index="{!index}" >
+                                            <lightning:input aura:id="MATCHINGSRN" type="text" value="{!claim.matchingSRN}" messageWhenValueMissing ="This field is required"  required="true" Name ="MATCHING SRN" onchange="{!c.onchngValue}"/>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </aura:if>
+                <aura:if isTrue="{!equals(v.viewClaimsSubType,'Referral Discrepancy')}">
+                    <table width="100%" class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered claimsTbl " style="cursor:pointer;">
+                        <thead>
+                            <tr class="slds-text-heading--label">
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CLAIM #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">SERVICE DATES</div>
+                                </th>
+                                <th scope="col">
+                                    <div style="float:left;">
+                                        <c:ACET_HoverPopup aura:id="commentsId"
+                                                           moveRight=""
+                                                           isNubbinLeft="true"
+                                                           noUnderLine="{!v.noUnderLine}"
+                                                           descriptionList="[ 'Matching Criteria:','• Member ID, Name, and DOB', '• Referring Provider TAX ID and Name (This must match the PCP on file.)','• Referred to Provider TAX ID and Name (This must match the specialist on the claim.)','• Date(s) of Service','• Has remaining units/visits' ]" />
+                                        <span style="display:inline;"> MATCHING REFERRAL #</span>
+                                        <span style="display:inline;"
+                                              data-popupId="commentsId"
+                                              onmouseover="{!c.togglePopup}"
+                                              onmouseout="{!c.togglePopup}">
+                                            <lightning:icon class="slds-icon-text-default ms-help-icon" size="xx-small"  iconName="utility:info" style="display: inline-block;"/>
+                                        </span>
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:iteration items="{!v.selectedUnresolvedClaims}" var="claim" indexVar="index" >
+                                <tr>
+                                    <td data-label="CLAIM #">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.claimId}</div>
+                                    </td>
+                                    <td data-label="SERVICE DATES">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.serviceDates}</div>
+                                    </td>
+                                    <td data-label="MATCHINGREFERRAL #">
+                                        <div class="slds-truncate slds-text-align_left" title="" onkeyup="{!c.getIndex}" onmouseover="{!c.getIndex}" data-index="{!index}" >
+                                            <lightning:input aura:id="MATCHINGREFERRAL" type="text" value="{!claim.matchingRefereal}" messageWhenValueMissing ="This field is required"  required="true" Name ="MATCHING REFERRAL #" label="" variant="" onchange="{!c.onchngValue}"/>
+                                        </div>
+                                    </td>
+                                 </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </aura:if>
+                <aura:if isTrue="{!equals(v.viewClaimsSubType,'Clerical Request')}">
+                    <table width="70%" class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered claimsTbl " style="cursor:pointer;width: 60%;">
+                        <thead>
+                            <tr class="slds-text-heading--label">
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CLAIM #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">SERVICE DATES</div>
+                                </th>
+                                <th scope="col">
+                                 <div class="slds-truncate" title="">REASON</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:iteration items="{!v.selectedUnresolvedClaims}" var="claim" indexVar="index" >
+                                <tr>
+                                    <td data-label="CLAIM #">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.claimId}</div>
+                                    </td>
+                                    <td data-label="SERVICE DATES">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.serviceDates}</div>
+                                    </td>
+                                   <td data-label="Reason" >
+                                        <div class="slds-text-align_left" title=""  onkeyup="{!c.getIndex}" onmouseover="{!c.getIndex}" data-index="{!index}">
+                                            <lightning:combobox aura:id="Reason"
+                                                                name="Reason"
+                                                                placeholder="Select"
+                                                                options="{!v.reasonOptions}"
+                                                                value="{!claim.reason}"
+                                                                onchange="{!c.onchngValue}"
+                                                                messageWhenValueMissing ="This field is required"
+                                                                required="true"/>
+                                        </div>
+                                    </td>
+                                 </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </aura:if>
+                <aura:if isTrue="{!equals(v.viewClaimsSubType,'Timely Filing Discrepancy')}">
+                    <table width="80%" class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered claimsTbl " style="cursor:pointer;">
+                        <thead>
+                            <tr class="slds-text-heading--label">
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CLAIM #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">SERVICE DATES</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">RECEIVED DATE</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">TFL DATE</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">UHC ERROR</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">
+                                        <label class="slds-form-element__label" >FLN #</label>
+                                        <lightning:helptext content="Enter the FLN # where the provider has submitted proof ex. screenshot/printout."/>
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:iteration items="{!v.selectedUnresolvedClaims}" var="claim" indexVar="index" >
+                                <tr onkeyup="{!c.getIndex}" onmouseover="{!c.getIndex}" data-index="{!index}">
+                                    <td data-label="CLAIM #" class="slds-p-top_none"  >
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.claimId}</div>
+                                    </td>
+                                    <td data-label="SERVICE DATES" class="slds-p-top_none">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.serviceDates}</div>
+                                    </td>
+                                    <td data-label="RECEIVED DATE" class="slds-p-top_none">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.receivedDate}</div>
+                                    </td>
+                                    <td data-label="TFL DATE" class="slds-p-top_none" >
+                                        <div class="slds-text-align_left slds-var-m-bottom_large" title="TFL DATE">
+                                            <aura:if  isTrue="{!equals(claim.tflDateValue,'')}">
+                                            <lightning:input aura:id="TFLDATE" messageWhenValueMissing ="This field is required" required="true" dateStyle="short" messageWhenBadInput="Your entry does not match the allowed format mm/dd/yyyy." type="date" disabled="{!claim.disTFLField}" Name ="TFL DATE" value="{!claim.tflDate}"  onchange="{!c.onchngValue}"/>
+                                            <aura:set attribute="else">
+                                           <lightning:input aura:id="TFLDATE" readonly="true" type="text" value="{!claim.tflDate}" />
+                                            </aura:set>
+                                            </aura:if>
+                                                </div>
+                                    </td>
+                                    <td data-label="UHC ERROR" class="slds-p-top_none" >
+                                        <div class="slds-text-align_left slds-var-m-bottom_large" title="UHC ERROR">
+                                            <lightning:combobox aura:id="UHCERROR"
+                                                                name="UHCERROR"
+                                                                placeholder="Select"
+                                                                required="true"
+                                                                options="{!v.cashedOptions}"
+                                                                value="{!claim.uhcErrorValue}"
+                                                                messageWhenValueMissing ="This field is required"
+                                                                onchange="{!c.handleUHCErrorChange}"
+                                                                />
+                                        </div>
+                                    </td>
+                                    <td data-label="FLN #" class="slds-p-top_none" >
+                                        <div class="slds-text-align_left slds-var-m-bottom_large" title="FLN #">
+                                            <lightning:input aura:id="FLN#" messageWhenValueMissing ="This field is required" required="{!!claim.disFLNValue}" disabled="{!claim.disFLNValue}" type="text" Name ="FLN#" value="{!claim.FLNValue}" onchange="{!c.onchngValue}"/>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </aura:if>
+                <aura:if isTrue="{!equals(v.viewClaimsSubType,'Eligibility Issue')}">
+                    <table width="100%" class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered claimsTbl " style="cursor:pointer;">
+                        <thead>
+                            <tr class="slds-text-heading--label">
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CLAIM #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">SERVICE DATES</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">COVERAGE LEVEL</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">ELIGIBILITY DATES</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">REASON</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:iteration items="{!v.selectedUnresolvedClaims}" var="claim"  indexVar="index">
+                                <tr>
+                                    <td data-label="CLAIM #">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.claimId}</div>
+                                    </td>
+                                    <td data-label="SERVICE DATES">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.serviceDates}</div>
+                                    </td>
+                                    <td data-label="COVERAGE LEVEL">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.coverageLevel}</div>
+                                    </td>
+                                    <td data-label="ELIGIBILITY DATES">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.eligibilityDates}</div>
+                                    </td>
+                                    <td data-label="Reason" >
+                                        <div class="slds-text-align_left" title=""  onkeyup="{!c.getIndex}" onmouseover="{!c.getIndex}" data-index="{!index}">
+                                            <lightning:combobox aura:id="EReason"
+                                                                name="EReason"
+                                                                placeholder="Select"
+                                                                class="priorityAlign"
+                                                                options="{!v.eReasonOptions}"
+                                                                value="{!claim.eReasonValue}"
+                                                                onchange="{!c.onchngValue}"
+                                                                required="true"
+                                                                messageWhenValueMissing ="This field is required"
+                                                                />
+                                        </div>
+                                    </td>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </aura:if>
+                <aura:if isTrue="{!equals(v.viewClaimsSubType,'Misquote of Information')}">
+                    <table width="100%" class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered claimsTbl " style="cursor:pointer;">
+                        <thead>
+                            <tr class="slds-text-heading--label">
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CLAIM #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">SERVICE DATES</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CHARGED</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">UNDER $ 7,000?</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title=""><a href="{!$Label.c.link_of_Misquote_of_Information}"
+                                                                           target="_blank">PAE CRITERIA MET</a></div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">SOURCE</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="Enter the FLN# where the provider has submitted proof ex. screenshot/printout." style="border-bottom: dashed 0.15em black;width: fit-content;">FLN #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="Enter the external ID where the misquoted information is documented." style="border-bottom: dashed 0.15em black;width: fit-content;">EXTERNAL ID</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">MISQUOTED INFORMATION</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:iteration items="{!v.selectedUnresolvedClaims}" var="claim"  indexVar="index">
+                                <tr onkeyup="{!c.getIndex}" onmouseover="{!c.getIndex}" data-index="{!index}">
+                                    <td data-label="CLAIM #">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.claimId}</div>
+                                    </td>
+                                    <td data-label="SERVICE DATES">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.serviceDates}</div>
+                                    </td>
+                                    <td data-label="CHARGED">
+                                        <div class="slds-truncate slds-text-align_left" title="" style="font-family:arial">{!claim.charged}</div>
+                                    </td>
+                                    <td data-label="UNDER $ 7,000?">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.underAmmount}</div>
+                                    </td>
+                                    <td data-label="PAE CRITERIA MET" class="slds-p-top_none">
+                                        <div class="slds-text-align_left" title="">
+                                            <lightning:combobox aura:id="PAECRITERIAMET"
+                                                                name="PAE CRITERIA MET"
+                                                                placeholder="Select"
+                                                                options="{!v.cashedOptions }"
+                                                                disabled="{!claim.disablePCM}"
+                                                                required="{! !claim.disablePCM}"
+                                                                value="{!claim.PCMValue}"
+                                                                messageWhenValueMissing ="This field is required"
+                                                                onchange="{!c.handlePCMChange}"
+                                                                />
+                                        </div>
+                                    </td>
+                                    <td data-label="SOURCE" class="slds-p-top_none">
+                                        <div class="slds-text-align_left" title="" style="width: 120px ;length: 170px;">
+                                            <lightning:combobox  aura:id="SOURCE"
+                                                                name="SOURCE"
+                                                                placeholder="Select"
+                                                                options="{!v.sourceOptions}"
+                                                                messageWhenValueMissing ="This field is required"
+                                                                disabled="{!claim.disableSource}"
+                                                                required="{!claim.PCMRequied}"
+                                                                value="{!claim.sourceValue}"
+                                                                onchange="{!c.handleSourceChange}"
+                                                                />
+                                        </div>
+                                    </td>
+                                    <td data-label="FLN #">
+                                        <div class="slds-truncate slds-text-align_left" title="" style="width: 120px ;length: 170px;">
+                                            <lightning:input aura:id="FLN" messageWhenValueMissing ="This field is required" type="text" disabled="{!claim.disableFLN}" required="{!claim.requiredFLN}" Name ="FLN #" value="{!claim.FLNNumber}"  onchange="{!c.onchngValue}"/>
+                                        </div>
+                                    </td>
+                                    <td data-label="EXTERNALID">
+                                        <div class="slds-truncate slds-text-align_left" title="" style="length: 170px;">
+                                            <lightning:input aura:id="EXTERNALID" type="text" messageWhenValueMissing ="This field is required" disabled="{!claim.disableEID}" required="{!claim.requiredEID}" Name ="EXTERNAL ID" value="{!claim.externalID}"  onchange="{!c.onchngValue}"/>
+                                        </div>
+                                    </td>
+                                    <td data-label="MISQUOTEDINFORMATION">
+                                        <div class="slds-truncate slds-text-align_left" title="">
+                                            <lightning:textarea aura:id="MISQUOTEDINFORMATION"
+                                                                disabled="{!claim.disableMIS}"
+                                                                required="{!claim.PCMRequied}"
+                                                                messageWhenValueMissing ="This field is required"
+                                                                Name ="MISQUOTED INFORMATION" value="{!claim.MISInfo}"
+                                                                onchange="{!c.onchngValue}"/>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </aura:if>
+                <aura:if isTrue="{!equals(v.viewClaimsSubType,'Corrected Claim')}">
+                    <table width="100%" class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered claimsTbl " style="cursor:pointer;">
+                        <thead>
+                            <tr class="slds-text-heading--label">
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CLAIM #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">SERVICE DATES</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">ORIGINAL CLAIM/FLN #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CORRECTED CLAIM/FLN #</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:iteration items="{!v.selectedUnresolvedClaims}" var="claim"  indexVar="index">
+                                <tr onkeyup="{!c.getIndex}" onmouseover="{!c.getIndex}" data-index="{!index}">
+                                    <td data-label="CLAIM #">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.claimId}</div>
+                                    </td>
+                                    <td data-label="SERVICE DATES">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.serviceDates}</div>
+                                    </td>
+                                    <td data-label="ORIGINAL CLAIM/FLN #">
+                                        
+                                        <div class="slds-truncate slds-text-align_left" title="" >
+                                            <lightning:input aura:id="ORIGINALFLN" messageWhenValueMissing ="This field is required" type="text" disabled="" required="true" Name ="ORIGINAL CLAIM/FLN #" value="{!claim.originalClaim}"  onchange="{!c.onchngValue}"/>
+                                        </div>
+                                    </td>
+                                    <td data-label="CORRECTED CLAIM/FLN #">
+                                        <div class="slds-truncate slds-text-align_left" title="" >
+                                            <lightning:input aura:id="CORRECTEDFLN" messageWhenValueMissing ="This field is required" type="text" disabled="" required="true" Name ="CORRECTED CLAIM/FLN #" value="{!claim.correctedClaim}"  onchange="{!c.onchngValue}"/>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </aura:if>
+                <aura:if isTrue="{!equals(v.viewClaimsSubType,'Medical/Reimbursement Policy')}">
+                    <table width="100%" class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered claimsTbl " style="cursor:pointer;">
+                        <thead>
+                            <tr class="slds-text-heading--label">
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CLAIM #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">SERVICE DATES</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">REASON</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:iteration items="{!v.selectedUnresolvedClaims}" var="claim"  indexVar="index">
+                                <tr>
+                                    <td data-label="CLAIM #">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.claimId}</div>
+                                    </td>
+                                    <td data-label="SERVICE DATES">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.serviceDates}</div>
+                                    </td>
+                                    <td data-label="Reason" >
+                                        <div class="slds-text-align_left" title=""  onkeyup="{!c.getIndex}" onmouseover="{!c.getIndex}" data-index="{!index}">
+                                            <lightning:combobox aura:id="PReason"
+                                                                name="Reason"
+                                                                placeholder="Select"
+                                                                options="{!v.policyOptions}"
+                                                                value="{!claim.reason}"
+                                                                onchange="{!c.onchngValue}"
+                                                                messageWhenValueMissing ="This field is required"
+                                                                required="true"/>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </aura:if>
+                <aura:if isTrue="{!equals(v.viewClaimsSubType,'Pend Status')}">
+                    <table width="100%" class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered claimsTbl " style="cursor:pointer;">
+                        <thead>
+                            <tr class="slds-text-heading--label">
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">CLAIM #</div>
+                                </th>
+                                <th scope="col">
+                                    <div class="slds-truncate" title="">SERVICE DATES</div>
+                                </th>
+								<th scope="col">
+                                    <div class="slds-truncate" title="">RECEIVED DATE</div>
+                                </th>
+                                <th scope="col">
+                                 <div class="slds-truncate" title="">REASON</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:iteration items="{!v.selectedUnresolvedClaims}" var="claim" indexVar="index" >
+                                <tr>
+                                    <td data-label="CLAIM #">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.claimId}</div>
+                                    </td>
+                                    <td data-label="SERVICE DATES">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.serviceDates}</div>
+                                    </td>
+									<td data-label="RECEIVED DATE" class="slds-p-top_none">
+                                        <div class="slds-truncate slds-text-align_left" title="">{!claim.receivedDate}</div>
+                                    </td>
+                                   <td data-label="Reason" >
+                                        <div class="slds-text-align_left" title=""  onmouseover="{!c.getIndex}" data-index="{!index}">
+                                            <lightning:combobox aura:id="PsReason"
+                                                                name="PsReason"                                                                
+                                                                label="Reason"
+                                                                variant="label-hidden"
+                                                                options="{!v.psReasonOptions}"
+                                                                value="Claim Pended Over TAT"
+                                                                onchange="{!c.onchngValue}"/>
+                                        </div>
+                                    </td>
+                                 </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </aura:if>
+             </div>
+        </div>
+        <div class="slds-grid slds-p-top_small card_bottom_margin">
+            <aura:if isTrue="{!equals(v.viewClaimsSubType,'Clerical Request')}">
+                <div class="slds-col slds-size_2-of-16 slds-p-right_small"  >
+                    <lightning:combobox aura:id="METHODOFDELIVERY"
+                                        name="METHOD OF DELIVERY"
+                                        label= "Method of Delivery"
+                                        placeholder="Select"
+                                        required="true"
+                                        value="{!v.demographicInfo.methofDelValue}"
+                                        options="{!v.MethofDelOptions}"
+                                        onchange="{!c.methofDelChange}"/>
+                </div>
+            </aura:if>
+            <aura:if isTrue="{!v.enableMemberInfoInput}">
+                <div class="slds-col slds-size_2-of-16 slds-p-right_small"  >
+                    <lightning:input aura:id="fstName"
+                                     type="fstName"
+                                     Name = "First Name"
+                                     label= "First Name"
+                                     required="true"
+                                     messageWhenValueMissing ="This field is required"
+                                     value="{!v.demographicInfo.firstNameValue}"
+                                     onchange="{!c.onchngValue}"/>
+                </div>
+                <div class="slds-col slds-size_2-of-16 slds-p-right_small"  >
+                    <lightning:input aura:id="lstName"
+                                     type="lstName"
+                                     Name = "Last Name"
+                                     label= "Last Name"
+                                     required= "true"
+                                     messageWhenValueMissing ="This field is required"
+                                     value="{!v.demographicInfo.lastNameValue}"
+                                     onchange="{!c.onchngValue}"/>
+                </div>
+                <div class="slds-col slds-size_2-of-16 slds-p-right_small"  >
+                    <lightning:input aura:id="Address"
+                                     type="address"
+                                     Name = "Address"
+                                     label= "Address"
+                                     required="true"
+                                     messageWhenValueMissing ="This field is required"
+                                     value="{!v.demographicInfo.addressValue}"
+                                     onchange="{!c.onchngValue}"/>
+                </div>
+                <div class="slds-col slds-size_2-of-16 slds-p-right_small"  >
+                    <lightning:input aura:id="city"
+                                     type="city"
+                                     Name = "City"
+                                     required="true"
+                                     label= "City"
+                                     value="{!v.demographicInfo.cityValue}"
+                                     messageWhenValueMissing ="This field is required"
+                                     onchange="{!c.onchngValue}"/>
+                </div>
+                <div class="slds-col slds-size_2-of-16  slds-p-right_small" >
+                    <c:ACET_CustomStateComboboxField aura:id="State"  makeRequired="true" strInput="{!v.demographicInfo.stateValue}"/>
+                </div>
+                <div class="slds-col slds-size_2-of-16   slds-p-right_small" onkeypress="{!c.allowOnlyNumbers}" onchange= "{!c.allowOnlyNumbers}" >
+                    <lightning:input
+                                     aura:id="ZipCode"
+                                     value="{!v.demographicInfo.zipCodeValue}"
+                                     name="ZipCode"
+                                     minlength="5"
+                                     label= "Zip Code"
+                                     maxlength="5"
+                                     pattern="[0-9]*"
+                                     required="true"
+                                     onclick="{!c.zipValidation}"
+                                     messageWhenValueMissing ="This field is required"
+                                     messageWhenTooShort="Enter 5 digits "
+                                     />
+                </div>
+            </aura:if>
+            <aura:if isTrue="{!v.isMethofDelValue}">
+                <div class="slds-col slds-size_2-of-16 slds-p-top_none  slds-p-right_small" >
+                    <lightning:input aura:id="FAXid"  type="text" name="Fax #" label="Fax #"
+                                     value="{!v.demographicInfo.fax}" onchange="{!c.onchngValue}"/>
+                </div>
+            </aura:if>
+        </div>
+        <aura:if isTrue="{!equals(v.viewClaimsSubType,'Corrected Claim')}">
+        
+        	<p>Add claim correction details in the comments box below.</p>
+       
+        </aura:if>
+        <aura:if isTrue="{!equals(v.viewClaimsSubType,'Paid Correctly, Pre-Appeal Reconsideration')}">
+         <lightning:input aura:id="attestId" required="true" value="{!v.demographicInfo.attestId}" class="slds-text-heading_small slds-p-top_medium customCheckBox" type="checkbox" onchange="{!c.onchngValue}" label="I attest that based on my research of the claim(s) and information available, I have determined that the claim(s) paid correctly.  I explained the processing to the provider, however they requested that the claim(s) be sent back as reconsideration to satisfy the need to have a reconsideration on file prior to filing an appeal." />
+        </aura:if>
+                 
+    </div>
+</aura:component>

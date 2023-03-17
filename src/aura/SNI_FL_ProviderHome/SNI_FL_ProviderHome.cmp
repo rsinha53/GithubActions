@@ -1,0 +1,221 @@
+<aura:component implements="forceCommunity:themeLayout,forceCommunity:availableForAllPageTypes,forceCommunity:layout,force:appHostable" access="global" controller="ProviderController">
+    
+    <aura:attribute name="displayedSection" type="String" default="homeSec"/>
+    <aura:attribute name="ProviderWrapper" type="object" />
+    <aura:attribute name="options" type="List" default="[]"/>
+    <aura:attribute name="picklist" type="Boolean" default="true" />
+    <aura:attribute name="refreshHome" type="Boolean" default="true" />
+    <aura:attribute name="fetchHome" type="Boolean" default="false" />
+    <aura:attribute name="selectFamilyId" type="string"/>
+    <aura:attribute name="isChatView" type="Boolean" default="false"/>
+    <aura:attribute name="programname" type="string"/>
+    <aura:attribute name="dropdown" type="Boolean" default="false" />
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:registerEvent name="loadMyEvent" type="c:Result"/>  
+    <aura:handler name="SNI_FL_RedirectToViewMessagesEvt" event="c:SNI_FL_RedirectToViewMessagesEvt" action="{!c.handleRedirectToMessages}"/>
+    <aura:attribute name="memberNameToMessages" type="string" default=""/>
+    <aura:attribute name="memberIdToMessages" type="string" default=""/>
+    <!--added by AC/DC -->
+    <aura:attribute name="isNewMessageAvailable" type="Boolean" />
+    <aura:attribute name="IsValidProfile" type="Boolean" />
+    <aura:attribute name="userIdValue" type="String"/>
+    
+    
+    <div class="mobile-menu-container">
+        <div class="mobile-actions">
+            <div class="team">
+                {!v.ProviderWrapper.userName}
+            </div>
+            <a onclick="{!c.getMobileNavUI}">
+                <lightning:icon class="mobile-icon slds-float_right" iconName="utility:rows" size="large" />
+            </a>
+        </div>
+    </div> 
+    <div class="dashboard ">
+        <div class="navigation bgn mobile-hide">
+            <div class="navigation-top ">
+                <div class="combo-style slds-size_11-of-12 slds-form_horizontal">
+                    <aura:if isTrue="{!v.dropdown}">
+                        <lightning:select onchange = "{!c.onProgramChange}" aura:id="distance" value = "{!v.programname}"  label="Select a Program"  >
+                            <aura:iteration items="{!v.ProviderWrapper.affliations}" var="ind" indexVar="key">
+                                <option text="{!ind.value}" value="{!ind.id}" selected= "{!ind.selected}" />
+                            </aura:iteration>
+                        </lightning:select> 
+                        <aura:set attribute="else">
+                            <div>
+                                <lightning:select  aura:id="distance" value = "{!v.programname}"  label=" "  >
+                                    <aura:iteration items="{!v.ProviderWrapper.affliations}" var="ind" indexVar="key">
+                                        <option text="{!ind.value}" value="{!ind.id}" selected= "{!ind.selected}" />
+                                    </aura:iteration>
+                                </lightning:select>
+                            </div>   
+                        </aura:set>
+                    </aura:if>
+                    <br/>
+                </div>
+                <ul class="navigation-ul ">
+                    <li class="{! if(v.displayedSection == 'homeSec','active','inactive')}">
+                        <a  class="applyTabStyles" id="Dashboard" href="javascript:void(0);" onclick="{!c.displayHome}">
+                            <lightning:icon class="imageSize" iconName="standard:home" size="small"/>
+                            <span class="mobile-menu slds-p-left_small">Home</span>
+                        </a>
+                    </li>
+                    <li class="{! if(v.displayedSection == 'memberSec','active','inactive')}">
+                        <a class="applyTabStyles" id="members" href="javascript:void(0);" onclick="{!c.displayMemberTeam}">
+                            <lightning:icon iconName="standard:record_create" class="imageSize" size="small"/>
+                            <span class="mobile-menu slds-p-left_small" >Members</span>
+                        </a>
+                    </li>
+                    
+                    <li class="{! if(v.displayedSection == 'messagesSec','active','inactive')}">
+                        <a  class="applyTabStyles" id="Messages" href="javascript:void(0);" onclick="{!c.displayMessage}"> 
+                            <lightning:icon iconName="utility:comments" size="small" class="imageSize"/>
+                            <span class="mobile-menu slds-p-left_small">Messages</span>
+                            <aura:if isTrue="{!v.isNewMessageAvailable}">
+                                <lightning:icon  iconName="utility:notification" alternativeText="priority" title="priority" size="xx-small" class="notificationIcon slds-m-right_xx-small "/>
+                            </aura:if> 
+                        </a>
+                    </li>
+                    <!--    <li class="{! if(v.displayedSection == 'casesSec','active','inactive')}">
+                        <a  class="applyTabStyles" id="Tasks" href="javascript:void(0);"  onclick="{!c.displayCasesMobile}">
+                            <lightning:icon iconName="standard:task2" class="imageSize" size="small"/>
+                            <span class="mobile-menu slds-p-left_small" >Cases</span>
+                        </a>
+                    </li>
+                    <li class="{! if(v.displayedSection == 'supportSec','active','inactive')}">
+                        <a class="applyTabStyles" id="Support" href="javascript:void(0);" onclick="{!c.displaySupportMobile}">
+                            <lightning:icon iconName="standard:omni_supervisor" class="imageSize" size="small"/>
+                            <span class="mobile-menu slds-p-left_small" >Support</span>
+                        </a>
+                    </li> --><br/><br/><br/>
+                    <li class="inactive">
+                        <div  class="imagediv slds-p-top_xx-large slds-m-top_xx-large">
+                            <img src="{!$Resource.UHG_Logo}" /></div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="desktopview_height">
+        <div class="slds-grid" style="height:100% !important;">
+            <div class="slds-size_3-of-12  mobile-navigation-display-grid-1-hide slds-scroll-hide" style="transition : width 2s ease;width:20% !important;min-width: 200px;overflow-y: auto;">
+                <div class="slds-grid slds-grid_vertical mobile-navigation-grid-ui" >
+                    <div style="height:100% !important; " class="mobile-navigation-tabs-hide">
+                        <div class="tabs" >
+                            <br/>
+                            <div class="changeUserStyle" >
+                                {!v.ProviderWrapper.userName}
+                            </div>
+                            <div class="combo-style slds-size_11-of-12">
+                                <aura:if isTrue="{!v.dropdown}">
+                                    <lightning:select onchange = "{!c.onProgramChange}" aura:id="distance" value = "{!v.programname}"  label="Select a Program"  >
+                                        <aura:iteration items="{!v.ProviderWrapper.affliations}" var="ind" indexVar="key">
+                                            <option text="{!ind.value}" value="{!ind.id}" selected= "{!ind.selected}" />
+                                        </aura:iteration>
+                                    </lightning:select> 
+                                    <aura:set attribute="else">
+                                        <div>
+                                            <lightning:select  aura:id="distance" value = "{!v.programname}"  label=" "  >
+                                                <aura:iteration items="{!v.ProviderWrapper.affliations}" var="ind" indexVar="key">
+                                                    <option text="{!ind.value}" value="{!ind.id}" selected= "{!ind.selected}" />
+                                                </aura:iteration>
+                                            </lightning:select>
+                                        </div>
+                                    </aura:set>
+                                </aura:if>
+                                
+                            </div>
+                            <br/>
+                            <div class="{! if(v.displayedSection == 'homeSec','slds-col changeTabBgColor activeTab','slds-col changeTabBgColor')}" style="padding-left:15px">
+                                <a  class="applyTabStyles" id="Dashboard" href="javascript:void(0);" onclick="{!c.displayHome}" >
+                                    <lightning:icon class="imageSize" iconName="standard:home" size="x-small"/>
+                                    <span class="tab-name" style="padding:1rem;">Home</span>
+                                </a>
+                            </div>
+                            <div class="{! if(v.displayedSection == 'memberSec','slds-col changeTabBgColor activeTab','slds-col changeTabBgColor')}" style="padding-left:15px">
+                                <a class="applyTabStyles" id="members" href="javascript:void(0);" onclick="{!c.displayMemberTeam}" > 
+                                    <lightning:icon iconName="standard:team_member" class="imageSize" size="x-small"/>
+                                    <span class="tab-name" style="padding:1rem">Members</span>
+                                </a>
+                            </div>
+                            <div class="{!if(v.displayedSection == 'messagesSec','slds-col changeTabBgColor activeTab','slds-col changeTabBgColor')}" style="padding-left:15px">
+                                <a  class="applyTabStyles" id="Messages" href="javascript:void(0);" onclick="{!c.displayMessage}" >
+                                    <lightning:icon iconName="standard:messaging_conversation" size="x-small" class="imageSize"/>
+                                    <span class="tab-name" style="padding:1rem">Messages</span>
+                                    <aura:if isTrue="{!v.isNewMessageAvailable}">
+                                        <lightning:icon  iconName="utility:notification" alternativeText="priority" title="priority" size="xx-small" class="notificationIcon slds-m-right_xx-small "/>
+                                    </aura:if> 
+                                </a>
+                            </div>
+                            <!-- <div class="{! if(v.displayedSection == 'casesSec','slds-col changeTabBgColor activeTab','slds-col changeTabBgColor')}" style="padding-left:15px">
+                                <a  class="applyTabStyles" id="CasesDT" href="javascript:void(0);" onclick="{!c.displayCases}" > 
+                                    <lightning:icon iconName="standard:task2" class="imageSize" size="x-small"/>
+                                    <span class="tab-name" style="padding:1rem">Cases</span>
+                                </a>
+                            </div> -->
+                            <!--   <div class="{! if(v.displayedSection == 'supportSec','slds-col changeTabBgColor activeTab','slds-col changeTabBgColor')}" style="padding-left:15px;">
+                                <a class="applyTabStyles" id="SupportDT" href="javascript:void(0);" onclick="{!c.displaySupport}">
+                                    <lightning:icon iconName="standard:omni_supervisor" class="imageSize" size="x-small"/>
+                                    <span class="tab-name" style="padding:1rem">Support</span>
+                                </a>
+                            </div> -->
+                        </div>
+                        
+                    </div>
+                    <div class="imagediv slds-p-top_xx-large slds-m-top_xx-large">    
+                        <img  src="{!$Resource.UHG_Logo}" />
+                    </div>
+                </div>
+                
+            </div>
+            <div class="{!if((v.displayedSection == 'ToHide'),'slds-size_7-of-12 contentDiv slds-border_top mobile-navigation-display-grid-2','slds-size_9-of-12 contentDiv slds-border_top mobile-navigation-display-grid-2')}" style="border-top:1px solid #d6c8f5;"> 
+                <div aura:id="flActivities" class="{!if(v.displayedSection == 'homeSec','slds-show','slds-hide')}" >
+                    <div id="style" >
+                        <aura:if isTrue="{!v.refreshHome}">
+                            <c:SNI_FL_ProviderHomeTab />
+                        </aura:if>
+                    </div>
+                </div>
+                <aura:if isTrue="{!if(v.displayedSection == 'memberSec',true,false)}" >
+                    <div aura:id="flCareTeam" class="{!if(v.displayedSection == 'memberSec','slds-show','slds-hide')}" >
+                        <div>
+                            <c:SNI_FL_ProviderMembersTab providerProgram="{!v.programname}"/>
+                        </div>
+                    </div>
+                </aura:if>
+                <div aura:id="flMessages" class="{!if(v.displayedSection == 'messagesSec','slds-show','slds-hide')}" >
+                    <div>
+                        <!-- <c:SNI_FL_FamilyView isChatView="{!v.isChatView}" SelectedAccountName="{!v.selectFamilyId}"></c:SNI_FL_FamilyView>-->
+
+                        <!--DE409699 added providerAffliationID attribute-->
+                        <c:SNI_FL_ProviderMessagingView providerAffliationID="{!v.programname}" isChatView="{!v.isChatView}" SelectedAccountName="{!v.selectFamilyId}" searchedMemberName="{!v.memberNameToMessages}"
+                                                        searchedMemberId="{!v.memberIdToMessages}"></c:SNI_FL_ProviderMessagingView>
+                      
+                    </div>
+                </div>
+                <!--   <div aura:id="flCases" class="{!if(v.displayedSection == 'casesSec','slds-show','slds-hide')}" >
+                    <div>
+                        
+                    </div> 
+                </div>
+                <aura:if isTrue="{!if(v.displayedSection == 'supportSec',true,false)}" >
+                    <div aura:id="flSupportTeam" class="{!if(v.displayedSection == 'supportSec','slds-show','slds-hide')}" >
+                        <div>
+                        </div>
+                    </div>
+                </aura:if> -->
+                <aura:if isTrue="{!if(v.displayedSection == 'settingSec',true,false)}" >
+                    <div aura:id="flsetting" class="{!if(v.displayedSection == 'settingSec','slds-show','slds-hide')}" >
+                        <div>                            
+                            <c:SNI_FL_AccountSetting selectFamilyId ="{!v.ProviderWrapper.userId}"/>
+                        </div>
+                    </div>
+                </aura:if>
+            </div>
+        </div>
+    </div>
+    <div>
+        <c:SNI_FL_LoginPopUp />
+        <div class="slds-backdrop slds-backdrop_open"> </div>
+    </div>
+</aura:component>

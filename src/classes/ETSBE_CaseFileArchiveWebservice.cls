@@ -1,0 +1,114 @@
+public class ETSBE_CaseFileArchiveWebservice extends AcetWebservice{
+public String GrantType;
+public String AccessToken;
+public String ClientId ;
+public String ClientSecret ;
+public String RequestBodyStr;
+public String FDSendpoint;
+transient private static Blob bodyBlob=null ;
+transient private static string header='';
+transient private static String last4Bytes='';
+transient private static String footerEncoded='';
+transient private static string headerEncoded='';
+transient private static string bodyEncoded='';
+transient private static Attachments__c attachmentdata;
+transient private static Map<string,Attachments__c> attachdoccontentDoc;
+public void getTokenEndpoint(){
+GetEndpointDetail('GetFDSTokenEndpoint');
+BaseURL = '';
+FDSendpoint ='';
+}
+public override void getEndpoint(){
+GetEndpointDetail('GetFDSUploadEndpoint');
+if (WSConfigurations.containsKey(OrgName + '_GetFDSBaseURL')){
+BaseURL = WSConfigurations.get(OrgName + '_GetFDSBaseURL').Value__c; //https://solaris-lightning--TEST.cs29.my.salesforce.com
+}
+if(WSConfigurations.containsKey(OrgName + '_GetFDSUploadEndpoint')){
+FDSendpoint = WSConfigurations.get(OrgName + '_GetFDSUploadEndpoint').Value__c; //50f766e3-c685-4e7d-a7d6-423c76b24cd5
+}
+}
+
+public String getOAuthToken(){
+if (WSConfigurations.containsKey('ISLConAccessToken')) {
+OAuthConfig = WSConfigurations.get('ISLConAccessToken');
+}
+ETSBE_FDSApiOAuthWebservice oAuth = new ETSBE_FDSApiOAuthWebservice();
+AccessToken = oAuth.GetAccessToken();
+OAuthConfig.Value__c = AccessToken;
+
+return accesstoken;
+}
+Public Map<string,Attachments__c> uploadFile(ContentVersion fileData,String caseid ){
+Attachments__c attachmentdata = new Attachments__c();
+Map<string,Attachments__c> attachdoccontentDoc= new Map<String,Attachments__c>();
+
+transient string Boundary = '1ff13444ed8140c7a32fc4e6451aa76d';
+transient string contentType = ETSBE_HttpFileFormBuilder.GetContentType();
+transient string form64 = '';
+if(limits.getHeapSize()<10000000) {
+form64 += ETSBE_HttpFileFormBuilder.WriteBoundary();
+ETSBE_HttpFileFormBuilder.WriteFileResult result = ETSBE_HttpFileFormBuilder.WriteFile('file_007', fileData.PathOnClient, 'application/octet-stream', filedata.VersionData);
+form64 += result.Content;
+form64 += ETSBE_HttpFileFormBuilder.WriteBoundary(result.EndingType);
+blob formBlob = EncodingUtil.base64Decode(form64);
+string contentLength = string.valueOf(formBlob.size());
+if(result.Content != '') {
+HttpRequest docreq =new HttpRequest();
+docreq.setHeader('Content-Type','multipart/form-data; charset="UTF-8"; boundary="' + Boundary + '"');
+docreq.setTimeout(120000);
+docreq .setEndpoint(FDSendpoint );
+docreq.setHeader('Authorization','Bearer '+AccessToken);
+docreq.setMethod('POST');
+docreq.setBodyasblob(formBlob);
+Http dochttp =new Http();
+HTTPResponse docres = dochttp.send(docreq );
+if(docres.getStatusCode() == 200) {
+dataList docData =
+(dataList)JSON.deserialize(docres.getbody(), dataList.class);
+if(docData.attachment.size()>0){
+Attachments__c attchdata = new Attachments__c();
+attchdata.FDS_File_Name__c = '<a href=/lightning/cmp/c__ETSBE_FetchFDSFile?c__fileID='+docData.attachment[0].Id+' >'+ docData.attachment[0].file_name+'</a> <br/>';
+attchdata.File_Name__c = docData.attachment[0].Id;
+if(docData.attachment[0].file_name.length()>80){
+attchdata.Name = docData.attachment[0].file_name.substring(0,80);
+}
+else{
+attchdata.Name = docData.attachment[0].file_name;
+}
+attchdata.Description__c = fileData.ContentDocument.description;
+attchdata.Content_Type__c = docData.attachment[0].content_type;
+
+attchdata.case__c =caseid;
+attachmentdata = attchdata;
+attachdoccontentDoc.put(fileData.ContentDocumentId,attchdata);
+}
+}
+}else{
+attachdoccontentDoc =new map<String,Attachments__c>();
+}
+}
+return attachdoccontentDoc;
+}
+private httpresponse calloutResponse(blob bodyBlob,string boundary ){
+HttpRequest docreq =new HttpRequest();
+docreq.setHeader('Content-Type','multipart/form-data; charset="UTF-8"; boundary="' + Boundary + '"');
+docreq.setTimeout(120000);
+docreq .setEndpoint(FDSendpoint );
+docreq.setHeader('Authorization','Bearer '+AccessToken);
+docreq.setMethod('POST');
+docreq.setBodyasblob(bodyBlob);
+Http dochttp =new Http();
+HTTPResponse docres = dochttp.send(docreq );
+return docres;
+}
+public class dataList{
+Public List<attachmentdata> attachment;
+}
+Public class attachmentdata {
+Public string id;
+Public string status;
+Public string file_name;
+Public string file_size;
+Public string content_type;
+}
+}

@@ -1,0 +1,321 @@
+<aura:component >
+    
+    <!-- SCRIPTS -->
+    <ltng:require styles="{!$Resource.ACET_MasterStyle}"/>
+    
+    <!-- EVENTS -->
+    <aura:registerEvent name="AutodocEvent" type="c:ACET_AutodocEvent"/>
+    
+    <!-- METHODS -->
+    <aura:method name="autodocByDefault" action="{!c.autodocByDefault}"/>
+    <aura:method name="selectAllByDefault" action="{!c.selectAll}"/>
+    
+    <!-- HANDLERS -->
+    <aura:handler event="c:ACET_AutoDocRefreshEvent" action="{!c.handleAutodocRefresh}"/> <!-- US3125332 - Thanish - 7th Jan 2021-->
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}"/> <!--DE415502 - Thanish - 4th Mar 2021-->
+
+    <!-- ATTRIBUTES -->
+    <aura:attribute name="cmpUniqueId" type="String"/> <!--DE415502 - Thanish - 4th Mar 2021-->
+    <aura:attribute name="autodocUniqueId" type="String"/>
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default="demoidCmp"/>
+    <aura:attribute name="defaultAutodoc" type="Boolean"/>
+    <aura:attribute name="disbaleHeaderCheckBox" type="Boolean" default="false"/>
+    <aura:attribute name="cardDetails" type="Object"/>
+    <aura:attribute name="showComponentName" type="Boolean" default="true"/>
+    <aura:attribute name="enableRefreshAutodoc" type="Boolean" default="true"/> <!-- US3125332 - Thanish - 7th Jan 2021-->
+    <aura:attribute name="autoSelectField" type="Boolean" default="false"/>
+    <aura:attribute name="autoSelectFieldIndex" type="Integer"/>
+    
+    <div class="slds-box slds-card">
+        <aura:if isTrue="{!v.showComponentName}">
+            <div style="">
+                <table style="">
+                    <tr>
+                        <aura:if isTrue="{!v.disbaleHeaderCheckBox}">
+                            <td style="width: 1px;vertical-align:top;">
+                                <lightning:input type="checkbox" name="{!v.cardDetails.componentName}" checked="{!v.disbaleHeaderCheckBox}"
+                                                 variant="label-hidden" onchange="{!c.selectAll}" disabled="{!v.disbaleHeaderCheckBox}"/>
+                            </td>
+                        </aura:if>
+                        <aura:if isTrue="{!!v.disbaleHeaderCheckBox}">
+                            <td style="width: 1px;vertical-align:top;">
+                                <lightning:input type="checkbox" name="{!v.cardDetails.componentName}" checked="{!v.cardDetails.allChecked}"
+                                                 variant="label-hidden" onchange="{!c.selectAll}" disabled=""/>
+                            </td>
+                        </aura:if>
+                        <td>
+                            <div class="component_title slds-text-heading_small">
+                                {!v.cardDetails.componentName} <b class="component_hearder_Val">{!v.cardDetails.componentHeaderVal}</b>
+                            </div>                        
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </aura:if>
+        <div class="slds-grid slds-gutters slds-wrap contentSection">
+            <aura:iteration items="{!v.cardDetails.cardData}" var="i" indexVar="index">
+                <aura:if isTrue="{!!i.hideField}">
+                    <div class="{!v.cardDetails.noOfColumns + ' slds-col card_element_top_margin'}">
+                        <table>
+                            <tr>
+                                <td style="width: 25px;vertical-align:top;">
+                                    <aura:if isTrue="{!i.showCheckbox}">
+                                        <lightning:input type="checkbox" name="{!i.fieldName + 'checkBox'}" label="{!index}"
+                                                         checked="{!i.checked}" variant="label-hidden" disabled="{!i.disableCheckbox}"
+                                                         onchange="{!c.handleSelectCheckBox}" />
+                                    </aura:if>
+                                </td>
+                                <td>
+                                    <aura:if isTrue="{!i.fieldType == 'emptySpace'}">
+                                        <div class="slds-form-element"> </div>
+                                    </aura:if>
+                                    <aura:if isTrue="{!i.fieldType == 'accordian'}">
+                                        <div class="slds-page-header" data-index="{!index}" onclick="{!c.toggleSection}">
+                                            <section class="slds-clearfix topLine">
+                                                <div class="slds-float-left slds-grid slds-gutters">
+                                                    <span style="padding-left: 1rem">
+                                                        <lightning:icon class="slds-show" data-index="{!index}" iconName="{!i.iconName}"
+                                                                        size="xx-small" alternativeText="Language Chevron Icon When Inactive"/>
+                                                    </span>
+                                                    <span data-index="{!index}">{!i.fieldName}</span>
+                                                </div>
+                                            </section>
+                                            <div class="autodocTableView detailSection BenefitLanguageAccordian">
+                                                <div class="{!i.toggleClass}">
+                                                    <div class="slds-panel__body">
+                                                        <div class="slds-m-top_small" style="padding: 0px; margin: 0px">
+                                                            <div style="overflow: auto">
+                                                                <lightning:formattedRichText value="{!i.fieldValue}" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                    <aura:if isTrue="{!i.fieldType == 'outputText'}">
+                                        <div class="slds-form-element">
+                                            <span class="slds-form-element__label">
+                                                {!i.fieldName}
+                                            </span>
+                                            <div class="slds-form-element__control" style="{!i.fieldValueStyle}">
+                                                <div title="{!i.fieldValueTitle}" class="slds-form-element__static">{!i.fieldValue}</div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                    <aura:if isTrue="{!i.fieldType == 'icon'}">
+                                        <div class="slds-form-element">
+                                            <span class="slds-form-element__label">
+                                                {!i.fieldName}
+                                            </span>
+                                            <div class="slds-form-element__control" style="{!i.fieldValueStyle}">
+                                                <div class="slds-form-element__static statusIcon">
+                                                    <lightning:icon iconName="{!i.iconName}" alternativeText="{!i.fieldValue}" size="x-small"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                    <aura:if isTrue="{!i.fieldType == 'iconWithText'}">
+                                        <div class="slds-form-element">
+                                            <span class="slds-form-element__label">
+                                                {!i.fieldName}
+                                            </span>
+                                            <div class="slds-form-element__control" style="{!i.fieldValueStyle}">
+                                                <div class="slds-form-element__static statusIcon">
+                                                    <span><lightning:icon iconName="{!i.iconName}" alternativeText="{!i.fieldValue}" size="x-small"/></span>
+                                                    <aura:if isTrue="{!not(empty(i.iconText))}">
+                                                        <span class="slds-p-left_x-small">{!i.iconText}</span>
+                                                    </aura:if>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                    <aura:if isTrue="{!i.fieldType == 'formattedUrl'}">
+                                        <div class="slds-form-element">
+                                            <span class="slds-form-element__label">
+                                                {!i.fieldName}
+                                            </span>
+                                            <div class="slds-form-element__control" style="{!i.fieldValueStyle}">
+                                                <div class="slds-form-element__static">
+                                                    <lightning:formattedUrl value="{!i.fieldValue}" tooltip="{!i.fieldValue}" label="{!i.urlLabel}" target="_blank" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                    <aura:if isTrue="{!i.fieldType == 'SingleLineUrl'}">
+                                        <div class="slds-form-element" style="{!i.fieldValueStyle}">
+                                            <div class="slds-form-element__label" style="{!i.fieldValueStyle}" >
+                                                {!i.fieldName}
+                                            </div>
+                                            <div class="slds-form-element__control" style="{!i.fieldValueStyle}">
+                                                <div class="slds-form-element__static" onclick="{!c.fireAutodocEvent}" data-index="{!index}">
+                                                    <lightning:formattedUrl value="{!i.fieldValue}" tooltip="{!i.fieldValue}" label="{!i.urlLabel}" target="_blank" />
+                                                 </div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                    <aura:if isTrue="{!i.fieldType == 'unescapedHtml'}">
+                                        <div class="slds-form-element">
+                                            <span class="slds-form-element__label">
+                                                {!i.fieldName}
+                                            </span>
+                                            <div class="slds-form-element__control">
+                                                <div class="slds-form-element__static customFont">
+                                                    <aura:unescapedHtml value="{!i.fieldValue}" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                    <aura:if isTrue="{!i.fieldType == 'link'}">
+                                        <div class="slds-form-element">
+                                            <span class="slds-form-element__label" style="{!i.fieldValueStyle}">{!i.fieldName}</span>
+                                            <div class="slds-form-element__control" style="{!i.fieldValueStyle}">
+                                                <span class="slds-text-link" style="cursor: pointer;" onclick="{!c.fireAutodocEvent}" data-index="{!index}" title="{!i.fieldValueTitle}">
+                                                    <aura:if isTrue="{!not(empty(i.fieldValue))}">
+                                                        {!i.fieldValue}
+                                                        <aura:set attribute="else">
+                                                            --
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+
+                                    <aura:if isTrue="{!i.fieldType == 'linkUrl'}">
+                                        <div style="{!i.fieldValueStyle}">
+                                        <c:ACET_HoverPopup aura:id="popup"
+                                                           moveRight=""
+                                                           description="{!i.description}"
+                                                           isNubbinLeft="true"
+                                                           />
+                                        <span  style="border-bottom:1px dashed;padding:0px"
+                                              data-popupId="popup"
+                                              onmouseover="{!c.togglePopup2}"
+                                              onmouseout="{!c.togglePopup2}">
+                                            <span style="{!i.fieldValueStyle}"> {!i.name}</span>
+                                        </span>
+                                        <aura:if isTrue="{!i.urlLabel == ' --'}">
+                                          {!i.urlLabel}
+                                            <aura:set attribute="else">
+                                                <span onclick="{!c.fireAutodocEvent}" data-index="{!index}">
+                                                    <lightning:formattedUrl value="{!i.urlValue}"  label="{!i.urlLabel}" target="_blank" />
+                                                </span>
+                                            </aura:set>
+                                        </aura:if>
+                                            </div>
+                                    </aura:if>
+
+                                    <aura:if isTrue="{!i.fieldType == 'hoverText'}">
+                                        <div class="slds-form-element">
+                                            <div class="tooltip">
+                                                <span style="cursor:pointer;border-bottom: 1px dashed;" data-popupId="{!i.popupId}" onmouseover="{!c.togglePopup}" onmouseout="{!c.togglePopup}" class=" slds-form-element__label" >                                                
+                                                    <span class="tooltiptext" data-left="{!i.moveLeft}" id="{!i.popupId}">
+                                                        <ul style="{! ('text-align: left;') + ((i.description) != '' ? 'list-style-type:disc;margin-left: 20px;' : '' ) + ((i.popupWidth) != '' ? 'width:' + i.popupWidth + ';' : '' )}">
+                                                            <span>{!i.description}</span>
+                                                            <aura:iteration items="{!i.descriptionList}" var="listItem">
+                                                                <li>{!listItem}</li>
+                                                            </aura:iteration>
+                                                        </ul>
+                                                    </span> 
+                                                    <div class="triangle-down" style=""></div>
+                                                    {!i.fieldName}
+                                                </span>
+                                            </div>
+                                            <div class="slds-form-element__control">
+                                                <div class="slds-form-element__static">
+                                                    <!-- US2917371 - Thanish - 7th Dec 2020 -->
+                                                    <aura:if isTrue="{!i.isLinkHover}">
+                                                        <span class="slds-text-link" style="cursor: pointer;" onclick="{!c.fireAutodocEvent}" data-index="{!index}">
+                                                            {!i.fieldValue}
+                                                        </span>
+                                                        <aura:set attribute="else">
+                                                            {!i.fieldValue}
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                    <aura:if isTrue="{!i.fieldType == 'customWidthText'}">
+                                        <div class="slds-form-element" style="{!'width:' + i.width}">
+                                            <span class="slds-form-element__label">
+                                                {!i.fieldName}
+                                            </span>
+                                            <div class="slds-form-element__control">
+                                                <div class="slds-form-element__static" style="{!i.fieldValueStyle}">{!i.fieldValue}</div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+									<aura:if isTrue="{!i.fieldType == 'outputTextArea'}">
+                                        <div class="slds-form-element" style="{!'width:' + i.width}">
+                                            <span class="slds-form-element__label">
+                                                {!i.fieldName}
+                                            </span>
+                                            <div class="slds-form-element__control">
+                                                <lightning:textarea name="textarea" variant="label-hidden" value="{!i.fieldValue}"/>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                    <aura:if isTrue="{!i.fieldType == 'maskedText'}">
+                                        <div class="slds-form-element">
+                                            <span class="slds-form-element__label">
+                                                {!i.fieldName}
+                                            </span>
+                                            <div class="slds-form-element__control">
+                                                <div class="slds-form-element__static">
+                                                    <aura:if isTrue="{!i.fieldValue == '--'}">
+                                                        {!i.fieldValue}
+                                                        <aura:set attribute="else">
+                                                            <span id="{!i.fieldName + 'value' + v.cmpUniqueId}">{!i.fieldValue}</span> <!--DE415502 - Thanish - 4th Mar 2021-->
+                                                            <lightning:buttonMenu name="{!index}" variant="container" aura:id="menu" class="slds-p-left_small" onselect="{!c.maskedMenuItemClicked}" alternativeText="Show menu" iconSize="small">
+                                                                <lightning:menuItem value="unmask" label="UnMask" />
+                                                                <lightning:menuItem value="copy" label="Copy"/>
+                                                            </lightning:buttonMenu>
+                                                        </aura:set> 
+                                                    </aura:if>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                    <aura:if isTrue="{!i.fieldType == 'formattedText'}">
+                                        <div class="slds-form-element">
+                                            <span class="slds-form-element__label">
+                                                {!i.fieldName}
+                                            </span>
+                                            <div class="slds-form-element__control">
+                                                <div class="slds-form-element__static">
+                                                    <lightning:formattedText value="{!i.fieldValue}"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                    <!-- US3394408 - Thanish - 9th Apr 2021 -->
+                                    <aura:if isTrue="{!i.fieldType == 'noFieldName'}">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control" style="{!i.fieldValueStyle}">
+                                                <div title="{!i.fieldValueTitle}" class="slds-form-element__static" style="{!i.fieldValueStyle}"><lightning:formattedRichText value="{!i.fieldValue}"/></div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                    <aura:if isTrue="{!i.fieldType == 'checkbox'}">
+                                        <div class="slds-form-element">
+                                            <span class="slds-form-element__label">
+                                                {!i.fieldName}
+                                            </span>
+                                            <div class="slds-form-element__control">
+                                                <div class="slds-form-element__static">
+                                                    <lightning:input type="checkbox" checked="{!i.fieldValue}" disabled="true" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </aura:if>
+            </aura:iteration>
+        </div>
+    </div>
+</aura:component>

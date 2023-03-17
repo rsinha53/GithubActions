@@ -1,0 +1,326 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes" access="global">
+    
+    <aura:attribute name="memberCardData" type="Object" access="public" />
+    <aura:attribute name="memberCardSnap" type="Object" access="public" />
+
+    <!-- 16th Aug 2019 - US1866429 - Search Claim  Number UI : SARMA : Attr for default selection val -->
+    <aura:attribute name="climsSearchSelectedOption" type="String" default="Claim Number" />
+   <!-- <aura:attribute name="coverageLine" type="SAEMemberProviderSearchCoveragesResult.CoverageLine" access="public"/>-->
+    <aura:attribute name="showClaimResults" type="boolean" default="false" />
+    <aura:handler name="claimSearchEvent" event="c:SAEClaimSearchResultEvent"
+                  action="{!c.handleSearchResultEvent}"/>
+    <aura:handler name="acetClaimSearchEvent" event="c:ACETClaimSearchResultEvent"
+                  action="{!c.handleAcetSearchResultEvent}"/>
+    <aura:attribute name="claimSearchResult" type="Object[]"/>
+    <aura:attribute name="claimInput" type="Object" />
+	<aura:attribute name="closedClaimDetails" type="String[]"/>
+    <aura:attribute name="selectedIPAValue" type="String" default=""/>
+	<aura:attribute name="claimInput2" type="Object" />
+    <aura:handler name="change" value="{!v.claimInput2}" action="{!c.handleAcetSearchResultEvent}"/>
+    <!-- 15th Aug 2019 - US1866429 - Search Claim  Number UI : SARMA -->
+     <!--US2817735 Chandra-->
+    <aura:attribute name="showComments" type="boolean" default="false" access="public"/>
+    <aura:attribute name="commentsValue" type="String" default="" access="public"/>
+     <aura:attribute name="interactionCard" type="Object" access="public"/>
+      <aura:attribute name="claimSearchFlag" type="Boolean" default="false"/>
+      <aura:attribute name="showNewMessage" type="Boolean" default="false"/>
+    <!--US1918617 venkat added-->
+
+    <!-- US1918629 Venkat 15th Sep 2020 -->
+
+    <!--US2876410 ketki 9/11 - HIPAA Guidelines Button -->
+    <aura:attribute name="hipaaEndpointUrl" type="String" default=""/>
+    <aura:attribute name="interactionRec" type="Interaction__c"/>
+     <aura:attribute name="contactUniqueId" type="string" access="public" />
+    <aura:attribute name="memberTabId" type="string" access="public" />
+     <aura:attribute name="interactionOverviewTabId" type="String" />
+  	<!--US2876410 ketki 9/11 - HIPAA Guidelines Button -->
+
+    <aura:attribute name="autodocUniqueId" type="String" default="claimResults"/>
+    <!--Added by Jay for Audit Details -->
+    <aura:attribute name="policyDetails" type="SAEPolicyDetailsResult" />
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0"/>
+    <aura:attribute name="policyList" type="list" access="public" />
+    <!-- End of Jay -->
+
+    <!--US1956058 : Malinda-->
+    <aura:attribute name="mapSelectedClaims" type="Map" />
+    <aura:attribute name="mapClaimDetails" type="Object" />
+    <aura:attribute name="mapCreatedComponents" type="Map" />
+    <aura:handler event="c:SAE_ClaimDetailsEvent" action="{!c.addRemoveClaimDetailsCmps}"/>
+    <aura:attribute name="claimDetailCmp" type="Aura.Component[]" />
+    <aura:attribute name="paymentDetailCmp" type="Aura.Component[]" />
+	<aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:handler name="change" value="{!v.showClaimResults}" action="{!c.clearClaimDetails}"/>
+    <aura:attribute name="openedCards" type="Set" default="[]" />
+     <!--US2894389 : sravani-->
+    <aura:attribute name="isModalOpen" type="boolean" default="false" />
+    <aura:attribute name="caseWrapper" type="SAETTSCaseWrapper" access="public" />
+    <aura:attribute name="caseWrapperMNF" type="SAETTSCaseWrapper" access="public"/>
+
+    <aura:attribute name="AutodocKey" type="string" access="public"/>
+    <aura:attribute name="autodocPageFeature" type="String" />
+    <aura:attribute name="isHippaInvokedInProviderSnapShot" type="Boolean" default="false"/>
+
+    <aura:attribute name="eligibleDate" type="String" access="public"/>
+    <!--chandra-->
+    <aura:attribute name="providerDetailsForRoutingScreen" type="Object" access="public" />
+	<aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+
+    <!--Autodoc-->
+    <aura:attribute name="memberautodocUniqueId" type="String" default="auto" />
+    <!--US280113 Claim Results line selection functionality -->
+    <aura:handler event="c:ACET_PolicyswitchclaimsEvent" action="{!c.dohideClaimResults}"/>
+    <!--Added Chandra for View PCP START-->
+    <aura:attribute name="componentId" type="String"/>
+    <aura:attribute name="memberDOB" type="string" access="public" />
+    <aura:attribute name="memberFN" type="string" access="public" />
+    <aura:attribute name="policyNumber" type="String" access="public"/>
+    <aura:attribute name="houseHoldMemberId" type="String" access="public" />
+    <aura:attribute name="currentPayerId" type="String" access="public"/>
+    <aura:attribute name="autoDocToBeDeleted" type="Object"/>
+    <aura:attribute name="isDependent" type="boolean" default="false" access="public"/>
+    <!--Added Chandra for View PCP END-->
+
+    <!--Added Bharat for Authorization START-->
+    <aura:attribute name="memberLN" type="string" access="public" />
+    <aura:attribute name="Type" type="String" />
+    <aura:attribute name="SubType" type="String" />
+    <aura:attribute name="IsCaseSaved" type="Boolean" default="false" />
+    <aura:attribute name="AuthAutodocPageFeature" type="String" default="authPageDetails" />
+    <aura:attribute name="authContactName" type="String" />
+    <aura:attribute name="SRNFlag" type="Boolean" default="false" />
+    <aura:attribute name="interactionType" type="string" />
+    <aura:attribute name="AutodocPageFeatureMemberDtl" type="String" />
+    <aura:attribute name="isAutodocForMultiplePages" type="Boolean" default="false" />
+    <aura:attribute name="AutodocKeyMemberDtl" type="String"/>
+    <aura:attribute name="caseNotSavedTopics" type="String[]"/>
+    <aura:attribute name="selectedTabType" type="String" access="public"/>
+    <aura:attribute name="originatorType" type="string" access="public"/>
+    <aura:attribute name="noMemberToSearch" type="Boolean" default="false" />
+
+    <aura:attribute name="insuranceTypeCode" type="String" default=""/>
+    <aura:attribute name="memberId" type="string" access="public"/>
+    <aura:attribute name="claimEngineCodeObj" type="Object[]"/>
+    <!--Added Bharat for Authorization END-->
+
+    <!--Added Bharat for Financial Start-->
+	<aura:attribute name="selectedPolicy" type="SAEMemberProviderSearchCoveragesResult.FinancialsWrapper" access="public"/>
+    <aura:attribute name="memberPolicies" type="SAEMemberProviderSearchCoveragesResult.CoverageLine[]" />
+    <aura:attribute name="callTopicOrder" type="Object" />
+    <aura:attribute name="planLevelBenefitsRes" type="ACET_ExtendedServiceController.PlanLevelBenefits" access="Public"/>
+    <aura:attribute name="highlightedPolicySourceCode" type="String" default=""/>
+    <aura:attribute name="isSourceCodeChanged" type="Boolean" default="false"/>
+    <aura:attribute name="policyStatus" type="Boolean" default="false"/>
+    <aura:attribute name="isTierOne" type="boolean" access="public" default="false"/>
+
+        <!--Added Bharat for Financial END-->
+         <!--DE393490 - Sravan-->
+            <aura:attribute name="memberMap" type="Map" access="public"/>
+
+    <!--US3117073 - Multiple Policies -  Creating Multiple Unique ORS Records Check In ISET - Sravan-->
+    <aura:attribute name="memberPolicyNumberMap" type="Map" default=""/>
+
+    <!--US3189884 - Highlight Panel Default Close upon Scrolling and Default Close on details page - Sravan-->
+    <aura:attribute name="callTopicLstSelected" type="sObject[]"/>
+    <aura:attribute name="callTopicTabId" type="String" />
+<!-- USUS2858385 -Rizwan-->
+     <aura:attribute name="iVRDetails" type="Object" access="public" />
+    <aura:attribute name="isVCCD" type="Boolean" default="false" />
+    <aura:attribute name="providerDetails" type="Object" access="public" />
+	<aura:attribute name="claimDetailsObj" type="Object[]"/>													 
+
+
+     <!--Ketki - open membersnap shot page for newly found memeber -->
+
+     <aura:attribute name="contactName" type="Object" access="public" />
+     <aura:attribute name="isOtherSearch" type="Object" access="public" />
+     <aura:attribute name="providerNotFound" type="Object" access="public" />
+     <aura:attribute name="isProviderSearchDisabled" type="Object" access="public" />
+     <aura:attribute name="memberCardFlag" type="Object" access="public" />
+     <aura:attribute name="contactCard" type="Object" access="public" />
+     <aura:attribute name="houseHoldData" type="Object[]" />
+    <aura:attribute name="dependentCode" type="String" />
+    <aura:attribute name="cobData" type="Object" />
+    <aura:attribute name="secondaryCoverageList" type="Object[]" />
+    <aura:attribute name="cobMNRCommentsTable" type="Object"/>
+    <aura:attribute name="regionCode" type="String" />
+    <aura:attribute name="cobENIHistoryTable" type="Object"/>
+    <aura:attribute name="flowDetails" type="Object" access="public" />
+    <!-- Durga-->
+        <aura:attribute name="showAdvanceSearch" type="Boolean" default="false" access="public"/>
+        <aura:attribute name="advClaimInput" type="object"/>
+        <aura:attribute name="enablePopup" type="Boolean" default="false"/>
+    <aura:handler event="c:ACET_EnableAutoDocLink" action="{!c.enableLink}"/>
+    <!-- US3177995 - Thanish - 22nd Jun 2021 -->
+    <aura:attribute name="subjectCard" type="Object" access="public"/>
+
+    <!--Ketki - open membersnap shot page for newly found memeber end -->
+
+     <lightning:layout class="slds-p-top_small">
+        <lightning:layoutItem size="12" class="slds-card card_padding"> <!-- US2045625 - Thanish - 2nd Oct 2019 -->
+            <!-- US1918629 Venkat 15th Sep 2020 -->
+            <c:SAE_ClaimsSearch isVCCD="{!v.isVCCD}" iVRDetails="{!v.iVRDetails}" memberCardData="{!v.memberCardData}"
+                                memberCardSnap="{!v.memberCardSnap}" policySelectedIndex="{!v.policySelectedIndex}"
+                                eligibleDate="{!v.eligibleDate}" interactionCard="{!v.interactionCard}"
+                                climsSearchSelectedOption="{!v.climsSearchSelectedOption}"
+                                autodocUniqueId = "{!v.autodocUniqueId}" ClaiminputFromLastClaim="{!v.claimInput}"
+                                claimInput2 = "{!v.claimInput2}" showAdvanceSearch="{!v.showAdvanceSearch}" advClaimInput="{!v.advClaimInput}" memberTabId="{!v.memberTabId}"
+                                highlightedPolicySourceCode = "{!v.highlightedPolicySourceCode}"
+                                enablePopup="{!v.enablePopup}"/>
+            <!--Claiminputs="{!v.claimInput}"-->
+         </lightning:layoutItem>
+    </lightning:layout>
+
+    <!-- End of Search Claim CMP -->
+     <!--US1918611 - Claim Search Results UI -->
+     <aura:If isTrue="{! v.showClaimResults }">
+        <lightning:layout class="slds-p-top_small">
+            <lightning:layoutItem size="12" class="slds-card slds-p-bottom_none slds-m-bottom_none">
+               <c:ACET_ClaimSearchResults aura:id="claimSearchResults" claimInput="{!v.claimInput}" showComments = "{!v.showComments}"
+                                          caseWrapperMNF="{!v.caseWrapperMNF}" autodocPageFeature="{!v.autodocPageFeature}"
+                                          AutodocKey="{!v.AutodocKey}"  interactionRec="{!v.interactionRec}"
+                                          hipaaEndpointUrl="{!v.hipaaEndpointUrl}" contactUniqueId="{!v.contactUniqueId}"
+										  claimDetailsObj="{!v.claimDetailsObj}" 
+                                          interactionOverviewTabId="{!v.interactionOverviewTabId}"
+                                          providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}"
+                                          flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}"
+                                          commentsValue="{!v.commentsValue}" showNewMessage = "{!v.showNewMessage}"
+                                          policyDetails="{!v.policyDetails}"
+                                          closedClaimDetails="{!v.closedClaimDetails}"
+                                          memberautodocUniqueId="{!v.memberautodocUniqueId}"
+        								  policySelectedIndex="{!v.policySelectedIndex}"
+                                          autodocUniqueId = "{!v.autodocUniqueId}"
+                                          autodocUniqueIdCmp="{!v.policySelectedIndex}"
+                                          componentId="{!v.componentId}" memberDOB="{!v.memberDOB}"
+                                          memberFN="{!v.memberFN}" memberCardData="{!v.memberCardData}"
+                                          isDependent="{!v.isDependent}" memberCardSnap ="{!v.memberCardSnap}"
+                                          policyNumber="{!v.policyNumber}" houseHoldMemberId="{!v.houseHoldMemberId}"
+                                          memberPolicies="{!v.policyList}" currentPayerId="{!v.currentPayerId}"
+                                          autoDocToBeDeleted="{!v.autoDocToBeDeleted}"
+                                          memberLN="{!v.memberLN}"
+                                          Type="{! v.Type }"
+                                          Subtype="{! v.SubType }"
+                                          IsCaseSaved="{! v.IsCaseSaved }"
+                                          authContactName="{!v.authContactName}"
+                                          SRNFlag="{!v.SRNFlag}"
+                                          interactionType="{!v.interactionType}"
+                                          AutodocPageFeatureMemberDtl="{!v.AutodocPageFeatureMemberDtl}"
+                                          isAutodocForMultiplePages="{!v.isAutodocForMultiplePages}"
+                                          AutodocKeyMemberDtl="{!v.AutodocKeyMemberDtl}"
+                                          caseNotSavedTopics="{!v.caseNotSavedTopics}"
+                                          noMemberToSearch="{!v.noMemberToSearch}"
+                                          selectedTabType = "{!v.selectedTabType}"
+                                          originatorType = "{!v.originatorType}"
+                                          insuranceTypeCode="{!v.insuranceTypeCode}"
+                                          memberMap ="{!v.memberMap}"
+                                          memberPolicyNumberMap="{!v.memberPolicyNumberMap}"
+                                          selectedPolicy ="{!v.selectedPolicy}"
+                                          callTopicOrder = "{!v.callTopicOrder}"
+                                          planLevelBenefitsRes="{!v.planLevelBenefitsRes}"
+                                          eligibleDate ="{!v.eligibleDate}"
+                                          highlightedPolicySourceCode = "{!v.highlightedPolicySourceCode}"
+                                          isSourceCodeChanged="{!v.isSourceCodeChanged}"
+                                          policyStatus ="{!v.policyStatus}"
+                                          isTierOne ="{!v.isTierOne}"
+                                          memberId ="{!v.memberId}"
+                                          callTopicLstSelected="{!v.callTopicLstSelected}"
+                                          callTopicTabId="{!v.callTopicTabId}"
+                                          providerDetails="{!v.providerDetails}"
+
+                                          contactName = "{!v.contactName}"
+                                          isOtherSearch = "{!v.isOtherSearch}"
+                                          providerNotFound = "{!v.providerNotFound}"
+                                          isProviderSearchDisabled = "{!v.isProviderSearchDisabled}"
+                                           memberCardFlag = "{!v.memberCardFlag}"
+                                            contactCard = "{!v.contactCard}"
+                                          interactionCard="{!v.interactionCard}"
+                                          houseHoldData="{!v.houseHoldData}"
+                                          dependentCode="{!v.dependentCode}"
+                                          cobData="{!v.cobData}"
+                                          secondaryCoverageList="{!v.secondaryCoverageList}"
+                                          cobMNRCommentsTable="{!v.cobMNRCommentsTable}"
+                                          regionCode="{!v.regionCode}"
+                                          cobENIHistoryTable="{!v.cobENIHistoryTable}"
+                                          showAdvanceSearch="{!v.showAdvanceSearch}" advClaimInput="{!v.advClaimInput}"
+										  memberTabId="{!v.memberTabId}"
+										  enablePopup="{!v.enablePopup}"
+                                           flowDetails="{!v.flowDetails}"
+                                          subjectCard="{!v.subjectCard}"
+                                          selectedIPAValue= "{!v.selectedIPAValue}"
+                                          claimEngineCodeObj="{!v.claimEngineCodeObj}"/> <!-- US3177995 - Thanish - 22nd Jun 2021 -->
+                                          <!--US3189884 - Sravan-->
+
+
+
+            </lightning:layoutItem>
+        </lightning:layout>
+        <!--<lightning:layout class="slds-p-top_small">
+            <lightning:layoutItem size="12" class="slds-card">
+               <c:SAE_ClaimSearchResults claimsList="{!v.claimSearchResult}" claimSearchFlag="{!v.claimSearchFlag}"
+                                         showComments = "{!v.showComments}" interactionRec="{!v.interactionRec}" caseWrapper="{!v.caseWrapper}"
+                                 caseWrapperMNF="{!v.caseWrapperMNF}" AutodocKey="{!v.AutodocKey}" isHippaInvokedInProviderSnapShot="{!v.isHippaInvokedInProviderSnapShot}"
+                                 autodocPageFeature="{!v.autodocPageFeature}" hipaaEndpointUrl="{!v.hipaaEndpointUrl}" contactUniqueId="{!v.contactUniqueId}" commentsValue="{!v.commentsValue}" interactionOverviewTabId="{!v.interactionOverviewTabId}"/>
+            </lightning:layoutItem>
+        </lightning:layout>-->
+        <lightning:layout class="slds-p-top_small">
+       		<aura:if isTrue="{!v.showComments}">
+                <lightning:layoutItem size="12" class="slds-card">
+                    <div class="slds-p-left_small slds-p-top_small card_right_padding card_bottom_padding">
+                            <c:ACET_HoverPopup aura:id="commentsId"
+                            moveRight=""
+                            description=""
+                            isNubbinLeft="true"
+                            descriptionList="[ 'Use the comments to include a brief','description of the issue, research performed,', 'and any attempts to resolve' ]" />
+
+                            <div class="slds-card__header slds-grid">
+                            <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                                <div class="slds-media__body">
+                                    <h2 class="slds-card__header-title">
+                                        <span class="slds-text-heading_small" >
+                                            <span style="border-bottom:1px dashed;padding:0px"
+                                            data-popupId="commentsId"
+                   onmouseover="{!c.togglePopup}"
+                       onmouseout="{!c.togglePopup}">
+                                            <b> Comments:</b>
+                                                </span>
+                                            <b class="component_title slds-p-left_small">View Claims</b></span>
+                                    </h2>
+                                </div>
+                            </header>
+                        </div>
+                        <div class="slds-card__body slds-card__body_inner">
+                            <lightning:textarea name="commentsTextArea"
+                                                value="{!v.commentsValue}"
+                                                label="Commets"
+                                                aura:id="commentsBoxId"
+                                                variant="label-hidden"
+                                                class="slds-p-top_small"
+                                                maxlength="2000"/>
+                            <span class="floatToRight valueCls slds-form-element__static">
+                                Characters remaining:
+                                <lightning:formattedNumber value = "{!2000-v.commentsValue.length}" />
+                            </span>
+                        </div>
+                    </div>
+                </lightning:layoutItem>
+            </aura:if>
+        </lightning:layout>
+        <!--US1918614 - Claim Payment Information UI -->
+       <!-- <div class="slds-grid slds-wrap" >
+            <div class="slds-size_6-of-12">
+                <div class="slds-m-right_small slds-m-top_small"> -->
+                        <!--US1956058 : Malinda-->
+                   <!--    <div>{!v.claimDetailCmp}</div>
+                </div>
+            </div>
+            <div class="slds-size_6-of-12">
+              <div class="slds-m-top_small" >
+                        <div>{!v.paymentDetailCmp}</div>
+                </div>
+            </div>
+        </div>-->
+        <!--US1918614 - END -->
+    </aura:If>
+    <!--US1918611 - END -->
+</aura:component>

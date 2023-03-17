@@ -1,0 +1,344 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction,lightning:isUrlAddressable" access="global" >
+    
+    <!-- Init Handler -->
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}" />
+
+     <!-- TTS Attributes-->
+    <aura:attribute name="cseTopic" type="String" access="public" default="{!$Label.c.ACETCallTopicViewConsumerDashboard}"/>
+	<aura:attribute name="srk" type="String" access="global" />
+    <aura:attribute name="int" type="Interaction__c" access="public"/>
+	<aura:attribute name="intId" type="String" access="global" />
+
+    <aura:attribute name="grpNum" type="String" access="public"/>
+    <aura:attribute name="memId" type="String" access="public"/>
+
+    <!-- Comments-->
+    <aura:attribute name="comments" type="String" access="global" />
+    
+    <!-- Opportunity -->
+    <aura:attribute name="opportunity"  type="string" default=""/>
+
+    <!-- Radio Button Change -->
+    <aura:attribute name="radioChange" type="String"/>    
+    <!-- Nurse  /Coach Name -->
+	<aura:attribute name="ncName"  type="string" default=""/>    
+    <!-- Date Time -->
+	<aura:attribute name="vcDate"  type="string" default=""/>
+    <aura:attribute name="vcTime"  type="string" default=""/>
+    <!-- Highlight Panel -->
+    <aura:attribute name="highlightPanel" type="ACETLGT_HighlightPanelInfo" access="global"/>
+    <aura:attribute name="hgltPanelDataString" type="String" access="global"/>
+    
+    <aura:attribute name="firstName" type="String" />
+    <aura:attribute name="lastName" type="String" />
+    <!-- Values For Consumer Dashboard-->
+    <aura:attribute name="memberTypeId" type="String" access="public"  default="SKEY"/>
+    <aura:attribute name="noOfOffers" type="String" access="public" default="99"/>
+    <!-- Error Validations : Nurse / Coach Name -->
+    <aura:attribute name="show_ncNameError" type="boolean" access="public" default="false"/>
+    <aura:attribute name="ncErrorMessage" type="String" access="public" default="{!$Label.c.ACETBlankError}"/>
+    <!-- Error Validations : Date -->
+    <aura:attribute name="show_vcDate" type="boolean" access="public" default="false"/>
+    <aura:attribute name="dateErrorMessage" type="String" access="public" default="{!$Label.c.ACETInvalidDateError}"/>
+    <aura:attribute name="priorDateErrorMessage" type="String" access="public" default="{!$Label.c.ACETPastDateError}"/>
+	<aura:attribute name="min_TodayVal" type="String" access="public"/>
+    <aura:attribute name="bookOfBusinessTypeCode" type="String" />
+    <aura:attribute name="show_vcDateError" type="boolean" access="public" default="false"/>
+    <aura:attribute name="show_vcPriorDateError" type="boolean" access="public" default="false"/>
+    <!-- Error Validations : Time -->
+    <aura:attribute name="show_vcTimeError" type="boolean" access="public" default="false"/>
+    <aura:attribute name="show_vcPriorTimeError" type="boolean" access="public" default="false"/>
+    <!--<aura:attribute name="show_vcPriorTimeError" type="boolean" access="public" default="false"/>-->
+    <aura:attribute name="timeErrorMessage" type="String" access="public" default="{!$Label.c.ACETInvalidTimeError}"/>
+    <aura:attribute name="priorTimeErrorMessage" type="String" access="public" default="{!$Label.c.ACETPastTimeError}"/>
+    <!-- Error Boolean Logger Values -->
+    <aura:attribute name="isValid_VCD_Opportunity" type="boolean" access="public" default="false"/>
+    <aura:attribute name="isValid_VCD_Appointment" type="boolean" access="public" default="false"/>
+    <aura:attribute name="isValid_VCD_Date" type="boolean" access="public" default="false"/>
+    <aura:attribute name="isValid_VCD_PriorDate" type="boolean" access="public" default="false"/>
+    <aura:attribute name="isValid_VCD_Time" type="boolean" access="public" default="false"/>
+    <aura:attribute name="isValid_VCD_PriorTime" type="boolean" access="public" default="false"/>
+    <aura:attribute name="isValid_VCD_ncName" type="boolean" access="public" default="false"/>
+    <!-- Opportunity Error Validation -->
+    <aura:attribute name = "isCDDropdownSetError" type= "boolean" access = "public" default="false"/>
+    <aura:attribute name="errorMessageSelection" type="String" access="public" default="{!$Label.c.ACETSelectError}"/>
+    <!-- Error Handlers -->
+    <aura:handler name="change" value="{!v.isCDDropdownSetError}" action="{!c.handleOppChange}"/>
+    <aura:handler name="change" value="{!v.show_ncNameError}" action="{!c.handleNurseNameChange}"/> 
+    <aura:handler name="change" value="{!v.show_vcDateError}" action="{!c.handlCVDateChange}"/> 
+    <aura:handler name="change" value="{!v.show_vcPriorDateError}" action="{!c.handlCVDateChange}"/> 
+    <aura:handler name="change" value="{!v.show_vcTimeError}" action="{!c.handlCVTimeChange}"/>
+    <aura:handler name="change" value="{!v.show_vcPriorTimeError}" action="{!c.handlCVTimeChange}"/>
+    <!-- Autodoc Attributes -->
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+    
+    <!--	Dynamic Call Types Attributes	US2528274 : Madhura Priyadarshana : 19 June 2020-->
+    <aura:attribute name="programsSelected" type="String[]" access = "public"/>
+    <aura:attribute name = "isProgramsListEmpty" type= "boolean" access = "global" default="false"/> 
+    
+    <div id="{!v.AutodocKey+'ViewConsumerDashboard'}">
+        <c:ACETLGT_AutoDoc></c:ACETLGT_AutoDoc>  
+        <lightning:workspaceAPI aura:id="workspace"/> 
+<lightning:card
+                variant="Narrow"
+                    title="{!$Label.c.ACETCallTopicViewConsumerDashboard}"
+                iconName="standard:household"
+                class="" 
+                >       
+    <br/>
+    <aura:set attribute="actions">
+        <div class="slds-grid slds-form-element slds-m-right_large">
+            <lightning:buttonGroup>
+
+                <c:ACETLGT_TTSModal aura:id = "cComp"
+                                        cseTopic="{!$Label.c.ACETCallTopicViewConsumerDashboard}" 
+                                        int="{!v.int}" 
+                                        intId="{!v.intId}" 
+                                        srk="{!v.srk}"                                     
+                                        memberId="{!v.memId}"
+                                        groupId="{!v.grpNum}" 
+                                        highlightPanel="{!v.highlightPanel}"
+                                        showCirrus="true"  
+                                        comments = "{!v.comments}"
+                                    	bookOfBusinessTypeCode="{!v.bookOfBusinessTypeCode}"
+                                        pagefeature="{!v.AutodocKey+'ViewConsumerDashboard'}" 
+                                        AutodocKey="{!v.AutodocKey+'ViewConsumerDashboard'}"
+                                        
+                                        isValid_VCD_Opportunity = "{!v.isValid_VCD_Opportunity}"
+                                        isValid_VCD_Appointment = "{!v.isValid_VCD_Appointment}"
+                                        isValid_VCD_Date = "{!v.isValid_VCD_Date}"
+                                        isValid_VCD_PriorDate = "{!v.isValid_VCD_PriorDate}"
+                                        isValid_VCD_Time = "{!v.isValid_VCD_Time}"
+                                        isValid_VCD_PriorTime = "{!v.isValid_VCD_PriorTime}"
+                                        isValid_VCD_ncName = "{!v.isValid_VCD_ncName}"
+                                        opportunity = "{!v.opportunity}"
+                                        isCDDropdownSetError = "{!v.isCDDropdownSetError}"
+                                        vcTime = "{!v.vcTime}"
+                                        vcDate = "{!v.vcDate}"
+                                        ncName = "{!v.ncName}"
+                                        show_ncNameError = "{!v.show_ncNameError}"
+                                        show_vcDateError = "{!v.show_vcDateError}"
+                                        show_vcTimeError = "{!v.show_vcTimeError}"
+                                        show_vcPriorDateError="{!v.show_vcPriorDateError}"
+                                        show_vcPriorTimeError="{!v.show_vcPriorTimeError}"
+                                        isConsumerDashboardModal = "true"
+                                    	programsSelected="{!v.programsSelected}"
+                                        isProgramsListEmpty="{!v.isProgramsListEmpty}"
+                                    />    
+
+                <lightning:button label="Clear" onclick="{!c.onClear}"  />                    
+            </lightning:buttonGroup>
+        </div>
+    </aura:set>
+        <p class="slds-p-horizontal_small"></p>         
+
+    <c:ACETLGT_HighlightPanel highlightPanelValues="{!v.highlightPanel}" pageFeature="{!v.AutodocKey+'ViewConsumerDashboard'}"  ShowComments="false"/>
+</lightning:card>
+
+<!-- Component Dashboard-->
+<!-- US2430908 : Care Path Opportunity-->
+	<div class="slds-m-top_x-small">
+        <div class="slds-card card_top_margin card_bottom_padding card_bottom_margin">
+				<lightning:layout verticalAlign="center" class="card_padding">
+					<lightning:layoutItem>
+						<div style="margin-right: 12px;"><lightning:icon iconName="standard:customer_portal_users" alternativeText="Icon"/></div>
+					</lightning:layoutItem>
+					<lightning:layoutItem>
+						<div class="component_title">Care Path Opportunities</div>
+					</lightning:layoutItem>
+            			</lightning:layout>
+            			<!-- <c:ADB_OpportunityComponent memberId="910810825" memberXrefId="{!v.srk}"-->
+            			 
+            			<c:ADB_OpportunityComponent memberXrefId="{!v.srk}" 
+                                            memberTypeId = "{!v.memberTypeId}"
+                                            noOfOffers = "{!v.noOfOffers}"
+                                            showUpDate = "false"
+                                            highlightPanel = "{!v.highlightPanel}"
+                                            subject_firstName = "{!v.firstName}"
+                                            subject_lastName = "{!v.lastName}"
+                                            showLaunchBtn = "true"
+                                            AutodocSection="true"
+                                            AutodocKey="{!v.AutodocKey+'ViewConsumerDashboard'}"
+                                            />
+            			
+         </div>
+</div>    
+
+<!-- Component Body-->      
+	<div class="slds-grid ">
+        <div class="slds-col slds-size_1-of-2 card_element_right_margin" style="margin-top: -8px;">
+            <c:ACETLGT_DynamicCallTypes
+                                        aura:id="dynamicCallTypes" 
+                                        attrCallTopic="{!$Label.c.ACETCallTopicViewConsumerDashboard}" 
+                                        attrShowCheckBoxCallTypes="true"
+                                        valList="{!v.programsSelected}"
+                                        isPharmacyListEmptyError="{!v.isProgramsListEmpty}"
+                                        AutodocKey="{!v.AutodocKey+'ViewConsumerDashboard'}"
+                                        />
+        </div>
+        <div class="slds-col slds-size_1-of-2 card_right_padding">
+            <div data-auto-doc="true" data-auto-doc-feature="{!v.AutodocKey+'ViewConsumerDashboard'}" >
+            <div class="slds-grid  slds-wrap">                
+                <div class="slds-col slds-size_1-of-1 ">
+                    <div class="slds-box slds-theme_default" style="border:0px">
+                        
+                        <div>
+                            <div class="slds-truncate" style="padding-bottom: 0.3%;" ><label><abbr class="slds-required">*</abbr>Opportunity</label></div>
+                            <lightning:select aura:id="opp" class="removeLabel" name="opportunity" value="{!v.opportunity}" label="Opportunity"  variant="label-hidden" onchange="{!c.onOppChange}"  onblur="{!c.onOppBlur}">
+                                <option value="" >None</option>
+                                <option value="Accepted">Accepted</option>
+                                <option value="Declined">Declined</option>
+                                <option value="No Status">No Status</option>
+                            </lightning:select>
+                            <div aura:id="errorSelection" class="{!v.isCDDropdownSetError? 'slds-show': 'slds-hide'}">
+                                <label class="slds-text-color_error">{!v.errorMessageSelection}</label>
+                            </div>
+                        </div>
+                        
+                        <div class="{!v.opportunity == 'Accepted' ? 'slds-show , slds-p-top_small': 'slds-hide'}">
+                            <div class="slds-grid slds-p-top_small">
+                                <div class="slds-col slds-p-horizontal_medium slds-size_3-of-12">
+                                    <span><p title="Appointment Scheduled">Appointment Scheduled</p> </span>
+                                </div>
+                                <div class="slds-col slds-p-horizontal_medium slds-size_2-of-12">
+                                    <span>
+                                        <p class="slds-float_left">
+                                            <fieldset class="slds-form-element">
+                                                <div class="slds-form-element__control">
+                                                    <input type="radio" id="rco_vcondash_yes" name="VConDash"  value="SelectedTrue"  onchange="{!c.onRadioChange}" />
+                                                    <label class="slds-radio__label" for="radio-Yes">
+                                                        <span class="slds-radio_faux"></span>
+                                                        <span class="slds-form-element__label">Yes</span>
+                                                    </label>
+                                                    
+                                                    <input type="radio" id="rco_vcondash_no" name="VConDash" value="SelectedFalse" checked="checked" onchange="{!c.onRadioChange}"/>
+                                                    <label class="slds-radio__label" for="radio-No">
+                                                        <span class="slds-radio_faux"></span>
+                                                        <span class="slds-form-element__label">No</span>
+                                                    </label>
+                                                </div>
+                                            </fieldset>
+                                        </p>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="{!and((v.opportunity == 'Accepted'), (v.radioChange == 'SelectedTrue')) ? 'slds-show': 'slds-hide'}">
+                            <div class="slds-grid slds-p-top_small">
+                                <div class="slds-grid" style="width:100%;">
+                                    <div class="slds-col slds-p-horizontal_medium slds-size_1-of-2">
+                                        <div class="slds-truncate" ><label><abbr class="slds-required">*</abbr>Date</label></div>
+                                        <span><lightning:input aura:id="vcDate"
+                                                               class="removeLabel"
+                                                               type="date" 
+                                                               value="{!v.vcDate}" 
+                                                               name="vcDate" 
+                                                               label="Date" 
+                                                               dateStyle="short" 
+                                                               variant="label-hidden"
+                                                               min = "{!v.min_TodayVal}"
+                                                               autocomplete="none"
+                                                               pattern="/^([0-9]{4})\-([0-9]{2})\-([0-9]{2})$/"
+                                                               onblur="{!c.onDateBlur}"
+                                                               messageWhenValueMissing=" "  
+                                                               messageWhenBadInput=" "
+                                                               messageWhenPatternMismatch=" " 
+                                                               />
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="slds-col slds-p-horizontal_medium slds-size_1-of-2" >
+                                        
+                                        <div class="slds-truncate" ><label><abbr class="slds-required">*</abbr>Time</label></div>
+                                        <span><lightning:input aura:id="vcTime"
+                                                               type="time" 
+                                                               value="{!v.vcTime}" 
+                                                               name="vcTime" 
+                                                               variant="label-hidden"
+                                                               onblur="{!c.onTimeBlur}"
+                                                               messageWhenValueMissing=" " 
+                                                               messageWhenPatternMismatch=" " 
+                                                               messageWhenBadInput=" " 
+                                                               /> 
+                                        </span>
+                                    </div>
+                                </div> 
+                            </div>
+                            <div class="slds-grid  slds-p-bottom_small" style="width:100%;">
+                                <div class="slds-col slds-size_1-of-2">
+                                    <!-- Date Error Message-->
+                                    <div aura:id="errorDate" class="{!v.show_vcDateError? 'slds-show': 'slds-hide'}">
+                                        <aura:if isTrue="{!v.show_vcDateError}">
+                                            <label class="slds-text-color_error">{!v.dateErrorMessage}</label>
+                                        </aura:if>
+                                    </div>
+                                    <div aura:id="errorPriorDate" class="{!v.show_vcPriorDateError? 'slds-show': 'slds-hide'}">
+                                        <aura:if isTrue="{!v.show_vcPriorDateError}">
+                                            <label class="slds-text-color_error">{!v.priorDateErrorMessage}</label>
+                                        </aura:if>
+                                    </div> 
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <!-- Time Error Message-->
+                                    <div aura:id="errorTime" class="{!v.show_vcTimeError? 'slds-show': 'slds-hide'}">
+                                        <aura:if isTrue="{!v.show_vcTimeError}">
+                                            <label class="slds-text-color_error  slds-grid">{!v.timeErrorMessage}</label>
+                                        </aura:if>
+                                    </div>
+                                    <div aura:id="errorPriorTime" class="{!v.show_vcPriorTimeError? 'slds-show': 'slds-hide'}">
+                                        <aura:if isTrue="{!v.show_vcPriorTimeError}">
+                                            <label class="slds-text-color_error  slds-grid ">{!v.priorTimeErrorMessage}</label>
+                                        </aura:if>
+                                    </div> 
+                                </div>
+                            </div> 
+                            <div class="slds-col slds-p-horizontal_medium slds-size_12-of-12 slds-p-top_small">
+                                <div class="slds-truncate" ><label><abbr class="slds-required">*</abbr>Nurse/Coach Name</label></div>
+                                <lightning:input aura:id="ncName" 
+                                                 name="ncName" 
+                                                 value="{!v.ncName}" 
+                                                 label="Nurse/Coach Name" 
+                                                 variant="label-hidden"
+                                                 onblur="{!c.onNCNameBlur}"   
+                                                 />
+                            </div>
+                            <!-- Nurse / Coach Error Message-->
+                            <div aura:id="errorBlank" class="{!v.show_ncNameError? 'slds-show': 'slds-hide'}">
+                                <label class="slds-text-color_error">{!v.ncErrorMessage}</label>
+                            </div>
+                        </div> 
+                    </div>
+                </div>
+                
+                
+                
+                <!-- Comments Section-->
+                <div class="slds-col slds-size_1-of-1">
+                    <div class="slds-box slds-theme_default card_top_margin">
+                        <div class="slds-col">
+                            <div class="slds-truncate" ><label>Comments</label></div>
+                            <lightning:textarea
+                                                aura:id="comments"
+                                                label="Comments"
+                                                value="{!v.comments}"
+                                                rows="6"
+                                                cols="60"
+                                                Class="slds-form-element__label slds-form-element__control slds-text-body_small"
+                                                variant="label-hidden" 
+                                                /> 
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+    
+    </div>
+
+
+
+	<div class="slds-p-around_xx-large"></div>
+    </div>
+</aura:component>

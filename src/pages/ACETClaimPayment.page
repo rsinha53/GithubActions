@@ -1,0 +1,664 @@
+<apex:page controller="ACETClaimPaymentController" sidebar="false"
+           title="Claims Payments" action="{!init}" id="mypage" docType="html-5.0">
+    <script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+    <!--apex:includeScript value="{!URLFOR($Resource.JQuery, '/js/jquery-1.4.2.min.js')}"  /-->
+    <apex:stylesheet value="{!URLFOR($Resource.ACETResources, '/css/m/memberdetail.css')}" />
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+    <style>
+        .autodoc {
+        vertical-align: middle;
+        }
+        .messageTable {
+        border: none !important;
+        }
+    </style>
+    <apex:form id="myform">
+        <!-- <div id="autodocCommentsContainer"
+             style="position: fixed; bottom: 0; right: 0; width: 400px; height: 100px; background-color: #E1E0DA; padding-left: 10px; padding-right: 10px; border: 3px solid #D18361; z-index: 10000">
+            <div id="autodocCommentsHeader"
+                 style="width: 100%; height: 24px; background-color: #E1E0DA; padding-top: 4px;">
+                <div style="float: left;">
+                    <img src="{!URLFOR($Resource.ACETResources, '/img/comments.png')}"
+                         style="vertical-align: middle; margin-right: 2px;" /> <span>Comments</span>
+                </div>
+                <div style="float: right;">
+                    <img id="btnMinimize"
+                         src="{!URLFOR($Resource.ACETResources, '/img/minimize.png')}" />
+                </div>
+            </div>
+            <textarea id="autodocComments" style="width: 100%; height: 50px; overflow: auto; border: none;" />
+            <div id="autodocCommentsFooter" style="width: 100%; height: 20px; background-color: #E1E0DA; bottom: 0" />
+        </div> -->
+        <apex:actionFunction name="showDetailsSection"
+                             action="{!showDetailsSection}" reRender="btnCheckNumber, imagelabel"
+                             status="PaymentSearchStatus"
+                             oncomplete="acet.autodoc.startAutodoc('pnlDetails');">
+            <apex:param value="" name="param1" assignTo="{!ShowDetails}" />
+        </apex:actionFunction>
+        <apex:actionFunction action="{!search}" name="search"
+                             reRender="pbDetails,pnlresults,pmtressec,pnlMessages,sf_id,pmtdtl,payeeinfo,PmtSize, btnCheckNumber, imagelabel" status="PaymentSearchStatus" oncomplete="calldatatable();acet.autodoc.startAutodoc();disableCheckboxClick();" />
+        <apex:actionFunction action="{!searchutil}" name="searchutil"
+                             reRender="pnlDetails, PmtSize,pnlMessages,sf_id,pmtdtl,payeeinfo" status="PaymentSearchStatus" oncomplete="calldatatable();acet.autodoc.startAutodoc('pnlDetails');">
+            <apex:param value="" name="SeriesDesignator" assignTo="{!SeriesDesig}" />
+            <apex:param value="" name="CheckNumber" assignTo="{!CheckNum}" />
+        </apex:actionFunction>
+        <c:ACETInteractionHighlightsPanel InteractionAtt="{!Interaction}"
+                                          SubjectAtt="{!Subject}" AdditionalInfoAtt="{!AdditionalInfo}"
+                                          html-auto-doc="auto" selectedOriginator="{!wrapper.interaction.Originator_Name__c}"/>
+        <apex:outputPanel id="hippapopupPanel">
+                       <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+            </apex:outputPanel>   
+        <apex:sectionHeader title="Payment Search" />
+        <apex:outputPanel id="pnlMessages">
+           <apex:pageMessages /> 
+        </apex:outputPanel>
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+                           attrShowSaveAndCloseButton="false" attrShowSaveButton="true"
+                           attrShowMisdirectButton="true" 
+                           attrSourceOriginator="{!Interaction.Interaction_Type__c}"
+                           attrInteractionId="{!wrapper.Interaction.Id}"
+                           attrSubjectId="{!wrapper.Subject.Id}" 
+                           attrCallTopic="View Payments" 
+                           attrInteractionObj="{!wrapper.interaction}"/> 
+        
+        <c:ValidateData typeVal="Global Rule;View Payment"/>   
+        <apex:pageBlock id="pbSearch" title="">
+             <apex:pageBlockSection columns="3">
+                <apex:pageBlockSectionItem dataStyle="width:16.67%;"
+                                           labelStyle="width:16.67%;">
+                        <apex:outputLabel value="Payment Number" for="checknumber"></apex:outputLabel>
+                        
+                   <apex:outputPanel styleclass="dataCol">
+                        <div class="requiredInput">
+                            <div class="requiredBlock"></div>
+                            <apex:input type="search" id="checknumber" value="{!CheckNumber}" onfocus="blockNonNumericPasteInPaymentNumber();"/>
+                        </div>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem dataStyle="width:16.67%;"
+                                           labelStyle="width:16.67%;">
+                    <apex:outputLabel value="Series Designator" for="seriesdesignator"></apex:outputLabel>
+                    <apex:input type="search" id="seriesdesignator" value="{!SeriesDesignator}" />
+                </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem dataStyle="width:16.67%;"
+                                           labelStyle="width:16.67%;">
+                    <apex:outputLabel value="Member ID" for="memberid"></apex:outputLabel>
+                    <apex:input type="search" id="memberid" styleClass="patient"
+                                    value="{!MemberId}" />
+                </apex:pageBlockSectionItem>
+                
+            </apex:pageBlockSection>
+            <apex:pageBlockButtons location="bottom">
+                
+                
+                <apex:actionFunction action="{!clear}" name="clear"
+                                     reRender="pnlDetails,pnlresults,pnlMessages, btnCheckNumber, imagelabel" />
+                <input type="button" id="btnSearch" class="btn" value="Search"
+                       onclick="return validatecheckno();" />
+                <input type="button" id="btnClearAll" class="btn" value="Clear"
+                       onclick="return clearForm();" />
+                
+            </apex:pageBlockButtons>
+        </apex:pageBlock>
+        <apex:outputPanel id="pnlresults">
+            <apex:pageBlock id="pbResults" title="Payment Search Results" rendered="{!ShowSearch}">
+                <apex:inputHidden id="selectedPaymentGUID"
+                                  value="{!SelectedPaymentGUID}" />
+                <apex:inputHidden id="PaymentSize" value="{!PaymentSize}" />
+                <apex:inputHidden id="PmtSize" value="{!PmtSize}" />
+                <apex:pageBlockSection columns="1" id="pmtressec" html-auto-doc="true" html-auto-doc-case-items="true" >
+                    
+                    <apex:pageBlockTable value="{!Payments}" styleClass="doc-list" var="w" id="results-table">
+                        <apex:column value="{!w.CheckEFTNumber}" headerValue="Payment Number" />
+                        <apex:column headerValue="Series Designator">{!w.SeriesDesignator}
+                            <div auto-doc-item="false">
+                                <apex:inputHidden id="wGUID" value="{!w.GUID}" />
+                                <apex:inputHidden id="wSeriesDesignator" value="{!w.SeriesDesignator}" />
+                                <apex:inputHidden id="wCheckEFTNumber" value="{!w.CheckEFTNumber}" />
+                            </div>
+                        </apex:column>
+                        <apex:column value="{!w.PaymentTotal}" headerValue="Payment Total" />
+                        <apex:column value="{!w.checkDate}" headerValue="Payment Date" />
+                        <apex:column value="{!w.PayeeName}" headerValue="Payee Name" />
+                        <apex:column value="{!w.PayeeAddress}" headerValue="Payee Address" />
+                        <apex:column value="{!w.City}" headerValue="City" />
+                        <apex:column value="{!w.State}" headerValue="State" />
+                        <apex:column value="{!w.Zip}" headerValue="Zip" />
+                    </apex:pageBlockTable>
+                    
+                    
+                </apex:pageBlockSection>
+            </apex:pageBlock>
+            
+            
+        </apex:outputPanel>
+        <apex:actionStatus id="PaymentSearchStatus">
+            <apex:facet name="start">
+                <p style="text-align: center;">
+                    <img src="/img/loading.gif" />&nbsp;Loading...
+                </p>
+            </apex:facet>
+        </apex:actionStatus>
+        <apex:outputPanel id="pnlDetails">
+            <apex:pageBlock id="pbDetailsblank" ></apex:pageBlock>
+            <apex:pageBlock id="pbDetails"  mode="maindetail">
+                <apex:pageBlockSection id="pmtdtl" rendered="{!ShowDetails}" title="Payment Details" columns="3" 
+                                       html-auto-doc="true">
+                    <apex:pageBlockSectionItem dataStyle="width:16.67%;"
+                                               labelStyle="width:16.67%;">
+                        <apex:outputLabel value="Payment Total" for="PaymentTotal" />
+                        <apex:outputText value="{!SelectedPayment.PaymentTotal}"
+                                         id="PaymentTotal" />
+                    </apex:pageBlockSectionItem>
+                    <!-- <apex:pageBlockSectionItem dataStyle="width:16.67%;"
+                                               labelStyle="width:16.67%;">
+                        <apex:outputLabel value="Bulk Payment" for="BulkCheck" />
+                        <apex:outputText value="{!SelectedPayment.BulkCheck}"
+                                         id="BulkCheck" />
+                    </apex:pageBlockSectionItem> -->
+                    <apex:pageBlockSectionItem dataStyle="width:16.67%;"
+                                               labelStyle="width:16.67%;">
+                        <apex:outputLabel value="Check Status" for="CheckStatus" />
+                        <apex:outputText value="{!checks.checkStatus}"
+                                         id="CheckStatus" />
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:16.67%;"
+                                               labelStyle="width:16.67%;">
+                        <apex:outputLabel value="Void/Stop Date" for="VoidStopDate" />
+                        <apex:outputText value="{0,date,MM/dd/yyyy}" id="VoidStopDate">
+                            <apex:param value="{!checks.VoidStopDate}" />
+                        </apex:outputText>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:16.67%;"
+                                               labelStyle="width:16.67%;" id="ptsecitem">
+                        <apex:outputLabel value="Payment Type" for="txtPaymentType" />
+                        <apex:outputText value="{!SelectedPayment.PaymentType}"
+                                         id="txtPaymentType" />
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:16.67%;"
+                                               labelStyle="width:16.67%;">
+                        <apex:outputLabel value="Issue Date" for="IssueDate" />
+                        <apex:outputText value="{!SelectedPayment.checkDate}"
+                                         id="IssuedDate" />
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:16.67%;"
+                                               labelStyle="width:16.67%;">
+                        <apex:outputLabel value="Returned Date" for="ReturnedDate" />
+                        <apex:outputText value="{!checks.returnedDate}"
+                                         id="ReturnedDate" />
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:16.67%;"
+                                               labelStyle="width:16.67%;">
+                        <apex:outputLabel value="Series Designator" for="SeriesDesignator" />
+                        <apex:outputText value="{!SelectedPayment.SeriesDesignator}"
+                                         id="SeriesDesignator" />
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:16.67%;"
+                                               labelStyle="width:16.67%;">
+                        <apex:outputLabel value="Cashed Date" for="CashedDate" />
+                        <apex:outputText value="{0,date,MM/dd/yyyy}" id="CashedDate">
+                            <apex:param value="{!checks.CashedDate}" />
+                        </apex:outputText>
+                    </apex:pageBlockSectionItem> 
+                    <apex:pageBlockSectionItem dataStyle="width:16.67%;"
+                                               labelStyle="width:16.67%;">
+                        <apex:outputLabel value="Remailed Date" for="RemailedDate" />
+                        <apex:outputText value="{!checks.remailedDate}"
+                                         id="RemailedDate" />
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:16.67%;"
+                                               labelStyle="width:16.67%;">
+                        <apex:outputLabel value="Payment Number" for="CheckEFTNumber" />
+                        <apex:outputText value="{!SelectedPayment.CheckEFTNumber}"
+                                         id="CheckEFTNumber" />
+                    </apex:pageBlockSectionItem>
+                    
+                    
+                    <apex:pageBlockSectionItem dataStyle="width:16.67%;"
+                                               labelStyle="width:16.67%;">
+                        <!-- <apex:outputLabel value="" /> -->
+                        <apex:outputText value=""
+                                         />
+                    </apex:pageBlockSectionItem> 
+                </apex:pageBlockSection>
+                <apex:pageBlockSection columns="1" title="Payee Information"
+                                       html-auto-doc="true" rendered="{!ShowDetails}">
+                    <apex:pageBlockTable value="{!wrapperpayeeinfo }" var="w" id="payeeinfo"
+                                         title="Payee Information">
+                        <apex:column headerValue="Payee Type">
+                            {!w.PayeeType}
+                        </apex:column>
+                        
+                        <apex:column headerValue="Payee Name">
+                            {!w.PayeeName}
+                        </apex:column>
+                        <apex:column headerValue="Payee Address Line 1">
+                            {!w.PayeeAddressLine1}
+                        </apex:column>
+                        <apex:column headerValue="Payee Address Line 2">
+                            {!w.PayeeAddressLine2}
+                        </apex:column>
+                        <apex:column headerValue="City">
+                            {!w.City}
+                        </apex:column>
+                        <apex:column headerValue="State">
+                            {!w.State}
+                        </apex:column>
+                        <apex:column headerValue="Zip">
+                            {!w.Zip}
+                        </apex:column>
+                    </apex:pageBlockTable>
+                    
+                </apex:pageBlockSection>
+                <apex:pageBlockSection id="sf_id" title="Paid Claims" columns="1"
+                                       html-auto-doc="true" html-auto-doc-pagination="true" html-auto-doc-section-key="pbSearchResults" html-auto-doc-section-column-indexes="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16"  rendered="{!ShowDetails}">
+                    <apex:outputPanel html-auto-doc-pagination="true" styleClass="enablePagination" html-auto-doc-section-combinedkey="pbSearchResults" >
+                    <c:ACETDataTable attrDatatableWrapper="{!DTWrapper}" />
+                            </apex:outputPanel>
+                </apex:pageBlockSection>
+                <apex:pageBlockButtons location="top">
+                    
+                    <apex:commandButton id="btnCheckNumber" onclick="CheckImage('{!JSENCODE(CheckImageUrl)}');return false;" value="Check Image"
+                                        disabled="{!disableChecknumber}" rendered="{!isCheck}" reRender="pbDetailsblank"/> 
+                   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<apex:outputLabel id="imagelabel" style="" value="No image available. Payment made electronically."
+                    rendered="{!disableChecknumber}">
+                    </apex:outputLabel>
+                                                                                
+                                                                              
+                </apex:pageBlockButtons>
+            </apex:pageBlock>
+        </apex:outputPanel>
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+                           attrShowSaveAndCloseButton="false" attrShowSaveButton="true"
+                           attrShowMisdirectButton="true" 
+                           attrSourceOriginator="{!Interaction.Interaction_Type__c}"
+                           attrInteractionId="{!wrapper.Interaction.Id}"
+                           attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="View Payments" 
+                           attrLocation="bottom"   
+                           attrInteractionObj="{!wrapper.interaction}"/>
+    </apex:form>
+    
+    <script>
+    
+    function clearForm(){
+        $("[id$='btnClearAll']").closest('form').find("input[type=search]").val("");
+        $("[id$='checknumber']").removeClass('error');
+        $("[id*='errorMsgDiv']").remove();
+        $("[class*='errorMsg']").remove();
+        clear();  
+        return true;
+    }   
+    function clearPatientForm(){
+        $(".patient").val(""); 
+        clear();
+        return true; 
+    }
+    
+    function drawCallback(settings)
+    {
+        acet.autodoc.startAutodoc('sf_id');
+    }
+    
+    function initDatatableComplete(settings, json){ 
+        console.log("json :");
+        console.log(json);
+        acet.autodoc.startAutodoc('sf_id');
+    } 
+    
+    function processDatatable(row, data, dataIndex) { 
+        console.log('claim data');       
+        console.log(data);
+        var SRK = "{!JSENCODE($CurrentPage.parameters.SRK)}";
+        var EIDstring = "{!JSENCODE($CurrentPage.parameters.EIDstring)}";
+        $(row).attr("data-row", JSON.stringify(data));
+        $(row).children().first().html("<a id='lnkClaimId' href='#'>" + data.ClaimNumber + "</a>");        
+        $(row).children().first().on('click', function(e){    
+            var primaryCalltopicTabId = '{!JSENCODE($CurrentPage.parameters.primaryCalltopicTabId)}';
+            var additionalInfoStr = '{!JSENCODE(hpAdditionInfoStr)}';
+	    sforce.console.getEnclosingTabId(function(result) {
+               var url = '/apex/ACETClaimSearch?claimId='+data.ClaimNumber+ '&interactionId={!JSENCODE(Interaction.Id)}' +'&contactId={!JSENCODE(Subject.Id)}'+ '&sourceOriginator={!JSENCODE(sourceOriginator)}'+'&additionalInfo='+encodeURIComponent(additionalInfoStr) + '&memberid='+data.MemberID+'&SRK='+SRK+'&'+'EIDstring='+EIDstring+'&'+'FirstName='+data.FirstName+'&'+'LastName='+data.LastName;
+                url = url + '&primaryCalltopicTabId=' + (primaryCalltopicTabId ? primaryCalltopicTabId : result.id);
+                console.log('url'+url);
+                
+                sforce.console.getFocusedPrimaryTabId(function(result){
+                    sforce.console.openSubtab(result.id, url, true,'Claim Search', null);
+                }); 
+            });
+                                                                        
+            return false;
+        });
+        
+    }
+    
+    function calldatatable()
+    {
+        var paymentssize = $("[id$='PaymentSize']").val(); 
+        var pmtsize = $("[id$='PmtSize']").val(); 
+        if(paymentssize == 1 || pmtsize == 1)
+        {
+            acet.datatables['datatable'].initDatatable();
+        }
+        
+        
+    }  
+    
+    /* 
+    function validatecheckno(){ 
+        var $checknumber= $("[id$='checknumber']");                                              
+        $checknumber.removeClass("error").parent().find(".errorMsg").remove(); 
+        var result = true;                    
+        if($checknumber.val() == ""){ 
+            var errorMsg = "You must enter a value"; 
+            $checknumber.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            result = false; 
+        }else{
+            search();
+            
+            
+        } 
+        return result;             
+    } 
+ */
+
+    function validatecheckno(){ 
+        //var $lastname= $("[id$='lastname']");
+        //var $firstname= $("[id$='firstname']"); 
+         
+        var $checknumber= $("[id$='checknumber']");   
+        $checknumber.val($checknumber.val().trim());                                           
+        $checknumber.removeClass("error").parent().find(".errorMsg").remove(); 
+//         alert($checknumber.val());
+//         alert(isNumber($checknumber.val()));
+        if(isNumber($checknumber.val())||$checknumber.val()==''){
+            if(validateNew('','true') == true){
+                search();
+            }
+        }
+        else{
+            $checknumber.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> Numeric entries only.</div>');
+        }
+        return false;
+    }
+    
+    function blockNonNumericPasteInPaymentNumber(){
+                                
+        //on quantity field input changes, enable/disable submit order button
+        $("[id$='checknumber']").keyup(function (e){
+            if(!isNumber($(this).val())){
+                $(this).val('');
+            }                                   
+        });                       
+    } 
+    
+    
+    function CheckImage(chkURL)
+    {
+        console.log('Entering URL');
+        //var url = '{!JSENCODE(CheckImageUrl)}';
+        window.open(chkURL,'_blank', 'toolbars=0, width=1333, height=706 ,left=0 ,top=0 ,scrollbars=1 ,resizable=1');
+    }
+    /*$('[id$="results-table"] tr').click(function(){
+        alert('Click');
+        });*/
+        
+       
+    function disableCheckboxClick(){
+
+        
+        $("td[id*='results-table']").click(function(e){
+            clickElem(e.target.parentElement);       
+        });
+        
+        $("td[class*='autodoc']").click(function(e){
+            var clickedTag = e.target.tagName;
+            if(clickedTag=="TD"){
+                clickElem(e.target.parentElement);
+            }
+        
+        });
+        
+    }
+    
+    /*$("[id$='results-table']").find("tbody").find("tr").click(function(e){
+        alert('Click');
+        //do not invoke on autodoc checkbox
+        if(!$(e.target).is("input")){
+        //hightlight the selected row
+        $("tr.selected").removeClass("selected");
+        
+        
+        var paymentssize = $("[id$='PaymentSize']").val(); 
+            if(paymentssize == 1){  
+                
+                $("[id$='results-table']").find("tbody tr:first").addClass('active');
+                var eft = $("[id$='results-table']").find(".active").find("[id$='wCheckEFTNumber']").val();                 
+                var series = $("[id$='results-table']").find(".active").find("[id$='wSeriesDesignator']").val();                 
+                showDetailsSection(true);
+            }
+            else{
+                
+                showDetailsSection(true);
+                $(this).addClass("selected");
+                var eft = $(this).find("[id$='wCheckEFTNumber']").val();  
+                var series = $(this).find("[id$='wSeriesDesignator']").val(); 
+                alert(eft);
+                alert(series);
+                searchutil(series,eft);
+                
+             }
+        }
+        });                                    
+      */  
+    
+    function clickElem(elem){
+        
+        $(elem).parent().children().removeClass('active');
+        var paymentssize = $("[id$='PaymentSize']").val(); 
+        /*if(paymentssize == 1){  
+                alert(paymentssize);
+                $("[id$='results-table']").find("tbody tr:first").addClass('active');
+                var eft = $("[id$='results-table']").find(".active").find("[id$='wCheckEFTNumber']").val();                 
+                var series = $("[id$='results-table']").find(".active").find("[id$='wSeriesDesignator']").val();                 
+                showDetailsSection(true);
+            }*/
+        if(paymentssize > 1){  
+            
+            $(elem).addClass('active');
+            var eft = $(elem).find("[id$='wCheckEFTNumber']").val();  
+            var series = $(elem).find("[id$='wSeriesDesignator']").val(); 
+            searchutil(series,eft);
+            showDetailsSection(true);
+            
+        }
+    }
+    
+    $(document).ready(function() { 
+      localStorage.removeItem("table");
+        localStorage.removeItem("rowCheckHold");
+        acet.autodoc.startAutodoc();
+        acet.autodoc.createCommentsbox(); 
+        var payment = "{!JSENCODE($CurrentPage.parameters.payments)}";
+        if(payment == "true")
+        {
+            acet.datatables['datatable'].initDatatable();
+        }
+        $(document).keypress(
+            function(event){
+                if (event.which == '13') {
+                    event.preventDefault();
+                    $("[id$='btnSearch']").trigger('click');
+                }
+            });         
+        
+    }); 
+    
+    
+    
+    
+    function autodoc(){
+        alert('test');
+        acet.autodoc.startAutodoc();
+        
+        //request autodoc comments from sub tabs
+        var subjectId = '{!Subject.Id}';
+        console.log(subjectId);
+        
+        acet.autodoc.getAutodocFromSubTabs = function(){
+            acet.autodoc.additionalInfo = '';                                               
+            sforce.console.fireEvent('RequestClaimPaymentDetail_'.concat(subjectId), subjectId);                   
+        };
+        
+        //receive autodoc comments from sub tabs                      
+        sforce.console.addEventListener('ReceiveClaimPaymentDetail_'.concat(subjectId), function(r){                 
+            var res = JSON.parse(r.message);     
+            console.log('res reveived: '+res); 
+            //acet.autodoc.subTabIds.push(res.subTabId);  
+            
+            if(res.doc){
+                var spaceSeperator = '<div id="seperator" style="width:100%;height:50px;"></div>';                                 
+                acet.autodoc.additionalInfo = acet.autodoc.additionalInfo + spaceSeperator + res.doc;   
+            }              
+            
+            //close sub tab
+            sforce.console.closeTab(res.subTabId);                                      
+        });    
+        
+    }
+    
+    
+    $(document).ready(function(){
+        //request autodoc comments from sub tabs
+        var subjectId = '{!Subject.Id}';       
+        var primaryCalltopicTabId = '{!JSENCODE($CurrentPage.parameters.primaryCalltopicTabId)}';
+        
+        console.log('before init getAutodocFromSubTabs');
+        //request autodoc comments from sub tabs        
+        acet.autodoc.getAutodocFromSubTabs = function(){
+            sforce.console.getEnclosingTabId(function(result) {
+                console.log('Request Sub Tabs Autodoc:');
+                acet.autodoc.additionalInfo = '';                                               
+                sforce.console.fireEvent('RequestSubTabAutodoc', result.id); 
+            });
+        };
+        console.log(acet.autodoc.getAutodocFromSubTabs);
+        
+        //receive autodoc comments from sub tabs                      
+        sforce.console.addEventListener('ReceiveSubTabAutodoc', function(r){ 
+            console.log('sub tab autodoc is received');
+            sforce.console.getEnclosingTabId(function(result) {
+                var res = JSON.parse(r.message);     
+                
+                if(res.primaryCalltopicTabId == result.id){
+                    if(res.doc){
+                        var spaceSeperator = '<div id="seperator" style="width:100%;height:50px;"></div>';                                 
+                        acet.autodoc.additionalInfo = acet.autodoc.additionalInfo + spaceSeperator + res.doc;   
+                    }              
+                    
+                    //close sub tab
+                    sforce.console.closeTab(res.subTabId); 
+                }   
+            });                                 
+        }); 
+        
+        //acet.autodoc.getAutodocFromSubTabs = function(){
+            //acet.autodoc.additionalInfo = '';                                               
+            //sforce.console.fireEvent('RequestClaimPaymentDetail_'.concat(subjectId), subjectId);                   
+        //};
+        
+        //receive autodoc comments from sub tabs                      
+        //sforce.console.addEventListener('ReceiveClaimPaymentDetail_'.concat(subjectId), function(r){                 
+            //var res = JSON.parse(r.message);                
+            //acet.autodoc.subTabIds.push(res.subTabId);  
+            
+            //if(res.doc){
+                //var spaceSeperator = '<div id="seperator" style="width:100%;height:50px;"></div>';                                 
+                //acet.autodoc.additionalInfo = acet.autodoc.additionalInfo + spaceSeperator + res.doc;   
+            //}              
+            
+            //close sub tab
+            //sforce.console.closeTab(res.subTabId);                                      
+        //});     
+        
+        //send over auth payment autodoc to primary call topic, e.g the view payments is opened from claim detail
+        console.log('subject id: ' + subjectId);      
+        sforce.console.addEventListener('RequestSubTabAutodoc', function(r) {
+            sforce.console.getEnclosingTabId(function(result) {
+                if(r.message == primaryCalltopicTabId){
+                    var res = {};
+                    res.primaryCalltopicTabId = primaryCalltopicTabId;
+                    res.subTabId = result.id;
+                    res.doc = acet.autodoc.saveAutodoc();
+                    sforce.console.fireEvent('ReceiveSubTabAutodoc', JSON.stringify(res));
+                }
+            });
+        });
+        
+        
+//         $("#autodocCommentsContainer").draggable({
+//             create: function(event, ui){                    
+//                 //fix for IE, does not work when left and top is auto                
+//                 $("#autodocCommentsContainer").css('left', $(window).width() - $(this).width() - 25 + 'px');
+//                 $("#autodocCommentsContainer").css('top', $(window).height() - $(this).height() - 4 + 'px');                                         
+//             }            
+//         }).resizable({
+//             handles: "n, e, s, w, ne, se, sw, nw"                
+//         }); 
+        
+//         $("#autodocCommentsContainer").on( "resize", function(event, ui){                
+//             $("#autodocComments").height(ui.size.height - 51);                
+//             ui.size.height = Math.max(51, ui.size.height);
+//             ui.size.width = Math.max(150, ui.size.width);
+            
+//         });  
+        
+//         $("#autodocCommentsContainer").on( "drag", function(event, ui){
+            
+//             if(ui.position.top + $(this).height() > $(window).height()){                    
+//                 ui.position.top = $(window).height() - $(this).height();    
+//             }
+            
+//             if(ui.position.left + $(this).width() > $(window).width()){
+//                 ui.position.left = $(window).width() - $(this).width();
+//             }
+//         });
+        
+        
+//         $("#btnMinimize").on('click', function(){                
+//             $("#autodocCommentsContainer").resizable("disable").draggable("disable");
+//             $("#autodocCommentsContainer").height(28);
+//             $("#autodocComments").height(0);
+//             $("#autodocCommentsFooter").height(0);
+//             $("#autodocCommentsContainer").css('left', 'auto');
+//             $("#autodocCommentsContainer").css('top', 'auto');
+//             $("#autodocCommentsContainer").css("bottom",'0px');
+//             $("#autodocCommentsContainer").css('right', '0px');
+            
+//         });
+//         $("#autodocCommentsHeader").on('dblclick', function(){   
+//             if($("#autodocComments").height() == 0){
+//                 $("#autodocCommentsContainer").resizable("enable").draggable("enable");
+//                 $("#autodocCommentsContainer").height(100);
+//                 $("#autodocComments").height(50);
+//                 $("#autodocCommentsFooter").height(20);
+//                 $("#autodocCommentsContainer").css('left', $(window).innerWidth() - $("#autodocCommentsContainer").width() -25  + 'px');
+//                 $("#autodocCommentsContainer").css('top', $(window).innerHeight() - $("#autodocCommentsContainer").height() -4 + 'px'); 
+//             }else{             
+//                 $("#autodocCommentsContainer").resizable("disable").draggable("disable");                    
+//                 $("#autodocCommentsContainer").height(28);
+//                 $("#autodocComments").height(0);
+//                 $("#autodocCommentsFooter").height(0); 
+//                 $("#autodocCommentsContainer").css('left', 'auto');
+//                 $("#autodocCommentsContainer").css('top', 'auto');
+//                 $("#autodocCommentsContainer").css("bottom",'0px');
+//                 $("#autodocCommentsContainer").css('right', '0px');
+//             }               
+//         });
+    });
+    
+    </Script>
+    </apex:page>

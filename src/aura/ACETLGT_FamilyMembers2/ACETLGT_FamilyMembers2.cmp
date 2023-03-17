@@ -1,0 +1,162 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global"
+                controller="ACETLGT_FamilyMemberController" >
+    <c:ACETLGT_SearchMemberHelper aura:id="memSearchHelper"></c:ACETLGT_SearchMemberHelper>
+    <aura:attribute name="lstmembers" type="ACETLGT_MemberSearchCoveragesResult[]"/>
+    <aura:attribute name="isOnshore" type="boolean" default="true"/>
+    <aura:attribute name="memId" type="String" access="public"/>
+    <aura:attribute name="isOpen" type="boolean" default="false"/>
+    <aura:attribute name="isSameDetail" type="boolean" default="false"/>
+    <aura:attribute name="isOpenSubtabs" type="boolean" default="false"/>
+    <aura:attribute name="isNavMemError" type="boolean" default="false"/>
+    
+    <aura:attribute name="int" type="Interaction__c" access="public"/>
+    <!--<aura:attribute name="mydata" type="string[]"/>-->
+    <aura:attribute name="familyMembersCol" type="string[]"/>
+    <aura:attribute name="FamilyMemberList" type="list" default="[]"/>
+    <aura:handler name="init" value="{!this}" action="{!c.init}"/>
+    <aura:attribute name="Memberdetail" type="sObject" access="public"/>
+    <aura:attribute name="needWebserviceCall" type="boolean" access="public" default="true"/>
+    <aura:attribute name="identifierType" type="string" access="public"/>
+    <aura:attribute name="identifier" type="string" access="public"/>
+    <aura:attribute name="groupNumber" type="string" access="public"/>
+    <aura:attribute name="effectiveDate" type="string" access="public"/>
+    <aura:attribute name="covLine" type="Object" access="public"/>
+    
+    <aura:handler name="change" value="{!v.covLine}" action="{!c.covChanged}"/>
+    <!--US1797578/7593/7958/7991 - START-->
+    <aura:handler  event="c:ACETLGT_FamilyMemberSelect" action="{!c.handleAppEvent}"/>
+    <aura:registerEvent name="appEvent" type="c:ACETLGT_FamilyMembersEvent"/>
+    
+    <!--<aura:attribute name="Memberdetail" type="sObject" access="public"/>
+    <aura:attribute name="identifier" type="string" access="public"/>
+    <aura:attribute name="groupNumber" type="string" access="public"/>
+    <aura:attribute name="effectiveDate" type="string" access="public"/>
+    <aura:attribute name="covLine" type="Object" access="public"/>-->
+    
+    <!--US1928298: Retain originator -->
+    <aura:attribute name="selectedOrginator" type="string" access="public"/>
+    <aura:attribute name="memberName" type="string" />
+    <aura:attribute name="uInfo" type="user" access="public"/>
+    <aura:attribute name="Spinner" type="boolean" default="true"/>
+    <aura:attribute name="SpinnerfromCoverage" type="boolean" default="false"/>
+    
+    <!--New-->
+    <aura:handler name="famEvent"  event="c:ACETLGT_FamilyMembersEvent" action="{!c.handleAppEventFam}"/>
+    <aura:attribute name="FamilyMembers" type="list" access="public"/>
+   	
+    <lightning:workspaceAPI aura:id="workspace"/>  
+    <!-- US2237162 - replaced lightning card with div -->
+    <div class="slds-card card_bottom_padding">
+        <!-- US2237162 - changed the card heading structure -->
+            <lightning:layout verticalAlign="center" class="card_padding">
+                <lightning:layoutItem>
+                    <div style="margin-right: 12px;"><lightning:icon iconName="standard:household" alternativeText="Icon"/></div>
+                </lightning:layoutItem>
+            	<lightning:layoutItem>
+                    <div class="component_title">Family Members</div>
+                </lightning:layoutItem>
+            </lightning:layout>
+			<!-- end of code - US2237162 - changed the card heading structure -->   
+        <!--data-auto-doc="true" data-auto-doc-case-items="true" data-auto-doc-section-key="Family" data-auto-doc-section-column-indexes="2"-->
+          
+        <div>
+            <div>
+        		<div class="outer-div">
+                    
+            		<aura:if isTrue="{!or(v.Spinner, v.SpinnerfromCoverage)}">
+          				<lightning:spinner alternativeText="Loading, Please Wait..." 
+               				title="Loading, Please Wait..." 
+               				variant="brand" size="medium" />
+    				</aura:if>
+                </div>
+         	</div>
+            <table class="slds-table slds-table_bordered slds-no-row-hover slds-table_fixed-layout " role="grid" >
+                <thead>
+                    <tr >
+                        <th class="slds-cell-wrap">Name</th>
+                        <th class="slds-cell-wrap">Relationship</th>
+                        <th class="slds-cell-wrap">Gender</th>
+                        <th class="slds-cell-wrap">Date of Birth</th>
+                        <th class="slds-cell-wrap">Member ID</th>
+                        <th class="slds-cell-wrap">Age</th>
+                        <th class="slds-cell-wrap">Member Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!--<aura:iteration items="{!v.Memberdetail.FamilyMembers}" var="dt" aura:id="item">-->
+                    <aura:iteration items="{!v.FamilyMemberList}" var="dt" aura:id="item">
+                        <tr >
+                            <td class="slds-cell-wrap">
+                                <div class="slds-wrap">{!dt.fullName}</div>
+                            </td>
+                            <td class="slds-cell-wrap">
+                                <div class="slds-wrap">{!dt.Relationship}</div>
+                            </td>
+                            <td class="slds-cell-wrap">
+                                <div class="slds-wrap">{!dt.Gender }</div>
+                            </td>
+                            <td class="slds-cell-wrap">
+                                <div class="slds-wrap">{!dt.DOB }</div>
+                            </td>
+                            <td class="slds-cell-wrap">
+                                <a data-memId="{!dt.subscriberIndividualId }" data-LN="{!dt.LastName}" data-FN="{!dt.FirstName}" data-dob="{!dt.DOB}" onclick="{!c.navMemberDetail}"><div class="slds-wrap">{!dt.subscriberIndividualId }</div></a>
+                            </td>
+                            <td class="slds-cell-wrap">
+                                <div class="slds-wrap">{!dt.Age }</div>
+                            </td>
+                            <td class="slds-cell-wrap">
+                                <div class="slds-wrap">{!dt.memberStatus }</div>
+                            </td>
+                        </tr>
+                    </aura:iteration>
+                </tbody>
+            </table>
+             
+        </div>
+        <br/>
+    </div> <!-- US2237162 - replaced lightning card with div -->
+    	<aura:if isTrue="{!v.isOpen}">
+            
+            <!--###### MODAL BOX Start######-->  
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container" style="width:400px" >
+                    <!-- ###### MODAL BOX HEADER Start ######-->
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeModal }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">
+                            <lightning:icon iconName="utility:info" alternativeText="Info!" variant="info"/> &nbsp;&nbsp;Informational Message
+                        </h2>
+                    </header>
+                    
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <aura:if isTrue="{!v.isSameDetail}">
+                            Member Detail page is already open.
+                        	
+                        </aura:if>
+                        <aura:if isTrue="{!v.isOpenSubtabs}">
+                            Close all Topics before changing Subject.
+                           
+                        </aura:if>
+                        <aura:if isTrue="{!v.isNavMemError}">
+                            Unexpected error occurred. Please try again. If problem persists, please contact the help desk.
+                        </aura:if>
+                        
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <lightning:button variant="brand" 
+                                          label="Ok"
+                                          title="Ok"
+                                          onclick="{! c.closeModal }"/>
+                        
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+            <!--###### MODAL BOX Part END Here ######-->
+            
+        </aura:if>
+</aura:component>

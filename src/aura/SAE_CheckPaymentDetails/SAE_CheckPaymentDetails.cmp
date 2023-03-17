@@ -1,0 +1,118 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes" access="global">
+    <aura:attribute name="tableDetails" type="Object" />
+    <aura:attribute name="autodocUniqueId" type="String" default="auto" />
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default="ViewPayments" />
+    <aura:attribute name="allowAutoCheck" type="Boolean" default="true" />
+    <aura:attribute name="hasCaseItems" type="Boolean" default="false" />
+
+
+    <!-- 21st Aug 2019 US1958806 ViewPayment UI - Payment Details Coming from topic : Sarma-->
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}" />
+    <aura:attribute name="showComments" type="boolean" default="false" access="public" />
+    <aura:attribute name="paymentsList" type="Object[]" />
+    <aura:attribute name="selectedRows" type="String[]" />
+    <ltng:require styles="{!$Resource.ACET_MasterStyle}" />
+
+    <aura:attribute name="readCheckResp" type="ACET_SAECalloutResult" default="" access="public" />
+    <aura:attribute name="readCheckRespObj" type="ACET_ReadCheckRespWrap" default="" />
+    <aura:attribute name="checkNumber" type="String" default="" access="public" />
+
+    <!--  US2851678 -ketki  9/10 -->
+    <aura:registerEvent name="paymentCheckDetailRequestEvent" type="c:ACET_PaymentCheckDetailRequestEvent" />
+    <aura:attribute name="isShowPaymentCheckDetails" type="Boolean" default="false" />
+    <aura:attribute name="checkSearchRespObj" type="ACET_ViewPaymentsCheckSearchWrapper[]" default="" access="public" />
+    <!--  US2851678 -ketki  9/10 -->
+
+    <!-- US3597656 -->
+    <aura:handler name="selectedRowLink" event="c:ACET_AutoDocSelectedRow" action="{!c.openPaymentDetails}" />
+
+    <!-- US3632386:View Payments - Auto Doc for the Same Member - Swapnil-->
+    <aura:attribute name="caseNotSavedTopics" type="String[]"/>
+    <aura:attribute name="tableDetails_preview" type="Object" />
+    <aura:attribute name="showpreview" type="Boolean" default="false" />
+
+    <!-- US3691404: View Payments Topic - Enable/Disable Auto Doc, Add Comments & Route Buttons - Swapnil -->
+    <aura:handler name="selectedRowData" event="c:ACET_AutoDocSelectedRow" action="{!c.getSelectedRecords}" />
+    <aura:attribute name="disableButtons" type="Boolean" default="true" />
+    <aura:attribute name="disableCommentButton" type="String" default="false" />
+    <aura:attribute name="commentsValue" type="String" default=""  access="public"/>
+	<aura:attribute name="openSaveCase" type="Boolean" default="false" />
+    <aura:attribute name="memberautodocUniqueId" type="String" default="auto" />
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0" />
+    <!--Started Vishnu-->
+    <aura:attribute name="caseWrapper" type="Object" access="public"/>
+    <aura:attribute name="memberMap" type="Map" access="public" />
+    <aura:attribute name="memberPolicyNumberMap" type="Map" default=""/>
+    <aura:attribute name="isProviderSnapshot" type="boolean" default="false" />
+    <aura:attribute name="caseWrapperMNF" type="Object" access="public"/>
+    <aura:attribute name="flowDetails" type="Object" access="public" />
+    <aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="isRoutingAllowed" type="boolean" default="true"/>
+    <aura:attribute name="policyDetails" type="SAEPolicyDetailsResult" />
+    <aura:attribute name="seriesDesignator" type="String" />
+    <aura:attribute name="platform" type="String" default=""/>
+    <!-- US3804847 - Krish - 26th August 2021-->
+    <aura:attribute name="interactionCard" type="Object" access="public" />
+    <!--Started Vishnu-->
+    <div class="slds-is-relative slds-p-vertical_none slds-card card_padding" style="background:white; width: 100%;">
+        <!--Adding buttons -->
+        <div class="slds-grid">
+            <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                <div class="slds-media_body">
+                    <p class="component_title ">Payment Results</p>
+                </div>
+            </header>
+            <div class="slds-no-flex slds-p-top_medium slds-p-right_none">
+                <lightning:buttonGroup>
+                    <!--US2817735-->
+                    <lightning:button class="slds-button slds-button_neutral neutral_button" variant="neutral"
+                        label="Autodoc" name="autodoc" onclick="{!c.getAutoDoc}" disabled="{!v.disableButtons}" />
+                    <aura:if isTrue="{!!v.showComments}">
+                        <lightning:button class="slds-button slds-button_neutral neutral_button " variant="neutral" value="{!v.commentsValue}"
+                            label="Add Comments" onclick="{!c.commentsShow}" disabled="{!v.disableButtons}" />
+                        <aura:set attribute="else">
+                            <lightning:button variant="brand" label="Add Comments" disabled="{! v.disableButtons || v.disableCommentButton }" />
+                        </aura:set>
+                    </aura:if>
+                    <!--US2817735-->
+                    <lightning:button class="slds-button slds-button_brand" variant="brand" label="Route"
+                                      onclick="{!c.openModal}" disabled="{!v.disableButtons}" />
+                </lightning:buttonGroup>
+            </div>
+
+        </div>
+        <div class="slds-col" align="Right"> </div>
+        <div class="slds-grid slds-wrap">
+
+        </div>
+        <!--Close -->
+        <!--US1958804 View Payments UI changes-->
+        <div class=" slds-grid slds-col slds-size_12-of-12 slds-p-bottom_small slds-p-top_small">
+            <c:ACET_AutoDocDataTable autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"
+                enablePagination="false" tableDetails="{!v.tableDetails}" autoCheck="{!v.autoCheck}"
+                hasCaseItems="{!v.hasCaseItems}" allowAutoCheck="{!v.allowAutoCheck}"
+                enableSort="true" enableSearch="true"/>
+        </div>
+    </div>
+    <aura:if isTrue="{!v.openSaveCase}">
+        <c:SAE_TtsModalCaseCreation Topic="View Payments"
+                caseWrapper="{!v.caseWrapper}" isModalOpen="{!v.openSaveCase}"
+                enableAutodocWarningMessage="true" isMemberLookup="{!v.isMemberLookup}" uhcProduct="{!v.uhcProduct}"
+                freeFormCommentsVal="{!v.commentsValue}"
+                providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}"
+                flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}" autodocUniqueId="{!v.autodocUniqueId}"
+                isMemberSnapshot="{!!v.isProviderSnapshot}" isRoutingAllowed="{!v.isRoutingAllowed}"
+                memberMap="{!v.memberMap}" memberPolicyNumberMap="{!v.memberPolicyNumberMap}"
+                flowDetails="{!v.flowDetails}" onlyRoute="true"/>
+            <!--c:SAE_TtsModalCaseCreation Topic="View Payments" caseWrapper=""
+                                        isModalOpen="{!v.openSaveCase}" autodocUniqueId="{!v.autodocUniqueId}"
+                                        freeFormCommentsVal="{!v.commentsValue}" memberMap=""
+                                        memberPolicyNumberMap="" flowDetails=""
+                                        flowDetailsForRoutingScreen="" state="" aura:id="casePopup"
+                                        onlyRoute="true" /-->
+        </aura:if>
+    <aura:if isTrue="{!v.showpreview}">
+        <c:ACET_PreviewAutoDoc tableDetails_prev="{!v.tableDetails_preview}"
+            isModalOpen="{!v.showpreview}" />
+    </aura:if>
+</aura:component>

@@ -1,0 +1,196 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,lightning:isUrlAddressable" access="global" controller="ACETLGT_PlanBenefitController">
+    <aura:attribute name="cseTopic" type="String" access="public" default="Plan Benefits"/>
+    <aura:attribute name="intId" type="String" access="public"/>
+    <aura:attribute name="int" type="Interaction__c" access="public"/>
+    <aura:attribute name= "pagerefaranceobj" type="object"/>
+    <aura:attribute name="srk" type="String" access="global" />
+    <aura:attribute name="memberid" type="String"/>
+    <aura:attribute name="grpNum" type="String" access="public"/>
+    <aura:attribute name="plnovrvwData" type="map" default="{}" />
+    <aura:attribute name="isAllSelected"  type="Boolean" default="false"/>
+    <aura:attribute name="highlightPanel" type="ACETLGT_HighlightPanelInfo" access="global"/>
+    <aura:attribute name="highlightPanel_String" type="String" access="global"/>
+    <aura:attribute name="planId" type="String" />
+    <aura:attribute name="usInfo" type="user" access="public"/>
+    <aura:attribute name="productId" type="String" />
+    <aura:attribute name="planTypeCode" type="String" />
+    <aura:attribute name="timePeriodQualifier" type="String" />
+    <aura:attribute name="administeredByName" type="String" />
+    <aura:attribute name="networkScheduleList" type="List" />
+    <aura:attribute name="coverageBenefits" type="sObject" access="global"/>
+     <aura:attribute name="doCollapseRiders" type="Boolean" default="false" access="public"/>
+    <aura:attribute name="doCollapseCoverageOverview" type="Boolean" default="false" access="public"/>
+     <aura:attribute name="activeSections" type="List" default="['planoverview','Riders','CoverageOverview']" />
+    <aura:attribute name="legalSubsidiary" type="String" />
+    <aura:attribute name="planMetallicLevel" type="String" />
+    <aura:attribute name="fundingArrangement" type="String" />    
+    <aura:attribute name="bbundleId" type="String" />
+    <aura:attribute name="hsaPlan" type="String" />
+    <aura:attribute name="memberPlanBenefitList" type="ACETGroupPlanBenefitLEXWrapper.BenefitWrapper[]"/> 
+    <aura:attribute name="OONReimbursementList" type="ACETGroupPlanBenefitLEXWrapper.OONReimbursement[]" />
+    <aura:attribute name="SitusState" type="String"/>
+    <aura:attribute name="pcpRequiredIndicator" type="String"/>
+    <aura:attribute name="gatedProductIndicator" type="String"/>
+    <aura:attribute name="eHBIndicator" type="String"/>
+    <aura:attribute name="benefitCodeKeyMap" type="List"/>
+    <aura:attribute name="varriableCoverageMap" type="List"/>
+    <aura:attribute name="benefitDisplayMap" type="Map"/>
+    <aura:attribute name="tierTypeCodeList" type="String"/>
+    <aura:attribute name="tierTypeIdentifierList" type="String"/>
+    <aura:attribute name="AutodocKey" type="string" access="public"/>
+    <aura:attribute name="existsOnRiderPlanMap" type="String"/>
+    <aura:attribute name="GUIkey" type="string" access="public"/>
+     <aura:attribute name="highlightPanelstring" type="string" access="public"/>
+	<aura:attribute name="selectedStrtDt" type="string" access="public"/>
+    <aura:attribute name="selectedEndDt" type="string" access="public"/>
+    <aura:attribute name="selectedBundleId" type="string" access="public"/>
+	<aura:attribute type="String" name="accumsdatesearch" />
+	<aura:attribute name="selectedBenefitStrtDt" type="string" access="public"/>
+    <aura:attribute name="selectedBenefitEndDt" type="string" access="public"/>																			
+	 <aura:attribute name="bookOfBusinessTypeCode" type="string"/> <!--US3582935 : Added By Manish -->
+    <aura:attribute name="showCirrusBenefit" type="boolean" default="true"/> <!--US3582935 : Added By Manish -->
+   																								 
+    <lightning:workspaceAPI aura:id="workspace"/>
+        <aura:handler  name="init" value="{!this}" action="{!c.doinit}"/>
+    <div id="{!v.AutodocKey + v.GUIkey}" class="{!v.AutodocKey}">
+        <div id="{!v.AutodocKey}">
+	<lightning:card variant="Narrow" title="Plan Benefits" iconName="standard:home">
+		<aura:set attribute="actions">
+			<div class="slds-grid slds-form-element slds-m-right_large">
+				<lightning:buttonGroup>
+                    <c:ACETLGT_TTSModal aura:id = "cComp"
+						                cseTopic="{!v.cseTopic}" 
+		                                int="{!v.int}" 
+		                                intId="{!v.intId}" 
+		                                srk="{!v.srk}" 
+		                                showCirrus="true" 
+		                                showMemAlerts="true"
+		                                showSave = "false"
+		                                showMisdirect="false"
+		                                memberId="{!v.memberid}"
+		                                groupId="{!v.grpNum}"
+		                                userInfo="{!v.usInfo}"
+                                        highlightPanel="{!v.highlightPanel}"
+                                        pagefeature="{!v.AutodocKey}"
+                                        AutodocKey="{!v.AutodocKey}"
+                                        />
+                      <c:ACETLGT_ViewDocuments  memberId="{!v.memberid}"  groupId ="{!v.grpNum}"  bbundleId="{!v.bbundleId}"/>
+                       <c:ACETLGT_RepeatCallViewRelatedCases   highlightPanel_String="{!v.highlightPanelstring}" InteractionId="{!v.intId}" SurrogateKey="{!v.srk}"  Calltopic="Plan Benefits" interactiontype="Phone Call" ExternalIDs="{!v.planId}"  />
+
+                </lightning:buttonGroup>
+			</div>
+		</aura:set>
+		<c:ACETLGT_HighlightPanel highlightPanelValues="{!v.highlightPanel}" pageFeature="{!v.AutodocKey}" AutodocKey="{!v.AutodocKey + v.GUIkey}"/>
+	</lightning:card>
+    	<div class="slds-box slds-p-around_none slds-theme_default slds-m-top_small">
+      <lightning:accordion  allowMultipleSectionsOpen="true"
+                         activeSectionName="planoverview">
+        <lightning:accordionSection name="planoverview" label="Plan Overview">
+              <div class="autodocTableView" data-auto-doc="true" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-case-items="true" data-auto-doc-section-key="Plan Overview"> 
+              <div class="slds-scrollable_x">
+          <table class="slds-table autodocPreselect benefitAccordionTable slds-table_bordered slds-table_cell-buffer slds-no-row-hover">
+              <thead>
+                        <tr>
+                            <th>Plan ID</th>
+                            <th>Plan Name</th>
+                            <th>
+                            <div class="slds-truncate" title="HSA Eligible">
+                                  HSA Eligible <lightning:helptext content="This plan's benefits conform to the Internal Revenue Service (IRS) guidelines for a qualified high-deductible health plan that is eligible to have a Health Savings Account (HSA)." />
+                             </div>                                    
+                            </th>
+                            <th>Legal Subsidiary</th>
+                            <th>Metallic Level</th>
+                            <th>Plan Type</th>
+                            <th>Funding Arrangement</th>
+                            <th>Accumulator</th>
+                            <th>Gated</th>
+                            <th>PCP Required </th>
+                            <th>Network</th>
+                            <th>EHB</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                            <tr>
+                                <td>{!v.planId}</td>
+                                <td>{!v.administeredByName}</td>
+                                <td>{!v.hsaPlan}</td>
+                                <td>{!v.legalSubsidiary}</td>
+                                <td>{!v.planMetallicLevel}</td>
+                                <td>{!v.planTypeCode}</td>
+                                <td>{!v.fundingArrangement}</td>
+                                <td>{!v.timePeriodQualifier}</td>
+                                <td>{!v.gatedProductIndicator}</td>
+                                <td>{!v.pcpRequiredIndicator}</td>
+                                <td><aura:iteration items="{!v.networkScheduleList}" var="networkSchedule">
+                                     {!networkSchedule}
+                                    </aura:iteration>
+                                </td>
+                                <td>{!v.eHBIndicator}</td>
+                            </tr>
+                    </tbody>
+                </table>
+            </div>
+            </div>
+            </lightning:accordionSection>
+        </lightning:accordion>
+      </div>
+ 	 <div class="slds-box slds-p-around_none slds-theme_default slds-m-top_small"> 		
+        <lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="Riders">
+            <lightning:accordionSection name="Riders" label="Riders">
+                
+                <table class="slds-table slds-table_bordered slds-table_cell-buffer slds-no-row-hover scroll">
+              <thead>
+                        <tr>
+                            <th>Coverage Type</th>
+                            <th>Plan ID</th>
+                            <th>Plan Name</th>
+                            <th>Gated</th>
+                            <th>Carrier Name</th>
+                            <th>Product</th>
+                            <th>Plan Type Code</th>  
+                        </tr>
+                    </thead>
+                    <tbody>
+                      <aura:iteration items="{!v.memberPlanBenefitList}"  var="item">
+                          
+                          
+                            <tr>
+                                <td>{!item.riderCoverageType}</td> 
+                                <td>{!item.riderBenefitPlanId}</td>
+                                <td>{!item.riderPlanName}</td>
+                                <td>{!item.riderGated}</td>
+                                <td>{!item.riderCarrierName}</td>
+                                <td>{!item.riderProductName}</td>
+                                <td>{!item.riderPlanTypeCode}</td> 
+                          </tr>
+                        </aura:iteration>
+                       
+                    </tbody>
+                </table>
+         </lightning:accordionSection>
+        </lightning:accordion>
+     </div>
+    <div class="slds-box slds-p-around_none slds-theme_default slds-m-top_small"> 
+        <c:ACETLGT_CoverageOverview aura:id="AccumSection" attrPlanType="{!v.planTypeCode}" attrOONReimbursementList="{!v.OONReimbursementList}" attrcoverageBenefits="{!v.coverageBenefits}" 
+                                    SitusState="{!v.SitusState}" accumAutodocKey="{!v.AutodocKey}" accumGUIkey="{!v.GUIkey}" selectedStrtDt="{!v.selectedStrtDt}" selectedEndDt="{!v.selectedEndDt}" selectedBundleId="{!v.selectedBundleId}"
+                                 accumsdatesearch="{!v.accumsdatesearch}" selectedBenefitStrtDt="{!v.selectedBenefitStrtDt}" selectedBenefitEndDt="{!v.selectedBenefitEndDt}" />
+     </div>
+   <aura:if isTrue="{!v.showCirrusBenefit}"> <!-- Added By Manish -->
+        <div class="slds-box slds-p-around_none slds-theme_default slds-m-top_small"> 
+     		<c:ACETLGT_PlanBenefitDetailOverview aura:id="BenefitSection" benefitCodeKeyMap="{!v.benefitCodeKeyMap}" varriableCoverageMap="{!v.varriableCoverageMap}" benefitDisplayMap="{!v.benefitDisplayMap}" attrcoverageBenefits="{!v.coverageBenefits}" timePeriodQualifier="{!v.timePeriodQualifier}" tierTypeCodeList="{!v.tierTypeCodeList}"  tierTypeIdentifierList="{!v.tierTypeIdentifierList}" AutodocKey="{!v.AutodocKey}"  SitusState="{!v.SitusState}" existsOnRiderPlanMap="{!v.existsOnRiderPlanMap}"
+         	selectedBenefitDate="{!v.accumsdatesearch}" benefitEffectiveDate="{!v.selectedBenefitStrtDt}" benefitEndDate="{!v.selectedBenefitEndDt}" selectedBundleId="{!v.selectedBundleId}"  />
+        </div>
+        <aura:set attribute="else"> <!--US3582935 : Added By Manish -->
+      		 <div class="slds-box slds-p-around_none slds-theme_default slds-m-top_small"> 
+                <!--<c:ACETLGT_B360BenefitCategoryDetailOverview aura:id="B360BenefitSection"   timePeriodQualifier="{!v.timePeriodQualifier}" AutodocKey="{!v.AutodocKey}"  groupNumber="{!v.grpNum}" SitusState="{!v.SitusState}"
+                selectedBenefitDate="{!v.accumsdatesearch}" benefitEffectiveDate="{!v.selectedBenefitStrtDt}" benefitEndDate="{!v.selectedBenefitEndDt}" selectedBundleId="{!v.selectedBundleId}"/>
+              -->
+                 <c:ACETLGT_B360BenefitCategoryDetailOverview aura:id="B360BenefitSection" benefitCodeKeyMap="{!v.benefitCodeKeyMap}" varriableCoverageMap="{!v.varriableCoverageMap}" benefitDisplayMap="{!v.benefitDisplayMap}" attrcoverageBenefits="{!v.coverageBenefits}"  timePeriodQualifier="{!v.timePeriodQualifier}" tierTypeCodeList="{!v.tierTypeCodeList}"  tierTypeIdentifierList="{!v.tierTypeIdentifierList}" AutodocKey="{!v.AutodocKey}" existsOnRiderPlanMap="{!v.existsOnRiderPlanMap}"  groupNumber="{!v.grpNum}" SitusState="{!v.SitusState}"
+                selectedBenefitDate="{!v.accumsdatesearch}" benefitEffectiveDate="{!v.selectedBenefitStrtDt}" benefitEndDate="{!v.selectedBenefitEndDt}" selectedBundleId="{!v.selectedBundleId}"/>
+              
+           </div> 
+    	</aura:set>
+      </aura:if>
+    </div>
+  </div>
+</aura:component>

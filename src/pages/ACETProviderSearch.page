@@ -1,0 +1,705 @@
+<apex:page showHeader="false" controller="ACETProviderSearchController" standardStylesheets="false" sidebar="false"
+title="Provider Search" id="thePage" applyHtmlTag="false" applyBodyTag="false" docType="html-5.0">
+<html xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" lang="en">
+    <head>
+        <apex:includeScript value="{!URLFOR($Resource.ACETUIResources, '/JS/jquery.min.js')}"/> 
+        <apex:includeScript value="{!URLFOR($Resource.ACETUIResources, '/JS/moment.js')}"/>
+        <apex:includeScript value="{!URLFOR($Resource.ACETUIResources, '/JS/jquery-ui.js')}"/>
+        <script type="text/javascript" src="https://dtsaas-sgw.uhc.com:443/jstag/managed/3ecd4b18-4fb5-4a58-81c2-e1b2c5a87029/56ed5c35a17f0669_bs.js" crossorigin="anonymous"></script>
+        <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.css"/>
+        <apex:includeScript value="/support/console/38.0/integration.js" />
+        <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+        <script type="text/javascript">
+            var AdvSearch = false;
+            $(function() {
+                var b = $("#adsearch");
+                var w = $("#wrapper");
+                var l = $("#list");
+    
+                w.height(l.outerHeight(true));
+                w.removeClass('open');
+                w.height(0);
+                b.click(function() {
+                    if (w.hasClass('open')) {
+                        w.removeClass('open');
+                        $("#adsearch").html("Show Advanced Search");
+                        w.height(0);
+                        AdvSearch = true;
+                    } else {
+                        w.addClass('open');
+                        w.height("28pc");
+                        $("#adsearch").html("Hide Advanced Search");
+                        AdvSearch = false;
+                    }
+                });
+            });
+        </script> 
+        <style>
+        html, body {
+            margin: 0;
+            height: 100%;
+        }
+                
+        .header {
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.07);
+          z-index: 1;
+        }
+        .stage-left {
+          width: 4rem;
+          transition: width 0.2s ease-in-out 0.05s;
+        }
+        @media (min-width: 1024px) {
+          .stage-left.open {
+            width: 15rem;
+            transition: width 0.1s ease-in-out;
+          }
+          .stage-left.open .stage-left__text {
+            opacity: 1;
+            width: auto;
+            transition-delay: 0.2s;
+          }
+        }
+        .stage-left li + li {
+          margin-top: 0.02rem;
+        }
+        .stage-left a:not(.button) {
+          display: block;
+          text-decoration: none;
+          white-space: nowrap;
+          border-radius: 0.25rem;
+          background: transparent;
+          padding: 0.25rem;
+          transition: background 0.05s linear;
+        }
+        
+        
+        .stage-left .stage-left__text {
+          opacity: 0;
+          width: 0;
+          transition: all 0.05s linear;
+        }
+        .stage-left .slds-icon {
+          max-width: initial;
+        }
+        .stage-container {
+          max-height: 100%;
+          overflow: hidden;
+        }
+        .slds-grid--frame {
+          min-width: 767px;
+          overflow-y: auto;
+        }
+            
+        li{
+            margin: 10px 0;
+        }
+            
+        #wrapper {
+          background: #f7f9fb;
+          overflow: hidden;
+          transition: height 200ms;
+        }
+        
+        .pbError {
+            font-weight: bold;
+            color: #c00 !important;
+            text-align: center;
+        }
+        
+        .errorMsg {
+            color: #c00 !important;
+            
+        }
+        
+        .error
+        {
+            border-color: #c00 !important;
+            box-shadow: 0px 0px 3px #c00;
+        }
+        .slds-scope .slds-size--1-of-2, .slds-scope .slds-size_1-of-2
+        {
+            width: 15rem;
+        }
+        
+        table.no-footer.dataTable
+        {
+            margin-left: 1px !important;
+        }
+        #datatable_wrapper
+        {    
+            max-width: 136%;
+        }
+        #datatable
+        {
+            width: 99.9% !important;
+        }
+        .slds-scope .slds-box
+        {
+            padding: 0.5rem;
+        }
+         #helpText {
+            background: transparent url(/img/alohaSkin/help_orange.png) no-repeat !important;
+            width:16px !important;
+            height:16px !important;
+            margin-left: 3px;
+        }
+        </style>
+    </head>    
+    <apex:form id="myform">
+    <div class="slds-scope">
+        <apex:slds />
+        <apex:actionFunction name="afSearch"  action="{!Search}" rerender="thePage:myform:pbSearchResult"/>
+        <apex:actionFunction name="afClear" action="{!clearResults}" status="refreshMemberStatus" />
+        <div class="slds-grid slds-grid--frame slds-grid--vertical">
+        <!-- Stage Container -->
+            <div class="stage-container slds-grid slds-nowrap slds-size--1-of-1">
+                <!-- Stage Left - Navigation -->
+                <nav class="stage-left slds-size--1-of-2 slds-shrink-none slds-scrollable--y slds-page-header slds-p-around--small open" style="display:block;height:92vh;overflow:scroll;">
+                    <ul role="navigation" class="slds-has-block-links" >
+                    <li>
+                        <div class="slds-form-element__row">  
+                            <div class="slds-col slds-has-flexi-truncate">
+                                <h1 class="slds-page-header__title slds-m-right--small slds-align-middle slds-truncate" >Find a Provider</h1>
+                            </div>
+                        </div>
+                    </li>
+                    <li>     
+                        <div id="pbSearchCriteria"></div>
+                    </li> 
+                    <li>     
+                        <div class="slds-form-element__row">  
+                            <div class="slds-form-element">
+                                <apex:outputLabel value="{!$Label.ACETProviderSearchInteractionTypeLabel}" />
+                                <apex:selectList id="InteractionType" value="{!InteractionType}" styleClass="slds-form-element__control slds-select slds-select_container" size="1">
+                                    <apex:selectOptions value="{!InteractionTypes}" />
+                                </apex:selectList>
+                            </div> 
+                        </div>
+                    </li>
+                    <li>     
+                        <div class="slds-form-element__row">  
+                            <div class="slds-form-element">
+                                <apex:outputLabel value="{!$Label.ACETProviderSearchContactNameLabel}"></apex:outputLabel>
+                                <apex:input type="search" styleClass="slds-input" value="{!CallerName}" id="CallerName"  />
+                            </div> 
+                        </div>
+                    </li>
+                    <li>     
+                        <div class="slds-form-element__row">  
+                            <div class="slds-form-element">
+                                <apex:outputLabel value="{!$Label.ACETProviderSearchTaxIdLabel}"></apex:outputLabel>
+                                <apex:input type="search" styleClass="slds-input" value="{!TaxID}" id="TaxID" />
+                            </div> 
+                        </div>
+                    </li>
+                     <li>
+                        <div class="slds-form-element">
+                          <apex:outputLabel value="{!$Label.ACETProviderSearchLastNameLabel}"></apex:outputLabel>
+                           <apex:input type="search" styleClass="slds-input" value="{!LastName}" id="LastName" />
+                       </div> 
+                    </li>
+                    <li>
+                        <div class="slds-form-element">
+                            <apex:outputLabel value="{!$Label.ACETProviderSearchNPILabel}"></apex:outputLabel>
+                            <apex:input type="search" styleClass="slds-input" value="{!NPI}" id="NPI" />
+                        </div> 
+                    </li>
+                      <!--As Per US1025407  Start -->
+                        <li>     
+                                   <div class="slds-form-element__row">  
+                                        <div class="slds-form-element">
+                                            <apex:outputLabel styleClass="slds-form-element__label"  value="{!$Label.ACETProviderSearchFilterTypeLabel}"></apex:outputLabel><br/>
+                                            <apex:selectList styleClass="slds-form-element__control slds-select slds-select_container" id="FilterBy" label="Provider Type" value="{!FilterBy}"  size="1">
+                                                <apex:selectOption itemValue="Both" itemLabel="--None--" />
+                                                <apex:selectOption itemValue="FACL" itemLabel="Facility/Group" />
+                                                <apex:selectOption itemValue="PROF" itemLabel="Physician" />
+                                                <apex:actionSupport event="onchange" action="{!FNameDisable}" reRender="FirstName" /> 
+                                            </apex:selectList>
+                                        </div> 
+                                    </div> 
+                                </li>
+                           <li>     
+                                   <div class="slds-form-element__row">  
+                                        <div class="slds-form-element">
+                                            <apex:outputLabel value="{!$Label.ACETProviderSearchPracticingStatusLabel}">
+                                            <img src="/s.gif" id="helpText" title="{!$Label.ACETProviderPracticingStatusHoverText}" /></apex:outputLabel><br/>
+                                            <apex:selectList styleClass="slds-form-element__control slds-select slds-select_container" id="FilterByStatus" value="{!FilterByStatus}"  size="1">
+                                                <apex:selectOption itemValue="Active" itemLabel="Active" />
+                                                <apex:selectOption itemValue="Active and Termed" itemLabel="Active and Termed" />
+                                            </apex:selectList>
+                                        </div> 
+                                    </div> 
+                                </li>
+                        <!--As Per US1025407 End -->
+                       
+                    <li>
+                        <a href="#" id="adsearch">Show Advanced Search</a>  
+                        <div id="wrapper" class="open" style="" >
+                            <ul id="list" style="margin-bottom:0;">
+                                <li>
+                                    <div class="slds-form-element">
+                                        <apex:outputLabel value="{!$Label.ACETProviderSearchFirstNameLabel}"></apex:outputLabel>
+                                        <apex:input type="search" value="{!FirstName}" disabled="{!FilterBy == 'FACL'}" id="FirstName" styleClass="slds-input">
+                                            <apex:actionSupport event="onchange" action="{!filterTypeChange}" reRender="FilterBy"/> 
+                                        </apex:input>
+                                    </div> 
+                                </li>
+                                <li>
+                                   <div class="slds-form-element">
+                                       <label class="slds-form-element__label" for="State">State</label>
+                           <c:ACETState ></c:ACETState>
+                            <!-- to pass value back when the input is disabled in form  -->
+                           <apex:inputHidden id="stateHidden" value="{!State}" />                       
+                              </div>
+                                </li>
+                                <li>
+                                    <div class="slds-form-element__row">  
+                                        <div class="slds-form-element">
+                                            <apex:outputLabel value="{!$Label.ACETProviderSearchZipCodeLabel}"></apex:outputLabel>
+                                            <apex:input type="search" styleClass="slds-input" value="{!ZipCode}" html-autocomplete="off" id="ZipCode" />
+                                        </div> 
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="slds-form-element">
+                                        <apex:outputLabel value="{!$Label.ACETProviderSearchPhoneNumberLabel}"></apex:outputLabel>
+                                        <apex:input type="search" styleClass="slds-input" value="{!PhoneNumber}" id="PhoneNumber" />
+                                    </div> 
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="slds-form-element__row">  
+                            <div class="slds-form-element" style="float:right;">
+                                <apex:actionRegion >
+                                    <apex:commandLink id="btnSearch"  styleClass="btn slds-button slds-button--brand slds-not-selected"
+                                        style="text-decoration:white;padding:3px;height:2.5pc;width:5.5pc;margin-right: 16px;background:#0070d2;float:left;" 
+                                        onclick="return validate();" value="Search"/>
+                                    <apex:commandButton id="btnClear" action="{!clearResults}" value="Clear" onClick="return ClearSearchCriteria();" 
+                                        style="height:2.5pc;width:5.5pc;float:right;" styleClass="slds-button slds-button--brand slds-not-selected"  />   
+                                </apex:actionRegion>
+                            </div>
+                        </div>
+                    </li>
+                    </ul>
+                </nav>
+                <apex:actionStatus id="refreshMemberStatus">
+                    <apex:facet name="start">
+                        <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">&nbsp;</div>
+                        <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 1001; margin: 15% 50%">
+                            <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                                <img src="/img/loading.gif" style="float: left; margin: 8px;" />
+                                <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                            </div>
+                        </div>
+                    </apex:facet>
+                </apex:actionStatus>
+                <section class="stage slds-grid slds-grid--vertical slds-nowrap" style="overflow:hidden;height:87vh;" id="sectionMain">
+                    <div class="slds-box slds-theme--inverse">
+                        <div class="">Results</div>
+                    </div>
+                    <!-- Stage Main -->
+                    <div  class="stage-main slds-grid slds-wrap slds-grow slds-scrollable--y" role="main" style="display:block;height:80vh;width:100%;">
+                        <apex:outputPanel id="pbSearchResult" title="Provider Search Results"> 
+                            <c:ACETDataTable attrDatatableWrapper="{!DTWrapper}" rendered="{!NOT(ISNULL(DTWrapper))}" />
+                            <apex:outputPanel id="buttons" >
+                                <div class="slds-docked-form-footer " style="justify-content: flex-end;">
+                                    <div class="slds-button-group" role="group" >
+                                        <apex:outputPanel rendered="{!NOT(ISNULL(DTWrapper))}">
+                                            <input type="button" class="slds-button slds-button--neutral" onclick="return ProviderNotFound();"
+                                                value="{!$Label.ACETProviderSearchProviderNotFoundButtonLabel}" style="margin-left:1pc;" id="btnMisdirectCase"/>
+                                        </apex:outputPanel>
+                                        <c:ACETCaseActions Save="{!Save}" attrRefreshNavigationTab="true"
+                                            SaveAndClose="{!SaveAndClose}" attrShowSaveAndCloseButton="false"
+                                            attrShowSaveButton="false" attrShowMisdirectButtonlds="true"
+                                            attrShowCancelButton="false"
+                                            attrSourceOriginator="{!InteractionType}"
+                                            attrInteractionId="{!wrapper.Interaction.Id}"
+                                            attrSubjectId="{!wrapper.Subject.Id}"
+                                            attrInteractionObj="{!wrapper.interaction}"
+                                             /> <!--displayReleatedCasesButton="false"-->
+                                    </div>
+                                </div>
+                            </apex:outputPanel>
+                        </apex:outputPanel>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>     
+    </apex:form>
+    <script type="text/javascript">
+        var $SearchCriteria = $("[id$='pbSearchCriteria']");
+        var $InteractionType = $("[id$='InteractionType']");
+        var $CallerName  = $("[id$='CallerName']");
+    	$CallerName.attr('maxLength',100);
+        var $TaxId       = $("[id$='TaxID']");
+    	$TaxId.attr('maxLength',9);
+        var $NPI         = $("[id$='NPI']");
+    	$NPI.attr('maxLength',10);
+        var $LastName    = $("[id$='LastName']");
+    	$LastName.attr('maxLength',80);
+        var $FirstName   = $("[id$='FirstName']");
+        var $State       = $("[id$='searchstate']");
+        var $ZipCode     = $("[id$='ZipCode']");
+    	$ZipCode.attr('maxLength',5);
+        var $PhoneNumber = $("[id$='PhoneNumber']");
+    	$PhoneNumber.attr('maxLength',10);
+        var $FilterBy = $("[id$='FilterBy']");
+    
+		function IEdetection() { 
+            var ua = window.navigator.userAgent; 
+            var msie = ua.indexOf('MSIE '); 
+            if (msie > 0) { //IE 10
+                return true; 
+            } 
+            var trident = ua.indexOf('Trident/'); 
+            if (trident > 0) { //IE 11
+                var rv = ua.indexOf('rv:'); 
+                return true; 
+            } 
+            var edge = ua.indexOf('Edge/'); 
+            if (edge > 0) { //IE 12+
+                return true; 
+            }  
+            return false; 
+        } 
+    
+        if(IEdetection()){            
+            $CallerName.attr('type','');
+            $TaxId.attr('type','');
+            $NPI.attr('type','');
+            $FirstName.attr('type','');
+            $LastName.attr('type','');
+            $ZipCode.attr('type','');
+            $PhoneNumber.attr('type','');
+        }
+    
+        function validate() {
+        
+        $("[id$='stateHidden']").val($("[id$='searchstate']").val());
+            $SearchCriteria.find(".pbError").remove();
+            $TaxId.removeClass("error").parent().find(".errorMsg").remove();
+            $NPI.removeClass("error").parent().find(".errorMsg").remove();
+            $LastName.removeClass("error").parent().find(".errorMsg").remove();
+            $FirstName.removeClass("error").parent().find(".errorMsg").remove();
+            $State.removeClass("error").parent().find(".errorMsg").remove();
+            $PhoneNumber.removeClass("error").parent().find(".errorMsg").remove();
+            $ZipCode.removeClass("error").parent().find(".errorMsg").remove();
+    
+            var ValidationResult = true;
+            if ($TaxId.val()) {
+                if($TaxId.val().length < 9) {
+                    $TaxId.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong>&nbsp;{!$Label.ACETProviderSearchTaxIdMinCharErrorMessage}</div>');
+                    ValidationResult = false;
+                }
+            }
+    
+            if ($NPI.val()) {
+                if($NPI.val().length < 10) {
+                    $NPI.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong>&nbsp;{!$Label.ACETProviderSearchNPIMinCharErrorMessage}</div>');
+                    ValidationResult = false;
+                }
+            }
+    
+            if ($LastName.val()) {
+                if($LastName.val().indexOf('*') >= 0) {
+                    if ($LastName.val().length < 4) {
+                        $LastName.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong>&nbsp;{!$Label.ACETProviderSearchLastNameMinCharErrorMessage}</div>');
+                        ValidationResult = false;
+                    }
+                    else if($LastName.val().substring($LastName.val().indexOf('*')).length > 1) {
+                        $LastName.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong>&nbsp;{!$Label.ACETProviderSearchLastNameMinCharErrorMessage}</div>');
+                        ValidationResult = false;
+                    }
+                }
+            }
+    
+            if ($FirstName.val()) {
+                if($FirstName.val().indexOf('*') >= 0) {
+                    if($FirstName.val().length < 2) {
+                        $FirstName.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong>&nbsp;{!$Label.ACETProviderSearchFirstNameMinCharErrorMessage}</div>');
+                        ValidationResult = false;
+                    }
+                    else if($FirstName.val().substring($FirstName.val().indexOf('*')).length > 1) {
+                        $FirstName.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong>&nbsp;{!$Label.ACETProviderSearchFirstNameMinCharErrorMessage}</div>');
+                        ValidationResult = false;
+                    }
+                }
+            }
+    
+            if ($ZipCode.val()) {
+                if($ZipCode.val().length < 5) {
+                    $ZipCode.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong>&nbsp;{!$Label.ACETProviderSearchZipCodeMinCharErrorMessage}</div>');
+                    ValidationResult = false;
+                }
+            }
+    
+            if ($PhoneNumber.val()) {
+                if($PhoneNumber.val().length < 10) {
+                    $PhoneNumber.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong>&nbsp;{!$Label.ACETProviderSearchPhoneNumberMinCharErrorMessage}</div>');
+                    ValidationResult = false;
+                }
+            }
+    
+            if (!ValidationResult)  {
+                $SearchCriteria.prepend('<div class="pbError">{!$Label.ACETProviderSearchInvalidDataErrorMessage}<br/>{!$Label.ACETProviderSearchReviewErrorMessage}</div>');
+            }
+            else    {
+                if ($TaxId.val() || $NPI.val() || $PhoneNumber.val()) {
+                    ValidationResult = true;        //Allow search on Tax ID or NPI or Phone Number alone
+                }
+                else if ($LastName.val()) {    //Tax ID, NPI and Phone Number are blank and Last Name or Facility/Group Name is not blank, check if State or Zip Code is entered
+                    var errorMsg;
+                    if ($FirstName.val()) {
+                        if ($State.val() || $ZipCode.val()) {
+                            ValidationResult = true;
+                        }
+                        else {
+                            errorMsg = '{!$Label.ACETProviderSearchLNameNFNameAloneErrorMessage}';
+                            ValidationResult = false;
+                        }
+                    }
+                    else {
+                        if ($State.val() || $ZipCode.val()) {
+                            ValidationResult = true;
+                        }
+                        else {
+                            errorMsg = '{!$Label.ACETProviderSearchLNameAloneErrorMessage}';
+                            ValidationResult = false;
+                        }
+                    }
+                    if (!ValidationResult)
+                    {
+                        $SearchCriteria.prepend('<div class="pbError">{!$Label.ACETProviderSearchInvalidDataErrorMessage}<br/>' + errorMsg + '</div>');
+                        $State.addClass("error");
+                        $ZipCode.addClass("error");
+                    }
+                } //end of if ($LastName.val())
+                else if ($FirstName.val()) {    //Tax ID, NPI and Phone Number and Last Name or Facility/Group Name are blank and First Name is not blank, check if State or Zip Code is entered
+                    ValidationResult = false;
+                    $LastName.addClass("error");
+                    var errorMsg;
+                    if (!$State.val() && !$ZipCode.val()) {
+                        errorMsg = '{!$Label.ACETProviderSearchFNameAloneErrorMessage}';
+                        $State.addClass("error");
+                        $ZipCode.addClass("error");
+                    }
+                    else if ($State.val() && !$ZipCode.val()) {
+                        errorMsg = '{!$Label.ACETProviderSearchFNameNStateAloneErrorMessage}';
+                    }
+                    else if (!$State.val() && $ZipCode.val()) {
+                        errorMsg = '{!$Label.ACETProviderSearchFNameNZipAloneErrorMessage}';
+                    }
+                    else {
+                        errorMsg = '{!$Label.ACETProviderSearchFNameNStateNZipAloneErrorMessage}';
+                    }
+                    $SearchCriteria.prepend('<div class="pbError">{!$Label.ACETProviderSearchInvalidDataErrorMessage}<br/>' + errorMsg + '</div>');
+                } //end of if ($FirstName.val())
+                else if ($State.val()) {
+                    ValidationResult = false;
+                    $TaxId.addClass("error");
+                    $NPI.addClass("error");
+                    $PhoneNumber.addClass("error");
+                    $LastName.addClass("error");
+                    var errorMsg;
+                    if ($ZipCode.val()) {
+                        errorMsg = '{!$Label.ACETProviderSearchStateNZipCodeAloneErrorMessage}';
+                    }
+                    else {
+                        errorMsg = '{!$Label.ACETProviderSearchStateAloneErrorMessage}';
+                    }
+                    $SearchCriteria.prepend('<div class="pbError">{!$Label.ACETProviderSearchInvalidDataErrorMessage}<br/>' + errorMsg + '</div>');
+                } //end of if ($State.val())
+                else if ($ZipCode.val()) {
+                    ValidationResult = false;
+                    $TaxId.addClass("error");
+                    $NPI.addClass("error");
+                    $PhoneNumber.addClass("error");
+                    $LastName.addClass("error");
+                    $SearchCriteria.prepend('<div class="pbError">{!$Label.ACETProviderSearchInvalidDataErrorMessage}<br/>{!$Label.ACETProviderSearchZipCodeAloneErrorMessage}</div>');
+                }
+                else {
+                    ValidationResult = false;
+                    $SearchCriteria.prepend('<div class="pbError">{!$Label.ACETProviderSearchInvalidDataErrorMessage}<br/>{!$Label.ACETProviderSearchValidCriteriaErrorMessage}</div>');
+                }
+            }
+            
+            if (ValidationResult == true)   {
+                afSearch();
+                return false;
+            }        
+            return ValidationResult;
+    
+        }
+    
+        function ClearSearchCriteria()  {
+            $SearchCriteria.find(".pbError").remove();
+            $TaxId.removeClass("error").parent().find(".errorMsg").remove();
+            $NPI.removeClass("error").parent().find(".errorMsg").remove();
+            $LastName.removeClass("error").parent().find(".errorMsg").remove();
+            $FirstName.removeClass("error").parent().find(".errorMsg").remove();
+            $State.removeClass("error").parent().find(".errorMsg").remove();
+            $PhoneNumber.removeClass("error").parent().find(".errorMsg").remove();
+            $ZipCode.removeClass("error").parent().find(".errorMsg").remove();
+    
+            $CallerName.val("");  //added by Srinivasa
+            $TaxId.val("");
+            $NPI.val("");
+            $LastName.val("");
+            // $FirstName.val(" ");
+            $State.val("");
+            $ZipCode.val("");
+            $PhoneNumber.val("");
+            // $FilterBy.val("");  
+            $("[id$='FirstName']").val("");  
+            document.getElementById("thePage:myform:FirstName").disabled = false;
+            $("[id$='FilterBy']").val(""); 
+            $("[id$='FilterByStatus']").val("Active");
+            afClear();
+        }
+    
+        function ProviderNotFound() {
+            var InteractionType = $InteractionType.val();
+            var ContactName = $CallerName.val();
+            var TaxID = $TaxId.val();
+            var NPI = $NPI.val();
+            var LastName = $LastName.val();
+            var FirstName = $FirstName.val();
+            var PhoneNumber = $PhoneNumber.val();
+            var FilterBy = $FilterBy.val();
+    
+            var dtNow = new Date();
+            var dtTime = dtNow.getTime();
+            var RedirectURL = '/apex/ACETProviderNotFoundForm?IT=' + InteractionType + '&CN=' + ContactName + '&TID=' + TaxID + '&FB=' + FilterBy + '&NPI=' + NPI + '&LN=' + LastName + '&FN=' + FirstName + '&Phone=' + PhoneNumber + '&TS=' + dtTime;
+    
+            sforce.console.openPrimaryTab(null, RedirectURL, true, 'Provider Not Found', null, 'PNF' + dtTime);
+    
+            return false;
+        }
+
+        function init() {
+            $TaxId.keypress(AllowDigitsOnly);
+            $NPI.keypress(AllowDigitsOnly);
+            $ZipCode.keypress(AllowDigitsOnly);
+            $PhoneNumber.keypress(AllowDigitsOnly);
+        }
+    
+        function AllowDigitsOnly(InputElement)  {
+            //Allow delete, tab, enter and escape keys through
+            if (/^(8|9|13|27)$/.test("" + InputElement.keyCode))    {
+                return true;
+            }
+    
+            var regex = new RegExp("^[0-9]+$");
+            var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+            if (regex.test(str))    {
+                return true;
+            }
+    
+            InputElement.preventDefault();
+            return false;
+        }
+        
+        function setPriTabStyle(result) { 
+            if (result.success) {
+                sforce.console.setTabStyle('background: ;', result.id);
+            } 
+        }
+        
+        function onloadSetTabTitle() {
+            //Set the current tabs title
+            sforce.console.getEnclosingPrimaryTabId(setPriTabStyle);
+            sforce.console.setTabTitle('Provider Search');            
+        }
+        
+         $(document).ready(function() {
+             localStorage.removeItem("flashConsoleTab");
+             onloadSetTabTitle();
+             init();
+         });
+         
+         $(document).ready(function() {
+             var noAutoSearch = '{!JSENCODE($CurrentPage.parameters.noAutoSearch)}'; 
+             if (noAutoSearch != 'true' && '{!JSENCODE($CurrentPage.parameters.vccdParams)}' != '') {
+                 var vccdParams;
+                 vccdParams =  JSON.parse('{!JSENCODE($CurrentPage.parameters.vccdParams)}');
+                 $("[id$='TaxID']").val(vccdParams.TaxID); 
+                 $("[id$='NPI']").val(vccdParams.npi);               
+                 $("[id$='btnSearch']").click();
+             }
+         }); 
+                 
+        var recLength ;
+        function initDatatableComplete() {
+            var noAutoSearch2 = '{!JSENCODE($CurrentPage.parameters.noAutoSearch)}';
+            if (recLength > 0 && noAutoSearch2 == 'true') { 
+               $("[id$='lastNameLinkid']").click();
+            }
+        }
+        
+        function processDatatable(row, data, dataIndex) {
+            $(row).children().first().html("<a id='lnkTaxId' href='#'>" + data.taxId + "</a>");                     
+            $(row).children().first().on('click', function(e) {
+                console.log('$InteractionType.val(): ' + $InteractionType.val() + ', $CallerName.val(): ' + $CallerName.val());
+                console.log('data.providerId: ' + data.providerId + ', data.taxId: ' + data.taxId + ', data.NPI: ' + data.NPI);
+                console.log('data.fullName: ' + data.fullName + ', data.providerType: ' + data.providerType);
+                recLength = dataIndex ;
+                Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.ACETProviderSearchController.RedirectToProviderDetail}',
+                    $InteractionType.val(), $CallerName.val(), data.providerId, data.taxId, data.NPI, data.fullName, data.providerType,
+                    data.addressId,data.addressTypeCode,data.postalPrefixCode, 
+                    function(result, event) {
+                        if (event.status) {
+                            var platProvider = '';
+                            if(data.Platinum == null || data.Platinum == '') {
+                                platProvider = ''
+                            } else {
+                                platProvider = data.Platinum;
+                            }
+                            var vccdParams = '{!JSENCODE($CurrentPage.parameters.vccdParams)}';
+                            var url = '/apex/ACETProviderDetail?Id=' + result.Id + '&Type=ProviderNotFound&vccdParams=' + vccdParams + '&ProviderTypeCode=' + data.providerTypeCode;
+                            url += '&providerTINStatusCode=' + data.providerTINStatusCode + '&ProvideraddressTypeCode=' + data.addressTypeCode;
+                            url += '&providerTINOwner=' + data.owner + '&addressId=' + data.addressId + '&providerTINTypeCode=' + data.providerTINTypeCode +'&ContactName='+ $CallerName.val();
+                            url += '&providerState=' + data.State+ '&providerPostalPrefix=' + data.zipCode + '&providerPhoneNumber=' + data.phoneNumber;
+                            url += '&providerType=' +data.providerType +  '&platinumProvider=' + platProvider;
+                            var decodeVal = decodeEntities(decodeEntities(result.Originator__r.LastName));                                                       
+                            sforce.console.openPrimaryTab('', url, true, 'Detail - '+decodeVal, null,data.providerId);
+
+                        }
+                        else if (event.type === 'exception') {
+                        }
+                        else {
+                        }
+                    },
+                    {escape: true}
+                );
+                return false;
+            });
+        }        
+
+        $(document).keypress(function (e) {
+            if (e.which == 13) {
+                console.log('enter key is pressed');
+                validate();
+                return false;
+            }
+        });
+    
+        //To convert the HTML numbers into Symbols    
+        function decodeEntities(encodedString) {
+            return $('<div/>').html(encodedString).text();
+        }
+    </script>
+    <style>
+        .slds-scope input[type=search]::-webkit-search-cancel-button,
+        .slds-scope input[type=search]::-webkit-search-decoration {
+        -webkit-appearance: searchfield !important;
+        }
+        .headerResultStyle {
+        font-size: 12px;
+        font-weight: Bold;
+        }
+    </style>
+</html>
+</apex:page>

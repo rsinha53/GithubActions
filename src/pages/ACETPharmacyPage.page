@@ -1,0 +1,282 @@
+<apex:page controller="ACETPharmacyController"   docType="html-5.0" sidebar="false">
+<script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+    <b><style>
+    .radioinput input[type="radio"] {
+        float: left;
+    }
+    
+    .radioinput label {
+        display: block;
+    }
+    
+    /* @Rama: Styling for radio width */
+    .radioWidth>tbody>tr>td:first-of-type {
+        width: 20%;
+    }
+    
+    .bPageBlock .detailList .data2Col {
+        padding-top: 2px;
+        padding-bottom: 2px;
+        padding-left: 0px;
+        text-align: left;
+        width: 82%;
+    }
+    </style></b>
+    <apex:includeScript value="{!$Resource.JQuery}" />
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+     <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"/>
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript> 
+    <apex:includeScript value="{!$Resource.JqueryDynamicCallTypesValidation}" />
+
+    <apex:form id="pharmacyForm">
+
+        <apex:outputPanel id="hlPanel">
+            <apex:inputHidden id="highlightPanelInfo"
+                value="{!hpAdditionInfoStr}" />
+            <c:ACETInteractionHighlightsPanel InteractionAtt="{!interaction}"
+                SubjectAtt="{!conObj}" AdditionalInfoAtt="{!additionalInfo}" selectedOriginator="{!wrapper.interaction.Originator_Name__c}"
+                html-auto-doc="auto"></c:ACETInteractionHighlightsPanel>
+        <apex:outputPanel id="hippapopupPanel">
+                       <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+            </apex:outputPanel>                
+        </apex:outputPanel>
+        <apex:sectionHeader title="Pharmacy Inquiry" id="sectionHeader" />
+        <apex:pageMessages />
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+            attrShowSaveAndCloseButton="false" attrShowSaveButton="true"
+            attrShowMisdirectButton="true" 
+            attrShowENBCancelButton="false"
+            attrSourceOriginator="{!wrapper.SourceOriginator}"
+            attrInteractionId="{!wrapper.Interaction.Id}"
+            attrSubjectId="{!wrapper.Subject.Id}"
+            attrCallTopic="Pharmacy Inquiry"
+            attrRedirectToPage="ACETOriginatingPageServiceRenewal" />
+        <apex:pageBlock id="mainBlock">
+            <br />
+            <br />
+            
+            <apex:pageblockSection columns="1">
+                <apex:pageBlockSectionItem >
+                    <input type="button" id="launchIsetBtn" style="margin-left: 44%;"
+                        value="Launch ISET" onclick="redirectToISET('{!ISETURL}');" />
+                </apex:pageBlockSectionItem>
+            </apex:pageblockSection>
+            <c:ACETDynamicCallTypesDisplay attrCaseDataWrapper="{!wrapper}" 
+                                  attrCallTopic="{!wrapper.caseobj.Topic__c}"
+                                  attrShowPickListcallTypes="false"
+                                  attrShowCheckBoxCallTypes="true"
+                                  attrshowAccountType="false"/>
+                                  
+           <apex:pageblockSection columns="1" html-auto-doc="auto">
+               <!-- <apex:pageBlockSectionItem id="PharmacyInquiry"
+                    dataStyle="padding-left:0px;!important">
+                    <apex:outputLabel value="Call Type"></apex:outputLabel>
+                    <apex:selectCheckboxes layout="pageDirection" id="CallTypes"
+                        value="{!wrapper.Topic}">
+                        <apex:selectOptions value="{!PharmacyInquiryCallTypes}"
+                            id="PharmacyInquiryoption" />
+                    </apex:selectCheckboxes>
+                </apex:pageBlockSectionItem> -->
+
+                <apex:pageBlockSectionItem html-auto-doc-item="false">
+                    <b>Client Services Referral Form </b>
+                </apex:pageBlockSectionItem>
+
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel html-auto-doc-item="false">Was a &nbsp;                    
+                        <apex:commandLink onclick="openCSRFWindow('{!CSRFURL}');" value="CSRF"
+                            id="theCommandLink" />
+                        created for this Inquiry?
+                    </apex:outputLabel>
+                    <apex:outputPanel id="viewCsrf">
+                        <apex:selectRadio value="{!selectedValue}" id="theRadio"
+                            styleClass="radioWidth" html-auto-doc-item="false">
+                            <apex:actionSupport event="onchange" rerender="viewCsrf" oncomplete="addRequiredFieldIndicator();"/>
+                            <apex:selectOption itemValue="Yes" itemlabel="Yes"
+                                html-auto-doc-item="false" />
+                            <apex:selectOption itemValue="No" itemlabel="No"
+                                html-auto-doc-item="false" />
+                        </apex:selectRadio>
+                        
+                        <table style="margin-left: -155px">
+                            <tr>
+                                <td html-auto-doc="true"><apex:outputLabel rendered="{!selectedValue='Yes'}"
+                                        style="font-size: 91%;font-weight: bold;color: #333;">Document the CSRF Number&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</apex:outputLabel></td>
+                                <td html-auto-doc="true"><apex:inputText maxlength="6"
+                                        id="csrfid" rendered="{!selectedValue='Yes'}">{!csrfNumber}</apex:inputText></td>
+                            </tr>
+                        </table>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputPanel >
+                        <table style="margin-left: 18.4%">
+                            <tr>
+                                <td><apex:outputLabel html-auto-doc-item="false"
+                                        style="font-size: 91%;font-weight: bold;color: #333;margin-left:-73px;">Comments&nbsp;&nbsp;</apex:outputLabel></td>
+                                <td><apex:inputTextarea html-auto-doc-item="false"
+                                        value="{!wrapper.Comments}" id="comments" 
+                                        style="width: 400px; height: 45px;"/></td>
+                            </tr>
+                        </table>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+            </apex:pageblockSection>
+        </apex:pageBlock>
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+            attrShowSaveAndCloseButton="false" attrShowSaveButton="true"
+            attrShowMisdirectButton="true" 
+            attrShowENBCancelButton="false"
+            attrSourceOriginator="{!wrapper.SourceOriginator}"
+            attrInteractionId="{!wrapper.Interaction.Id}"
+            attrSubjectId="{!wrapper.Subject.Id}"
+            attrCallTopic="Pharmacy Inquiry"
+            attrRedirectToPage="ACETOriginatingPageServiceRenewal" 
+            attrLocation="bottom"/>
+    </apex:form>
+    <script type="text/javascript">
+        function init()
+        {
+             $(document).on("keypress", "[id$='csrfid']", AllowDigitsOnly); 
+        }    
+        function AllowDigitsOnly(InputElement) 
+        {
+            //Allow delete, tab, enter and escape keys through
+            if (/^(8|9|13|27)$/.test("" + InputElement.keyCode)) 
+            {
+                return true;
+            }        
+            var regex = new RegExp("^[0-9]+$");
+            var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+            if (regex.test(str)) 
+            {
+                return true;
+            }        
+            InputElement.preventDefault();
+            return false;
+        }
+        window.onload = function()
+        {
+            acet.autodoc.startAutodoc();
+            addRequiredFieldIndicator();
+            unCheckSelectAll();
+            init(); 
+        }
+        $(document).ready(function(){
+            acet.autodoc.startAutodoc();
+            
+            unCheckSelectAll();       
+           
+        }); 
+        function unCheckSelectAll(){
+            console.log('un check select all inside');
+            $(".dataRow .autodoc input[type=checkbox]").on("change",function() {
+                console.log(' un check select all  onchange');
+                if(!$(this).is(":checked"))
+                {
+                    console.log(' un check select all  uncheck');
+                    $(".headerRow .autodoc input[type=checkbox]").prop("checked", false); 
+                }
+            });
+        }   
+    
+        function redirectToISET(ISETURL) {
+            window.open(ISETURL, 'ISET', 'toolbars=0,width=1200,height=800,left=0,top=0,scrollbars=1,resizable=1');        
+        }
+            
+        function addRequiredFieldIndicator()
+        {     
+                $("[id$='pbTableId']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+                $("[id$='theRadio']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock" ></div>');  
+                $("[id$='csrfid']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock" ></div>');          
+                $("[id$='comments']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>'); 
+        } 
+        
+        function validate(btnSearch){
+ 
+            var csrfid = $("[id$='csrfid']");   
+            var PharmacyComments =  $("[id$='comments']");
+
+            var isCsrfCreated = $("[id*='theRadio:']:checked").map(function() {
+                return this.value;
+            }).get();   
+
+            
+            
+            
+            $(".errorMsg").remove();
+            var errorMsg = "Select at least one Call Type."; 
+            var errorMsgComments = "You must enter a value."; 
+            var errorMsgRadio = "Select Yes or No."; 
+            var errorMsgCsrf = "CSRF Number must be 6 digits";
+            var errorMsgCommentsLength = "4000 character limit exceeded";
+            var returnFlag=true;
+            console.log('Testing....'+isCsrfCreated);        
+            
+            var chkArray = [];
+            $(".autodoc input[type=checkbox]").each(function() {
+                if($(this).is(':checked')) {
+                    chkArray.push($(this).is(':checked'));
+                }
+            }); 
+            var selected;
+            selected = chkArray.join(',') + ",";
+
+            if(selected.length >1){
+              // $(".errorMsg").remove();
+
+                $("[id$='pbTableId']").removeClass('errorMsg');
+
+              //  returnFlag = true;
+            } else {
+                $("[id$='pbTableId']").parent().append('<div class = "errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>');   
+                returnFlag = false;
+            }
+            PharmacyComments.val(PharmacyComments.val().trim());
+            if(PharmacyComments.val() == '' ){
+                $("[id$='comments']").parent().append('<div class = "errorMsg"><strong>Error:</strong> ' + errorMsgComments + '</div>');  
+                returnFlag  = false;                         
+            } 
+            
+            if(PharmacyComments.val().length > 4000 ) {
+                $("[id$='comments']").parent().append('<div class = "errorMsg"><strong>Error:</strong> ' + errorMsgCommentsLength + '</div>');  
+                returnFlag  = false;                         
+            } 
+            
+            if(isCsrfCreated == '' ){
+                var errorMsgRadio = "Select Yes or No."; 
+                console.log('Testing123....'+isCsrfCreated); 
+                $("[id$='theRadio']").parent().append('<div class = "errorMsg"><strong>Error:</strong> ' + errorMsgRadio + '</div>');  
+                returnFlag  = false;                         
+            }   
+            if(isCsrfCreated == 'Yes')
+            {
+              if(csrfid.val() == ''){
+                    $("[id$='csrfid']").parent().append('<div class = "errorMsg"><strong>Error:</strong> ' + errorMsgCsrf + '</div>');  
+                    returnFlag  = false;                         
+                }         
+                if(csrfid.val()){       
+                    if(csrfid.val().length < 6) {
+                        $("[id$='csrfid']").parent().append('<div class = "errorMsg"><strong>Error:</strong> ' + errorMsgCsrf + '</div>');
+                        returnFlag = false; 
+                    }   
+                } 
+            }
+            
+        if(returnFlag == true) {
+            return true;
+            }
+        else {
+            return false;
+            } 
+            
+            
+        }
+        function openCSRFWindow(CSRF_Link) {
+            window.open(CSRF_Link, 'CSRFwindow', 'toolbars=0,width=1200,height=800,left=0,top=0,scrollbars=1,resizable=1');
+        }
+
+    </script>
+   
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+</apex:page>

@@ -1,0 +1,821 @@
+<apex:component controller="ValidateData">
+    <apex:attribute name="typeVal" description="" type="String" required="true" assignTo="{!typeValue}"/>
+    
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"/>
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+   <!-- <apex:includeScript value="{!$Resource.JQuery}" /> -->
+    <apex:includeScript value="/soap/ajax/30.0/connection.js" />
+    <apex:includeScript value="/soap/ajax/30.0/apex.js" /> 
+
+    <style>
+        .errorCls{
+            font-weight: bold;
+            color: #c00;
+            text-align: center;
+        }
+    
+    </style>
+ 
+    <script >  
+        var inputswrapper;
+        var validationRuleRecords;
+        var requiredFieldArray;
+        var dependentFieldArray;
+        var fieldMinLengthArray;
+        var fieldMaxLengthArray;
+        var fieldToBeDisplayAsRequiredArray;
+        var fieldToBeAllowedNumberOnly;
+        var fieldToBeAllowedAlphabetsOnly;
+        var fieldToBeAllowedAlphaAndwildcardOnly;
+        var regexToFollow;
+        var aplhaNumeric;
+        var aplhaNumericwildcardOnly;
+        var dateOnly;
+        var errorLocation;
+        var invalidCombinations;
+        var hideTopDiv;
+        var errorCount;
+        var errorArr = [];
+        $(document).ready(function(){
+            hideTopDiv = false;
+            errorCount = 0;
+            sforce.connection.sessionId = "{!$Api.Session_ID}";
+            var inputswrapperStr = sforce.apex.execute("ValidateData","getinputswrapperStr",{typeValue:"{!typeValue}"});  
+            inputswrapper = JSON.parse(inputswrapperStr);
+            $.each( inputswrapper, function( index, wrapper ) {
+                $.each( wrapper, function( key, value ) {
+                    if(key == 'validationRuleRecords'){
+                        validationRuleRecords = value;
+                    }else if(key == 'requiredFields'){
+                        requiredFieldArray = value;
+                    }else if(key == 'fieldsRequiredByParent'){
+                        dependentFieldArray = value;
+                    }else if(key == 'fieldMinLength'){
+                        fieldMinLengthArray = value;
+                    }else if(key == 'fieldMaxLength'){
+                        fieldMaxLengthArray = value;
+                        $.each( fieldMaxLengthArray, function( recIdAndField, maxLength ) {
+                            var fieldDomId = recIdAndField.split('~')[1];
+                            $("[id$="+fieldDomId+"]").attr('maxlength', maxLength);
+                        });
+                        
+                    }else if(key == 'fieldToBeDisplayAsRequired'){
+                        fieldToBeDisplayAsRequired = value;
+                    }else if(key == 'numbersOnly'){
+                    
+                        fieldToBeAllowedNumberOnly = value;
+                        $.each( fieldToBeAllowedNumberOnly, function( key, fields ) {
+                            for(var field in fields){
+                                if($.isNumeric(field)){
+                                    var fieldDomId = fields[field];
+                                    $("[id$="+fieldDomId+"]").keypress(AllowDigitsOnly);  
+                                }
+                                
+                            }
+                        });
+                        
+                        
+                    }else if(key == 'alphabetsOnly'){
+                        fieldToBeAllowedAlphabetsOnly = value;
+                        $.each( fieldToBeAllowedAlphabetsOnly, function( key, fields ) {
+                            for(var field in fields){
+                                if($.isNumeric(field)){
+                                    var fieldDomId = fields[field];
+                                    $("[id$="+fieldDomId+"]").keypress(AllowAlphabetsOnly);  
+                                }
+                                
+                            }
+                        });
+                    }else if(key == 'alphaAndwildcardOnly' ){
+                        fieldToBeAllowedAlphaAndwildcardOnly = value; 
+                        $.each( fieldToBeAllowedAlphaAndwildcardOnly, function( key, fields ) {
+                            for(var field in fields){
+                                if($.isNumeric(field)){
+                                    var fieldDomId = fields[field];
+                                    if(fieldDomId.indexOf('~') > 0){
+                                        fieldDomId = fields[field].split('~')[0];
+                                    }
+                                    
+                                    $("[id$="+fieldDomId+"]").keypress(AllowAplhaAndWildCardsOnly);  
+                                }
+                                
+                            }
+                        });
+                    }else if(key == 'regexToFollow' ){
+                        regexToFollow = value; 
+                    }else if(key == 'aplhaNumeric' ){
+                        aplhaNumeric = value; 
+                        $.each( aplhaNumeric, function( key, fields ) {
+                            for(var field in fields){
+                                if($.isNumeric(field)){
+                                    var fieldDomId = fields[field];
+                                    $("[id$="+fieldDomId+"]").keypress(AllowAlphaNumericOnly);  
+                                }
+                                
+                            }
+                        });
+                    }else if(key == 'aplhaNumericwildcardOnly' ){
+                        aplhaNumericwildcardOnly = value; 
+                        $.each( aplhaNumericwildcardOnly, function( key, fields ) {
+                            for(var field in fields){
+                                if($.isNumeric(field)){
+                                    var fieldDomId = fields[field];
+                                    if(fieldDomId.indexOf('~') > 0){
+                                        fieldDomId = fields[field].split('~')[0];
+                                    }
+                                    $("[id$="+fieldDomId+"]").keypress(AllowAlphaNumericWildCardsOnly);  
+                                }
+                                
+                            }
+                        });
+                    }else if(key == 'dateOnly' ){
+                        dateOnly = value; 
+                    }
+                    else if(key == 'invalidCombinations' ){
+                        invalidCombinations = value; 
+                    }
+                });
+            });
+            
+            //on key press - check for enter/return key - execute the search
+            $(document).keypress(function(e) {
+                if(e.which == 13 || e.keyCode == 13) {
+                    $('[id$="btnSearch"]').trigger('click');
+                }
+            });
+            
+            applyRequiredBlockForfieldInArray(fieldToBeDisplayAsRequired);      
+            
+        });
+        
+        
+        
+        function isNumber(str) {
+          return /^[0-9]+$/.test(str);
+        }
+        
+        function isAlpha(str) {
+          return /^[a-zA-Z ]+$/.test(str);
+        }
+        
+        function isAlphaNumeric(str) {
+            return /^[a-zA-Z0-9 ]+$/.test(str);
+        }
+        
+        function isAlphaNumericwildChar(str,minCharLength) {
+            if(str != null && str !=''){
+                if(str.indexOf('*') >= 0){
+                    var lastIndex = str.length - 1;
+                    if(lastIndex != str.indexOf('*')){
+                        return false;
+                    } 
+                }
+            }
+            
+            if(minCharLength != null && minCharLength != '' && str != null && str !='' && str.indexOf('*') >= 0){
+                
+                
+                var lastIndex = str.length - 1;
+                if(lastIndex != str.indexOf('*')){
+                       return false;
+                }
+                 
+                
+                var tmpStr = str.replace(/\*/g, ''); 
+                //tmpStr = tmpStr.replace(/\?/g, ''); 
+                
+                if(/^[a-zA-Z0-9* ]+$/.test(str) == true){
+                    
+                    if(tmpStr.length < minCharLength){
+                        return false;
+                    }else{
+                        return true;    
+                    }
+                }else{
+                    return false;    
+                }
+            }else{
+                return /^[a-zA-Z0-9* ]+$/.test(str);        
+            }
+        }
+    
+        function isAlphaAndWildCard(str,minCharLength) {
+            
+            if(str != null && str !=''){
+                if(str.indexOf('*') >= 0){
+                    var lastIndex = str.length - 1;
+                    if(lastIndex != str.indexOf('*')){
+                        return false;
+                    } 
+                }
+            }
+            
+            if(minCharLength != null && minCharLength != '' && str != null && str !='' && str.indexOf('*') >= 0){
+                var tmpStr = str.replace(/\*/g, ''); 
+                //tmpStr = tmpStr.replace(/\?/g, ''); 
+                if(/^[a-zA-Z* ]+$/.test(str) == true){
+                    if(tmpStr.length < minCharLength){
+                        return false;
+                    }else{
+                        return true;    
+                    }
+                }else{
+                    return false;    
+                }
+            }else{
+                return /^[a-zA-Z* ]+$/.test(str);       
+            }
+        }
+               
+        
+        function applyRequiredBlockForfieldInArray(listOfFields){
+            if(listOfFields != null){
+                $.each( listOfFields, function( index, field ) {
+                    applyRequiredBlock(field);      
+                });
+            }
+        }
+        
+        function applyRequiredBlock(domId){
+            $("[id$="+domId+"]").wrap('<div class="requiredInput"></div>');
+            $("[id$="+domId+"]").before('<div class="requiredBlock"></div>');
+        }
+        
+        
+        function validateNew(locationToDisplayError,hideTopDivParam){
+            hideTopDiv = hideTopDivParam;
+            var isSuccess = validate_comp(locationToDisplayError);
+            return isSuccess;
+        }
+        
+        function validate_comp(locationToDisplayError){
+                $("#topErrorMsgDiv").remove();
+                $(".errorMsg").remove();
+                
+                console.log('errorCount  '+errorCount);
+                if(errorArr != null){
+                    for(var ea in errorArr){
+                        if($.isNumeric(ea)){
+                            console.log('ea  '+errorArr[ea]); 
+                            $("[id$="+errorArr[ea]+"]").removeClass("error");
+                        } 
+                    }
+                    errorArr = [];
+                }
+                for(var i=0;i<errorCount;i++){
+                    console.log('errorCount - for  '+i);
+                    $("#errorMsgDiv").removeClass();
+                    $("#errorMsgDiv").remove();
+                }
+                
+                errorCount = 0;
+                 
+                
+                
+                var isSuccess = true;
+                
+                if(errorLocation != null){
+                    var errLocationArray = errorLocation.split(',');
+                    for(var i=0;i<errLocationArray.length;i++){
+                        $("[id$="+errLocationArray[i]+"]").removeClass('error');
+                    }
+                }
+                
+                errorLocation = null;
+                if(locationToDisplayError != null && locationToDisplayError != ''){
+                    errorLocation = locationToDisplayError;
+                }
+                var errorRecId = null; 
+                var reqFieldsDataAvailable = false;
+                
+                
+                /*Regular expression handle start*/
+                if(regexToFollow != null && regexToFollow != ''){
+                    $.each( regexToFollow, function( key, regExpressions ) {
+                        for(var index in regExpressions){
+                            if($.isNumeric(index)){
+                                var regExpression = regExpressions[index];
+                                regExpression = regExpression.replace(/\slash/g, '\\');
+                                if(regExpression != null && regExpression != ''){
+                                    var fieldApiName = key.split('~')[1];
+                                    var fieldVal = $("[id$="+fieldApiName+"]").val();
+                                    if(fieldVal != null && fieldVal != ''){
+                                        var pat = new RegExp(regExpression);
+                                        var result =pat.test(fieldVal);
+                                        if(result == false){
+                                            errorRecId = key.split('~')[0];
+                                            isSuccess =  displayErrorMessage(errorRecId,false);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }); 
+                }
+                
+                /*Regular expression handle end*/
+                
+                
+                //If any of the field defined as "Number only", but entered non numeric values , then throwing an error
+                $.each( fieldToBeAllowedNumberOnly, function( key, fields ) {
+                    for(var field in fields){
+                        if($.isNumeric(field)){
+                            var fieldApiName = fields[field];
+                            var fieldVal = $("[id$="+fieldApiName+"]").val();
+                            if(fieldVal != null && fieldVal != ''){
+                                if( isNumber(fieldVal) == false){
+                                    errorRecId = key;
+                                    isSuccess =  displayErrorMessage(errorRecId,false);
+                                }
+                            }
+                        }
+                        
+                    }
+                });
+                
+                
+                
+                //If any of the field defined as "Alphabets only", but entered non alpha values , then throwing an error
+                $.each( fieldToBeAllowedAlphabetsOnly, function( key, fields ) {
+                    for(var field in fields){
+                        if($.isNumeric(field)){
+                            var fieldApiName = fields[field];
+                            var fieldVal = $("[id$="+fieldApiName+"]").val();
+                            if(fieldVal != null && fieldVal != ''){
+                                if( isAlpha(fieldVal) == false){
+                                    errorRecId = key;
+                                    isSuccess =  displayErrorMessage(errorRecId,false);
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                
+                //If any of the field defined as "Alphabets and Wildcard characters only", but entered some other values , then throwing an error
+                $.each( fieldToBeAllowedAlphaAndwildcardOnly, function( key, fields ) {
+                    for(var field in fields){
+                        if($.isNumeric(field)){
+                            var fieldApiName = fields[field];
+                            var minCharLength;
+                            if(fieldApiName.indexOf('~') > 0){
+                                fieldApiName = fields[field].split('~')[0];
+                                minCharLength = fields[field].split('~')[1];
+                            }
+                            var fieldVal = $("[id$="+fieldApiName+"]").val();
+                            if(fieldVal != null && fieldVal != ''){
+                                if( isAlphaAndWildCard(fieldVal,minCharLength) == false){
+                                    errorRecId = key;
+                                    isSuccess =  displayErrorMessage(errorRecId,false);
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                
+                
+                //If any of the field defined as "aplhaNumeric", but entered some other values , then throwing an error
+                $.each( aplhaNumeric, function( key, fields ) {
+                    for(var field in fields){
+                        if($.isNumeric(field)){
+                            var fieldApiName = fields[field];
+                            var fieldVal = $("[id$="+fieldApiName+"]").val();
+                            if(fieldVal != null && fieldVal != ''){
+                                if( isAlphaNumeric(fieldVal) == false){
+                                    errorRecId = key;
+                                    isSuccess = displayErrorMessage(errorRecId,false);
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                
+                //If any of the field defined as "aplhaNumericwildcardOnly", but entered some other values , then throwing an error
+                $.each( aplhaNumericwildcardOnly, function( key, fields ) {
+                    for(var field in fields){
+                        if($.isNumeric(field)){
+                            var fieldApiName = fields[field];
+                            
+                            var minCharLength;
+                            if(fieldApiName.indexOf('~') > 0){
+                                fieldApiName = fields[field].split('~')[0];
+                                minCharLength = fields[field].split('~')[1];
+                            }
+                            var fieldVal = $("[id$="+fieldApiName+"]").val();
+                            
+                            if(fieldVal != null && fieldVal != ''){
+                                if( isAlphaNumericwildChar(fieldVal,minCharLength) == false){
+                                    errorRecId = key;
+                                    isSuccess = displayErrorMessage(errorRecId,false);
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                
+                $.each( dateOnly, function( key, fields ) {
+                    for(var field in fields){
+                        if($.isNumeric(field)){
+                            var fieldApiName = fields[field];
+                            var fieldVal = $("[id$="+fieldApiName+"]").val();
+                            if(fieldVal != null && fieldVal != ''){
+                                if( isValidDate(fieldVal) == false){
+                                    errorRecId = key;
+                                    isSuccess = displayErrorMessage(errorRecId,false);
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                
+                //Checking whether any of the field is having more than number of characters, than defined maximum characters 
+                $.each( fieldMaxLengthArray, function( recIdAndField, maxLength ) {
+                    var fieldApiName = recIdAndField.split('~')[1];
+                    var fieldVal = $("[id$="+fieldApiName+"]").val();
+                    if(fieldVal != null && fieldVal != '' && maxLength != null){
+                        if(fieldVal.length > maxLength){
+                            //if(isSuccess == true){
+                                errorRecId = recIdAndField.split('~')[0];
+                                isSuccess = displayErrorMessage(errorRecId,false);
+                            //}
+                        }
+                    }
+                });
+                
+                
+                //Checking whether any of the field is having less than number of characters, than defined minimum characters 
+                $.each( fieldMinLengthArray, function( recIdAndField, minLength ) {
+                    var fieldApiName = recIdAndField.split('~')[1];
+                    var fieldVal = $("[id$="+fieldApiName+"]").val();
+                    if(fieldVal != null && fieldVal != '' && minLength != null){
+                        if(fieldVal.length < minLength){
+                            //if(isSuccess == true){
+                                errorRecId = recIdAndField.split('~')[0];
+                                isSuccess = displayErrorMessage(errorRecId,false);
+                            //}
+                        }
+                    }
+                });
+                
+                
+                if(invalidCombinations != null && invalidCombinations != ''){
+                    $.each( invalidCombinations, function( key, values ) {
+                        var recId = key.split('~')[0];
+                        var arr = [];
+                        var fields = [];
+                        if((key.split('~')[1]).indexOf(',') > 0){
+                            var tmpFields =  (key.split('~')[1]).split(',');
+                            for(var i in tmpFields){
+                                if($.isNumeric(i)){
+                                    fields.push(tmpFields[i]);
+                                }
+                            }
+                        }else{
+                            fields.push(key.split('~')[1]);
+                        }
+                        var firstConditionMet = true;
+                        if(fields.length > 0){
+                            for(var i in fields){ 
+                                if($.isNumeric(i) ){
+                                    if(isNotBlankORTrue(fields[i]) == false){ 
+                                        firstConditionMet = false;
+                                    }
+                                }
+                            }
+                        }
+                        var secondConditionMet = true;
+                        if(values.length > 0 && firstConditionMet == true){
+                            for(var index in values){
+                                if($.isNumeric(index)){
+                                    if(isNotBlankORTrue(values[index]) == true){
+                                        secondConditionMet = false;
+                                    }
+                                }
+                            }
+                        }
+                        if(fields.length > 0 && values.length > 0){
+                            if(firstConditionMet == true && secondConditionMet == true){
+                                errorRecId = recId;
+                                console.log('errorRecId  '+errorRecId);
+                            }
+                        }
+                                
+                    }); 
+                    if(errorRecId != null && errorRecId != '' && isSuccess == true){
+                        isSuccess =  displayErrorMessage(errorRecId,false);
+                    }
+                
+                }
+                
+                
+                //Checking whether required fields infomation available or not
+                reqFieldsDataAvailable = false;
+                errorRecId = null;
+                $.each( requiredFieldArray, function( reqFields, fieldInfo ) {
+                    if(reqFieldsDataAvailable == false){
+                        var reqFieldCount  = parseInt(fieldInfo.length);
+                        var actualCount = parseInt(0);
+                        for(var tmpKey in fieldInfo){
+                            if($.isNumeric(tmpKey)){
+                                errorRecId = fieldInfo[tmpKey].split('~')[0];
+                                var fieldApiName = fieldInfo[tmpKey].split('~')[1];
+                                
+                                reqFieldsDataAvailable = false;
+                                if(isNotBlankORTrue(fieldApiName) == true){
+                                    actualCount = actualCount + 1;
+                                }
+                            }
+                        }
+                        if(reqFieldCount == actualCount){
+                            reqFieldsDataAvailable = true;
+                        }
+                    }
+                });
+                
+                
+                
+                //If required fields data not avilable thorowing an error message
+                if(reqFieldsDataAvailable == false && errorRecId != null && errorRecId != ''){
+                    if(isSuccess == true){
+                        isSuccess =  displayErrorMessage(errorRecId,true);
+                    }
+                }
+                /*
+                var dependetFieldMissing =true;
+                errorRecId = null;
+                
+                //Checking whether dependets fields data available or not
+                $.each( dependentFieldArray, function( parentField, dependetFields ) {
+                    if(dependetFieldMissing == true){
+                        var fieldApiName = parentField.split('~')[1];
+                        var parentFieldVal = $("[id$="+fieldApiName+"]").val();
+                        
+                        
+                        if(isNotBlankORTrue(fieldApiName) == true ){  
+                            errorRecId = parentField.split('~')[0];
+                            if(dependetFields.length == 0){
+                                dependetFieldMissing = false;
+                                errorRecId = null;
+                            }
+                            
+                            for(var index in dependetFields){
+                                if($.isNumeric(index)){
+                                    var totalFieldsLength = 0;
+                                    var fieldsMetReq = 0;
+                                    
+                                    var dependentFieldsArray = dependetFields[index];
+                                    for(var dependentFieldIndex in dependentFieldsArray){    
+                                        if($.isNumeric(dependentFieldIndex)){
+                                            totalFieldsLength = totalFieldsLength + 1;                            
+                                            var dependentfieldApiName = dependentFieldsArray[dependentFieldIndex];
+                                            if(isNotBlankORTrue(dependentfieldApiName) == true){
+                                                fieldsMetReq = fieldsMetReq + 1;
+                                            }
+                                        }
+                                    }
+                                    
+                                    if(totalFieldsLength > 0 &&  totalFieldsLength == fieldsMetReq ){
+                                        dependetFieldMissing = false;
+                                        errorRecId = null;
+                                    }else if(totalFieldsLength == 0){
+                                        dependetFieldMissing = false;
+                                        errorRecId = null;
+                                    } 
+                                }
+                            }
+                            
+                        }
+                    }
+                    
+                });
+                
+                
+                
+                //If dependent fields data not avilable thorowing an error message
+                if(dependetFieldMissing != false && errorRecId != null && errorRecId != ''){
+                    if(isSuccess == true){
+                        isSuccess = displayErrorMessage(errorRecId,false);
+                    }
+                }*/
+                
+                return isSuccess;
+        }
+        
+        function displayErrorMessage(errorRecId,forReqFields){
+            //alert(errorRecId);
+            var errorMsg;
+            var fieldLevelError = false;
+            $.each( validationRuleRecords, function( recId, wrapper ) {
+                if(recId == errorRecId){
+                    $.each( wrapper, function( key, value ) {
+                        if(key == 'errorMessage' ){
+                            errorMsg = value;
+                        }
+                        if(key == 'errorLocation' && value != null){
+                            errorLocation = value;
+                            fieldLevelError = true;
+                        }
+                    });
+                }
+            });
+            if(errorLocation != null && errorLocation != ''){
+                errorLocation = errorLocation;
+            }else{
+                errorLocation = 'topErrorPanel';
+            }
+            if(fieldLevelError == true){
+                
+                var errLocationArray = errorLocation.split(',');
+                if(hideTopDiv == false){
+                    if(document.getElementById('topErrorMsgDiv') == null){
+                        $("#topErrorPanel").after('<div  id="topErrorMsgDiv"  class="errorCls"><strong>Error:</strong>  Invalid Data. Review all error messages below to correct your data.</div>');
+                    }
+                }
+                for(var i=0;i<errLocationArray.length;i++){
+                    if(forReqFields == true){
+                        if(isNotBlankORTrue(errLocationArray[i]) == false){
+                            $("[id$="+errLocationArray[i]+"]").addClass('error');
+                    
+                            if($("[id$="+errLocationArray[i]+"]").next('span').hasClass( "dateFormat" )){
+                                $("[id$="+errLocationArray[i]+"]").next('span').after('<span id="errorMsgDiv" class="errorMsg"> <p style="width:200px;margin-top:-0px;"> <strong>Error:</strong> '+errorMsg  +' </p> </span>');
+                            }else{
+                                $("[id$="+errLocationArray[i]+"]").after('<span id="errorMsgDiv" class="errorMsg"> <p style="width:200px;margin-top:-0px;"><strong>Error:</strong> '+errorMsg  +'</p> </span>');
+                            }
+                            errorCount = errorCount + 1;
+                            errorArr.push(errLocationArray[i]);
+                        }
+                    }else{
+                        $("[id$="+errLocationArray[i]+"]").addClass('error');
+                    
+                        if($("[id$="+errLocationArray[i]+"]").next('span').hasClass( "dateFormat" )){
+                            $("[id$="+errLocationArray[i]+"]").next('span').after('<span id="errorMsgDiv" class="errorMsg"> <p style="width:200px;margin-top:-0px;"> <strong>Error:</strong> '+errorMsg  +' </p> </span>');
+                        }else{
+                            $("[id$="+errLocationArray[i]+"]").after('<span id="errorMsgDiv" class="errorMsg"> <p style="width:200px;margin-top:-0px;"><strong>Error:</strong> '+errorMsg  +'</p> </span>');
+                        }
+                        errorCount = errorCount + 1;
+                        errorArr.push(errLocationArray[i]);
+                    }
+                    
+                }
+            }else{
+                if(errorLocation != null){
+                    $("[id$="+errorLocation+"]").after('<div  id="errorMsgDiv"  class="errorCls"><strong>Error:</strong> '+errorMsg  +'</div>');
+                    errorCount = errorCount + 1;
+                    errorArr.push(errorLocation);
+                }
+            }
+            
+            
+            return false;
+        }
+    
+        function isNotBlankORTrue(domId){
+            if($("[id$="+domId+"]").is(':checkbox')){
+                if($("[id$="+domId+"]").is(":checked")){
+                    return true;
+                }else{
+                    return false;
+                }
+            }else{
+                if($("[id$="+domId+"]").val() != null && $("[id$="+domId+"]").val() != '' && $("[id$="+domId+"]").val() != 'None'){
+                    return true;
+                }else{
+                    return false;
+                }
+            }
+        }
+        
+        function AllowDigitsOnly(InputElement) {
+            //Allow delete, tab, enter and escape keys through
+            if (/^(8|9|13|27)$/.test("" + InputElement.keyCode)) {
+                return true;
+            }
+            
+            var regex = new RegExp("^[0-9]+$");
+            var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+            if (regex.test(str)) {
+                return true;
+            }
+            
+            InputElement.preventDefault();
+            return false;
+        }
+        
+        function AllowAlphabetsOnly(InputElement) {
+            //Allow delete, tab, enter and escape keys through
+            if (/^(8|9|13|27)$/.test("" + InputElement.keyCode)) {
+                return true;
+            }
+            
+            var regex = new RegExp("^[a-zA-z ]+$");
+            var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+            if (/^[a-zA-Z ]+$/.test(str)) {
+                return true;
+            }
+            
+            InputElement.preventDefault();
+            return false;
+        }
+        
+        function AllowAlphaNumericOnly(InputElement) {
+            //Allow delete, tab, enter and escape keys through
+            if (/^(8|9|13|27)$/.test("" + InputElement.keyCode)) {
+                return true;
+            }
+            
+            var regex = new RegExp("^[a-zA-z0-9 ]+$");
+            var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+            if (/^[a-zA-Z0-9 ]+$/.test(str)) {
+                return true;
+            }
+            
+            InputElement.preventDefault();
+            return false;
+        }
+        
+        
+        function AllowAplhaAndWildCardsOnly(InputElement) {
+            //Allow delete, tab, enter and escape keys through
+            if (/^(8|9|13|27)$/.test("" + InputElement.keyCode)) {
+                return true;
+            }
+            
+            var regex = new RegExp("^[a-zA-z* ]+$");
+            var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+            if (regex.test(str)) {
+                return true;
+            }
+            
+            InputElement.preventDefault();
+            return false;
+        }
+        
+        function AllowAlphaNumericWildCardsOnly(InputElement) {
+            //Allow delete, tab, enter and escape keys through
+            if (/^(8|9|13|27)$/.test("" + InputElement.keyCode)) {
+                return true;
+            }
+            
+            //var regex = new RegExp("/^[a-zA-Z0-9* ]+$"); //Commented do not allow ^ and _ special characters
+            var regex = /^[a-zA-Z0-9* ]+$/;
+            var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+            if (regex.test(str)) {
+                return true;
+            }
+            
+            InputElement.preventDefault();
+            return false;
+        }
+        
+        
+        
+        
+        
+        
+        function NotAllowSpecials(e){
+            var valid = (e.which >= 48 && e.which <= 57) || (e.which >= 65 && e.which <= 90) || (e.which >= 97 && e.which <= 122);
+            if (!valid) {
+                e.preventDefault();
+                return false;
+            }
+        }
+        
+        function isValidDate(dateStr) {
+            var datePat = /^(\d{1,2})(\/|-)(\d{1,2})\2(\d{2}|\d{4})$/;
+            var matchArray = dateStr.match(datePat);
+            if (matchArray == null) {
+                return false;
+            }
+            month = matchArray[1]; // parse date into variables
+            day = matchArray[3];
+            year = matchArray[4];
+            if (month < 1 || month > 12) { // check month range
+                return false;
+            }
+            if (day < 1 || day > 31) {
+                return false;
+            }
+            if ((month==4 || month==6 || month==9 || month==11) && day==31) {
+                return false
+            }
+            if (month == 2) { // check for february 29th
+            var isleap = (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+            if (day>29 || (day==29 && !isleap)) {
+                return false;
+               }
+            }
+            return true;  // date is valid
+        }
+    
+    </script>
+    
+    <div id="topErrorPanel" >
+                
+    </div>
+    
+    
+</apex:component>

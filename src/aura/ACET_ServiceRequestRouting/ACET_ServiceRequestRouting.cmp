@@ -1,0 +1,369 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,lightning:isUrlAddressable" access="global" controller="ACET_RoutingScreenController">
+   <ltng:require styles="{!$Resource.ACETLink_MasterStyle}" />
+   <aura:handler name="init" value="{!this}" action="{!c.onLoad}" />
+   <aura:registerEvent name="ACET_OpenTTSPopUPForClaim" type="c:ACET_OpenTTSPopUPForClaim"/>
+   <aura:registerEvent name="ACET_OpenTTSPopUPFromRouting" type="c:ACET_OpenTTSPopUPFromRouting"/>
+   <aura:handler event="c:ACET_SendContactNumber" action="{!c.getContactNumber}"/>
+   <!--Praveen-->
+   <aura:registerEvent name="SAE_GetProviderDetailsAE" type="c:SAE_GetProviderDetailsAE" />
+   <aura:handler event="c:SAE_SetProviderDetailsAE" action="{!c.setProviderDetails}" />
+   <aura:registerEvent name="ACET_GetContactNumber" type="c:ACET_GetContactNumber" />
+   <aura:handler name="showSendToBlock" event="c:ACET_ShowClaimsSendToCmp" action="{!c.toggleFlag}"/>
+   <!--Praveen-->
+   <!--<aura:handler name="showSendItems" event="c:ACET_ShowClaimsSendToCmp" action="{!c.showSendToFlag}"/>-->
+   <aura:attribute name="showSendToCard" type="Boolean" default="false"/>
+   <aura:attribute name="selectteamQuickList" type="List" />
+   <aura:attribute name="DispAmountAllowd" type="List" />
+   <aura:attribute name="selectOfficelist" type="List" />
+   <aura:attribute name="selectdepartmentlist" type="List" />
+   <aura:attribute name="selectTeamslist" type="List" />
+   <aura:attribute name="selectedTeams" type="List" />
+   <aura:attribute name="selectAdvocateroles" type="object" />
+   <aura:attribute name="selectedDept" type="string" />
+   <aura:attribute name="selectedOptionDispAmount" type="string" />
+   <aura:attribute name="isReferal" type="string" />
+   <aura:attribute name="isTimelyFilingvalue" type="string" />
+   <aura:attribute name="timeLiFillingValue" type="string" />
+   <aura:attribute name="isAuthDiscvalue" type="string" />
+   <aura:attribute name="isAuthselctDiscvalue" type="string" />
+   <aura:attribute name="authDIScValue" type="string" />
+   <aura:attribute name="isMisquoteInfovalue" type="string" />
+   <aura:attribute name="MisquoteINFOValue" type="string" />
+   <aura:attribute name="isClaim" type="Boolean" default="false"/>
+   <aura:attribute name="selectdepartlist" type="List" />
+   <aura:handler name="change" value="{!v.isShowCmp}" action="{!c.teamChange}"/>
+   <aura:attribute name="isShowCmp" type="Boolean" default="false" access="public"/>
+   <aura:attribute name="selTabId" type="string" default="" />
+   <aura:attribute name="yesOrNoOptions" type="List" default="[
+      {'label': 'Yes', 'value': 'Yes'},
+      {'label': 'No', 'value': 'No'}
+      ]"/>
+   <aura:attribute name="individualRadioOption" type="List" default="[{'label': 'Individual', 'value': 'individual'}]"/>
+   <aura:attribute name="sendToOptions" type="List" default="[
+      {'label': 'Team Quick List', 'value': 'teamList'},
+      {'label': 'Office/Department/Team', 'value': 'office'}
+      ]" />
+   <!-- Boolean Variables Declaration -->
+   <aura:attribute name="hideEntireSection" type="Boolean" default="false"/>
+   <aura:attribute name="disableRoleField" type="Boolean" default="true"/>
+   <aura:attribute name="disableQuickListField" type="Boolean" default="true"/>
+   <aura:attribute name="disableOfficeField" type="Boolean" default="true"/>
+   <aura:attribute name="disableDepartmentField" type="Boolean" default="true"/>
+   <aura:attribute name="disableTeamField" type="Boolean" default="true"/>
+   <aura:attribute name="disableIndividualField" type="Boolean" default="true"/>
+   <aura:attribute name="isProvider" type="Boolean" default="false"/>
+   <aura:attribute name="quickListFieldsRequiredSymbol" type="Boolean" default="true"/>
+   <aura:attribute name="officeFieldsRequiredSymbol" type="Boolean" default="true"/>
+   <aura:attribute name="isMemberLookup" type="Boolean" default="false"/>
+   <aura:attribute name="uhcProduct" type="String"/>
+   <aura:attribute name="concatComments" type="String"/>
+   <aura:attribute name="hoursOfOperation" type="String"/>
+   <aura:attribute name="whereTTSTopic" type="String"/>
+   <!-- sraavni -->
+   <aura:attribute name="viewClaims" type="String"/>
+   <aura:attribute name="viewClaimsSubType" type="String"/>
+   <aura:attribute name="isorsMetaDataTrue" type="Boolean" default="false"/>
+   <aura:attribute name="isreasonCodeMapTrue" type="Boolean" default="false"/>
+   <!-- sraavni -->
+   <!-- picklist Fields declarations -->
+   <aura:attribute name="orsMap" type="Map"/>
+   <aura:attribute name="orsMetaDataList" type="Object"/>
+   <aura:attribute name="providerDetails" type="List"/>
+   <aura:attribute name="reasonCodesMap" type="Map"/>
+   <aura:attribute name="reasonCodesList" type="Object"/>
+   <aura:attribute name="sendToListInputs" type="Object"/>
+   <aura:attribute name="data" type="List"/>
+   <aura:attribute name="selectedSendValue" type="String" default="teamList"/>
+   <aura:attribute name="reasonCode" type="String" default="--"/>
+   <aura:attribute name="category" type="String" default="--"/>
+   <aura:attribute name="individualRadioValue" type="String" default=""/>
+   <aura:attribute name="comments" type="String"/>
+   <aura:attribute name="selectedRadioValue" type="String"/>
+   <aura:attribute name="individualOptions" type="List" default="[{'label': '--None--', 'value': ''}]"/>
+   <aura:attribute name="caseResponse" type="List"/>
+   <lightning:workspaceAPI aura:id="workspace"/>
+   <!--Field Validation Declarations -->
+   <aura:attribute name="mapError" type="Object" />
+   <aura:attribute name="fieldValidationFlag" type="Boolean" />
+   <!--US2510172 - ORS Cases - Populate Category and Reason Based on TTS of Case- Sravan-->
+   <aura:attribute name="caseWrapper" type="Object"/>
+   <aura:attribute name="caseId" type="String" default=""/>
+
+   <aura:attribute name="showSpinner" type="Boolean" default="false"/>
+   <!-- US2543182 - Thanish - 6th May 2020 -->
+   <aura:attribute name="isSubmitClicked" type="Boolean" default="false"/>
+   <aura:attribute name="tabId" type="String"/>
+   <aura:attribute name="ttsTopic" type="String"/>
+   <aura:attribute name="AutodocPageFeature" type="String"/>
+   <aura:attribute name="AutodocKey" type="String"/>
+   <aura:attribute name="isSOPLinkClicked" type="Boolean" default="false"/>
+   <aura:handler event="lightning:tabFocused" action="{! c.onTabFocused }"/>
+   <aura:handler event="lightning:tabClosed" action="{! c.onTabClosed }"/>
+   <aura:attribute name="isClosedPopup" type="boolean" default="true" />
+   <!--DE347387: ORS Issue - Provider information is missing in ORS routing Screen - Praveen  -->
+   <aura:attribute name="providerDetailsForRoutingScreen" type="Object" access="public" />
+   <aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+   <aura:handler event="aura:waiting" action="{!c.showSpinner}"/>
+   <aura:handler event="aura:doneWaiting" action="{!c.hideSpinner}"/>
+   <aura:attribute name="spinner" type="boolean" default="FALSE"/>
+   <!--US2883416 - Change Functionality on Routing Screen - Sravan -->
+   <aura:attribute name="isOfficeSelected" type="Boolean" default="false"/>
+   <aura:attribute name="isDepartmentSelected" type="Boolean" default="false"/>
+   <aura:attribute name="isTeamSelected" type="Boolean" default="false"/>
+   <aura:attribute name="departmentReload" type="Boolean" default="false"/>
+   <aura:attribute name="teamReload" type="Boolean" default="false"/>
+   <aura:attribute name="whereConditionForDepartment" type="String" default=""/>
+   <aura:attribute name="whereConditionForTeam" type="String" default=""/>
+   <aura:handler name="change" value="{!v.isOfficeSelected}" action="{!c.enableDepartment}"/>
+   <aura:handler name="change" value="{!v.isDepartmentSelected}" action="{!c.enableTeam}"/>
+   <!--chandra US2904624-->
+   <aura:attribute name="isPaidorPre" type="Boolean" default="false"/>
+   <!--chandra-->
+   <aura:attribute name="isClaimView" type="Boolean" default="false"/>
+   <aura:attribute name="isStopPay" type="Boolean" default="false"/>
+   <aura:attribute name="isDispAllo" type="Boolean" default="false"/>
+   <aura:attribute name="isAuthDisc" type="Boolean" default="false"/>
+   <!--chandra-start-->
+   <aura:attribute name="subType" type="String" default=""/>
+   <aura:attribute name="adoRole" type="String" default=""/>
+   <!--sravani start-->
+   <aura:attribute name="isRoleFieldSelected" type="Boolean" default="false"/>
+   <aura:handler name="change" value="{!v.selTabId}" action="{!c.topFocus}"/>
+   <aura:handler name="change" value="{!v.isRoleFieldSelected}" action="{!c.advoacteRoleChange}"/>
+   <aura:handler name="change" value="{!v.TeamQuickFieldSelected}" action="{!c.onTeamQuickChange}"/>
+   <aura:handler name="change" value="{!v.isOfficeSelected}" action="{!c.onChangeOffice}"/>
+   <aura:attribute name="TeamQuickListReload" type="Boolean" default="false"/>
+   <aura:attribute name="officeReload" type="Boolean" default="false"/>
+   <!--<aura:attribute name="viewClaims" type="String"/>-->
+   <!--<aura:attribute name="viewClaimsSubType" type="String"/>-->
+   <!--<aura:attribute name="isorsMetaDataTrue" type="Boolean" default="false"/>-->
+   <!--<aura:attribute name="isreasonCodeMapTrue" type="Boolean" default="false"/>-->
+   <aura:attribute name="whereConditionForAdvocate" type="String" default=""/>
+   <aura:handler name="showSendItems" event="c:ACET_ShowClaimsSendToCmp" action="{!c.ShowSendTO}"/>
+   <!--sravani end-->
+   <aura:attribute name="teamQuickReload" type="Boolean" default="false"/>
+   <aura:attribute name="isTimelyFiling" type="Boolean" default="false"/>
+   <aura:attribute name="isMisquoteInfo" type="Boolean" default="false"/>
+   <aura:attribute name="isReferralDiscrepancy" type="Boolean" default="false"/>
+   <!--chandra-End-->
+   <aura:attribute name="timeLiFilling" type="List" default=""/>
+   <aura:attribute name="showSendTo" type="Boolean" default="false"/>
+   <!--Jitendra-->
+   <aura:attribute name="isFacets" type="Boolean" default="false"/>
+   <aura:attribute name="isNotValidSFNo" type="Boolean" default="false"/>
+   <aura:attribute name="isProviderLookupWitNoOption" type="Boolean" default="true"/>
+   <!--US3075630 -->
+   <aura:attribute name="facetsTitle" type="String" default=""/>
+   <!--US3075630 -->
+   <!--US3068299 - Sravan -->
+   <aura:attribute name="finalPolicyMap" type="Map" default=""/>
+   <aura:attribute name="memberMap" type="Map" access="public"/>
+   <aura:attribute name="delegatedSpeciality" type="Boolean" default="false"/>
+   <!-- US2948257: Update TAT Section to match Claims Routing - UI -->
+   <aura:attribute name="selectedRadioBtnValue" type="String" default="businessDays"/>
+   <aura:attribute name="businessDaysOption" type="List" default="[{'label': 'Business Days', 'value': 'Business Days'}]"/>
+   <aura:attribute name="calendarDaysOption" type="List" default="[{'label': 'Calendar Days', 'value': 'Calendar Days'}]"/>
+   <!-- US2815284 - Sanka -->
+   <aura:registerEvent name="refreshHistory" type="c:ACET_CaseHistoryRefreshEvt" />
+   <!-- DE408715 - 5th Feb 2021 -->
+   <aura:registerEvent name="ACET_AutoDocRefreshEvent" type="c:ACET_AutoDocRefreshEvent" />
+   <!--US3117073 - Multiple Policies -  Creating Multiple Unique ORS Records Check In ISET - Sravan-->
+   <aura:attribute name="memberPolicyNumberMap" type="Map" default=""/>
+   <!--US3198523-->
+   <aura:attribute name="objNetworkHeader" type="object" default="{}"/>
+   <aura:attribute name="objServiceRequestHeader" type="object" default="{}"/>
+   <aura:attribute name="objAdditionRequestHeader" type="object" default="{}"/>
+   <aura:attribute name="objSendToHeader" type="object" default="{}"/>
+   <aura:attribute name="objCOBInfo" type="Object" default="{}" access="public"/>
+   <aura:attribute name="lstUnResolvedProviders" type="List"/>
+   <aura:attribute name="strIssue" type="String" default=""/>
+   <aura:attribute name="isDoesNotKnowChecked" type="Boolean" default="true" />
+   <aura:attribute name="strPaymentAmount" type="String" />
+   <aura:handler name="change" value="{!v.strIssue}" action="{!c.issueChange}"/>
+   <aura:attribute name="strWhereCondition" type="String" default=""/>
+   <aura:attribute name="isCreateCaseClicked" type="Boolean" default="false"/>
+   <aura:handler name="createCase" event="c:ACET_CreateRoutingCase" action="{!c.createCase}"/>
+   <aura:attribute name="strSelectedEsclatedRequest" type="String" default="No"/>
+   <aura:attribute name="strIssueFilterCondition" type="String"/>
+   <aura:attribute name="IsDelegatedSpeciality" type="Boolean" default="false"/>
+   <aura:attribute name="isValiadContact" type="Boolean" default="true"/>
+   <aura:handler name="closeRoutingTab" event="c:ACET_CloseRoutingTab" action="{!c.closeRoutingTab}"/>
+   <aura:attribute name="isCancelClicked" type="Boolean" default="false" />
+   <aura:attribute name="strDelegatedData" type="String"/>
+   <aura:attribute name="strTabLabel" type="String" default=""/>
+   <aura:attribute name="objSubscriberAndProviderDetails" type="object" default="{}"/>
+   <aura:attribute name="showHOPandTable" type="Boolean" default="true" />
+   <aura:attribute name="strIssueMetadataName" type="String" default="SAE_Reason_Codes__mdt"/>
+   <aura:attribute name="strIssueSearchName" type="String" default="Issue__c"/>
+   <aura:attribute name="strIssueOrderByName" type="String" default="Issue__c"/>
+   <aura:attribute name="facetsReasonCategory" type="String" default=""/>
+   <aura:handler name="createFacetsCase" event="c:ACET_CreateFacetsRoutingCase" action="{!c.submitFacetsCase}"/>
+   <!--US3198523-->
+   <!--US3259671 - Sravan-->
+   <aura:attribute name="flowDetails" type="Object" access="public" />
+   <aura:attribute name="validateHoursOfOperation" type="Boolean" default="false"/>
+   <aura:attribute name="showContactName" type="Boolean" default="false" />
+   <!--US3182779 - Sravan-->
+   <aura:attribute name="additionalFieldsValidation" type="Boolean" default="false"/>
+   <aura:attribute name="showIsExchangeCard" type="Boolean" default="false"/>
+   <aura:attribute name="showSpinnerForFacetsSubmit" type="Boolean" default="false" />
+   <aura:attribute name="showExceptedPaymentAmount" type="Boolean" default="true" />
+   <aura:attribute name="strTatProvided" type="String" default=""/>
+   <aura:attribute name="isCalender" type="Boolean"/>
+   <aura:attribute name="showSendToSection" type="Boolean" default="false"/>
+   <!--US3182829 - Sravan-->
+   <aura:attribute name="requestResource" type="String" default=""/>
+   <!--DE436123 -Sravan-->
+   <aura:attribute name="providerFlow" type="Boolean" default="false"/>
+    <aura:attribute name="mapClaimSummaryDetails" type="Object" default="[]"/>
+   <div aura:id="ClaimServiceRoutings" class="slds-card card_padding" style="background: rgb(243, 242, 242);">
+      <div class="slds-grid">
+         <div class="slds-col slds-has-flexi-truncate">
+            <div class="slds-media slds-no-space slds-grow">
+               <div class="slds-media__figure">
+                  <span class="slds-icon_container slds-icon-utility-send" title="Service Request Routing">
+                     <lightning:icon class="blackOnRed" iconName="utility:send" alternativeText="Service Request Routing" size="small"/>
+                  </span>
+               </div>
+               <div class="slds-media__body">
+                  <div class="slds-page-header__name slds-p-top_x-small">
+                     <div class="slds-page-header__name-title">
+                        <h1 class="page_header_label slds-m-right_small slds-align-middle slds-truncate">Service Request Routing</h1>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+         <lightning:buttonGroup>
+            <a href="http://knowledgecentral.uhc.com/SPA/Advocate_CallHandling_OneSource/index.html#" target="_blank">
+               <!--chandra-->    <button class="slds-button slds-button_neutral" style="width: 102%;height:100%">HIPAA Guidelines</button>
+            </a>
+            <lightning:button variant="neutral" label="Misdirect" name="misDirectBtnName"
+               class="misdirect_button" onclick="{!c.openMisdirectComp}"/>
+            <c:SAE_Alerts aura:id="alertsAI"/>
+         </lightning:buttonGroup>
+      </div>
+   </div>
+         <!--US3075630 -->
+   <div>
+      <aura:if isTrue="{!!v.isClaim}">
+         <aura:if isTrue="{!v.showIsExchangeCard}">
+            <article class="slds-card card_padding slds-p-top_small">
+               <aura:if isTrue="{!v.showSpinner}">
+                  <lightning:spinner  alternativeText="Loading.." title="Loading.." variant="brand" size="large" />
+               </aura:if>
+               <div class="slds-card__header slds-grid">
+                  <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                     <div class="slds-media__body">
+                        <h2 class="slds-card__header-title">
+                           <span class="component_title">{!v.facetsTitle}</span>
+                        </h2>
+                     </div>
+                  </header>
+               </div>
+               <div class="slds-card__body slds-card__body_inner">
+                  <div class="slds-form-element" aura:id="idSFNoCard">
+                     <label class="slds-form-element__label" for="form-element-sfno">
+                     <abbr class="slds-required" title="required">* </abbr>Enter SF#</label>
+                     <div class="slds-form-element__control" style="width: 15%;">
+                        <input type="text" id="form-element-sfno" required="" maxlength="19" class="slds-input" aura:id="idSFNo"/>
+                     </div>
+                     <aura:if isTrue="{!v.isNotValidSFNo}">
+                        <div class="slds-form-element__help" id="form-error-sfno">Required field. Enter 19 characters.</div>
+                     </aura:if>
+                  </div>
+                  <div class="slds-p-top_small">
+                     <lightning:button variant="brand" label="Submit" onclick="{! c.submitFacetsCase }" />
+                  </div>
+               </div>
+            </article>
+            <aura:set attribute="else">
+               <div class="slds-p-top_small">
+                  <article class="slds-card card_padding">
+                     <c:ACET_ReferringProviderDetailsCardHeader objPcpDataHeader="{!v.objNetworkHeader}"/>
+                     <div class="slds-card__body slds-card__body_inner">
+                        <c:ACET_ServiceRequestRoutingTabs objServiceRequestHeader="{!v.objServiceRequestHeader}"
+                           whereTTSTopics="{!v.strIssueFilterCondition}"
+                           sendToListInputs="{!v.sendToListInputs}"
+                           reasonCode="{!v.reasonCode}"
+                           category="{!v.category}"
+                           lstSelectedRoutedProviders ="{!v.lstUnResolvedProviders}"
+                           showCOCSData = "{!!v.isProvider}"
+                           isValiadContact = "{!v.isValiadContact}"
+                           strIssue="{!v.strIssue}"
+                           aura:id="idServiceRequestTabs"
+                           hideEntireSection ="{!v.hideEntireSection}" objAdditionRequestHeader ="{!v.objAdditionRequestHeader}"
+                           strComments = "{!v.sendToListInputs.comments}"
+                           isDoesNotKnowChecked = "{!v.isDoesNotKnowChecked}"
+                           strPaymentAmount = "{!v.strPaymentAmount}" objSendToHeader="{!v.objSendToHeader}"
+                           selectedSendValue = "{!v.selectedSendValue}"
+                           individualRadioValue = "{v.individualRadioValue}"
+                           whereConditionForAdvocate = "{!v.whereConditionForAdvocate}"
+                           officeFieldsRequiredSymbol = "{!v.officeFieldsRequiredSymbol}"
+                           disableQuickListField = "{!v.disableQuickListField}"
+                           disableRoleField = "{!v.disableRoleField}"
+                           isRoleFieldSelected = "{!v.isRoleFieldSelected}"
+                           TeamQuickListReload = "{!v.TeamQuickListReload}"
+                           disableOfficeField = "{!v.disableOfficeField}"
+                           isOfficeSelected = "{!v.isOfficeSelected}"
+                           disableDepartmentField = "{!v.disableDepartmentField}"
+                           isDepartmentSelected = "{!v.isDepartmentSelected}"
+                           disableTeamField = "{!v.disableTeamField}"
+                           isTeamSelected = "{!v.isTeamSelected}"
+                           teamReload = "{!v.teamReload}"
+                           individualOptions = "{!v.individualOptions}"
+                           disableIndividualField = "{!v.disableIndividualField}"
+                           orsMap="{!v.orsMap}"
+                           showSpinner = "{!v.showSpinner}"
+                           strSelectedEsclatedRequest = "{!v.strSelectedEsclatedRequest}"
+                           IsDelegatedSpeciality = "{!v.IsDelegatedSpeciality}"
+                           strDelegatedData="{!v.strDelegatedData}"
+                           flowDetails="{!v.flowDetails}"
+                           validateHoursOfOperation="{!v.validateHoursOfOperation}"
+                           strTabLabel="{!v.strTabLabel}"
+                           isApPolicy="{!v.isFacets}"
+                           objSubscriberAndProviderDetails="{!v.objSubscriberAndProviderDetails}"
+                           showHOPandTable="{!v.showHOPandTable}"
+                           strIssueMetadataName="{!v.strIssueMetadataName}"
+                           strIssueSearchName="{!v.strIssueSearchName}"
+                           strIssueOrderByName="{!v.strIssueOrderByName}"
+                           objCOBInfo= "{!v.objCOBInfo}"
+                           facetsReasonCategory="{!v.facetsReasonCategory}"
+                           additionalFieldsValidation="{!v.additionalFieldsValidation}"
+                           showSpinnerForFacetsSubmit="{!v.showSpinnerForFacetsSubmit}"
+                           strTatProvided="{!v.strTatProvided}"
+                           isCalender ="{!v.isCalender}"
+                           showContactName="{!v.showContactName}"
+                           showExceptedPaymentAmount="{!v.showExceptedPaymentAmount}"
+                           showSendToSection="{!v.showSendToSection}"
+                           requestResource="{!v.requestResource}"/>
+                     </div>
+                  </article>
+               </div>
+            </aura:set>
+         </aura:if>
+      </aura:if>
+      <aura:if isTrue="{!and(v.isClaim,(not(empty(v.reasonCodesList,v.orsMetaDataList))))}">
+         <c:ACET_ServiceRoutingTab caseWrapper="{!v.caseWrapper}"
+                                                   viewClaims="{!v.viewClaims}"
+                                                   AutodocKey="{!v.AutodocKey}"
+                                                   viewClaimsSubType="{!v.viewClaimsSubType}"
+                                                   category="{!v.category}"
+                                                   orsMap="{!v.orsMap}"
+                                                   isClosedPopup="{!v.isClosedPopup}"
+                                                   ttsTopic="{!v.ttsTopic}"
+                                                   providerDetails="{!v.providerDetails}"
+                                                   yesOrNoOptions="{!v.yesOrNoOptions}"
+                                                   sendToListInputs="{!v.sendToListInputs}"
+                                                   orsMetaDataList="{!v.orsMetaDataList}"
+                                                   reasonCodesList="{!v.reasonCodesList}"
+                                                   reasonCodesMap="{!v.reasonCodesMap}"
+                                                   finalPolicyMap="{!v.finalPolicyMap}"
+                                                   selTabId="{!v.selTabId}"
+                                                   flowDetails="{!v.flowDetails}"
+                                   				   mapClaimSummaryDetails="{!v.mapClaimSummaryDetails}"
+
+                                   />
+         </aura:if>
+   </div>
+</aura:component>

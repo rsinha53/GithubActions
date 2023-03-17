@@ -1,0 +1,231 @@
+<aura:component implements="flexipage:availableForRecordHome,force:hasRecordId,lightning:actionOverride,lightning:hasPageReference" access="global" controller = "SNICaseCreationController">
+    <aura:handler name="init" value="{!this}" action="{!c.init}" />
+    <aura:attribute name="showCaseLayout" type="Boolean" default="false"/>
+    <aura:attribute name="showSupportLayout" type="Boolean" default="false"/>
+    <aura:attribute name="isOpen" type="boolean" default="false"/>
+    <aura:attribute name="selectedRecordId" type="Id" />
+    <aura:attribute name="typeOptions" type="List" access="public"/>
+    <aura:attribute name="subtypeOptions" type="List" access="public"/>
+    <aura:attribute name="disabled" type="Boolean" default="false" />
+    <aura:attribute name="saved" type="Boolean" default="false" />
+    <aura:attribute name="showSpinner" type="Boolean" default="true" />
+    <aura:attribute name="cseType" type="String" access="public" default="None"/>
+    <aura:attribute name="cseSubtype" type="String" access="public" default="None"/>
+    <aura:attribute name="parentId" type="String" />
+    <aura:attribute name= "recordTypesMap" type ="Map"/>
+    <lightning:workspaceAPI aura:id="workspace"/>
+    <aura:attribute name="memberidoptions" type="List"/>
+    <aura:attribute name="selectedmemberidValue" type="String"/>
+    <aura:attribute name="accId" type="String"/>
+    <aura:attribute name="contactId" type="String"/>
+    <aura:attribute name="showCaseOrigin" type="Boolean" default="false"/>
+    
+    <aura:if isTrue="{!v.showCaseLayout}">
+        <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header slds-modal__close">
+                    <lightning:buttonIcon iconName="utility:close"
+                                          onclick="{!c.closeModel}"
+                                          alternativeText="close"
+                                          variant="bare-inverse"
+                                          class="slds-modal__close slds-change-color"/>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                    <aura:if isTrue="{!v.showSpinner}">
+                        <lightning:spinner />
+                    </aura:if>
+                    <aura:if isTrue="{!!v.saved}">
+                        <lightning:card iconName="standard:case"
+                                        title="{! (v.recordId == null ? 'New ' : 'Edit ') + 'Case' }">
+                            <lightning:recordEditForm
+                                                      aura:id="caseForm"
+                                                      onload="{!c.handleLoad}"
+                                                      onsubmit="{!c.handleSubmit}"
+                                                      onsuccess="{!c.handleSuccess}"
+													  onerror="{!c.handleError}"
+                                                      objectApiName="Case"
+                                                      class="slds-card__body_inner"
+                                                      recordTypeId ="{!v.selectedRecordId}"
+                                                      >
+
+                                <lightning:messages aura:id="OppMessage"/>
+                                <div class="slds-grid">
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <div aura:id ="owneridValidity">
+                                        <lightning:inputField aura:id ="ownerid" fieldName="OwnerId"/>
+                                        <div class="slds-form-element__help slds-p-left_xx-small err" aura:id ="OwnerIDValidationMessage">&nbsp;</div>
+                                        </div>
+                                        <div aura:id ="caseNameValidity">
+                                        <lightning:inputField fieldName="Case_Name__c" aura:id ="caseName" class="customRequired none" onchange = "{!c.OnClickValidation}"/>
+                                        <div class="slds-form-element__help slds-p-left_xx-small err" aura:id ="caseNameValidationMessage">Complete this field</div>
+                                        </div>
+                                        <div aura:id ="priorityValidity">
+                                        <lightning:inputField fieldName="Priority" aura:id ="priority" class="customRequired"  onchange = "{!c.OnClickValidation}"/>
+                                        <div class="slds-form-element__help slds-p-left_xx-small err" aura:id ="priorityValidationMessage">Complete this field</div>
+                                        </div>
+                                        <aura:if isTrue="{!v.showCaseOrigin}">
+                                        	<div aura:id ="originValidity">
+                                        		<lightning:inputField fieldName="Origin" aura:id ="origin" class="customRequired"  onchange = "{!c.OnClickValidation}"/>
+                                        		<div class="slds-form-element__help slds-p-left_xx-small err" aura:id ="originValidationMessage">Complete this field</div>
+                                        	</div>
+                                        </aura:if>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <!-- US2526182: SNI Core - Select Policy when creating a new case - Vishal Yelisetti|4/25/2020 -->
+                                         <div aura:id ="memberIDValidity" >
+										 <lightning:select required="true" name="memberid" label="Member ID - Policy ID" aura:id="memberid" value="{!v.selectedmemberidValue}" onchange = "{!c.OnClickValidation}" class="slds-form-element slds-form-element_stacked">
+                                             <aura:iteration items="{!v.memberidoptions}" var="option">
+            									<option text="{!option}" value="{!option}"/>
+        									</aura:iteration>
+   										 </lightning:select>
+										<div class="slds-form-element__help slds-p-left_xx-small err" aura:id ="memberIDValidationMessage">Complete this field</div>
+                                         </div>
+                                        <div aura:id ="oppCategoryValidity">
+                                        <lightning:inputField fieldName="Opportunity_Category__c" aura:id ="oppCategory" class="customRequired none"  onchange = "{!c.OnClickValidation}" />
+                                         <div class="slds-form-element__help slds-p-left_xx-small err" aura:id ="oppCategoryValidationMessage">Complete this field</div>
+                                        </div>
+                                        <lightning:inputField fieldName="Community__c"/>
+										<lightning:inputField fieldName="ParentId" value="{!v.parentId}" class="slds-hidden"/>
+                                        <lightning:inputField fieldName="Status"  class="slds-hidden"/>
+                                    </div>
+                                </div>
+
+
+                               <!-- <div class="slds-section slds-is-open">
+                                    <h3 class="slds-section-title-divider">Additional Information</h3>
+                                    <div aria-hidden="false" class="slds-section__content" id="expando-unique-id">
+                                        <div class="slds-grid">
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <div aura:id ="topicValidity">
+                                                <lightning:inputField fieldName="SENS_Topic__c" aura:id="caseTopicSelected" onchange ="{!c.onTopicSelection}" class="customRequired none"  />
+                                                <div class="slds-form-element__help slds-p-left_xx-small err" aura:id ="topicValidationMessage">Complete this field</div>
+                                                </div>
+                                                <lightning:inputField fieldName="Topic__c" aura:id="caseTopicSelected1" onchange ="{!c.onTopicSelection}" class="slds-hide"/>
+                                                <div aura:id ="typeValidity">
+                                                <lightning:select name="type" label="Type" aura:id="csetype" value="{!v.cseType}" onchange="{!c.onTypeChange}" class="customRequired none" >
+                                                    <aura:iteration items="{!v.typeOptions}" var="option" >
+                                                        <option text="{!option}" value="{!option}" />
+                                                    </aura:iteration>
+                                                </lightning:select>
+                                                <div class="slds-form-element__help slds-p-left_xx-small err" aura:id ="typeValidationMessage">Complete this field</div>
+                                                </div>
+                                                <lightning:select name="subtype" label="SubType" aura:id="csesubtype" value="{!v.cseSubtype}" >
+                                                    <aura:iteration items="{!v.subtypeOptions}" var="option">
+                                                        <option text="{!option}" value="{!option}" />
+                                                    </aura:iteration>
+                                                </lightning:select>
+
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>-->
+                                <div class="slds-m-top_medium">
+								    <lightning:button variant="neutral" name="cancel" onclick="{! c.closeModel }" label="Cancel" />
+                                    <lightning:button disabled="{!v.disabled}" variant="brand" type="submit" name="save" label="Save" />
+                                </div>
+                            </lightning:recordEditForm>
+                        </lightning:card>
+                    </aura:if>
+                </div>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+
+    <aura:if isTrue="{!v.showSupportLayout}">
+        <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header slds-modal__close">
+                    <lightning:buttonIcon iconName="utility:close"
+                                          onclick="{!c.closeModel}"
+                                          alternativeText="close"
+                                          variant="bare-inverse"
+                                          class="slds-modal__close slds-change-color"/>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                    <aura:if isTrue="{!v.showSpinner}">
+                        <lightning:spinner />
+                    </aura:if>
+                    <aura:if isTrue="{!!v.saved}">
+                        <lightning:card iconName="standard:case"
+                                        title="{! (v.recordId == null ? 'New ' : 'Edit ') + 'Case' }">
+                            <lightning:recordEditForm
+                                                      aura:id="supportCaseForm"
+                                                      onload="{!c.handleLoad}"
+                                                      onsubmit="{!c.handleSupportSubmit}"
+                                                      onsuccess="{!c.handleSuccess}"
+													  onerror="{!c.handleError}"
+                                                      objectApiName="Case"
+                                                      class="slds-card__body_inner"
+                                                      recordTypeId ="{!v.selectedRecordId}"
+                                                      >
+                                <lightning:messages/>
+                                <div class="slds-grid">
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning:inputField fieldName="OwnerId"/>
+                                        <lightning:inputField fieldName="CaseNumber"/>
+                                        <lightning:inputField fieldName="Support_Request__c" value="{!v.parentId}"/>
+                                        <lightning:inputField fieldName="ContactId"/>
+                                        <!--lightning:inputField fieldName="Origin"/-->
+                                        <lightning:inputField fieldName="Subject"/>
+                                        <lightning:inputField fieldName="Description"/>
+                                        <lightning:inputField fieldName="SuppliedEmail"/>
+                                        <lightning:inputField fieldName="recordTypeId" class="slds-hide" />
+
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning:inputField fieldName="Priority"/>
+                                        <lightning:inputField fieldName="SENS_Topic__c" aura:id="caseTopicSelected" onchange ="{!c.onTopicSelection}" required="true"/>
+                                        <lightning:select name="type" label="Type" aura:id="csetype1" value="{!v.cseType}" onchange="{!c.onTypeChange}" onfocus="{!c.onTopicSelection}"  required="true">
+                                            <aura:iteration items="{!v.typeOptions}" var="option">
+                                                <option value="{!option}" selected="{!option == v.cseType}">{!option}</option>
+                                            </aura:iteration>
+                                        </lightning:select>
+                                       <lightning:select name="subtype" label="SubType" aura:id="csesubtype" value="{!v.cseSubtype}" class="slds-p-top_x-small">
+                                            <aura:iteration items="{!v.subtypeOptions}" var="option">
+                                                <option text="{!option}" value="{!option}" selected="{!option == v.cseSubtype}"/>
+                                            </aura:iteration>
+                                        </lightning:select>
+                                    </div>
+                                </div>
+                                <div class="slds-section slds-is-open">
+                                    <h3 class="slds-section-title--divider">Entitlement</h3>
+                                    <div aria-hidden="false" class="slds-section__content" id="expando-unique-id">
+                                        <div class="slds-grid">
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="Entitlement_Name_Text__c"/>
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="Target_Date__c"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="slds-section slds-is-open">
+                                    <h3 class="slds-section-title--divider">System Information</h3>
+                                    <div aria-hidden="false" class="slds-section__content" id="expando-unique-id">
+                                        <div class="slds-grid">
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="Created_By_Role__c"/>
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="Onshore_Restriction__c"/>
+                                                <lightning:inputField fieldName="UHG_Restriction__c"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="slds-m-top_medium">
+								    <lightning:button variant="neutral" onclick="{!c.closeModel}" name="cancel" label="Cancel" />
+                                    <lightning:button disabled="{!v.disabled}" variant="brand" type="submit" name="save" label="Save" />
+                                </div>
+                            </lightning:recordEditForm>
+                        </lightning:card>
+                    </aura:if>
+                </div>
+            </div>
+        </section>
+    </aura:if>
+</aura:component>

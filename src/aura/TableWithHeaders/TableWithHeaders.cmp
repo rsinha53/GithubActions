@@ -1,0 +1,176 @@
+<aura:component >    
+    <aura:attribute name="header" type="Object[]" />
+    <aura:attribute name="tbody" type="Object[]" />
+    <aura:attribute name="tableBody" type="Object[]" />
+    <aura:attribute name="tempTableBody" type="Object[]" />
+    <aura:attribute name="tableBodyOriginal" type="Object[]" />
+    <!-- Sorting -->
+    <aura:attribute name="arrowDirection" type="string" />
+    <aura:attribute name="isAsc" type="boolean" />
+    <aura:attribute name="selectedTabsoft" type="string" />
+    <!--Sorting end -->
+    
+    <aura:method name="refreshTable" action="{!c.refreshTable}" />
+
+    <!--Open Member Details Tab start-->
+    <lightning:workspaceAPI aura:id="workspace"/>
+    <aura:attribute name="tabLabelName" type='String' default="Member Details"/>
+    <!--Open Member Details Tab end -->
+    <aura:attribute name="interactType" type="String" default=""/>
+    <!-- Pagination start -->
+    <aura:attribute name="searchType" type="String" default="B"/>
+    <aura:attribute name="enablePagination" type="Boolean" default="false"/>
+    <aura:attribute name="noOfRecordPerPage" type="Integer" default="25" />
+    <aura:attribute name="pageNumber" type="Integer" default="1" />
+    <aura:attribute name="maxPageNumber" type="Integer" default="0" />
+    <aura:attribute name="currentStartNumber" type="Integer" default="0" />
+    <aura:attribute name="currentEndNumber" type="Integer" />
+    <aura:attribute name="paginationDetail" type="Object"/>
+
+	<!--Email to Case-->
+	<aura:attribute name="iscaserecord" type="boolean" default = "false"/>
+    <aura:attribute name="showResult" type="boolean" default="true"/>
+    <aura:registerEvent name="ChangeFirstNameEvent" type="c:Motion_CaseMemberEvent"></aura:registerEvent>
+	<!--end Email to Case-->
+    
+    <!-- Pagination end -->
+    
+    <aura:registerEvent name="changePageEvent" type="c:Motion_ChangePageEvt" />
+    <!--Handler-->
+    <!--aura:handler name="init" value="{!this}" action="{!c.doInit}" /-->
+
+    <aura:handler name="change" value="{!v.tableBodyOriginal}" action="{!c.dataLoaded}" />
+    <!--Handler-->
+    <aura:if isTrue="{!v.showResult}">
+    <div class="slds-card card-background" >
+        
+        <div class="slds-text-heading_small slds-p-top_medium slds-p-left_medium" >Search Results</div>
+        <div style="height:100%;width:100%" class="slds-box slds-card">
+        <div class="{!if(v.enablePagination,'table-header slds-p-top_xx-large slds-p-left_medium slds-p-right_medium slds-p-bottom_xx-medium','table-header slds-p-top_xx-large slds-p-left_medium slds-p-right_medium slds-p-bottom_xx-large')}">
+            <table class="slds-table slds-table_cell-buffer slds-table_bordered">                
+                <thead>
+                    <tr class="slds-line-height_reset">                        
+                        <aura:iteration items="{!v.header}"  var="i" indexVar="index">                            
+                            <th class="{!('slds-is-sortable slds-text-title_caps ') + ('_' + index)}" scope="col" data-index="{!index}"
+                                data-colname="{!i}" onclick="{!c.sortColumn}">                                
+                                <a href="javascript:void(0);" class="search-result-th slds-text-link_reset">
+                                    <span class="slds-assistive-text">Sort</span>
+                                    <span class="slds-truncate slds-align_absolute-left" title="{!i}">{!i}</span> 
+                                       
+                                    <aura:if
+                                             isTrue="{! and(v.arrowDirection == 'arrowdown', v.selectedTabsoft == i) }">
+                                        &nbsp; &#9660;</aura:if>
+                                    <aura:if
+                                             isTrue="{! and(v.arrowDirection != 'arrowdown', v.selectedTabsoft == i) }">
+                                        &nbsp; &#9650;</aura:if>
+                                    <aura:set attribute="else">
+                                        <th class="{!('_' + index)}" scope="col">
+                                            <div class="slds-truncate">{!i}</div>                                           
+                                        </th>
+                                    </aura:set>
+                                </a>
+                            </th>
+                        </aura:iteration>                       
+                    </tr>
+                </thead>
+                <tbody>
+                    <aura:iteration items="{!v.tableBody}" var="i" indexVar="index">
+                        <aura:if isTrue="{!index % 2!=0}">                  	
+                            <tr class="slds-hint-parent" data-index="{!index}" >                             
+                                <aura:iteration items="{!i.rowColumnData}" var="j">
+                                    <aura:if isTrue="{!j.isLink}">
+                                        <td style="{!empty(j.tdStyle) ? '' : j.tdStyle }">
+                                            <a href="javascript:void(0);" class="{!(i.linkDisabled) ? 'disableLink slds-text-link_reset' : 'slds-text-link_reset'}"  onclick="{!c.navMemberDetail}" data-LastName="{!j.lastName}" data-firstName="{!j.firstName}" data-RegisteredMemberId="{!j.RegisteredMemberId}" data-EligibleMemberId="{!j.EligibleMemberId}" data-email="{!j.email}" data-dob="{!j.dob}" data-interactType="{!v.interactType}" data-groupName="{!j.groupName}" data-groupNo="{!j.groupNo}" data-phone="{!j.phone}"
+                                               >
+                                                <span class="{!(i.linkDisabled) ? 'disableLink slds-text-linkt' : 'slds-text-link'}">{!j.fieldValue}</span>
+                                                
+                                            </a>
+                                        </td>
+                                    </aura:if>
+                                    <aura:if isTrue="{!j.isOutputText}">
+                                        <td style="{!empty(j.tdStyle) ? '' : j.tdStyle }" >
+                                            
+                                            <div title="{!j.titleName ? j.titleName : j.fieldValue}" class="slds-td-wrap">
+                                                {!j.fieldValue}
+                                            </div>
+                                        </td>
+                                    </aura:if>
+                                    
+                                    <aura:if isTrue="{!j.fieldType == 'unescapedHtml'}">
+                                            <td style="{!empty(!j.tdStyle) ? '' : j.tdStyle }" >
+                                                <!-- Using slds-truncate to display address in two lines-->
+                                                <div title="{!j.titleName ? j.titleName : j.fieldValue}" class="slds-td-wrap slds-truncate">
+                                                    <aura:unescapedHtml value="{!j.fieldValue}"/>
+                                                </div>
+                                            </td>
+                                    </aura:if>
+                                    
+                                    
+                                </aura:iteration>                                
+                            </tr>
+                        </aura:if>
+                        <aura:if isTrue="{!index % 2==0}">                  	
+                            <tr class="tr-alt" data-index="{!index}" >                               
+                                <aura:iteration items="{!i.rowColumnData}" var="j">
+                                    <aura:if isTrue="{!j.isLink}">
+                                        <td style="{!empty(j.tdStyle) ? '' : j.tdStyle }">
+                                            <a href="javascript:void(0);" class="{!(i.linkDisabled) ? 'disableLink slds-text-link_reset' : 'slds-text-link_reset'}"  onclick="{!c.navMemberDetail}" data-LastName="{!j.lastName}" data-firstName="{!j.firstName}" data-RegisteredMemberId="{!j.RegisteredMemberId}" data-EligibleMemberId="{!j.EligibleMemberId}" data-email="{!j.email}" data-dob="{!j.dob}" data-interactType="{!v.interactType}" data-groupName="{!j.groupName}" data-groupNo="{!j.groupNo}" data-phone="{!j.phone}"
+                                               >
+                                                <span class="{!(i.linkDisabled) ? 'disableLink slds-text-linkt' : 'slds-text-link'}">{!j.fieldValue}</span>
+                                            </a>
+                                        </td>
+                                    </aura:if>
+                                    <aura:if isTrue="{!j.isOutputText}">
+                                        <td style="{!empty(!j.tdStyle) ? '' : j.tdStyle }" >
+                                            <div title="{!j.titleName ? j.titleName : j.fieldValue}" class="slds-td-wrap slds-truncate">
+                                                {!j.fieldValue}
+                                            </div>
+                                        </td>
+                                    </aura:if>
+                                    
+                                    <aura:if isTrue="{!j.fieldType == 'unescapedHtml'}">
+                                        <td style="{!empty(!j.tdStyle) ? '' : j.tdStyle }" >
+                                            <div title="{!j.titleName ? j.titleName : j.fieldValue}" class="slds-td-wrap slds-truncate">
+                                                <aura:unescapedHtml value="{!j.fieldValue}"/>
+                                            </div>
+                                        </td>
+                                    </aura:if>
+                                    
+                                </aura:iteration>                                
+                            </tr>
+                        </aura:if>
+                    </aura:iteration>
+                </tbody>                
+            </table>            
+        </div>
+        <aura:if isTrue="{!v.enablePagination}">
+                <!-- Pagination Start -->
+                <!-- Showing {!v.currentStartNumber} to {!v.currentEndNumber} of {!v.tableBody.length} entries -->
+                <div class="slds-p-top_xx-small page-info">
+                   <!-- Showing {!v.paginationDetail.startNumber} to {!v.paginationDetail.endNumber} of {!v.paginationDetail.recordCount}
+                    entries  -->
+                    Showing {!v.currentStartNumber} to {!v.currentEndNumber} of {!v.paginationDetail.recordCount} entries                  
+                </div>
+                <lightning:layout class="slds-align_absolute-center">
+                    <lightning:buttonGroup>
+                        <lightning:button variant="neutral" class="slds-button firstButton" label="First" iconName="utility:left" 
+                                         iconPosition="left" onclick="{!c.firstPage}" disabled="{!v.pageNumber == 1}"/>
+                        <lightning:button variant="neutral" class="slds-button" iconName="utility:chevronleft"
+                                          iconPosition="left" onclick="{!c.prevPage}" disabled="{!v.pageNumber == 1}" />
+                        <lightning:button variant="neutral" class="paginationbutton">
+                            <lightning:input name="" label="" style="width: 30%;" value="{!v.pageNumber}"
+                                             onblur="{!c.enterPage}" variant="label-hidden" />&nbsp;of {!v.paginationDetail.noOfPages}
+                        </lightning:button>
+                        <lightning:button variant="neutral" iconName="utility:chevronright" iconPosition="right"
+                                          onclick="{!c.nextPage}" class="slds-button" disabled="{!v.maxPageNumber == v.pageNumber}" />
+                        <lightning:button variant="neutral" label="Last" iconName="utility:right" iconPosition="right"
+                                          onclick="{!c.lastPage}" class="slds-button" disabled="{!v.maxPageNumber == v.pageNumber}" />
+                    </lightning:buttonGroup>
+                </lightning:layout>
+                <!-- Pagination end -->
+            </aura:if>     
+    </div>
+</div>
+    <div class="slds-p-bottom_small">&nbsp;</div>
+   </aura:if>
+</aura:component>

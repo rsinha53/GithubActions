@@ -1,0 +1,75 @@
+<aura:component controller="ACET_ServiceRequestDetailCtrl">
+	
+    <lightning:workspaceAPI aura:id="workspace"/>
+    <aura:attribute name="cmpUniqueId" type="String"/>
+    <aura:attribute name="claimNumber" type="String"/>
+    <aura:attribute name="tempTabId" type="String"/>
+    <aura:attribute name="taxId" type="String"/>
+    <aura:attribute name="showSpinner" type="Boolean" default="false"/>
+    <aura:attribute name="externalIdInfo" type="List" default="[{'DateCreated':'--', 'IdType':'--', 'ExternalId':'--'}]"/>
+    <aura:attribute name="purgedORSLoaded" type="Boolean" default="false"/> <!-- US3667124 - Thanish - 6th Jul 2021 -->
+
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}"/>
+    <aura:handler event="c:ACET_SRICloseTabEvent" action="{!c.handleServiceRequestDetailClose}"/>
+    <aura:attribute name="memberEEID" type="String"/> <!-- US3177995 - Thanish - 22nd Jun 2021 -->
+
+    <div class="slds-card card_top_padding card_bottom_padding">
+
+        <aura:if isTrue="{!v.showSpinner}">
+            <lightning:spinner alternativeText="Loading" variant="brand"/>
+        </aura:if>
+
+        <!-- US3177991: Create Purged ORS Checkbox and Display Records UI - Krish - 8th June 2021 -->
+        <div class="slds-grid">
+            <div class="slds-col slds-size_11-of-12 component_title card_element_bottom_margin card_left_padding">
+            Related External IDs: {!v.claimNumber}  {!v.tempTabId}
+        </div>
+            <div class="slds-col slds-size_1-of-12">
+                <lightning:input  type="checkbox" label="Purged" onchange="{!c.purgedCheckboxChange}"/>
+            </div>
+        </div>
+
+        <div class="scrollableTable">
+            <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                <thead>
+                    <tr class="slds-line-height_reset">
+                        <th class="" scope="col">
+                            <div class="slds-truncate">DATE CREATED</div>
+                        </th>
+                        <th class="" scope="col">
+                            <div class="slds-truncate">ID TYPE</div>
+                        </th>
+                        <th class="" scope="col">
+                            <div class="slds-truncate">EXTERNAL ID</div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <aura:iteration items="{!v.externalIdInfo}" var="item" indexVar="index">
+                        <!-- US3177995 - Thanish - 22nd Jun 2021 -->
+                        <aura:if isTrue="{!!item.hideRow}">
+                            <tr class="slds-hint-parent">
+                                <td>
+                                    <div class="slds-truncate">{!item.DateCreated}</div>
+                                </td>
+                                <td>
+                                    <div class="slds-truncate">{!item.IdType}</div>
+                                </td>
+                                <td>
+                                    <div class="slds-truncate">
+                                        <aura:if isTrue="{!item.isLink}">
+                                            <a class="{!item.class}" onclick="{!c.onIdClick}" data-index="{!index}" data-objectId="{!item.purgedORSID}" data-orsId="{!item.ExternalId}" data-IdType="{!item.IdType}">{!item.ExternalId}</a>
+                                            <aura:set attribute="else">
+                                                {!item.ExternalId}
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </td>
+                            </tr>
+                        </aura:if>
+                    </aura:iteration>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</aura:component>

@@ -1,0 +1,132 @@
+<aura:component>
+    <ltng:require scripts="{!$Resource.ACET_AutodocJS}" />
+    <!-- Attributes -->
+    <aura:attribute name="Description" type="String" default="Description" />
+    <aura:attribute name="Percentage" type="double" default="0" />
+    <aura:attribute name="TotalAmount" type="String" default="0.00" />
+    <aura:attribute name="TotalAmountStr" type="String" default="0.00" />
+    <aura:attribute name="SpentAmount" type="String" default="0.00" />
+    <aura:attribute name="RemainingAmount" type="String" default="0.00" />
+    <aura:attribute name="Size" type="String" default="large" />
+    <aura:attribute name="showRemaining" type="Boolean" default="true" />
+    <aura:attribute name="valueMin" type="double" default="0" />
+    <aura:attribute name="valueMax" type="double" default="100" />
+    <aura:attribute name="isAggregateIndividualIndicator" type="Boolean" default="false" />
+    <aura:attribute name="isAggregateFamilyIndicator" type="Boolean" default="false" />
+    <aura:attribute name="isEmbeddedIndividualIndicator" type="Boolean" default="false" />
+    <aura:attribute name="isEmbeddedFamilyIndicator" type="Boolean" default="false" />
+    <aura:attribute name="isFamilyAccumulation" type="Boolean" default="false" />
+    <aura:attribute name="moveLeft" type="String" default="0" /> <!-- US2382482-->
+    <aura:attribute name="moveTop" type="String" default="0" />
+    <aura:attribute name="aggregateDesc" type="String" access="public"
+                    default="Aggregate plans have a single combined family deductible.  When more than one person is covered under the plan, no individual in the family has met the deductible until the entire family amount has been satisfied.  Note:  If there is only one individual covered under the plan, the individual deductible/OOP will apply." />
+    <aura:attribute name="embeddedDesc" type="String" access="public"
+                    default="Embedded plans contain both individual and family deductible/OOP amounts.  When an individual in a family meets their individual deductible or OOP, that individual’s claims are no longer subject to deductible or OOP.  When the family deductible/OOP amount is met, future claims for all family members are no longer subject to deductible or OOP." />
+    <aura:attribute name="showDeductMsg" type="Boolean" default="true" />
+    <!-- End of Attributes -->
+    
+    <aura:attribute name="financialCardDetails" type="Object" />
+    <aura:attribute name="autodocUniqueId" type="String" default="financials"/>
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default="financials"/>
+    <aura:attribute name="headerChecked" type="Boolean" default="false" />
+    <!-- US3507751 - Save Case Consolidation -->
+    <aura:handler event="c:ACET_AutoDocRefreshEvent" action="{!c.handleAutodocRefresh}"/>
+    
+    <div class="slds-m-bottom_small">
+        <div class="slds-grid slds-wrap">
+            <div class="slds-col">
+                <div class="left-align boldedTitle slds-m-bottom_small"
+                     style="{!v.isFamilyAccumulation?'color:grey':'color:black'}">
+                    <p class="field-title slds-form-element__label field_label_padding">
+                        <b>
+                            <aura:if isTrue="{!v.isFamilyAccumulation}">
+                                {!v.Description}
+                                <aura:set attribute="else">
+                                    <lightning:input type="checkbox" name="{!v.Description}" label="{!v.Description}" checked="{!v.headerChecked}" onchange="{!c.handleSelectCheckBox}" />
+                                </aura:set>
+                            </aura:if>
+                        </b>
+                    </p>
+                </div>
+            </div>
+            <div class="slds-col" style="margin-left: 1rem; width: 0.3rem; margin-top: 0.2rem;">
+                <aura:if isTrue="{!or(v.isAggregateIndividualIndicator,v.isAggregateFamilyIndicator)}">
+                    <c:ACET_HoverPopup aura:id="CCFpopupAggregate" popupId="CCFpopupAggregate" moveTop="{!v.moveTop}"
+                                       moveLeft="{!v.moveLeft}" description="{!v.aggregateDesc}" descriptionList=""
+                                       isNubbinLeft="true" />
+                    <p data-popupId="CCFpopupAggregate" onmouseover="{!c.togglePopup}" onmouseout="{!c.togglePopup}"
+                       class="field-title">
+                        <span class="dashedLine"><b>(Aggregate)</b></span>
+                    </p>
+                </aura:if>
+                <aura:if isTrue="{!or(v.isEmbeddedIndividualIndicator,v.isEmbeddedFamilyIndicator)}">
+                    <c:ACET_HoverPopup aura:id="CCFpopupEmbedded" popupId="CCFpopupEmbedded" moveTop="{!v.moveTop}"
+                                       moveLeft="{!v.moveLeft}" description="{!v.embeddedDesc}" descriptionList=""
+                                       isNubbinLeft="true" />
+                    <p data-popupId="CCFpopupEmbedded" onmouseover="{!c.togglePopup}" onmouseout="{!c.togglePopup}"
+                       class="field-title">
+                        <span class="dashedLine"><b>(Embedded)</b></span>
+                    </p>
+                </aura:if>
+            </div>
+			<aura:if isTrue="{!or(v.isAggregateIndividualIndicator,v.isAggregateFamilyIndicator,v.isEmbeddedIndividualIndicator,v.isEmbeddedFamilyIndicator)}">
+				<aura:if isTrue="{!!v.isFamilyAccumulation}">
+                    <aura:if isTrue="{!v.showDeductMsg==false}">
+                        <div class="slds-col" style="margin-left: 6rem; width: 11rem; margin-top: 0.2rem;">
+                            <p class="field-title boldedTitle">
+                                <span><b>Check ISET for Accumulations</b></span>
+                            </p>
+                        </div>
+                    </aura:if>
+                </aura:if>
+                <aura:set attribute="else">
+                    <aura:if isTrue="{!!v.isFamilyAccumulation}">
+                        <aura:if isTrue="{!v.showDeductMsg==false}">
+                            <div class="slds-col" style="margin-left: 6rem; width: 11rem; margin-top: 0.2rem;">
+                                <p class="field-title boldedTitle">
+                                    <span><b>Check ISET for Accumulations</b></span>
+                                </p>
+                            </div>
+                        </aura:if>
+                    </aura:if>
+                </aura:set>
+            </aura:if>
+        </div>
+        <p class="valueCls">
+            <div class="slds-grid slds-wrap">
+                <aura:if isTrue="{!!v.isFamilyAccumulation}">
+                    <div class="slds-col slds-size_6-of-12 slds-text-align_left"> <span style="font-family:Arial">$ </span> {!v.SpentAmount} Satisfied </div>
+                    <aura:If isTrue="{!v.showRemaining}">
+                        <div class="slds-col slds-size_6-of-12 slds-text-align_right"> <span style="font-family:Arial">$ </span> {!v.RemainingAmount}
+                            Remaining </div>
+                    </aura:If>
+                </aura:if>
+            </div>
+            <div class="slds-form-element__static">
+                <aura:if isTrue="{!v.isFamilyAccumulation}"><br /></aura:if>
+                <div class="slds-grid slds-wrap">
+                    <div class="slds-col slds-size_12-of-12">
+                        <div class="slds-progress-bar slds-progress-bar_large"
+                             style="{!v.isFamilyAccumulation?'color:grey':'color:black'}" aria-valuemin="{!v.valueMin}"
+                             aria-valuemax="{!v.valueMax}" aria-valuenow="{!v.Percentage}" role="progressbar">
+                            <aura:if isTrue="{!!v.isFamilyAccumulation}">
+                                <span class="slds-progress-bar__value"
+                                      style="{! 'width: ' + v.Percentage + '%'}"></span>
+                                <aura:set attribute="else">
+                                    <span class="slds-progress-bar__value" style="{! 'width: ' + 0 + '%'}"></span>
+                                </aura:set>
+                            </aura:if>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="slds-grid slds-wrap">
+                    <aura:if isTrue="{!!v.isFamilyAccumulation}">
+                        <div class="slds-col slds-size_6-of-12 slds-text-align_left"><span style="font-family:Arial">$ </span>0.00 </div>
+                        <div class="slds-col slds-size_6-of-12 slds-text-align_right"><span style="font-family:Arial">$ </span>{!v.TotalAmount} </div>
+                    </aura:if>
+                </div>
+            </div>
+        </p>
+    </div>
+</aura:component>

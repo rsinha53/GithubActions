@@ -1,0 +1,115 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,lightning:isUrlAddressable" access="global"
+                controller="SAE_AlertsCtrl">
+    <!--aura:handler name="init" value="{!this}" action="{!c.init}" /-->
+    <ltng:require styles="{!$Resource.ACETLink_MasterStyle}" />
+    <aura:attribute name="alertsSize" type="Integer" access="public" default="0" />
+    <aura:attribute name="isMemberAlertModalOpen" type="boolean" default="false"/>
+    
+    <aura:attribute name="getAlertsData" type="List" access="public"/>
+    <aura:attribute name="providerId" type="String" access="public"/>
+    <aura:attribute name="taxId" type="String" access="public"/>
+    <aura:attribute name="memberId" type="String" access="public"/>
+    <aura:attribute name="groupId" type="String" access="public"/>
+    <aura:attribute name="memberNotFound" type="String" default="mnf" />
+    <aura:attribute name="noMemberToSearch" type="Boolean" default="false" />
+    <aura:attribute name="providerNotFound" type="Boolean" default="false" />
+    <aura:attribute name="isProviderSearchDisabled" type="Boolean" default="false" />
+    <aura:attribute name="isProvider" type="Boolean" default="false" />
+    <aura:attribute name="isProviderSnapshot" type="Boolean" default="false" />
+    <aura:attribute name="isMemberSnapshot" type="Boolean" default="false" />
+    <aura:attribute name="isInteractionPage" type="Boolean" default="false"/>   
+    <aura:method name="alertsMethod" action="{!c.getAlerts}" access="public"/>
+    <aura:method name="alertsMethodShapshots" action="{!c.getAlertsOnSnapShots}" access="public"/>
+     <aura:method name="getAlertsOnclickPolicies" action="{!c.getAlertsOnclickPolicies}" access="public"/>
+    <!-- US2554307: View Authorizations Details Page - Add Alerts Button -->
+    <aura:method name="getAlertsOnAuthDetailsPage" action="{!c.getAlertsOnAuthDetailsPage}" access="public"/>
+     <!-- US2876410 ketki 9/15:  alert on claim detail page-->
+    <aura:method name="getAlertsOnClaimDetailsPage" action="{!c.getAlertsOnClaimDetailsPage}" access="public"/>
+	 <!-- US2876410 ketki 9/15:  alert on claim detail page-->
+     <aura:method name="getAlertsOnCreateReferralPage" action="{!c.getAlertsOnCreateReferralPage}" access="public"/>
+    <aura:attribute name="houseHoldMemberId" type="String" access="public"/>
+    <aura:attribute name="policyGroupId" type="String" access="public"/>
+    <aura:attribute name="policyMemberId" type="String" access="public"/>
+    <aura:attribute name="houseHoldGroupId" type="String" access="public"/>
+    <aura:attribute name="disableAlertButton" type="Boolean" access="public"/>
+    <aura:attribute name="isOtherSearch" type="Boolean" default="false" />
+    <aura:attribute name="interactionAlert" type="Interaction_Alert__c"/>
+    <aura:attribute name="interactionRecId" type="String"/>
+    <aura:attribute name="lastGroupNo" type="String"/>
+    
+    <!-- US3480373: Service Request Detail Page Alignment - Krish - 5 May 2021 Start-->
+    <aura:method name="getAlertsOnServiceRequestDetail" action="{!c.getAlertsOnServiceRequestDetail}" access="public"/>
+    <aura:attribute name="caseRecordId" type="String" default=""/>
+    
+    <lightning:button variant="neutral" 
+                      label="{!'Alerts ('+v.alertsSize+')'}" 
+                      title="Alert" 
+                      name="alertName"
+                      onclick="{!c.openAlertPopUp}"
+                      /><!--US2705857 - Sravan-->
+    
+    
+    <aura:if isTrue="{!v.isMemberAlertModalOpen}">
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" style="position: fixed !important;" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container"  style="min-width: 85rem;"> <!-- US1817921 - Thanish - 21st Oct 2019 - Added style attribute-->
+                    <!-- Modal/Popup Box Header Starts here-->
+                    <header class="slds-modal__header card_padding"> 
+                        
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate" style="font-weight: bold;">Alerts</h2>
+                    </header>
+                    <!--Modal/Popup Box Body Starts here-->
+                    
+                    <ui:scrollerWrapper class="outerScroller">
+                        <div class="slds-modal__content card_padding no_radius"  id="modal-content-id-1"> 
+                            <aura:if isTrue="{!v.alertsSize == 0}">
+                                No active alerts.
+                            </aura:if>
+                            <aura:if isTrue="{!v.alertsSize > 0}">
+                                <table class="slds-table slds-table_bordered coverage-tbl slds-no-row-hover" style="width:100%; table-layout: fixed;">
+                                    <thead>
+                                        <tr>
+                                            <th class="slds-cell-wrap typeCls" width="5%">Type</th> <!-- US1817921 - Thanish - 21st Oct 2019 -->
+                                            <th class="slds-cell-wrap groupCls" width="6%">Group #</th> <!-- US1817921 - Thanish - 21st Oct 2019 -->
+                                            <th class="slds-cell-wrap idNoCls" width="6%">ID #</th> <!-- US1817921 - Thanish - 21st Oct 2019 -->
+                                            <th class="slds-cell-wrap alertTitleCls" width="22%">Alert Title</th> <!-- US1817921 - Thanish - 21st Oct 2019 -->
+                                            <th class="slds-cell-wrap alertCommentCls" width="35%">Alert Comment</th> <!-- US1817921 - Thanish - 21st Oct 2019 -->
+                                            <th class="slds-cell-wrap effectiveDateCls" width="7%">Effective Date</th> <!-- US1817921 - Thanish - 21st Oct 2019 -->
+                                            <th class="slds-cell-wrap endDateCls" width="7%">End Date</th> <!-- US1817921 - Thanish - 21st Oct 2019 -->
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <lightning:workspaceAPI aura:id="getAlertsData"/>
+                                        <aura:iteration items="{!v.getAlertsData}" var="dt" aura:id="item">
+                                            <tr class="activecol" >	
+                                                <td class="slds-cell-wrap typeCls" width="5%" style="font-weight: bold;"><ui:outputText value="{!dt.Type__c}"/> <!-- US1817921 - Thanish - 21st Oct 2019 -->
+                                                </td>
+                                                <td class="slds-cell-wrap groupCls" width="6%"><ui:outputText value="{!dt.Group_Number__c}"/></td> <!-- US1817921 - Thanish - 21st Oct 2019 -->
+                                                <td class="slds-cell-wrap idNoCls" width="6%"><ui:outputText value="{!dt.ID_Number__c}"/></td> <!-- US1817921 - Thanish - 21st Oct 2019 -->
+                                                <td class="slds-cell-wrap alertTitleCls" width="22%"><ui:outputText value="{!dt.Alert_Title__c}"/></td> <!-- US1817921 - Thanish - 21st Oct 2019 -->
+                                                <td class="slds-cell-wrap alertCommentCls" width="35%"><ui:outputText value="{!dt.Alert_Comments__c}"/></td> <!-- US1817921 - Thanish - 21st Oct 2019 -->
+                                                <td class="slds-cell-wrap effectiveDateCls" width="7%"><ui:outputdate value="{!dt.Effective_Date__c}" format="MM/DD/YYYY"/></td> <!-- US1817921 - Thanish - 21st Oct 2019 -->
+                                                <td class="slds-cell-wrap endDateCls" width="7%"><ui:outputdate value="{!dt.End_Date__c}" format="MM/DD/YYYY"/></td> <!-- US1817921 - Thanish - 21st Oct 2019 -->
+                                            </tr>
+                                        </aura:iteration>
+                                    </tbody>
+                                </table>
+                            </aura:if> 
+                        </div>
+                    </ui:scrollerWrapper>
+                    
+                    <!--Modal/Popup Box Footer Starts here-->
+                    <footer class="slds-modal__footer card_padding"> <!-- US1817921 - Thanish - 15th Oct 2019 -->
+                        <lightning:button variant="brand"
+                                          label="Close"
+                                          title="Close"
+                                          onclick="{! c.closeAlertsModal }"
+                                          class="brand_button"/> <!-- US1817921 - Thanish - 15th Oct 2019 -->
+                        
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open" style="position: fixed !important;"></div>
+        
+    </aura:if>
+    
+</aura:component>

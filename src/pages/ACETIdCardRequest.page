@@ -1,0 +1,413 @@
+<apex:page Controller="ACETIdCardRequestController" sidebar="false"  applyBodyTag="true" applyHtmlTag="true" showHeader="true" >
+<script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+    <apex:includeScript value="{!$Resource.JQuery}" />
+    <apex:includeScript value="/support/console/30.0/integration.js" />  
+    <apex:stylesheet value="{!URLFOR($Resource.ACETResources, '/css/vendor/chosen.min.css')}" />
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+    <apex:stylesheet value="{!URLFOR($Resource.jQueryDatatableResources,'jquery.dataTables.min.css')}" />
+    <apex:stylesheet value="{!URLFOR($Resource.jQueryDatatableResources,'dataTables.searchHighlight.css')}" />
+    <apex:includeScript value="{!URLFOR($Resource.ACETBenefitAccordionJSExtend)}"/>
+    <script>
+    window.onload = function() {
+        window.scrollTo(0,0);
+    };
+    var submitorderBtn;
+     $(document).ready(function() { 
+       localStorage.removeItem("table");
+       localStorage.removeItem("rowCheckHold");
+       acet.autodoc.createCommentsbox(); 
+        init(); 
+        getFamilyMembersOnPageLoad();
+        apply_accordion();
+     });
+     function apply_accordion() {
+        $(".acord").accordion({
+            header: '> h3:not(.item)', //this line is a bug fix for accordion jquery//
+            heightStyle: 'content',
+            active: false,
+            collapsible: true 
+        });            
+     }
+     function init() {
+        acet.autodoc.startAutodoc();    
+    } 
+    function findDoc(groupNumber, memberId,reqDate){
+    
+               console.log(memberId);
+               console.log(groupNumber);
+               var parameters = [];
+               textField='groupNumber,'+groupNumber;
+               console.log(textField);
+               parameters.push(textField); 
+               textField='memberId,'+memberId.substr(0,9);
+               console.log(textField);
+               parameters.push(textField); 
+               textField='MemberSequenceNumberOrDivision,'+memberId.substr(memberId.length - 2);
+               console.log(textField);
+               parameters.push(textField); 
+               textField='clientNumber,3134';
+               console.log(textField);
+               parameters.push(textField); 
+               
+               textField='printDateFilter,ALLCARDS';
+               console.log(textField);
+               parameters.push(textField);
+        
+               var params = JSON.stringify(parameters);
+               console.log('params is '+params);
+               affinddoc(params,reqDate);
+                     
+    }
+    
+    function validate(btnSave)
+    {
+        var result = true;
+        
+        if(result)
+            acet.autodoc.saveAutodoc();   
+        return result;    
+         
+    }
+    
+    function validateAndPlaceOrder(memberId,groupId,benBundleId,obj)
+    {
+       submitorderBtn =  $(obj);//
+       console.log($(submitorderBtn).parent().parent().find("input:checkbox"));
+       submitOrder(memberId,groupId,benBundleId);
+       console.log('----'+$('.submitOrder'+memberId));
+       
+    }
+    function updateCheckboxes(){
+    //init();
+    $(submitorderBtn).parent().parent().find(".trackingIdCol").html($("#currentTId").val());
+    $(submitorderBtn).parent().parent().find("input:checkbox").prop('checked', true);
+        $(submitorderBtn).prop("disabled",true);
+    }
+    function getOrderHistorySelectedId(){
+        var memid = '{!JSENCODE(memberId)}';
+        console.log('-------memid-------'+memid);
+            $("[id$='acordId']").find("[id$='headerId']").each(function(){
+               var str1 = $(this).html();
+               if(str1.indexOf(memid) >= 0)
+                {
+                    $(this).click();
+                    $(this).addClass("ui-accordion-header-active ui-state-active");
+                    $(this).removeClass("ui-accordion-header-collapsed");
+                    $(this).attr("aria-selected","true");
+                    $(this).attr("aria-expanded","true");
+                    $(this).parent().closest("div").find(".content").css("display","block");
+                    $(this).find("span").removeClass("ui-accordion-header-icon ui-icon ui-icon-triangle-1-e").addClass("ui-accordion-header-icon ui-icon ui-icon-triangle-1-s");
+                    getMemberDetails(memid);
+                }
+            });
+    }
+    function getOrderHistory(FamilyId, mem){
+         var imgclass = $(mem).attr('class').split(' ');
+         $(imgclass).each(function() { 
+            if(this == 'ui-corner-all'){  
+              var IsDateValid = IsStartDateValid();
+              if(IsDateValid){ 
+                 console.log('------IsDateValid--------'+IsDateValid);
+                   getMemberDetails(FamilyId);
+               }
+            } 
+               
+        });    
+      }
+      function ValidateStartDate(){
+          var IsDateValid = IsStartDateValid();
+          if(IsDateValid){
+          console.log('-------calcEnddate-------'+IsDateValid);
+           $("[id$='loadingDivPanel']").css("display","block");
+           CalcEnddate();
+         }
+     }
+      function IsStartDateValid(){
+        var dateitem = true;
+        $("[id$='startdate']").parent().find(".errorMsg").remove();
+        $("[id$='startdate']").parent().parent().find(".errorMsg").remove();
+        $("[id$='startdate']").parent().find(".requiredBlock").remove();
+        $("[id$='startdate']").removeClass('error');
+        var $startdate =  $("[id$='startdate']");
+        console.log('-----startdate------'+$startdate);
+        console.log('-----startdate-val-----'+$startdate.val());
+        var parts = $startdate.val().split("/");
+        var day = parseInt(parts[1], 10); 
+        var month = parseInt(parts[0], 10);
+        var year = parseInt(parts[2], 10);
+        if($startdate != null && $startdate.val()!= undefined && $startdate.val().search("[a-z,A-Z<>!@#$%^&?=_(){}:;*']")>=0 || (year < 1000 || year > 3000 || month == 0 || month > 12 || day == 0) ){ 
+            var errorMsg = "Invalid Date"; 
+            $("[id$='startdate']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+            $("[id$='startdate']").addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            dateitem = false;
+           }
+            else if((month ==4 || month == 6 || month==9 || month == 11) && day > 30){
+                var errorMsg = "Invalid Date"; 
+                $("[id$='startdate']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+                $("[id$='startdate']").addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                dateitem = false;
+            }   
+            else if((month ==1 || month == 3 || month==5 || month == 7 || month == 8 || month==10 || month ==12) && day > 31){
+                var errorMsg = "Invalid Date"; 
+                $("[id$='startdate']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+                $("[id$='startdate']").addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                dateitem = false;
+            }
+            else if($startdate.val()==''){
+                var errorMsg = "Invalid Date"; 
+                $("[id$='startdate']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+                $("[id$='startdate']").addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                dateitem = false;
+              }
+               else if($startdate != null && new Date($startdate.val()) > new Date()){
+                    var errorMsg = "Start date cannot be greater than today's date."; 
+                    $("[id$='startdate']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+                    $("[id$='startdate']").addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                    dateitem = false;
+                }  
+        return dateitem;      
+    }
+     function showPanel() {
+                $("[id$='loadingDivPanel']").hide();
+       }
+    </script>
+    <script>
+    $(window).load(function (){
+    var d = new Date();
+    var vdate = document.getElementById("calYearPicker").innerHTML = d.getFullYear();
+      $("#calYearPicker").html('')
+      for(var i=2017; i<= vdate+5; i++){
+        $("#calYearPicker").append("<option value= '"+ i +"'>"+i+"</option>")
+      }
+    });
+    </script>
+   <apex:outputPanel id="scriptPanel">
+        <script>
+            $(document).ready(function() {
+            var memid = '{!JSENCODE(memberId)}';
+            var size = {!familySize};
+            if(size > 0)
+            {
+                $("[id$='memberDetailTable']").find("[id$='familyId']").each(function()
+                {
+                    if(($(this).html() == memid ))
+                    {
+                        $(this).parent().children().addClass("highlight");
+                    }
+                });
+                $("[id$='memberDetailTable']").find("tbody").find("tr").each(function()
+                {
+                    
+                    if($(this).find("[id$='memstat']").html() == 'TERM'){
+                        $(this).find("[id^='submitOrder']").prop("disabled",true);
+                    }
+                });
+            }
+          });
+      </script>
+    </apex:outputPanel>
+    <style>
+        .apexp .apexDefaultPageBlock.bPageBlock .pbBody .pbSubheader
+        {
+            color: black;
+            font-size: 1.1em;
+        }
+        
+        .homeTab .tertiaryPalette, .individualPalette .homeBlock .tertiaryPalette, .layoutEdit .individualPalette .homeBlock .tertiaryPalette
+        {
+            background-color: #f8f8f8;
+            border-color: #f8f8f8;
+        }
+       .ui-state-active, .ui-widget-content .ui-state-active, .ui-widget-header .ui-state-active, a.ui-button:active, .ui-button:active, .ui-button.ui-state-active:hover {
+            border: 1px solid #ffffff;
+            background: #d8edff;
+            font-weight: bold;
+            color: #000000;
+        }
+        
+        .highlight
+        {
+            background: yellow;
+        }
+        .messageTable
+        {
+         border: none;
+        }
+    </style>
+    <apex:form >
+        <apex:outputPanel id="trackingId">
+        <input id = "currentTId" type = "hidden" value = "{!currentTrackingId}" />
+        </apex:outputPanel>
+        <apex:outputPanel id="hlPanel" layout="none" styleClass="h_line">
+            <apex:inputHidden id="highlightPanelInfo" />
+            <c:ACETInteractionHighlightsPanel InteractionAtt="{!Interaction}" SubjectAtt="{!Subject}" AdditionalInfoAtt="{!AdditionalInfo}" html-auto-doc="auto" selectedOriginator="{!wrapper.interaction.Originator_Name__c}"/>
+        </apex:outputPanel>
+        <apex:outputPanel id="hippapopupPanel">
+                       <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+            </apex:outputPanel>
+         <apex:sectionHeader title="ID Card Request" id="sectionHeader"/>
+         
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveButton="true" attrShowMisdirectButton="true" 
+            attrSourceOriginator="{!wrapper.SourceOriginator}" attrInteractionId="{!wrapper.Interaction.Id}" attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="ID Card Request"/>
+        <!--<apex:actionFunction name="getMemberDetails" action="{!getPersonInfo}" oncomplete="acet.autodoc.startAutodoc();" reRender="memAddSection,memhistory" status="refreshMemberStatus"/>
+        -->
+        <apex:pagemessages id="pageMessages" />
+          <apex:actionFunction name="CalcEnddate" action="{!CalculateEnddate}" reRender="endDatePanel,enddate" oncomplete="apply_accordion();showPanel();"/>
+          <apex:actionFunction name="getMemberDetails" action="{!getPersonInfo}" oncomplete="acet.autodoc.startAutodoc();acet.autodoc.startAutodoc('memAddSection');acet.autodoc.startAutodoc('orderHistory');" reRender="memhistory,pageMessages" status="refreshMemberStatus">
+            <apex:param name="selectedFamilyId" value="" assignTo="{!selectedFamilyId}"/>
+        </apex:actionFunction>
+        <apex:actionFunction name="submitOrder" action="{!submitOrderCall}"  reRender="serviceResponse,serviceResponseId,pageMessages,trackingId" status="refreshMemberStatus" onComplete="updateCheckboxes();">
+        <apex:param name="selectedMember" value=""/>
+        <apex:param name="selectedGroupId" value=""/>
+        <apex:param name="BenBundleId" value=""/>
+        </apex:actionFunction>
+        <apex:actionFunction action="{!findDocument}" name="affinddoc" oncomplete=" acet.autodoc.startAutodoc('orderHistory');" status="refreshMemberStatus" rerender="memhistory,DocRes,pageMessages">
+            <apex:param name="params" value="" assignTo="{!DynamicParams}"/>
+            <apex:param name="reqDate" value="" assignTo="{!reqDate}"/>
+        </apex:actionFunction>
+        <apex:actionFunction name="getFamilyMembersOnPageLoad" action="{!getFamilyMembers}" reRender="serviceResponse,serviceResponseId,pageMessages,memAddSection,familyMemTable,pbSectionFamilyAccordion,scriptPanel" status="refreshMemberStatus" oncomplete="init();apply_accordion();getOrderHistorySelectedId();"/>
+        <apex:actionStatus id="refreshMemberStatus">
+            <apex:facet name="start">
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                &nbsp;
+            </div>
+            <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 1001; margin: 15% 50%">
+                <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                    <img src="/img/loading.gif" style="float: left; margin: 8px;" />
+                    <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                </div>
+            </div>
+            </apex:facet>
+        </apex:actionStatus>
+        
+        <apex:pageBlock id="familyDetailPB" title="Select Member">
+            <apex:outputPanel id="familyMemTable">
+            <apex:pageBlockSection columns="1" id="memAddSection" collapsible="false" html-auto-doc="true"  html-auto-doc-case-items="true" html-auto-doc-section-key="memAddSection" html-auto-doc-section-column-indexes="1,2">
+                
+                    <apex:pageBlockTable value="{!FamilyInfo}" var="fm" id="memberDetailTable">
+                        <apex:column value="{!fm.FirstName} {!fm.LastName}" headerValue="Recipient"/>
+                        <apex:column value="{!fm.FamilyId}" headerValue="Member ID" id="familyId"/>
+                        <apex:column value="{!fm.memberStatus}" headerValue="Member Status" id="memstat"/>
+                        <apex:column rendered="{!notResearchUser}">
+                        <input type="button" class="submit-order" id="submitOrder{!fm.FamilyId}" value="Submit Order" onclick="validateAndPlaceOrder('{!fm.FamilyId}','{!fm.groupNumber}','{!fm.benefitBundleOptionId}',this);" />
+                        </apex:column>
+                        <apex:column rendered="{!!notResearchUser}">
+                        <input type="button" class="submit-order" value="Submit Order" disabled="true"/>
+                        </apex:column>
+                        <apex:column styleClass="trackingIdCol" headerValue="Confirmation #">
+                        {!memberTokenMap[fm.FamilyId]}
+                        </apex:column>
+                                                
+                    </apex:pageBlockTable>
+                
+            </apex:pageBlockSection> 
+            </apex:outputPanel>
+        </apex:pageBlock>
+          <apex:outputPanel id="pbSectionFamilyAccordion">
+           <apex:pageBlock title="Order History">   
+           <!-- Added the below datesoutputpanel for User story  US927032    -->  
+             <apex:outputPanel id="datespanel">
+                 <apex:pageBlockSection id="section1b" columns="2">
+                   <apex:pageBlockSectionItem rendered="true" id="startDateSection">                                   
+                          <apex:outputLabel value="Start Date" style="font-weight: bold;font-size: 91%;color: #4a4a56;"/>
+                                    <apex:outputPanel id="startDatePanel" rendered="true">
+                                        <apex:inputField onchange="ValidateStartDate();" id="startdate" value="{!ordHistStartdate.tst_Date_Field__c}" rendered="true"/>                                              
+                                   <div style="display: inline;float:right;padding-right:30%;">
+                                        <div id="loadingDivPanel" style = "margin : 0 auto;width : 100%;display:none">
+                                            <img src="{!URLFOR($Resource.ACETResources, '/img/m/loading16x16.gif')}" />
+                                            <b>Loading.... Please Wait...</b>
+                                        </div> 
+                                       </div>                                       
+                                    </apex:outputPanel>                                       
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem rendered="true"
+                                                           id="endDateSection">                                
+                                    <apex:outputLabel style="font-weight: bold;font-size: 91%;color: #4a4a56;" value="End Date"/>
+                                    <apex:outputPanel id="endDatePanel" rendered="true">
+                                        <apex:OutputText id="enddate"
+                                                         value="{!ordHistEnddate}"
+                                                         style="font-size:12px;margin-left:4px;padding-bottom: 4px;" rendered="true"/>
+                                        <div class="errorMsg"
+                                             style="display: none; margin-left: -12px;">
+                                            <b>Error:</b> Invalid End Date
+                                        </div>
+                                    </apex:outputPanel>                                    
+                                </apex:pageBlockSectionItem>                                
+                        </apex:pageBlockSection>                     
+                  </apex:outputPanel>                       
+            <div style='width:100%;height:100%;' class="accordion">
+                <table width='100%' height='100%'>
+                    <tr height='100%'>
+                        <td width='50%'>                            
+                            <apex:repeat value="{!FamilyInfo}" var="fm">    
+                             <div class="acord" id="acordId">                  
+                                <h3 id="headerId" onclick="getOrderHistory('{!JSENCODE(fm.FamilyId)}',this);"> {!fm.FirstName} {!fm.LastName} - {!fm.FamilyId} </h3>                                     
+                              <div class="content">
+                            <apex:Outputpanel layout="block" id="memhistory">
+                            <apex:pageBlocksection columns="1" html-auto-doc="true"  id="orderHistory" html-auto-doc-section-key="orderHistory" html-auto-doc-section-column-indexes="1,2,3,4,5,6">
+                                <apex:pageBlockTable value="{!formHistoryResultMap[fm.FamilyId]}" var="r" rendered="true">                      
+                                    <apex:column headerValue="Request Date">
+                                        <apex:outputText value="{!r.requestdate}"></apex:outputText>
+                                    </apex:column>                        
+                                   <apex:column headerValue="Order Status">   
+                                     <apex:outputText value="{!r.status}" title="{!r.statusToolTip}" style="color:blue"></apex:outputText>
+                                    </apex:column>       
+                                    <apex:column headerValue="Recipient Id">   
+                                     <apex:outputText value="{!r.recipientId}"></apex:outputText>
+                                    </apex:column>                   
+                                    <!--   <apex:column headerValue="Mailed Date" > //US2808705
+                                        <apex:outputText value="{!r.maileddate}"></apex:outputText>
+                                    </apex:column>       -->                  
+                                    <apex:column headerValue="Address" >
+                                        <apex:outputText value="{!r.Address}"></apex:outputText>
+                                    </apex:column>
+                                    <apex:column headerValue="ID Card Image" >
+                                        <apex:outputPanel rendered="{!r.isAvailable}">
+                                             <a href="#" id="linkId" onclick="findDoc('{!coverageGroupNumber}','{!r.recipientId}','{!r.recievedDate}');" >View Image</a>  
+                                        </apex:outputPanel>
+                                    </apex:column>
+                                </apex:pageBlockTable>
+                            </apex:pageBlocksection>
+                            <apex:pageBlocksection columns="1" rendered="{!formHistorySizeMap[fm.FamilyId]}">
+                                <apex:outputLabel value="No results found"></apex:outputLabel>
+                            </apex:pageBlocksection>
+                            
+                        </apex:Outputpanel>
+                              </div>
+                              </div>
+                             </apex:repeat>                          
+                         </td>
+                     </tr>
+                 </table>
+            </div> 
+            </apex:pageBlock>
+          </apex:outputPanel>
+        <!-- Get Document Id and View Image>-->  
+        <apex:outputPanel id="DocRes" > 
+            <script>
+            var documentId = '{!JSENCODE(documentId)}';
+            var isDocSizeMoreThanOneMB = 'false';
+            var docType = 'application/pdf';
+            var isIdCard = 'true';
+            console.log(documentId);
+            
+            if(documentId)
+            {
+                sforce.console.getFocusedPrimaryTabId(function(result){
+                     //var urlParam = encodeURLParams(window.location.href.split('?')[1]);                             
+                     //var url = '/apex/ACETDocument?' + urlParam + '&DocId=' + docId + '&docContentType=' + docType + '&isDocSizeMoreThanOneMB=' + isDocSizeMoreThanOneMB + '&docName=' + docName; 
+                     var url = '/apex/ACETDocument?'+ 'DocId=' + documentId + '&docContentType=' + docType + '&isDocSizeMoreThanOneMB=' + isDocSizeMoreThanOneMB + '&idCard=' + isIdCard; 
+                     sforce.console.openSubtab(result.id, url, true, 'ID Card Image', null, null, 'ID Card Image');
+                 });
+            }
+                
+           </script>
+        </apex:outputPanel>
+        <!-- search result section End--> 
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveButton="true" attrShowMisdirectButton="true" 
+            attrSourceOriginator="{!wrapper.SourceOriginator}" attrInteractionId="{!wrapper.Interaction.Id}" attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="ID Card Request" attrLocation="bottom"/>
+          <div align="left"> <a href="#" id="backToToP" style="color:Blue" >Back To Top</a> </div>  
+          </apex:form>
+</apex:page>

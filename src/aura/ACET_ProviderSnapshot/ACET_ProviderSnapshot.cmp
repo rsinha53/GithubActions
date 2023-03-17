@@ -1,0 +1,425 @@
+<aura:component
+    implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,lightning:isUrlAddressable"
+    access="global" controller="ACET_ProviderLookupDetailController">
+
+    <ltng:require scripts="{!$Resource.ACET_AutodocJS}" />
+    <ltng:require scripts="{!$Resource.ACET_SAEContactDetails}" />
+    <ltng:require styles="{!$Resource.slds_page_header_hide}" />
+    <ltng:require styles="{!$Resource.ACET_MasterStyle}" />
+    <lightning:workspaceAPI aura:id="workspace" />
+
+    <!-- Attributes -->
+    <aura:attribute name="providerTopicNO" type="Integer" default="2"/>
+     <aura:attribute name="paymentTopicNO" type="Integer" default="2"/>
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+    <aura:attribute name="selectedLookUpRecords" type="sObject[]" default="[]" />
+    <aura:attribute name="providerNotFound" type="Boolean" default="false" />
+    <aura:attribute name="noMemberToSearch" type="Boolean" default="false" />
+    <aura:attribute name="isProviderSearchDisabled" type="Boolean" default="false" />
+    <aura:attribute name="mnf" type="String" default="" />
+    <aura:attribute name="ProviderDetails" type="Object" />
+    <aura:attribute name="taxId" type="String" default="" />
+    <aura:attribute name="providerId" type="String" default="" />
+    <aura:attribute name="addrSequence" type="String" default="" />
+    <aura:attribute name="addressId" type="String" default="" /> <!-- Thanish - optimizing contract summary - 4th Nov 2020 -->
+    <aura:attribute name="interactionName" type="String" />
+    <aura:attribute name="interactionId" type="String" />
+    <aura:attribute name="subjectDetails" type="Object" />
+    <aura:attribute name="showProviderLookup" type="boolean" default="false" />
+    <aura:attribute name="autodocPageFeature" type="String" default="physiciandetails" />
+    <aura:attribute name="pageNumber" type="Integer" access="public" />
+    <aura:attribute name="interactionRec" type="Interaction__c" />
+    <aura:attribute name="contractApiParameters" type="Object" default="" />
+    <aura:attribute name="caseHistoryList" type="ACETGetCases.CaseWrapper[]" />
+    <aura:attribute name="isProvider" type="Boolean" default="true" />
+    <aura:attribute name="isPhysician" type="Boolean" default="true" />
+    <aura:attribute name="caseWrapper" type="Object" />
+    <aura:attribute name="providerSearchResultsADMultiplePages" type="boolean" default="false" />
+    <aura:attribute name="credentialList" type="String" default=" " />
+    <aura:attribute name="hipaaEndpointUrl" type="String" default="" />
+    <aura:attribute name="isHippaInvokedInProviderSnapShot" type="Boolean" default="false" />
+    <aura:attribute name="providerDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+    <!-- New Data -->
+    <aura:attribute name="autodocUniqueId" type="String" />
+    <aura:attribute name="providerData" type="Object" />
+    <aura:attribute name="contactDetails" type="ACET_ProviderLookupDetailController.contactDetails" default="[]" />
+    <aura:attribute name="credData" type="Object" />
+    <aura:attribute name="additionalData" type="Object" />
+    <aura:attribute name="specialityDetails" type="Object" />
+
+    <!-- Handlers -->
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:handler name="topicClick" event="c:SAE_TopicClickEvent" action="{!c.handleTopicClick}" />
+
+    <!-- Events -->
+    <aura:registerEvent name="SAE_CaseHistorySpinnerEvent" type="c:SAE_CaseHistorySpinnerEvent" />
+    <aura:registerEvent name="SAE_CaseHistoryEvent" type="c:SAE_CaseHistoryEvent" />
+
+    <!-- for Comments box-->
+    <aura:attribute name="isCommentsBox" type="Boolean" default="false" />
+    <aura:attribute name="commentsValue" type="String" default="" />
+    <aura:handler name="ACET_OpenFreeFormComment" event="c:ACET_OpenFreeFormComment" action="{!c.openCommentsBox}" />
+
+    <aura:attribute name="interactionOverviewTabId" type="String" /> <!-- DE364195 - Avish -->
+
+    <aura:handler name="PaymentSearchEvent" event="c:SAEPaymentSearchEvent" action="{!c.viewPaymentTopicClick}"/>
+    <aura:attribute name="ViewPayment" type="boolean" default="false"/>
+
+    <!--US2897253 - VCCD - Member/Provider Snapshot Page - Topic Integration - Sravan-->
+        <aura:attribute name="isVCCD" type="Boolean" default="false"/>
+        <aura:attribute name="VCCDQuestionType" type="String" default=""/>
+        <aura:registerEvent name="postVCCD" type="c:ACET_PostVCCD"/>
+
+    <aura:attribute name="callTopicLstSelected" type="sObject[]"/>
+    <aura:attribute name="callTopicName" type="String" default=""/>
+    <!-- <aura:handler name="change" value="{!v.callTopicName}" action="{!c.navigateToCallTopicScroll}" /> -->
+    <aura:attribute name="showHighlightsPanel" type="Boolean" default="true"/>
+    <aura:attribute name="callTopicTabId" type="String" />
+    <aura:handler event="c:ACET_navigateToCallTopic" action="{!c.navigateToCallTopicEventHandler}"/>
+    <aura:attribute name="contactNameFreeze" type="String" />
+    <aura:attribute name="isSandbox" type="Boolean" default="false"/>
+    <!--US3259671 - Sravan-->
+    <aura:attribute name="flowDetails" type="Object" access="public" />
+    
+
+	<c:ACET_OrgType isSandbox="{!v.isSandbox}"/>
+    <!-- US3516117: Create Overall Auto Doc Button on Provider Snapshot Page - Krish - 19th May 2021 -->
+    <aura:attribute name="tableDetails_prev" type="Object" />
+    <aura:attribute name="showpreview" type="Boolean" default="false" />
+    <!-- US3507762 - Create Overall Save Case Button on Provider Snapshot Page - Thanish - 20th May 2021 -->
+    <aura:attribute name="caseNotSavedTopics" type="String[]" default="['Provider Details']" />
+    <aura:attribute name="showSaveCase" type="Boolean" default="false" />
+    <aura:attribute name="showWarning" type="Boolean" default="false" />
+    <aura:attribute name="warningMessage" type="String" default="" />
+    <aura:attribute name="disableButtons" type="boolean" default="true"/>
+    <aura:attribute name="hasUnresolvedCNS" type="boolean" default="false"/>
+    <aura:attribute name="hasUnresolvedENI" type="boolean" default="false"/>
+    <aura:attribute name="hasUnresolvedMNR" type="boolean" default="false"/>
+    <!-- US3507762 - Create Overall Save Case Button on Provider Snapshot Page - Thanish - 20th May 2021 -->
+    <aura:attribute name="openedTopicUniqueIds" type="String[]" default="[]" />
+    
+    <!-- US3536342 - Thanish - 3rd Jun 2021 -->
+    <aura:handler event="lightning:tabFocused" action="{!c.onTabFocused}"/>
+    <aura:attribute name="currentTabId" type="String"/>
+    <aura:attribute name="resolvedCommentsValue" type="String" default="" />
+    <aura:attribute name="showComments" type="boolean" default="true"/>
+
+    <!-- 	US3389424: View Payments - Select Claim # Hyperlink in Payment Details - Swapnil-->
+    <aura:attribute name="interactionCard" type="Object" access="public" />
+    <aura:attribute name="contactCard" type="Object" access="public" />
+
+    <!-- DE491765 -->
+    <aura:attribute name="isSaveCaseDisabled" type="Boolean" default="true" />
+    <aura:attribute name="contractSpinner" type="Boolean" default="true" />
+    <aura:handler name="change" value="{!v.contractSpinner}" action="{!c.handleContractSnipperChange}" />
+
+      <div style="display:flex !important; flex-direction:column !important;"  >
+
+        <!-- Page Header --> <!-- US3536342 - Thanish - 3rd Jun 2021 -->
+        <div id="{!v.currentTabId + 'pageHeader'}" class="slds-card pageHeaderTransition" style="background: rgb(243, 242, 242);">
+            <div class="slds-grid card_padding">
+            <div class="slds-col slds-has-flexi-truncate">
+                <div class="slds-media slds-no-space slds-grow">
+                    <div class="slds-media__figure">
+                        <span class="slds-icon_container slds-icon-custom-custom38">
+                            <lightning:icon iconName="custom:custom38" alternativeText="Snapshot" />
+                        </span>
+                    </div>
+                    <div class="slds-media__body">
+                        <div class="slds-page-header__name">
+                            <div class="slds-page-header__name-title">
+                                <h1 class="page_header_label slds-var-m-right_small  slds-truncate">Snapshot</h1>
+                                <p class="page_header_link">
+                                    <a href="javascript:void(0)" data-intId="{!v.interactionId}"
+                                        onclick="{!c.navigateToDetail}">{!v.interactionName}</a>
+                                </p>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            <lightning:buttonGroup>
+                <button class="slds-button slds-button_neutral" style=""
+                    onclick="{!c.handleHippaGuideLines}">HIPAA Guidelines</button>
+                <lightning:button variant="neutral" label="Misdirect" name="misDirectBtnName"
+                    class="slds-button  misdirect_button" onclick="{!c.openMisdirectComp}" />
+                <c:SAE_Alerts aura:id="alertsAI" providerId="{!v.providerId}" taxId="{!v.taxId}"
+                    providerNotFound="{!v.providerNotFound}" noMemberToSearch="{!v.noMemberToSearch}"
+                    memberNotFound="{!v.mnf}" isProviderSearchDisabled="{!v.isProviderSearchDisabled}"
+                    isProviderSnapshot="true" />
+                    <!-- US3516117 - Create Overall Auto Doc Button on Provider Snapshot Page - Krish - 19th May 2021 -->
+                    <lightning:button class="slds-button slds-button_neutral neutral_button" variant="neutral" label="Autodoc" onclick="{!c.getAllAutoDoc}"/>
+                    <!-- US3507762 - Create Overall Save Case Button on Provider Snapshot Page - Thanish - 20th May 2021 -->
+                    <lightning:button variant="brand" name="Save Case" label="Save Case" title="Save Case" onclick="{!c.openSaveCase}" disabled="{!v.providerNotFound ? false : v.isSaveCaseDisabled }"/> <!-- DE491765 -->
+            </lightning:buttonGroup>
+        </div>
+            <div class="slds-card" style="padding-top: 8px; padding-bottom: 8px; border: 1px solid rgb(221, 219, 218); border-radius: 4px;">
+                <div class="slds-size_12-of-12 slds-border_bottom">
+                    <div class="{!v.showHighlightsPanel ? 'slds-is-open' : 'slds-is-close'}" aura:id="highLightSection">
+                        <h3 class="slds-section__title">
+                        <div class="slds-grid slds-size_12-of-12">
+                                <div id="{!v.currentTabId + 'highlightPanelToggle'}" class="slds-col slds-m-left_x-small slds-size_5-of-12 pointer isOpened" onclick="{!c.toggleSection}" style="font-weight: bold;">
+                                    <lightning:icon iconName="{!v.showHighlightsPanel ? 'utility:chevrondown' : 'utility:chevronright'}" size="x-small" alternativeText="button icon" class="slds-button__icon_left"/>
+                                    <span class="component_title">Highlight Panel: {!v.contactNameFreeze}</span>
+                            </div>
+                            <div class="slds-col  slds-size_7-of-12">
+                                <div class="{!v.showHighlightsPanel == true ? 'slds-hide' : 'slds-show'}" >
+                                    <div class="slds-grid slds-m-right_medium slds-grid_align-end slds-wrap" style="font-weight: bold;">
+                                        <div class="slds-col slds-m-right_medium" style="padding-top: 3px;">Topic:</div>
+
+                                        <aura:iteration items="{!v.callTopicLstSelected}" var="sr">
+                                            <div class="slds-col">
+                                            <lightning:pill class="slds-m-around_xx-small" label="{!sr.Name}" name="{!sr.Id}" onclick="{! c.navigateToCallTopic }">
+                                                <aura:set attribute="media">
+                                                    <lightning:icon iconName="standard:account" size="x-small" alternativeText="icon"/>
+                                                </aura:set>
+                                            </lightning:pill>
+                                            </div>
+                                        </aura:iteration>
+
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+                    </h3>
+                    <div class="{!v.showHighlightsPanel == true ? 'slds-show' : 'slds-hide'}">
+                            <lightning:layout verticalAlign="stretch" class="slds-p-bottom_small slds-p-top_small">
+                                <lightning:layoutItem size="8">
+                                <div style="height: 100%">
+                                    <c:ACET_HighlightPanel displayChevron="false"
+                                                           highLightObj="{!v.subjectDetails}"
+                                                           interactionOverviewTabId="{!v.interactionOverviewTabId}"
+                                                           isMemberFlow="false" isProviderFlow ="true"
+                                                           displayName="true"
+                                                           contactNameFreeze="{!v.contactNameFreeze}"/>
+                                </div>
+                            </lightning:layoutItem>
+                            <div class="slds-border_right">
+                                <br/>
+                            </div>
+                            <lightning:layoutItem size="4" class="slds-card">
+                                <div class="slds-card" style="height: 100%">
+                                    <c:SAE_CallTopicComponent objectAPIName="Call_Topic_Access__c" IconName="standard:account"
+                                                              lstSelectedRecords="{!v.selectedLookUpRecords}" label="Topic"
+                                                              detailPgName="Provider Snapshot" originatorName="Provider"
+                                                              providerNotFound="{!v.providerNotFound}" noMemberToSearch="{!v.noMemberToSearch}"
+                                                              mnf="{!v.mnf}" alertTaxId="{!v.taxId}" alertProviderId="{!v.providerId}"
+                                                              callTopicLstSelected="{!v.callTopicLstSelected}"/>
+                                </div>
+                            </lightning:layoutItem>
+                        </lightning:layout>
+                    </div>
+                </div>
+                </div>
+                <div style="padding-top: 8px; padding-left: 10px; padding-right: 10px;">
+                    <div class="slds-grid">
+                        <div id="{!v.currentTabId + 'commentsToggle'}" class="pointer isOpened" onclick="{!c.toggleComments}">
+                            <lightning:icon iconName="{!v.showComments ? 'utility:chevrondown' : 'utility:chevronright'}" size="x-small" class="slds-button__icon_left" alternativeText="button icon"/>
+                        </div>
+                        <div>
+                            <c:ACET_HoverPopup aura:id="overAllCommentsPopup" moveRight="" description="" isNubbinLeft="true"
+                                            descriptionList="[ 'Use the comments to include a brief','description of the issue, research performed,', 'and any attempts to resolve' ]"/>
+                            <p class="component_title slds-form-element__label field_label_padding" style="border-bottom:1px dashed;padding:0px"
+                            data-popupId="overAllCommentsPopup" onmouseover="{!c.togglePopup}" onmouseout="{!c.togglePopup}">
+                                Comments:
+                            </p>
+                            <b class="component_title slds-var-p-left_small">Resolved Case Items</b>
+                        </div>
+                    </div>
+                    <div class="{!v.showComments ? 'slds-show' : 'slds-hide'}">
+                        <lightning:textarea name="commentsTextArea" value="{!v.resolvedCommentsValue}" label="Commets" aura:id="overAllCommentsBoxId"
+                                            variant="label-hidden" class="slds-var-p-top_small" onkeyup="{!c.handleKeyup }" maxlength="2000"/>
+                        <span class="floatToRight valueCls slds-form-element__static">
+                            Characters remaining: <lightning:formattedNumber value="{!2000-v.resolvedCommentsValue.length}" />
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- /Page Header -->
+
+        <lightning:layout multipleRows="true">
+            <lightning:spinner class="slds-show" aura:id="lookup-spinner" alternativeText="Loading.." title="Loading.." variant="brand" size="medium" />
+            <!-- US3536342 - Thanish - 3rd Jun 2021 - moved highlight panel under pageheader-->
+        <lightning:layoutItem size="12" class="slds-var-p-top_small">
+            <lightning:layout>
+                <lightning:layoutItem size="12">
+                    <c:ACET_ProviderDetails caseWrapper="{!v.caseWrapper}" providerData="{!v.providerData}"
+                            autodocUniqueId="{!v.autodocUniqueId + 'providerDetails'}"
+                        providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}"
+                        flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}"
+                            commentsValue="{!v.commentsValue}" disableButtons="{!!(v.hasUnresolvedCNS || v.hasUnresolvedENI || v.hasUnresolvedMNR)}"
+                            flowDetails = "{!v.flowDetails}"/> <!-- US3507762 - Create Overall Save Case Button on Provider Snapshot Page - Thanish - 20th May 2021 -->
+                            <!-- US3516065: Enable Route Button: Provider Snapshot - Krish - 8th June 2021 - Adding flowDetails -->
+                </lightning:layoutItem>
+            </lightning:layout>
+        </lightning:layoutItem>
+            <!-- US3516065: Enable Route Button: Provider Snapshot - Krish - 8th June 2021 - Moving Comments from Provider Snap to Provider Details-->
+            <!-- Comments
+            <lightning:layoutItem size="12" class="{!(v.showAddCommentsCard ? 'slds-var-p-top_small' : 'slds-var-p-top_small slds-hide')}">
+                <div aura:id="commentsCardAI" class="slds-card card_left_padding card_top_padding card_right_padding card_bottom_padding">
+                <c:ACET_HoverPopup aura:id="commentsId" moveRight="" description="" isNubbinLeft="true"
+                    descriptionList="[ 'Use the comments to include a brief','description of the issue, research performed,', 'and any attempts to resolve' ]" />
+                <p class="component_title slds-form-element__label field_label_padding"
+                    style="border-bottom:1px dashed;padding:0px" data-popupId="commentsId"
+                    onmouseover="{!c.togglePopup}" onmouseout="{!c.togglePopup}">
+                    Comments:
+                </p>
+                <b class="component_title slds-var-p-left_small">Provider Details</b>
+                <lightning:textarea name="commentsTextArea" value="{!v.commentsValue}" label="Commets"
+                    aura:id="commentsBoxId" variant="label-hidden" class="slds-var-p-top_small"
+                    onkeyup="{!c.handleKeyup }" maxlength="2000" />
+                <span class="floatToRight valueCls slds-form-element__static">Characters remaining:
+                    <lightning:formattedNumber value="{!2000-v.commentsValue.length}" /> </span>
+            </div>
+        </lightning:layoutItem>
+            -->
+        <lightning:layoutItem size="12" class="slds-var-p-top_small">
+            <lightning:layout>
+                <!-- Specialty -->
+                <lightning:layoutItem size="6">
+                        <c:ACET_AutoDocDataTable autodocUniqueId="{!v.autodocUniqueId + 'providerDetails'}"
+                            autodocUniqueIdCmp="{!v.autodocUniqueId + 'providerDetails'}" enablePagination="false"
+                        tableDetails="{!v.specialityDetails}" />
+                </lightning:layoutItem>
+                <lightning:layoutItem size="6" class="slds-var-p-left_small">
+                    <aura:if isTrue="{!v.isPhysician}">
+                        <!-- Credentialing -->
+                            <c:ACET_AutoDocDataTable autodocUniqueId="{!v.autodocUniqueId + 'providerDetails'}"
+                                autodocUniqueIdCmp="{!v.autodocUniqueId + 'providerDetails'}" enablePagination="false"
+                            tableDetails="{!v.credData}" />
+                        <aura:set attribute="else">
+                                <c:ACET_ActiveAffliations autodocUniqueId="{!v.autodocUniqueId + 'providerDetails'}"
+                                    autodocUniqueIdCmp="{!v.autodocUniqueId + 'providerDetails'}" providerId="{!v.providerId}"
+                                taxId="{!v.taxId}" />
+                        </aura:set>
+                    </aura:if>
+                </lightning:layoutItem>
+            </lightning:layout>
+        </lightning:layoutItem>
+        <lightning:layoutItem size="12" class="slds-var-p-top_small">
+            <lightning:layout>
+                <aura:if isTrue="{!v.isPhysician}">
+                    <lightning:layoutItem size="6">
+                            <c:ACET_ActiveAffliations autodocUniqueId="{!v.autodocUniqueId + 'providerDetails'}"
+                                autodocUniqueIdCmp="{!v.autodocUniqueId + 'providerDetails'}" providerId="{!v.providerId}" taxId="{!v.taxId}" />
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="6" class="slds-var-p-left_small slds-card matchActiveAffiliations">
+                            <c:ACET_AdditionalDetails autodocUniqueId="{!v.autodocUniqueId + 'providerDetails'}"
+                                autodocUniqueIdCmp="{!v.autodocUniqueId + 'providerDetails'}" additionalDetails="{!v.additionalData}" />
+                    </lightning:layoutItem>
+                    <aura:set attribute="else">
+                        <lightning:layoutItem size="12">
+                                <c:ACET_AdditionalDetails autodocUniqueId="{!v.autodocUniqueId + 'providerDetails'}"
+                                    autodocUniqueIdCmp="{!v.autodocUniqueId + 'providerDetails'}" additionalDetails="{!v.additionalData}" />
+                        </lightning:layoutItem>
+                    </aura:set>
+                </aura:if>
+            </lightning:layout>
+        </lightning:layoutItem>
+        <lightning:layoutItem size="12" class="slds-var-p-top_small">
+                <c:ACET_AdditionalAddresses autodocUniqueId="{!v.autodocUniqueId + 'providerDetails'}" autodocUniqueIdCmp="{!v.autodocUniqueId + 'providerDetails'}"
+                providerId="{!v.providerId}" taxId="{!v.taxId}" />
+        </lightning:layoutItem>
+        <lightning:layoutItem size="12" class="slds-var-p-top_small">
+                    <c:ACET_ContractSummary contractApiParameters="{!v.contractApiParameters}" autodocUniqueId="{!v.autodocUniqueId + 'providerDetails'}"
+                    hasUnresolvedCNS="{!v.hasUnresolvedCNS}" hasUnresolvedENI="{!v.hasUnresolvedENI}" hasUnresolvedMNR="{!v.hasUnresolvedMNR}"
+                                            isPhysician="{!v.isPhysician}"
+                                            showSpinner = "{!v.contractSpinner}"/> <!-- US3507762 - Create Overall Save Case Button on Provider Snapshot Page - Thanish - 20th May 2021 -->
+        </lightning:layoutItem>
+        <!-- US3394408 - Thanish - 9th Apr 2021 -->
+        <lightning:layoutItem size="12" class="slds-var-p-top_small">
+                <c:ACET_OONReimbursement autodocUniqueId="{!v.autodocUniqueId + 'providerDetails'}" autodocUniqueIdCmp="{!v.autodocUniqueId + 'providerDetails'}" componentOrder="9"/>
+        </lightning:layoutItem>
+    </lightning:layout>
+
+        <aura:if isTrue="{!v.showProviderLookup}">
+                     <div aura:id="providerLookupPrvdSnapshot" size="12" class="slds-p-bottom_none slds-p-top_small  slds-p-top_small-x" style="{! 'order: ' +v.providerTopicNO+ ' !important;' }">
+                <c:SAE_ProviderLookup interactionRec="{!v.interactionRec}" isProviderSnapshot="true"
+                    noMemberToSearch="true" pageNumber="{!v.pageNumber}" aura:id="providerLookup"
+                    caseWrapper="{!v.caseWrapper}" contactUniqueId="{!v.interactionId}"
+                    autodocPageFeature="{!v.autodocPageFeature}" AutodocKey="{!v.AutodocKey}"
+                    providerSearchResultsADMultiplePages="{!v.providerSearchResultsADMultiplePages}"
+                    isHippaInvokedInProviderSnapShot="{!v.isHippaInvokedInProviderSnapShot}"
+                    hipaaEndpointUrl="{!v.hipaaEndpointUrl}"
+                    providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}"
+                                      flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}" interactionOverviewTabId="{!v.interactionOverviewTabId}"
+                    callTopicLstSelected="{!v.callTopicLstSelected}" callTopicTabId="{!v.callTopicTabId}"
+                    flowDetails="{!v.flowDetails}" caseNotSavedTopics="{!v.caseNotSavedTopics}"
+                    autodocUniqueId="{!v.autodocUniqueId + 'providerLookup'}" policySelectedIndex="{!v.autodocUniqueId + 'providerLookup'}"/> <!-- US3507762 - Create Overall Save Case Button on Provider Snapshot Page - Thanish - 20th May 2021 -->
+            </div>
+
+             </aura:if>
+        <!-- US1958804 -->
+                 <aura:if isTrue="{!v.ViewPayment}">
+                     <div aura:id="paymentInfo" size="12"  class="slds-p-bottom_none  slds-p-top_small slds-p-top_small-xxx" style="{! 'order: ' +v.paymentTopicNO + ' !important;' }">
+                    	<c:SAE_PaymentInformation interactionRec="{!v.interactionRec}"
+                                                  contactName = "{!v.contactNameFreeze}"
+                                                  providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}"
+                                                  flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}"
+                                                  interactionOverviewTabId="{!v.interactionOverviewTabId}"
+                                                  providerNotFound = "{!v.providerNotFound}"
+                                                  isProviderSearchDisabled = "{!v.isProviderSearchDisabled}"
+                                                  interactionCard="{!v.interactionCard}"
+                                                  autodocUniqueId = "{! v.autodocUniqueId + 'payment' }"
+                                                  contactCard = "{!v.contactCard}"
+                                                  caseNotSavedTopics="{!v.caseNotSavedTopics}" />
+                         <!-- US3389424: View Payments - Select Claim # Hyperlink in Payment Details - For Different Member : Swapnil (7/6/2021) -->
+                       </div>
+
+                </aura:if>
+        </div>
+        <div size="12" class="slds-var-p-top_small">
+            <div class="slds-var-p-bottom_small">
+                <div class="slds-var-p-bottom_small slds-card">
+                    <!-- US2465288 - Avish -->
+                    <!-- US2815284 -->
+                    <c:ACET_CaseHistoryCard aura:id="caseHistoryCard" showFamilyCases="false"
+                        caseHistoryList="{!v.caseHistoryList}" memberTabId="{!v.taxId}" taxId="{!v.taxId}"
+                                            isProvider="{!v.isProvider}" refreshUnique="{!v.autodocUniqueId + 'providerDetails'}" autodocUniqueId="{!v.autodocUniqueId + 'providerDetails'}"/>
+                </div>
+            </div>
+        </div>
+
+    <!-- US3516117: Create Overall Auto Doc Button on Provider Snapshot Page - Krish - 19th May 2021 -->
+    <aura:if isTrue="{!v.showpreview}">
+        <c:ACET_PreviewAutoDoc tableDetails_prev="{!v.tableDetails_prev}" isModalOpen="{!v.showpreview}"/>
+    </aura:if>
+
+    <aura:if isTrue="{!v.showSaveCase}">
+        <!-- US3536342 - Thanish - 3rd Jun 2021 -->
+        <c:SAE_TtsModalCaseCreation disableTopic="false" omitRoute="true" isMemberSnapshot="false"
+            caseWrapper="{!v.caseWrapper}" isModalOpen="{!v.showSaveCase}" autodocUniqueId="{!v.autodocUniqueId}"
+            freeFormCommentsVal="{!v.resolvedCommentsValue}" topicOptions="{!v.caseNotSavedTopics}"
+            flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}"
+            providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}" openedTopicUniqueIds="{!v.openedTopicUniqueIds}"/>
+    </aura:if>
+    <aura:if isTrue="{!v.showWarning}">
+        <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <div class="slds-modal__content slds-is-relative slds-theme--warning centerTexts warningFont card_padding" style="border-top-right-radius: 0.25rem; border-top-left-radius: 0.25rem; padding-bottom: 0px">
+                    <div class="slds-grid slds-wrap slds-grid_align-center">
+                        <div class="slds-col slds-size_1-of-12">
+                            <lightning:icon iconName="utility:warning" variant="inverse" class="autodocWarningIcon"/>
+                        </div>
+                        <div class="slds-col slds-size_11-of-12">
+                            Following topics have unresolved case items. Please resolve / route before saving a resolved case.
+                        </div>
+                        <div class="slds-col bulletPoints">
+                            <aura:unescapedHtml value="{!v.warningMessage}" />
+                        </div>
+                    </div>
+                </div>
+                <footer class="slds-modal__footer slds-theme--warning noTopBorder centerTexts">
+                    <lightning:button variant="neutral" label="Close" class="noUnderline" onclick="{!c.closeWarning}" />
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+
+    <!-- US3533564 - Thanish - 5th Jul 2021 -->
+    <c:acet_ScrollToTop/>
+</aura:component>

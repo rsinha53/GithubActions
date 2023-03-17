@@ -1,0 +1,277 @@
+<!--
+@Description: US1835149 - Snapshot member not found
+@Date: 03-07-2019
+-->
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes">
+    <aura:attribute name="searchData" type="Object" access="public"/>
+    <aura:attribute name="options" type="List" default="[{'label': '--None--', 'value': 'None'},
+                                                        {'label': 'Commercial', 'value': 'Commercial'},
+                                                        {'label': 'Medicare', 'value': 'Medicare'},
+                                                        {'label': 'Medicaid', 'value': 'Medicaid'},
+                                                        {'label': 'Other/Unknown', 'value': 'Other/Unknown'}]"/>
+    <aura:attribute name="RadioOptions" type="List" default="[{'label': 'Yes', 'value': 'Yes'},
+                                                             {'label': 'No', 'value': 'No'}]"/>
+    <aura:attribute name="selectedRadioOption" type="String"/>
+    <aura:attribute name="NewbornChkValue" type="Boolean" default="false" />
+    
+    <!-- US1875495 - Malinda : Case Creation MNF -->
+    <aura:attribute name="caseWrapper" type="SAETTSCaseWrapper" access="public" default="[]"/>    
+    <aura:handler name="change" value="{!v.caseWrapper}" action="{!c.wrapperChange}"/>
+    <aura:attribute name="isModalOpen" type="boolean" default="false"/>
+    <aura:handler name="closeModalBox" event="c:SAE_TtsModalCloseEvent" action="{!c.closeModal}"/>
+    
+    <!-- US1753077 - Pilot Enhancement - Save Case - Validations and Additional Functionality: Kavinda -->
+    <aura:attribute name="planType" type="String" default='None' />
+    <aura:attribute name="MedicareId" type="String" />
+    <aura:attribute name="MedicaidId" type="String" />
+    <aura:attribute name="MedicaidAddress" type="String" />
+    <aura:attribute name="MedicaidZipCode" type="String" />
+    <aura:attribute name="GroupId" type="String" />
+    <aura:attribute name="commercialAltID" type="String" />
+    <aura:attribute name="BabyCIN" type="String" />
+    <aura:attribute name="MotherCIN" type="String" />
+    <aura:attribute name="FamilyID" type="String" />
+    <!--US2356260 - Member Not Found Update to Medicaid Gender Options - Sravan-->
+    <aura:attribute name="Gender" type="List" default="[{'label': '--None--', 'value': 'None'},
+                                                        {'label': 'Male', 'value': 'Male'},
+														{'label': 'Female', 'value': 'Female'},
+                                                        {'label': 'Unknown/Other', 'value': 'Unknown/Other'}]"/>
+    <aura:attribute name="genderValue" type="String" default=""/>
+    <aura:attribute name="showPlanTypeError" type="Boolean" default="false" />
+    <!-- <aura:attribute name="genderOptions" type="List" default="[{'label': '', 'value': ''},
+                                                        {'label': 'Male', 'value': 'Male'},
+              {'label': 'Female', 'value': 'Female'}]"/> -->
+    <!-- US2119569 - Thanish - 25th Nov 2019 -->
+    <aura:attribute name="AutodocPageFeature" type="String" default="memberDetails"/>
+    <aura:attribute name="AutodocKey" type="string" access="public"/>
+    
+    <!-- US2396743 -->
+    <aura:attribute name="isPreviewOpen" type="boolean" default="false"/>
+    <aura:attribute name="commentsValue" type="String" default=""/>
+    
+    <!-- New AutoDoc -->
+    <aura:attribute name="contactDetails" type="Object" />
+    <aura:attribute name="providerDetails" type="Object" />
+    <aura:attribute name="otherDetails" type="Object" />
+    <aura:attribute name="memberDetails" type="Object" />
+    <aura:attribute name="isOther" type="boolean" default="false"/>
+    <aura:attribute name="autodocUniqueId" type="String" default="mnf"/>
+    <aura:attribute name="tableDetails_prev" type="Object" />
+    <aura:attribute name="selectedPlanType" type="String" default=""/>
+    <aura:attribute name="isProviderSearchDisabled" type="boolean" default="true"/>
+    <aura:attribute name="isDefaultGenerated" type="boolean" default="false"/>
+    <aura:attribute name="CSPProviderId" type="string" access="public" default="--"/>
+
+    <!--US2076634 - HIPAA Guidelines Button - Sravan-->
+    <aura:attribute name="isHippaInvokedInProviderSnapShot" type="Boolean" default="false"/>
+    <!--US2478836 - Member Not Found Plan Type Card Link to OneSource - Sravan-->
+    <aura:attribute name="oneSourceLink" type="String" default=""/>
+
+    <aura:attribute name="flowDetails" type="Object" access="public" />
+    <aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+
+    <!--US3376219 - Sravan-->
+    <aura:attribute name="memberNotFoundDetails" type="String" default="" />
+    <aura:attribute name="isMedicaid" type="boolean" default="false" />
+    <aura:attribute name="isResolved" type="boolean" default="true" />
+    <aura:handler event="c:ACET_HandleCaseWrapperEvent" action="{!c.createCaseWrapper}" />
+    <aura:method name="savecaseWrapper" action="{!c.savecaseWrapper}"></aura:method>
+
+    <!-- US3692809: Krish - 29th July 2021 -->
+    <aura:attribute name="isResolvedDisabled" type="boolean" default="true" />
+    <aura:attribute name="isAutodocDisabled" type="boolean" default="true" />
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:method name="fireSaveCaseValidations" action="{!c.fireSaveCaseValidations}"></aura:method>
+
+    <!--DE477294 - Regression PreProd: After saving a case for member not found flow the snapshot is not getting defaulted - Krish - 12th Aug 2021 -->
+    <aura:handler event="c:ACET_AutoDocRefreshEvent" action="{!c.handleAutodocRefresh}" />
+    <div aura:id="card" class="slds-box slds-card card_padding" data-auto-doc="auto" data-auto-doc-feature="{!v.AutodocPageFeature}" data-auto-doc-section-key="{!'Plan Type : ' + v.planType}" data-auto-doc-section-column-indexes="1,2">
+        <div class="autodocNotTableView" data-auto-doc-feature="{!v.AutodocPageFeature}">
+            
+            <lightning:layout class="card_bottom_margin">
+                <lightning:layoutItem size="6" >
+                    <div style="float: left;"><input type="checkbox" class="autodoc" checked="true" disabled="true"/>&nbsp;</div>
+                    <p class="component_title" style="float: left;"><lightning:layoutItem>Plan Type &nbsp;</lightning:layoutItem></p>
+                     <!--US2478836 - Member Not Found Plan Type Card Link to OneSource - Sravan-->
+					<div style="padding-top:2px"><lightning:formattedUrl value="{!v.oneSourceLink}"  label="Determining Member Eligibility" target="_blank" /></div>
+                </lightning:layoutItem>
+                <lightning:layoutItem size="6">
+                    <div style="float:right;">
+                        <!--Preview Autodoc US2349049-->
+                        <lightning:buttonGroup>
+                            <lightning:button class="slds-button slds-button_neutral neutral_button" variant="neutral"
+                                label="Autodoc" onclick="{!c.openPreview}" disabled="{!v.isAutodocDisabled}" /><!--US3692809 - Krish - 2nd Aug 2021 -->
+                            <lightning:button class="slds-button slds-button_neutral neutral_button" variant="brand"
+                                label="Add Comments" disabled="true" />
+                            <lightning:button label="Route" title="Brand action"
+                                class="slds-button slds-button_brand brand_button" onclick="{! c.openModal }"
+                                disabled="{!v.isResolved}" />
+                        </lightning:buttonGroup>
+                    </div>
+                </lightning:layoutItem>
+            </lightning:layout>
+
+            <lightning:layout>
+                <lightning:layoutItem>
+                    <lightning:combobox placeholder="--None--" style="width:356px;" class="valuesAlignCls"
+                        name="stateName" variant="label-hidden" aura:id="provStateId" options="{!v.options}"
+                        onchange="{! c.handleComboChange }" value="{!v.planType}" />
+                </lightning:layoutItem>
+                <div class="slds-m-left_x-large slds-form-element">
+                    <span>Resolved</span>
+                    <div class="slds-form-element__control">
+                        <div class="slds-form-element__static">
+                            <lightning:input type="checkbox" name="Resolved" checked="{!v.isResolved}"
+                                variant="label-hidden" disabled="{!v.isResolvedDisabled}" onchange="{!c.handleResolveCheck}" /><!--US3692809 - Krish - 2nd Aug 2021 -->
+                        </div>
+                    </div>
+                </div>
+            </lightning:layout>
+
+            <div aura:id="conTypeError"
+                class="{! ' slds-text-color_error ' + if(or(equals(v.planType, ''), v.showPlanTypeError), ' slds-show ', ' slds-hide ') }">
+                Complete this field.</div>
+
+            <span aura:id="Commercial" class="slds-hide">
+                <!--Commercial-->
+                <!-- US1753077 - Pilot Enhancement - Save Case - Validations and Additional Functionality: Kavinda - START -->
+                <lightning:radioGroup name="radioGroup"
+                                      label="Was the member found in CDB, but not returning in the search results?"
+                                      options="{! v.RadioOptions }"
+                                      value="{! v.selectedRadioOption }"
+                                      type="radio"
+                                      onchange="{! c.handleRadioChange }"
+                                      aura:id="memberFound"
+                                      required="true" class="card_top_margin"/>
+                <aura:If isTrue="{! equals(v.selectedRadioOption, 'Yes') }" >
+                    <span aura:id="Commercial-Sub" class="slds-hide">
+                        <lightning:input aura:id="GroupId" class="slds-size_1-of-3 card_top_margin" type="text" name="Commercial-Group" required="true" value="{! v.GroupId }" label="Group#" onblur="{!c.validateForAutodocButton}"/><!--US3692809 - Krish - 2nd Aug 2021 -->
+                        <span onkeypress="{! c.alphanumericAndNoSpecialCharacters }" onpaste="{! c.alphanumericAndNoSpecialCharacters }" >
+                            <lightning:input aura:id="commercialAltID" class="slds-size_1-of-3 card_top_margin" type="text" name="Commercial-Alt-ID" required="true" value="{! v.commercialAltID }" label="Alt ID/SSN" onblur="{!c.validateForAutodocButton}"/><!--US3692809 - Krish - 2nd Aug 2021 -->
+                        </span>
+                    </span>
+                    
+                    <!-- US2119569 - Thanish - 25th Nov 2019 - Commercial Autodoc Section -->
+                    <div class="slds-grid slds-wrap hideField">
+                        <div class="slds-size_1-of-1" style="margin-top: 20px;"><b>Was the member found in CDB, but not returning in the search results?  Yes</b></div>
+                        <div class="slds-size_1-of-2" style="margin-top: 20px;"><div>Group#</div> <div>{!v.GroupId}</div></div>
+                        <div class="slds-size_1-of-2" style="margin-top: 20px;"><div>Alt ID/SSN</div> <div>{!v.commercialAltID}</div></div>
+                    </div>
+                    <aura:set attribute="else">
+                        <aura:If isTrue="{! equals(v.selectedRadioOption, 'No') }" ><!--US2955126-->
+                            <div class="slds-size_1-of-1" style="margin-top: 5px;">Advise the caller that the member is currently not showing with active eligibility in the system and the member may need to contact their HR Department.</div>
+                        </aura:If>
+                        <div class="slds-size_1-of-1 hideField" style="margin-top: 20px;"><b>Was the member found in CDB, but not returning in the search results?  No</b></div>
+                    </aura:set>
+                    <!-- End of Code - US2119569 - Thanish - 25th Nov 2019 - Commercial Autodoc Section -->
+                </aura:If>
+                <!-- US1753077 - Pilot Enhancement - Save Case - Validations and Additional Functionality: Kavinda - END -->
+            </span>
+            <!-- US1753077 - Pilot Enhancement - Save Case - Validations and Additional Functionality: Kavinda - START -->
+            <span aura:id="Medicare" class="slds-hide">
+                <!-- Medicare -->
+                <span onkeypress="{! c.alphanumericAndNoSpecialCharacters }" onpaste="{! c.alphanumericAndNoSpecialCharacters }" >
+                    <lightning:input class="slds-size_1-of-3 card_top_margin" aura:id="MedicareId" type="text" name="MedicareId" required="true" value="{! v.MedicareId }" label="MBI/HICN" onblur="{!c.validateForAutodocButton}"/><!--US3692809 - Krish - 2nd Aug 2021 -->
+                </span>
+                <!-- US2119569 - Thanish - 23rd Nov 2019 - Medicare Autodoc Section -->
+                <span class="hideField"><div style="margin-top: 20px;">MBI/HICN</div> <div>{!v.MedicareId}</div></span>
+            </span>
+            <!-- US1753077 - Pilot Enhancement - Save Case - Validations and Additional Functionality: Kavinda - END -->
+            
+            <!-- US1753077 - Pilot Enhancement - Save Case - Validations and Additional Functionality: Kavinda - START -->
+            <span aura:id="Medicaid" class="slds-hide">
+                <!-- Medicaid -->
+                <span onkeypress="{! c.alphanumericAndNoSpecialCharacters }" onpaste="{! c.alphanumericAndNoSpecialCharacters }" >
+                    <lightning:input class="slds-size_1-of-3 card_top_margin" aura:id="MedicaidId" type="text" name="MedicaidId" required="true" value="{! v.MedicaidId }" label="Medicaid ID" onblur="{!c.validateForAutodocButton}"/><!--US3692809 - Krish - 2nd Aug 2021 -->
+                </span>
+                <lightning:input class="slds-size_1-of-3 card_top_margin" aura:id="MedicaidAddress" type="text" name="MedicaidAddress" required="true" value="{! v.MedicaidAddress }" label="Street Address" onblur="{!c.validateForAutodocButton}"/><!--US3692809 - Krish - 2nd Aug 2021 -->
+                <span onkeypress="{! c.allowOnlyNumbers }" onpaste="{! c.allowOnlyNumbers }" >
+                    <lightning:input class="slds-size_1-of-3 card_top_margin" aura:id="MedicaidZipCode" type="text" name="MedicaidZipCode" required="true" value="{! v.MedicaidZipCode }" label="Zip Code"
+                                     minlength="5" maxlength="5" messageWhenTooShort="To search by Zip Code, Enter 5 digits" onblur="{!c.validateForAutodocButton}"/><!--US3692809 - Krish - 2nd Aug 2021 -->
+                </span>
+                <lightning:input class="card_top_margin" type="checkbox" label="Newborn" checked="{!v.NewbornChkValue}" onchange="{! c.handleCheckChange }"/>
+                <span aura:id="Medicaid-Sub" class="slds-hide">
+                    <span onkeypress="{! c.alphanumericAndNoSpecialCharacters }" onpaste="{! c.alphanumericAndNoSpecialCharacters }" >
+                        <lightning:input aura:id="BabyCIN" class="slds-size_1-of-3 card_top_margin" type="text" name="MedicaidId-Baby-CIN" required="true" value="{! v.BabyCIN }" label="Baby's CIN (Medicaid ID)" onblur="{!c.validateForAutodocButton}"/><!--US3692809 - Krish - 2nd Aug 2021 -->
+                    </span>
+                    <span onkeypress="{! c.alphanumericAndNoSpecialCharacters }" onpaste="{! c.alphanumericAndNoSpecialCharacters }" >
+                        <lightning:input aura:id="MotherCIN" class="slds-size_1-of-3 card_top_margin" type="text" name="MedicaidId-Mother-CIN" required="true" value="{! v.MotherCIN }" label="Mother's CIN (Medicaid ID)" onblur="{!c.validateForAutodocButton}"/><!--US3692809 - Krish - 2nd Aug 2021 -->
+                    </span>
+                    <span onkeypress="{! c.alphanumericAndNoSpecialCharacters }" onpaste="{! c.alphanumericAndNoSpecialCharacters }" >
+                        <lightning:input aura:id="FamilyID" class="slds-size_1-of-3 card_top_margin" type="text" name="MedicaidId-Family-ID" required="true" value="{! v.FamilyID }" label="Family Link ID" onblur="{!c.validateForAutodocButton}"/><!--US3692809 - Krish - 2nd Aug 2021 -->
+                    </span>
+                    <!--US2356260 - Member Not Found Update to Medicaid Gender Options - Sravan-->
+                    <!--<lightning:input aura:id="Gender" class="slds-size_1-of-3 card_top_margin" type="text" name="MedicaidId-Gender" required="true" value="{! v.Gender }" label="Gender" />-->
+                    <lightning:combobox aura:id="Gender" placeholder="--None--" class="slds-size_1-of-3 card_top_margin" name="MedicaidId-Gender" required="true"  label="Gender" options="{! v.Gender }" onchange="{!c.handleChange}"/>
+
+                </span>
+                <!-- US1753077 - Pilot Enhancement - Save Case - Validations and Additional Functionality: Kavinda - END -->
+                
+                <!-- US2119569 - Thanish - 23rd Nov 2019 - Medicaid Autodoc Section -->
+                <div class="slds-grid slds-wrap hideField">
+                    <div class="slds-size_1-of-2" style="margin-top: 20px;"><div>Medicaid ID</div> <div>{!v.MedicaidId}</div></div>
+                    <div class="slds-size_1-of-2" style="margin-top: 20px;"><div>Street Address</div> <div>{!v.MedicaidAddress}</div></div>
+                    <div class="slds-size_1-of-2" style="margin-top: 20px;"><div>Zip Code</div> <div>{!v.MedicaidZipCode}</div></div>
+                    
+                    <aura:if isTrue="{!v.NewbornChkValue}">
+                        <div class="slds-size_1-of-1" style="margin-top: 20px;"><b>Newborn Details</b></div>
+                        <div class="slds-size_1-of-2" style="margin-top: 20px;"><div>Baby's CIN (Medicaid ID)</div> <div>{!v.BabyCIN}</div></div>
+                        <div class="slds-size_1-of-2" style="margin-top: 20px;"><div>Mother's CIN (Medicaid ID)</div> <div>{!v.MotherCIN}</div></div>
+                        <div class="slds-size_1-of-2" style="margin-top: 20px;"><div>Family Link ID</div> <div>{!v.FamilyID}</div></div>
+                        <div class="slds-size_1-of-2" style="margin-top: 20px;"><div>Gender</div> <div>{!v.genderValue}</div></div><!--US2356260 - Sravan-->
+                    </aura:if>
+                </div>
+                <!-- End of Code - US2119569 - Thanish - 23rd Nov 2019 - Medicaid Autodoc Section -->
+            </span>
+            <span aura:id="Other" class="slds-hide">
+                <!-- Other -->
+                <p class="description" style="margin-top: 20px;">
+                    Please refer provider to the provider services number on the back of the member's ID Card
+                </p>
+            </span>
+        </div>
+    </div>
+    <!-- End of Code - US2119569 - Thanish - 25th Nov 2019 -->
+    
+    <div class="slds-m-top_x-small slds-card card_left_padding card_top_padding card_right_padding card_bottom_padding">
+        <c:ACET_HoverPopup aura:id="commentsId" 
+                           moveRight="" 
+                           description="" 
+                           isNubbinLeft="true"
+                           descriptionList="[ 'Use the comments to include a brief','description of the issue, research performed,', 'and any attempts to resolve' ]" />
+        <p class="component_title slds-form-element__label field_label_padding" 
+           style="border-bottom:1px dashed;padding:0px"
+           data-popupId="commentsId"
+           onmouseover="{!c.togglePopup}" 
+           onmouseout="{!c.togglePopup}">
+            Comments: 
+        </p>
+        <b class="component_title slds-p-left_small">Member Not Found</b>
+        <lightning:textarea name="commentsTextArea"
+                            value="{!v.commentsValue}" 
+                            label="Commets" 
+                            aura:id="commentsBoxId"
+                            variant="label-hidden" 
+                            class="slds-p-top_small"
+                            onkeyup="{!c.handleKeyup }"
+                            maxlength="2000"/>
+        <span class="floatToRight valueCls slds-form-element__static">Characters remaining: <lightning:formattedNumber value = "{!2000-v.commentsValue.length}" /> </span>
+    </div>
+    
+    <!--US1875495 : Malinda-->
+    <aura:if isTrue="{!v.isModalOpen}">
+        <!--US1875495 : Malinda - sending case data to the TTS popup model -->
+        <c:SAE_TtsModalCaseCreation Topic="Member Not Found" caseWrapper="{!v.caseWrapper}"
+            pagefeature="{!v.AutodocPageFeature}" AutodocKey="{!v.AutodocKey}" freeFormCommentsVal="{!v.commentsValue}"
+            isMemberSnapshot="false" autodocUniqueId="{!v.autodocUniqueId}" flowDetails="{!v.flowDetails}"
+            flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}"
+            memberNotFoundDetails="{!v.memberNotFoundDetails}" onlyRoute="true"/> <!-- US2119569 - Thanish - 21st Nov 2019 -->
+        <!--US3187242 - Sravan-->
+    </aura:if>
+    
+    <!-- US2396743 -->
+    <aura:if isTrue="{!v.isPreviewOpen}">
+        <c:ACET_PreviewAutoDoc tableDetails_prev ="{!v.tableDetails_prev}" isModalOpen="{!v.isPreviewOpen}" />
+        <!-- <c:ACET_AutoDocPreview isModalOpen="{!v.isPreviewOpen}" pagefeature="{!v.AutodocPageFeature}" AutodocKey="{!v.AutodocKey}"/> -->
+    </aura:if>
+</aura:component>

@@ -1,0 +1,204 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction" access="global" controller="ACETLGT_ThirdPartyContactsController" > <!--extends="c:ACETLGT_FamilyMembers"-->
+    <aura:attribute name="options" type="List" default="[]"/>
+    <aura:attribute name="originator" type="String" />
+    <aura:attribute name="originalOriginator" type="String" />
+    <aura:attribute name="showTPpopUp" type="Boolean" default="false" />
+    <aura:attribute name="addTPBlock" type="Boolean" default="false" />
+    <aura:attribute name="tpAvailable" type="Boolean" default="false" />
+    <aura:attribute name="tpRecordsAvailable" type="Boolean" default="true" />
+    <aura:attribute name="Memberdetail" type="sObject" access="public"/>
+    <aura:attribute name="identifier" type="string" access="public"/>
+    <aura:attribute name="FamilyMembersList" type="list" default="[]" />
+    <aura:handler name="init" value="{!this}" action="{!c.handleOptionSelected}"/>
+    <aura:attribute name="keyUpEvt" type="Boolean" default="false" />
+    <aura:registerEvent name="tpevent" type="c:ACETLGT_TPModalEvent" />
+    
+    <aura:attribute name="firstname" type="string" access="public"/>
+    <aura:attribute name="lastName" type="string" access="public"/>
+    <aura:attribute name="phonenum" type="string" access="public"/>
+    <aura:attribute name="grpName" type="string" access="public"/>
+    <aura:attribute name="otherOriginator" type="string" access="public"/>
+	<aura:attribute name="tpRelation" type="string" access="public"/>
+
+    <aura:attribute name="TPrecords" type="List" default="[]"/>
+    <aura:attribute name="intID" type="string" access="public"/>
+    <aura:attribute name="subId" type="string" access="public"/>    
+       
+    <aura:attribute name="tpId" type="string" access="public"/>
+    <aura:attribute name="isTPSelected" type="Boolean" default="false" access="public"/>
+    <aura:attribute name="idEditTP" type="Boolean" default="false" access="public"/>
+    <aura:attribute name="OriginatorMap" type="List"/>
+    
+            
+    <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                <aura:if isTrue="{!v.addTPBlock}">
+                	<div class="slds-modal__container">
+                    <!-- ###### MODAL BOX HEADER Start ######-->
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeModal }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>
+
+                        <aura:if isTrue="{!v.idEditTP}"> 
+                            <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Update Third Party</h2>
+                            <aura:set attribute="else">
+                                <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Add Third Party</h2>       
+                            </aura:set>    
+                        </aura:if>                        
+                        
+                    </header>
+                    <form>    
+                    <!--###### MODAL BOX BODY Part Start######-->
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                    	<div class="row">                           
+							<!--<span onkeypress="{!c.restrictCharacters}" data-id="Fname">--> 
+                            	<lightning:input aura:id="firstname" type="text" name="input5" label="First Name" required="true" maxlength="40" value="{!v.firstname}" messageWhenValueMissing="You must enter a value."/>
+                            <!--</span>-->
+                            <!--<span onkeypress="{!c.restrictCharacters}" data-id="Lname">--> 
+                            <lightning:input aura:id="lastname" type="text" name="input6" label="Last Name" required="true" maxlength="40" value="{!v.lastName}" messageWhenValueMissing="You must enter a value." />
+                            <lightning:input aura:id="phfieldId" type="tel" name="input7" label="Phone Number" required="true" 
+                                value="{!v.phonenum}" maxlength="12" minlength="12" onkeyup="{!c.phoneNumberKeyUpHandler}"
+                                onkeypress="{!c.addHyphen}" onblur="{!c.checkLength}" messageWhenValueMissing="You must enter a value." 
+                                messageWhenTooShort="Enter a valid 10 digit number"  /><!--</span>-->                            
+                            <lightning:input type="text" name="input8" label="Group Name" value="{!v.grpName}" />
+                            <lightning:select aura:id="fieldId" name="Orginator" label="Other Orginator" required="true" value="{!v.otherOriginator}" messageWhenValueMissing="You must enter a value.">
+								<aura:iteration items="{!v.OriginatorMap}" var="ind" indexVar="key">
+                        			<option value="{!ind.value}">{!ind.label}</option>
+                    			</aura:iteration>                               
+                            </lightning:select>
+                        </div>    
+                    </div>
+                    <!--###### MODAL BOX FOOTER Part Start ######-->
+                    <footer class="slds-modal__footer">
+                        <aura:if isTrue="{!v.idEditTP}"> 
+                            <lightning:button variant="brand" 
+                                            label="Save"
+                                            title="Save"
+                                            aura:id="commonbtnid"
+                                            onclick="{! c.addTP }"/>
+                            <aura:set attribute="else">                                    
+                                <lightning:button variant="brand" 
+                                        label="Add"
+                                        title="Add"
+                                        aura:id="commonbtnid2"
+                                        onclick="{! c.addTP }"/>       
+                            </aura:set>                 
+                        </aura:if>                    
+                        <lightning:button variant="brand" 
+                                          label="Close"
+                                          title="Close"
+                                          onclick="{! c.closeModal }"/>
+                        
+                    </footer>
+                    </form>
+                </div>
+                </aura:if>                
+
+
+                <aura:if isTrue="{!not(v.addTPBlock)}">
+                	<div class="slds-modal__container">
+                    <!-- ###### MODAL BOX HEADER Start ######-->
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeModal }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>
+                                              
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Add Third Party</h2>
+                    </header>
+                    <!--###### MODAL BOX BODY Part Start######-->
+                    <div class="slds-modal__content slds-p-around_medium slds-scrollable" id="modal-content-id-1">
+                    	<div class="row">
+                            <!--{!v.tpRecordsAvailable}-->
+                            <!--{!v.tpAvailable}-->
+                            
+
+                            <!--<aura:if isTrue="{!not(v.tpRecordsAvailable)}">-->
+                            <aura:if isTrue="{!v.tpRecordsAvailable}"> 
+                                <aura:if isTrue="{!v.tpAvailable}">
+                                    <table class="slds-table slds-table_cell-buffer slds-table_header-hidden">
+                                        <thead>
+                                            <tr class="slds-line-height_reset">
+                                                <th>SELECT</th>
+                                                <th>FIRST NAME</th>
+                                                <th>LAST NAME</th>
+                                                <th>PHONE NUMBER</th>
+                                                <th>OTHER ORIGINATOR</th>
+                                                <th>ACTION</th>
+                                            </tr>
+                                        </thead>
+                                        <aura:iteration items="{!v.TPrecords}" var="tp">    
+                                            <tr class="slds-hint-parent">
+                                                    
+                                                    <td class="slds-rich-text-area__content slds-grow slds-cell-wrap">
+                                                        <!--<ui:inputRadio aura:id="{!tp.Third_Party__r.FullName__c}" text="{!tp.Third_Party__r.FullName__c}"  name="others" data-tpoid="{!tp.id}"  change="{!c.onTPselected}" />-->  
+                                                        <!--<ui:inputRadio aura:id="{!tp.Third_Party__r.FullName__c}" text="{!tp.Third_Party__r.id}"  label="{!tp.Third_Party__r.FullName__c}" name="others"  change="{!c.onTPselected}"/>-->
+                                                        <!--<lightning:input type="radio" value="{!tp.id}" label="{!tp.Third_Party__r.id}" aura:id="{!tp.Third_Party__r.FullName__c}" text="{!tp.Third_Party__r.FullName__c}"  onchange="{!c.onTPselected}" />-->
+                                                        <!--<input type="radio" aura:id="{!tp.Third_Party__r.id}" data-tpid="{!tp.Third_Party__r.id}" data-tpoid="{!tp.id}" data-dob="{!tp.Other_Originator__c}" text="{!tp.Third_Party__r.FullName__c}"  name="others" onclick="{!c.onTPselected}" >{!tp.Third_Party__r.FullName__c}"</input>--> 
+                                                        <!--<input type="radio" name="tpRec" value='{ "data-text": {!tp.Third_Party__r.FullName__c}, "data-tpid": {!tp.id}, "data-tpoid": {!tp.Third_Party__r.id} }' onclick="{!c.onTPselected}"/>-->
+                                                    	<!--<input type="radio" name="tpRec" value="{! 'tp.Third_Party__r.FullName__c' +'-'+ 'tp.Third_Party__r.id' }" onclick="{!c.onTPselected}"/>-->
+                                                        <lightning:input type="radio" value="{! tp.Third_Party__c +'||'+ tp.Third_Party__r.FullName__c+'||'+ tp.Other_Originator__c}" name="options" onchange="{!c.onTPselected}" />
+                                                        
+                                                	</td>
+                                                	
+                                                    <td class="slds-rich-text-area__content slds-grow slds-cell-wrap">
+                                                        <ui:outputText value="{!tp.Third_Party__r.First_Name__c}"/>	
+                                                    </td>
+                                                	
+                                                    <td class="slds-rich-text-area__content slds-grow slds-cell-wrap">
+                                                        <ui:outputText value="{!tp.Third_Party__r.LastName__c}"/>	
+                                                    </td>
+                                                    <td class="slds-rich-text-area__content slds-grow slds-cell-wrap">
+                                                        <ui:outputText value="{!tp.Third_Party__r.Phone_Number__c}"/>	
+                                                    </td>
+                                                    <td class="slds-rich-text-area__content slds-grow slds-cell-wrap">
+                                                        <ui:outputText value="{!tp.Third_Party__r.Other_Originator__c}"/>	
+                                                    </td>
+                                                    <td>
+                                                    	<a data-fname="{!tp.Third_Party__r.First_Name__c}" data-lname="{!tp.Third_Party__r.LastName__c}" data-phone="{!tp.Third_Party__r.Phone_Number__c}" data-originator="{!tp.Third_Party__r.Other_Originator__c}" data-groupname="{!tp.Third_Party__r.Group_Name__c}" data-tpid="{!tp.Third_Party__c}" onclick="{!c.onClickTP}">Edit</a>   
+                                                                                                                
+                                                    </td>
+                                                    
+                                                
+                                            </tr>
+                                        </aura:iteration>
+                                    </table>
+                                
+                                </aura:if>
+                                
+                                
+                            </aura:if>
+
+                            <aura:if isTrue="{!not(v.tpAvailable)}">
+                                <!--<aura:if isTrue="{!not(v.tpRecordsAvailable)}">-->    
+                                    <lightning:spinner alternativeText="Loading" size="medium" />
+                                    <!--<p>No Third Party Contacts are found.</p>-->
+                                </aura:if>
+
+                            <!--<aura:if isTrue="{!v.tpRecordsAvailable}">-->
+                            <aura:if isTrue="{!not(v.tpRecordsAvailable)}">    
+                            	<p>No Third Party Contacts are found.</p>
+                            </aura:if>
+                        </div>    
+                    </div>
+
+                    <!--###### MODAL BOX FOOTER Part Start ######-->
+                    <footer class="slds-modal__footer">
+                        <lightning:button variant="brand" 
+                                          label="Add New Third Party"
+                                          title="Add New Third Party"
+                                          onclick="{! c.addNewTP }"/>
+                        <lightning:button variant="brand" 
+                                          label="Close"
+                                          title="Close"
+                                          onclick="{! c.closeModal }"/>
+                        
+                    </footer>
+                </div>
+                </aura:if>
+            </section>
+            
+</aura:component>

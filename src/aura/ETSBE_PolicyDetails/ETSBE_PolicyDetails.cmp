@@ -1,0 +1,404 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes" access="global" controller="ETSBE_PolicyDetailsController">
+    <aura:attribute name="AutodocKey" type="string" access="public"/>
+    <!--HANDLERS-->
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:handler event="c:SAE_PolicyClick" action="{!c.handlePolicyClick}" />
+    
+    <!-- US-1773292-->
+    <aura:attribute name="timelyFiling" type="String" default=""/>
+    <aura:attribute name="policyDiv" type="String" default=""/>
+    <aura:attribute name="sharedSavings" type="String" default=""/>
+    <aura:attribute name="maintenanceDate" type="String" default=""/>
+    <aura:attribute name="regionCode" type="String" default=""/>
+    <aura:attribute name="policyPanel" type="String" default=""/>
+    <aura:attribute name="healthPlanSite" type="String" default=""/>
+    <aura:attribute name="payerId" type="String" default=""/>
+    <aura:attribute name="claimsMailingAddress" type="String" default=""/>   
+    
+    <aura:attribute name="isPHSPlan" type="Boolean" default="false"/>  
+    <aura:attribute name="isMedicarePlan" type="Boolean" default="false"/>  
+    <aura:attribute name="isMedicaidPlan" type="Boolean" default="false"/>  
+    <aura:attribute name="isComPlan" type="Boolean" default="true"/>  
+    
+    <aura:attribute name="transId" type="String" default="" access="global"/> 
+    <aura:attribute name="conAddress" type="String" default="" access="global"/> 
+    <aura:handler name="change" value="{!v.transId}" action="{!c.runExtendedService}"/>
+    <!--aura:handler name="change" value="{!v.conAddress}" action="{!c.changeConAddress}"/-->
+    
+    <!--USUS1741579 - Cobra Indicator -->
+    <aura:attribute name="activeCobra" type="String" default="Active Cobra" access="public"/>
+    <aura:attribute name="inactiveCobra" type="String" default="Inactive Cobra" access="public"/>
+    
+    <aura:attribute name="policyDetails" type="ETSBE_PolicyDetailsResults"/>    
+    
+    <!--
+    <aura:handler event="aura:waiting" action="{!c.showSpinner}"/>
+    <aura:handler event="aura:doneWaiting" action="{!c.hideSpinner}"/>
+ -->
+    <aura:attribute name="loadSpinner" type="boolean" default="false"/>
+    
+    <!-- US1888880 --> 
+    <aura:attribute name="isFireSpinner" type="Boolean" default="false"/> 
+    
+    <!-- US1761826 - UHC/Optum Exclusion UI -->
+    <aura:attribute name="allowCallouts" type="Boolean" default="true"/>
+    
+    <aura:if isTrue="{!v.loadSpinner}">        
+        <!--lightning:spinner variant="brand" size="medium" aura:id="Id_spinner" class="slds-show" alternativeText="loading"/-->      
+    </aura:if> 
+    
+    <!-- US2138277 - Thanish - 24th Oct 2019 -->
+    <!-- US1888880 - Malinda : Spinner -->   	
+    <lightning:spinner class="slds-hide" aura:id="policy-details-spinner" 
+                       alternativeText="Loading.." title="Loading.." 
+                       variant="brand" size="large"/>
+    
+    <!-- US2137922: Page Feature Unique - Thanish - 7th Nov 2019 -->
+    <aura:attribute name="AutodocPageFeature" type="String"/>
+    <aura:attribute name="componentId" type="String"/>
+    <aura:attribute name="originPage" type="String"/>
+    <aura:attribute name="InitialLoad" type="Boolean" default="true"/>
+    
+    <div class="slds-box slds-card card_padding titleCheckBox" data-auto-doc="true" data-auto-doc-feature="{!v.AutodocPageFeature}" data-auto-doc-section-key="Policy Details"
+         data-auto-doc-section-column-indexes="1,2" style="height:100%" id="{!v.componentId}">
+        <div class="autodocNotTableView" data-auto-doc-feature="{!v.AutodocPageFeature}">
+            
+            <p class="component_title slds-text-heading_small card_bottom_margin card_bottom_margin">Policy Details</p>
+            
+            <div class="slds-grid slds-wrap slds-form-element">
+                
+                <!-- ROW 1 -->
+                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_6-of-12 card_bottom_margin" style="padding:0px;"> 
+                    <div class="header-column">
+                        <p class="field-title slds-form-element__label field_label_padding">Type</p> 
+                        <p class="valueCls">
+                            <div class="slds-form-element__static">
+                                <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.productType}">
+                                    {!v.policyDetails.resultWrapper.policyRes.productType}
+                                    <aura:set attribute="else">
+                                        --
+                                    </aura:set>
+                                </aura:if>  
+                            </div>             
+                        </p>
+                    </div>
+                </div>
+                <!-- US1827051 - Show only core fields - Sanka - 06/06/2019 -->
+                <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.showAllFields}">
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_6-of-12 card_bottom_margin" style="padding:0px;">              
+                        <aura:if isTrue="{!or(v.policyDetails.resultWrapper.policyRes.isPHSPlan, v.policyDetails.resultWrapper.policyRes.isComPlan)}">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding">Cobra</p> 
+                                <p class="valueCls">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.isComPlan}">
+                                            <span class="field_value cobra-background">
+                                                Active Cobra
+                                            </span>
+                                            <aura:set attribute="else">   
+                                                Inactive Cobra                            	
+                                            </aura:set>
+                                        </aura:if> 
+                                    </div>
+                                </p>   
+                            </div>
+                        </aura:if> 
+                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.isMedicaidPlan}">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding">Funding Arrangement</p>
+                                <p class="valueCls">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.fundingType}">
+                                            {!v.policyDetails.resultWrapper.policyRes.fundingType}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </p>
+                            </div>
+                        </aura:if> 
+                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.isMedicarePlan}">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding">DIV</p>
+                                <p class="valueCls">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.cosmosDivision}">
+                                            {!v.policyDetails.resultWrapper.policyRes.cosmosDivision}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if> 
+                                    </div>
+                                </p>
+                            </div>
+                        </aura:if> 
+                    </div>
+                </aura:if>
+                <!-- End ROW 1-->
+                
+                <!-- ROW 2 -->
+                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_6-of-12 card_bottom_margin" style="padding:0px;"> 
+                    <div class="header-column">
+                        <p class="field-title slds-form-element__label field_label_padding">Timely Filing</p> 
+                        <p class="valueCls">
+                            <div class="slds-form-element__static">
+                                <aura:if isTrue="{!v.timelyFiling}">
+                                    {!v.timelyFiling}
+                                    <aura:set attribute="else">
+                                        --
+                                    </aura:set>
+                                </aura:if>
+                            </div> 
+                        </p>
+                    </div>
+                </div>
+                <!-- US1827051 - Show only core fields - Sanka - 06/06/2019 -->
+                <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.showAllFields}">
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_6-of-12 card_bottom_margin" style="padding:0px;"> 
+                        <aura:if isTrue="{!or(v.policyDetails.resultWrapper.policyRes.isPHSPlan, v.policyDetails.resultWrapper.policyRes.isComPlan)}">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding">Funding Arrangement</p> 
+                                <p class="valueCls">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.fundingType}">
+                                            {!v.policyDetails.resultWrapper.policyRes.fundingType}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if> 
+                                    </div>
+                                </p>
+                            </div>
+                        </aura:if>
+                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.isMedicarePlan}">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding">Panel</p>
+                                <p class="valueCls">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.groupPanelNumber}">
+                                            {!v.policyDetails.resultWrapper.policyRes.groupPanelNumber}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </p>
+                            </div>
+                        </aura:if>
+                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.isMedicaidPlan}">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding">Health Plan</p>
+                                <p class="valueCls">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.stateOfIssueCode}">
+                                            {!v.policyDetails.resultWrapper.policyRes.stateOfIssueCode}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if> 
+                                    </div>
+                                </p>
+                            </div>
+                        </aura:if>
+                    </div>
+                </aura:if>
+                <!-- End ROW 2-->
+                
+                <!-- ROW 3 -->
+                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_6-of-12 card_bottom_margin" style="padding:0px;">
+                    <div class="header-column">
+                        <p class="field-title slds-form-element__label field_label_padding">Maintenance Date</p>
+                        <p class="valueCls">
+                            <div class="slds-form-element__static">
+                                <aura:if isTrue="{!v.maintenanceDate}">
+                                    {!v.maintenanceDate}
+                                    <aura:set attribute="else">
+                                        --
+                                    </aura:set>
+                                </aura:if> 
+                            </div>
+                        </p>
+                    </div>
+                </div>         
+                <!-- US1827051 - Show only core fields - Sanka - 06/06/2019 -->
+                <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.showAllFields}"> 
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_6-of-12 card_bottom_margin" style="padding:0px;">
+                        <aura:if isTrue="{!or(v.policyDetails.resultWrapper.policyRes.isPHSPlan, v.policyDetails.resultWrapper.policyRes.isComPlan)}">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding">Shared Savings</p>
+                                <p class="valueCls">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.sharedSavings}">
+                                            {!v.sharedSavings}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>    
+                                    </div>                      
+                                </p>
+                            </div>
+                        </aura:if>
+                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.isMedicarePlan}">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding">Group Name</p>
+                                <p class="valueCls">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.groupNumber}">
+                                            {!v.policyDetails.resultWrapper.policyRes.groupNumber}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </p>
+                            </div>
+                        </aura:if>
+                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.isMedicaidPlan}">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding">Health Plan Site</p> <!-- US2045625 - Thanish - 2nd Oct 2019 -->
+                                <p class="valueCls">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.HealthPlanSite != ''}">
+                                            <lightning:formattedUrl value="{!v.policyDetails.resultWrapper.policyRes.HealthPlanSite}" tooltip="{!v.policyDetails.resultWrapper.policyRes.HealthPlanSite}" label="Click here for state site" target="_blank" />
+                                            <aura:set attribute="else">
+                                                Follow standard process  
+                                            </aura:set>
+                                        </aura:if> 
+                                    </div>                    
+                                </p>
+                            </div>  
+                        </aura:if>                                                        
+                    </div>
+                </aura:if>
+                <!-- End ROW 3 -->
+                
+                <!-- ROW 4 -->
+                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_6-of-12 card_bottom_margin" style="padding:0px;">
+                    <div class="header-column">
+                        <p class="field-title slds-form-element__label field_label_padding">Payer ID</p>
+                        <p class="valueCls">
+                            <div class="slds-form-element__static">
+                                <aura:if isTrue="{!v.payerId}">
+                                    {!v.payerId}
+                                    <aura:set attribute="else">
+                                        --
+                                    </aura:set>
+                                </aura:if>
+                            </div>
+                        </p>
+                    </div>
+                </div>
+                <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.isMedicaidPlan}">
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_6-of-12 card_bottom_margin" style="padding:0px;">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding">Network Type</p>
+                            <p class="valueCls">
+                                <div class="slds-form-element__static">
+                                    <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.productId}">
+                                        {!v.policyDetails.resultWrapper.policyRes.productId}
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                </aura:if>
+                <!-- US1827051 - Show only core fields - Sanka - 06/06/2019 -->
+                <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.showAllFields}">
+                    <div class="{!if(v.policyDetails.resultWrapper.policyRes.isMedicaidPlan,'','slds-p-around_xx-small slds-col_bump-right slds-size_6-of-12 card_bottom_margin')}" style="padding:0px;">
+                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.isPHSPlan}">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding">Region Code</p> 
+                                <p class="valueCls">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.regionCode}">
+                                            {!v.regionCode}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if> 
+                                    </div>                          
+                                </p>
+                            </div>
+                        </aura:if>
+                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.isComPlan}">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding">Group Name</p> 
+                                <p class="valueCls">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.groupNumber}">
+                                            {!v.policyDetails.resultWrapper.policyRes.groupNumber}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </p>
+                            </div>
+                        </aura:if>
+                    </div>
+                </aura:if>
+                <!-- End ROW 4 -->
+                
+                <!-- ROW 5 -->
+                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_6-of-12 card_bottom_margin" style="padding:0px;">
+                    <div class="header-column">
+                        <p class="field-title slds-form-element__label field_label_padding">Claims Mailing Address</p>
+                        <p class="valueCls">
+                            <div class="slds-form-element__static">
+                                <aura:if isTrue="{!v.conAddress}">
+                                    <lightning:formattedText value="{!v.conAddress}" />
+                                    <aura:set attribute="else">
+                                        --
+                                    </aura:set>
+                                </aura:if>
+                            </div>
+                        </p>
+                    </div>
+                </div>
+                <!-- US1827051 - Show only core fields - Sanka - 06/06/2019 -->
+                <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.showAllFields}">
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_6-of-12 card_bottom_margin" style="padding:0px;">
+                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.isPHSPlan}">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding">Group Name</p>
+                                <p class="valueCls">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.groupNumber}">
+                                            {!v.policyDetails.resultWrapper.policyRes.groupNumber}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </p>
+                            </div>
+                        </aura:if>
+                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.isComPlan}">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding">Market Type</p>
+                                <p class="valueCls">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.policyDetails.resultWrapper.policyRes.marketType}">
+                                            {!v.policyDetails.resultWrapper.policyRes.marketType}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </p>
+                            </div>
+                        </aura:if>
+                    </div>
+                </aura:if>
+                <!-- End ROW 5 -->
+                
+            </div>
+        </div>
+    </div>
+    <!-- End of Code - US2138277 - Thanish - 24th Oct 2019 -->
+    
+</aura:component>

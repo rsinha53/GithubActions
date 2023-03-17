@@ -1,0 +1,234 @@
+<apex:page controller="ACETHSAAccountsController" docType="html-5.0" >
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="{!$Resource.JqueryTableSorter}"></apex:includeScript>
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js" />
+    <apex:includeScript value="/soap/ajax/30.0/connection.js" />
+    <style>
+    .headerResultStyle {
+        font-size: 15px;
+        font-weight: Bold;
+    } 
+    .messageTable {
+        border: solid #ffc;
+    } 
+    </style>
+    <script>
+        var subtabIds = new Array();
+        var policyAray = new Array();
+        var cmmentsTmp;
+        $(document).ready(function() {
+            acet.autodoc.startAutodoc();
+            acet.autodoc.createCommentsbox();
+            callWSOnLoad();
+            init();
+            acet.autodoc.subTabIds = []; 
+            var subjectId = '{!wrapper.Subject}';
+            console.log('Subject Id');
+            console.log(subjectId);
+                        acet.autodoc.getAutodocFromSubTabs = function(){
+                acet.autodoc.additionalInfo = '';
+                sforce.console.fireEvent('RequestHSADetail_'.concat(subjectId), subjectId);                   
+            };           
+            sforce.console.addEventListener('ReceiveHSADetail_'.concat(subjectId), function(r){                   
+                var res = JSON.parse(r.message);     
+                policyAray.push(res.test); 
+                acet.autodoc.subTabIds.push(res.subTabId);
+                if(res.doc){
+                var spaceSeperator = '<div id="seperator" style="width:100%;height:50px;"></div>';    
+                    // alert('test******' + acet.autodoc.additionalInfo + spaceSeperator + res.doc);
+                acet.autodoc.additionalInfo = acet.autodoc.additionalInfo + spaceSeperator + res.doc;   
+                    }
+               sforce.console.closeTab(res.subTabId);
+                                    
+            }); 
+            
+            //sync comments between HSA Accounts and HSA Account details tabs
+            //only fire at last keyup
+            var timer;
+            $("#autodocComments").keyup(function(){
+                clearTimeout(timer);  
+              //  if(cmmentsTmp !=$("#autodocComments").val()){
+                    timer = setTimeout(function(){
+                        sforce.console.fireEvent('HSACommentsUpdated_'.concat(subjectId), $("#autodocComments").val()); 
+                    }, 500);   
+               // }
+               // cmmentsTmp = $("#autodocComments").val();
+            }); 
+        
+            sforce.console.addEventListener('HSACommentsUpdated_'.concat(subjectId), function(r){
+            if(r.message != $("#autodocComments").val()){
+                $("#autodocComments").val(r.message);  
+                }              
+            }); 
+        
+            //send comments to detail page when requested
+            sforce.console.addEventListener('RequestHSAComments_'.concat(subjectId), function(r){
+                sforce.console.fireEvent('HSACommentsUpdated_'.concat(subjectId), $("#autodocComments").val());                   
+            }); 
+            
+              //added by Ranjit : work in progress
+             
+             $("[id$='btnSaveCase']").on('click', function(){                  
+                   closeSubtabs();
+             }); 
+             $("[id$='btnMisdirectCase']").on('click', function(){                  
+                 closeSubtabs();
+             });            
+
+        });
+        
+        //Function to track the number of subtabs opened from the current page
+        var openedTabs = function openedTabs(result) {
+        console.log(">>>>>> "+result.success);
+            //Report whether we succeeded in opening the subtab
+            if (result.success) {
+                subtabIds.push(result.id);
+                //alert('subtab opened'+ subtabIds);
+            } else {
+                //alert('subtab cannot be opened');
+            }
+        };
+         
+        //Function to close all subtabs
+        function closeSubtabs(){
+            console.log('Testing');
+            for(i = 0 ; i < subtabIds.length ; i++){
+                sforce.console.closeTab(subtabIds[i]);
+            }
+        }
+         
+        function init(){ 
+            acet.autodoc.startAutodoc(); 
+            var highlightPanelInfo;
+            $("[id$='HSALink']").on('click', function(){
+               $(".errorMsg").remove();
+               var $policy = $(this);  
+               var ssn = $policy.attr('data-ssn');
+               console.log(ssn);      
+               var tabName = 'HSA' + ' - ' + $policy.attr('data-HSAIDMasked').substr($policy.attr('data-HSAIDMasked').length - 4);
+               var administered = $policy.attr('data-administeredBy');
+               if(administered == 'OPTUM BANK')
+               {
+                   highlightPanelInfo = '{!JSENCODE(hpAdditionInfoStr)}';
+                   console.log(highlightPanelInfo);
+                   var url = '/apex/ACETHSAAccountsDetail?InteractionId={!JSENCODE(InteractionId)}&contactId={!wrapper.Originator.Id}&HSAAccNo=' + $policy.attr('data-HSAID') +'&additionalInfo='+encodeURIComponent(highlightPanelInfo) + '&HSAKey='+$policy.attr('data-key')+ '&HSAMember='+$policy.attr('data-member')+'&ssn='+ssn ;
+                   console.log(url);
+                    sforce.console.getFocusedPrimaryTabId(function(result) {
+                        sforce.console.openSubtab(result.id, url, true, tabName, null, openSuccess);
+                    }); 
+                } 
+                else
+                {
+                    var errorMsg = 'Transactions not available, not administered by Optum Bank';
+                    $("[id$='showerrormsg']").parent().append('<div class = "errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>');   
+                } 
+            });
+                        
+            var openSuccess = function openSuccess(result) {
+                //Report whether opening the new tab was successful
+                if (result.success == true) {
+                  
+                } else {
+                   
+                }
+            };
+            
+        }
+    </script>
+    <apex:form id="hsaAccountsInfo">
+        <apex:actionFunction name="callWSOnLoad"
+                           action="{!callWSOnLoad}" 
+                           reRender="pbid,pgErrorMsgs,scriptPanel,hlPanel,hippapopupPanel"
+                           oncomplete="init();" status="refreshMemberStatus1"/>                   
+                             
+        <apex:outputPanel id="hlPanel" layout="none">
+            <apex:inputHidden id="highlightPanelInfo" />
+            
+            <c:ACETInteractionHighlightsPanel InteractionAtt="{!Interaction}" SubjectAtt="{!wrapper.Subject}" AdditionalInfoAtt="{!AdditionalInfo}" html-auto-doc="auto" selectedOriginator="{!wrapper.interaction.Originator_Name__c}"/>
+            <apex:outputPanel id="hippapopupPanel">
+                       <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+            </apex:outputPanel>
+
+        </apex:outputPanel>
+        
+        <apex:sectionHeader title="HSA Account(s)"/>
+
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" 
+                           attrSourceOriginator="{!wrapper.SourceOriginator}" 
+                           attrInteractionId="{!wrapper.Interaction.Id}" 
+                           attrSubjectId="{!wrapper.Subject.Id}"
+                           attrCallTopic="{!wrapper.CaseObj.Topic__c}"
+                           attrShowMisdirectButton="true"
+                           attrShowSaveButton="true"/>
+         <apex:pageMessages id="pgErrorMsgs"/>                   
+        <apex:actionStatus id="refreshMemberStatus1">
+            <apex:facet name="start">
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                 
+            </div>
+            <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 1001; margin: 15% 50%">
+                <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                    <img src="/img/loading.gif" style="float: left; margin: 8px;" />
+                    <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                </div>
+            </div>
+            </apex:facet>
+        </apex:actionStatus>        
+        <apex:pageBlock mode="mainDetail" id="pbid">
+            <apex:pageBlockSection id="bankAuth" columns="1" Title="Bank Authentication" >
+                    <apex:pageBlockTable value="{!hsaSummaryResult.accHolderList}" var="auth"
+                        captionStyle="text-align:left;margin-bottom:3px;" >
+                        <apex:column value="{!auth.accountHoldersName}" headerValue="Account Holder's Name" />
+                        <apex:column headerValue="SSN" >
+                            <c:ACETMaskSSNComponent SSNValue="{!auth.ssn}" EID="{!memberId}" Type="HSA Summary" Showcopy="True"></c:ACETMaskSSNComponent> 
+                        </apex:column>
+                        <apex:column value="{!auth.address}" headerValue="Address"/>
+                        <apex:column value="{!auth.phone}" headerValue="Phone" />
+                        <apex:column value="{!auth.phoneType}" headerValue="Phone Type" />
+                        <apex:column value="{!auth.dob}" headerValue="Date of Birth"/>
+                   </apex:pageBlockTable>
+                   </apex:pageBlockSection>
+                 <apex:pageBlockSection columns="1">      
+                   <apex:pageBlockTable value="{!hsaSummaryResult.accHolderList}" var="r"
+                        rendered="{!((hsaSummaryResult.accHolderList.size == 0) || ISNULL(hsaSummaryResult.accHolderList) )}">
+                       <apex:column headerValue=" No data found." width="100%"/>
+                   </apex:pageBlockTable> 
+                 </apex:pageBlockSection>
+
+            <apex:pageBlockSection columns="1" id="hsaAccounts" Title="Account Information" >
+                <apex:outputpanel id="showerrormsg"/>
+                <apex:pageBlockTable value="{!hsaSummaryResult.hsaAccounts}" var="acc" captionStyle="text-align:left;margin-bottom:3px;" id="pbTableId" styleClass="applySort" >
+                    <apex:column >
+                        <apex:facet name="header">
+                            <apex:commandLink value="Account Number" oncomplete="init();" />
+                        </apex:facet>
+                        <apex:outputLink id="HSALink" value="#" html-data-key="{!acc.hsaId}" html-data-member="{!memberId}" html-data-ssn="{!unmaskedSSN}"
+                                         html-data-HSAID="{!acc.HSAAccountNo}" html-data-HSAIDMasked="{!acc.HSAAccountNoMasked}" html-data-administeredBy="{!acc.administeredBy}">{!acc.HSAAccountNoMasked}</apex:outputLink>
+                    </apex:column>
+                    <apex:column value="{!acc.accCode}" headerValue="Account Code"/>
+                    <apex:column value="{!acc.accName}" headerValue="Account Name" /> 
+                    <apex:column value="{!acc.groupId}" headerValue="Group Number" />
+                    <apex:column value="{!acc.groupName}" headerValue="Group Name" />            
+                    <apex:column value="{!acc.administeredBy}" headerValue="Administered By" />
+                </apex:pageBlockTable>
+            </apex:pageBlockSection>
+            <apex:pageBlockSection columns="1">
+                <apex:pageBlockTable value="{!hsaSummaryResult.hsaAccounts}" var="r"
+                    rendered="{!(hsaSummaryResult.hsaAccounts.size == 0 || ISNULL(hsaSummaryResult.hsaAccounts))}">
+                   <apex:column headerValue="No HSA Account available." styleClass="headerResultStyle"/>
+                </apex:pageBlockTable> 
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+        
+       <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"   
+                           attrSourceOriginator="{!wrapper.SourceOriginator}" 
+                           attrInteractionId="{!wrapper.Interaction.Id}" 
+                           attrSubjectId="{!wrapper.Subject.Id}"
+                           attrCallTopic="{!wrapper.CaseObj.Topic__c}"
+                           attrShowSaveButton="true"
+                           attrShowMisdirectButton="true"
+                           attrLocation="bottom" />
+    </apex:form>
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+</apex:page>

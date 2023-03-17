@@ -1,0 +1,375 @@
+<apex:page Controller="ACETGroupEligibilityController" sidebar="false"  applyBodyTag="true" applyHtmlTag="true" showHeader="true">
+    <apex:includeScript value="{!$Resource.JQuery}" />
+    <apex:includeScript value="{!$Resource.JqueryTableSorter}"></apex:includeScript>
+    <apex:stylesheet value="{!URLFOR($Resource.ACETResources, '/css/vendor/chosen.min.css')}" />
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js" />
+    <apex:includeScript value="/soap/ajax/30.0/connection.js" />
+    <apex:includeScript value="{!URLFOR($Resource.ACETBenefitAccordionJSExtend)}"/> 
+    
+    <style>
+    .widthOriginator{
+        width: 10%;
+    }    
+    .highlights-panel-container {
+        width: 100%;
+        background: #FFF;
+        overflow: hidden;
+        border-bottom: 2px solid #dbdbdb;
+        position: relative;
+        min-height: 21px;
+    }
+    
+    .highlights-panel-collapsible {
+        min-height: 100px;
+    }
+    
+    .highlights-panel-container .panel-arrow-down {
+        position: absolute;
+        top: 0;
+        left: 45%;
+    }
+    
+    .highlights-panel-container .panel-arrow-up {
+        position: absolute;
+        bottom: 0;
+        left: 45%;
+    }
+    
+    .hide-arrow {
+        display: none;
+    }
+    
+    .show-arrow {
+        display: block;
+    }
+    
+    .outputLabelPanel {
+        font-weight: bold;
+        margin-right: 20px;
+    }
+    .colStyle {
+        width: 33%;
+    }
+    
+    
+    .autodoc {
+        vertical-align: middle;
+    }
+    
+    .imgclass:hover {
+        background-image: url('/img/help/helpOrbs.gif');
+        background-repeat: no-repeat;
+        width: 16px;
+        height: 15px;
+        background-position: right;
+    }
+    .highlight
+    {
+        background: yellow;
+    }
+    .headerResultStyle {
+        font-size: 15px;
+        font-weight: Bold;
+    }  
+    .messageTable{
+      border:none;
+    }
+    body .helpIcon {
+        background: transparent url(/img/alohaSkin/help_orange.png) no-repeat !important;
+    } 
+</style>
+<script>
+    $(document).ready(function() {
+        localStorage.removeItem("table");
+        localStorage.removeItem("rowCheckHold");
+        acet.autodoc.createCommentsbox();    
+        init();        
+        callPageOnLoad();
+        apply_accordion();
+    }); 
+    function apply_accordion() {
+        $(".acord").accordion({
+            header: '> h3:not(.item)', //this line is a bug fix for accordion jquery//
+            heightStyle: 'content',
+            active: false,
+            collapsible: true 
+        });            
+     }
+    function init(){ 
+        acet.autodoc.startAutodoc(); 
+    }
+    function getIndInsRules(dat, rul){
+         var imgclass = $(rul).attr('class').split(' ');
+         $(imgclass).each(function() { 
+            if(this == 'ui-corner-all'){  
+              console.log('----------if--dat------'+dat);
+               
+            } 
+               
+        });    
+      }
+    function hideGrpSettColumns(){
+        
+          $(".headertest").each(function(){
+          console.log('----headertest------');
+             $(this).hide();
+          
+          }); 
+        
+          $("[id$='grpinspop']").hide();  
+          $("[id$='grpinspop']").closest('table').find('th').eq($("[id$='grpinspop']").index()).hide();
+          $("[id$='grpwithnopop']").hide();  
+          $("[id$='grpwithnopop']").closest('table').find('th').eq($("[id$='grpwithnopop']").index()).hide();
+          $("[id$='grpsettwithpop']").hide();  
+          $("[id$='grpsettwithpop']").closest('table').find('th').eq($("[id$='grpsettwithpop']").index()).hide();   
+          
+        
+          
+    }
+    </script>
+    
+    <apex:outputPanel id="scriptPanel">
+    <script> 
+        function highlightRow(str){
+            
+            var conId = {!JSENCODE(contractId)};
+            
+            var size = '{!GroupPolicyResultsList.size}';
+            if(size != '0')
+            {
+                console.log('>>>>>');
+                $("[id$='pbTableId']").find("[id$='contractId']").each(function()
+                {
+                    if(($(this).html() == conId ))
+                    {
+                        $(this).parent().children().addClass("highlight");
+                        if(str=='onload'){
+                            getGroupInsuringRules();
+                            
+                        }
+                       
+                    }
+                });
+            }
+            
+        }
+           
+        
+    </script>
+    </apex:outputPanel>
+    
+    
+    <apex:form >    
+        <apex:actionFunction name="callPageOnLoad" action="{!showPolicyContract}" reRender="pbid,genInfo,grpInsInfo,pgErrorMsgs,scriptPanel,hlPanel,messagePanel"
+                           oncomplete="init();insuringRulesSelection();" status="refreshMemberStatus1"/>
+
+       <apex:actionFunction name="insuringRulesSelection" action="{!insuringRulesSelection}" reRender="pbirid, scriptPanel" status="refreshMemberStatus1" oncomplete="highlightRow('onload');"/>
+       <apex:actionFunction name="getGroupInsuringRules" action="{!getGroupInsuringRules}" reRender="pbgsid,SingPop,multiPop,messagePanel" status="refreshMemberStatus1" oncomplete="acet.autodoc.startAutodoc();apply_accordion();getInsuringRules();"/>
+       <apex:actionFunction name="getInsuringRules" action="{!getInsuringRules}" reRender="pbirid,insRule,insRulesTableId,messagePanel" status="refreshMemberStatus1"  oncomplete="hideGrpSettColumns();acet.autodoc.startAutodoc('insRule');"/>
+       
+
+       <apex:actionStatus id="refreshMemberStatus1">
+            <apex:facet name="start">
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                 
+            </div>
+            <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 1001; margin: 15% 50%">
+                <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                    <img src="/img/loading.gif" style="float: left; margin: 8px;" />
+                    <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                </div>
+            </div>
+            </apex:facet>
+        </apex:actionStatus>
+        <apex:outputPanel id="hlPanel" layout="none" styleClass="h_line">
+                <apex:inputHidden id="highlightPanelInfo" />
+                <c:ACETInteractionHighlightsPanel InteractionAtt="{!wrapper.Interaction}" SubjectAtt="{!wrapper.Subject}" AdditionalInfoAtt="{!wrapper.AdditionalInfo}" html-auto-doc="auto" selectedOriginator="{!wrapper.interaction.Originator_Name__c}"/>    
+        </apex:outputPanel>
+        <apex:outputPanel id="hippapopupPanel">
+                   <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+        </apex:outputPanel>      
+        <apex:sectionHeader title="Group Eligibility" id="sectionHeader"/>
+            
+         <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveButton="true" attrShowMisdirectButton="true" 
+                            attrSourceOriginator="{!wrapper.SourceOriginator}" attrInteractionId="{!wrapper.Interaction.Id}" attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="{!wrapper.CaseObj.Topic__c}" attrLocation="bottom"/>
+            <apex:outputPanel id="messagePanel" layout="none">
+                  <apex:pageMessages />
+              </apex:outputPanel>
+        
+            <apex:pageBlock mode="mainDetail" id="pbid">
+                <apex:outputText style="font-size:large;margin-left:0.75%" value="{!filterStatus} Contract Option(s)"/>
+                  <apex:pageBlockSection columns="1" id="genInfo"  html-auto-doc="auto" html-auto-doc-section-key="genInfo" html-auto-doc-section-column-indexes="1,2,3,4,5,6,7,8">
+                            <apex:pageBlockTable value="{!GroupPolicyResultsList}" var="genInfoTable" captionStyle="text-align:left;margin-bottom:3px;" id="pbTableId" styleClass="applySort" style="margin-top: 1pc;">
+                                <apex:column value="{!genInfoTable.policyConId}" id="contractId" styleclass="contractId">
+                                    <apex:facet name="header">
+                                        <apex:outputLabel value="Policy Number">
+                                            &nbsp;<apex:image value="/s.gif" styleclass="helpIcon" id="helpText"  title="{!$Label.ACETPolicyNumberHoverText}" />
+                                        </apex:outputLabel>
+                                    </apex:facet>
+                                </apex:column>
+                                <apex:column >
+                                     <apex:inputHidden value="{!genInfoTable.policyActualStatus}" />
+                                </apex:column>
+                                <apex:column value="{!genInfoTable.population}" headerValue="Population" />
+                                <apex:column value="{!genInfoTable.policyOptId}" headerValue="Plan Option ID(s)" id="policyId"/>
+                                <apex:column value="{!genInfoTable.benefitBundleId}" headerValue="Benefit Bundle Option ID(s)" id="bundleId" />
+                                <apex:column value="{!genInfoTable.effectiveDate}" headerValue="Effective Date" id="colEffDate" />
+                                <apex:column value="{!genInfoTable.endDate}" headerValue="End Date" />
+                                <!-- US1870020 starts -->
+                                <apex:column headerValue="Exchange Type" rendered="{!IF(genInfoTable.exchangeType == 'Public State Exchange',true, false)}">{!genInfoTable.groupSitusState} Shop</apex:column>
+                                <apex:column headerValue="Exchange Type" rendered="{!IF(genInfoTable.exchangeType == 'Public State Exchange',false, true)}">None</apex:column>
+                                <!-- US1870020 ends -->
+                                <apex:column value="{!genInfoTable.migrated}" headerValue="Migrated" />
+                            </apex:pageBlockTable>
+                            <apex:outputpanel id="showerrormsg"/>
+                            
+                </apex:pageBlockSection>
+                <apex:pageBlockSection columns="1">
+                    <apex:pageBlockTable value="{!GroupPolicyResultsList}" var="r"
+                        rendered="{!NOT(ISNULL(GroupPolicyResultsList)) && GroupPolicyResultsList.size == 0}">
+                       <apex:column headerValue="No results found." styleClass="headerResultStyle"/>
+                    </apex:pageBlockTable> 
+                </apex:pageBlockSection>
+            </apex:pageblock>     
+                
+                <apex:pageblock mode="mainDetail" id="pbgsid">    
+                    <apex:outputText style="font-size:large;margin-left:0.75%" value="Group Settings"/>
+                    <apex:Outputpanel layout="block" id="grpInsSetting1">
+                            <!-- No Population --> 
+                            <apex:outputPanel id="SingPop" rendered="{!!isPop}" >
+                                <div style='width:100%;height:100%;' class="accordion">
+                                    <table width='100%' height='100%'>
+                                        <tr height='100%'>
+                                            <td width='50%'>                            
+                                                <apex:repeat value="{!allGroupInsuringResults}" var="res">    
+                                                 <div class="acord" id="acordId">                  
+                                                    <h3 id="headerId" onclick="getIndInsRules('{!JSENCODE(res.fullDate)}',this);"> {!res.fullDate} </h3>                                   
+                                                      <div class="content">
+                                                        <apex:pageBlocksection columns="1" html-auto-doc="true"  id="insSetting1" html-auto-doc-case-items="true" html-auto-doc-section-key="insSetting1" html-auto-doc-section-column-indexes="1">
+                                                        <apex:pageBlockTable value="{!settingsResultMap[res.fullDate]}" var="r" columnsWidth="10%,40%,50%" width="100%">                                                                                             
+                                                               <apex:column id="grpwithnopop" headerClass="headertest">
+                                                                    {!res.fullDate}_{!r.insRules}_{!r.insRulesDesc}
+                                                                </apex:column>
+                                                                <apex:column >
+                                                                    <apex:facet name="header">Group Settings</apex:facet>
+                                                                    <apex:outputText value="{!r.insRules}"/>
+                                                                </apex:column>
+                                                                <apex:column >
+                                                                    <apex:facet name="header">Description</apex:facet>
+                                                                    <apex:outputText value="{!r.insRulesDesc}"/> &nbsp;<apex:image value="/s.gif" styleclass="helpIcon" id="helpText"  title="{!r.OnshoreRestrictTooltip}" rendered="{! If(r.insRules=='Onshore Restriction' ,true,false) }"/>
+                                                                </apex:column> 
+                                                        </apex:pageBlockTable>
+                                                                                </apex:pageBlocksection>
+
+                                                    </div>
+                                                  </div>
+                                                 </apex:repeat>                          
+                                             </td>
+                                         </tr>
+                                     </table>
+                                </div> 
+                            </apex:outputPanel> 
+                                            
+                   </apex:Outputpanel>
+                                              
+                   <!-- Multiple Population --> 
+                   <apex:Outputpanel layout="block" id="grpInsSetting">
+                     <apex:pageBlocksection columns="1" html-auto-doc="true" html-auto-doc-case-items="true" id="insSetting" html-auto-doc-section-key="insSetting" html-auto-doc-section-column-indexes="1">
+                      <apex:outputPanel id="multiPop" rendered="{!isPop}" >
+                        <div style='width:100%;height:100%;' class="accordion">
+                            <table width='100%' height='100%' style="margin-top: 0.75pc;">
+                                <tr height='100%'>
+                                    <td width='50%'>                            
+                                        <apex:repeat value="{!grpsettingsResultMap}" var="pop">
+                                             <div class="acord" id="acordIdparent">
+                                                 <h3 id="headerId"> {!pop} </h3>
+                                                 <div>
+                                                     <apex:repeat value="{!grpsettingsResultMap[pop]}" var="fulldate">
+                                                      <div class="acord" id="acordId"> 
+                                                         <h3 id="headerId"> {!fullDate} </h3>
+                                                         <div class="content">
+                                                             <apex:repeat value="{!grpsettingsResultMap[pop][fulldate]}" var="rule">
+                                                             <apex:pageBlockTable value="{!rule.insRules}" var="r" columnsWidth="10%,40%,50%" width="100%" styleClass="GrpEligiSett">     
+                                                                  <apex:column id="grpsettwithpop" headerClass="headertest">
+                                                                    {!pop}_{!fullDate}_{!r.insRules}_{!r.insRulesDesc}
+                                                                </apex:column>
+                                                                 
+                                                                <apex:column >
+                                                                    <apex:facet name="header">Group Settings</apex:facet>
+                                                                    <apex:outputText value="{!r.insRules}"/>
+                                                                </apex:column>
+                                                                <apex:column >
+                                                                    <apex:facet name="header">Description</apex:facet>
+                                                                    <apex:outputText value="{!r.insRulesDesc}"/> &nbsp;<apex:image value="/s.gif" styleclass="helpIcon" id="helpText"  title="{!r.OnshoreRestrictTooltip}" rendered="{! If(r.insRules=='Onshore Restriction' ,true,false) }"/>
+                                                                </apex:column>             
+                                                               <!--  <apex:column value="{!r.insRules}" headerValue="Group Settings"/>
+                                                                 <apex:column value="{!r.insRulesDesc}" headerValue="Description"/> -->
+                                                             </apex:pageBlockTable>
+                                                             </apex:repeat>
+                                                         </div>
+                                                        </div> 
+                                                     </apex:repeat>   
+                                                  </div>                                      
+                                             </div>
+                                         </apex:repeat>
+                                     </td>
+                                 </tr>
+                             </table>
+                        </div> 
+                    </apex:outputPanel>
+               <!--End Multiple Population-->
+               </apex:pageBlocksection>
+               </apex:Outputpanel>
+           </apex:pageBlock>  
+           
+               <apex:pageblock mode="mainDetail" id="pbirid"> 
+                <apex:pageBlocksection columns="1" id="insRule" html-auto-doc="true" html-auto-doc-case-items="true" collapsible="true"  html-auto-doc-section-key="insRule" html-auto-doc-section-column-indexes="1">
+                        <apex:outputPanel styleClass="enableSectionAutodocGrpEligbility" html-auto-doc-section-state="yes">
+                        <!-- added the code from above pbs -->
+                        <apex:outputText style="font-size:large;" value="Insuring Rules"/>
+                        <apex:outputPanel style="text-align:center;margin-left: 25%;">
+                             <apex:outputLabel value="Population" style="font-weight:bold;margin-right: 5px;" rendered="{!isShow}"/>
+                             <apex:outputPanel id="populationPanel" rendered="{!isShow}">
+                                
+                                  <apex:selectList multiselect="false" id="grpEligPopulationId" label="Population" value="{!populationSelected}" size="1" onchange="getInsuringRules();acet.autodoc.saveStateAutodocOnSearch();return false;">
+                                      <apex:selectOptions value="{!populationsList}" id="popId"/>  
+                                  </apex:selectList> 
+                             </apex:outputPanel>
+                             <apex:outputPanel style="text-align:center;padding-left: 1%;">
+                                 <apex:outputLabel value="Date" style="font-weight:bold;margin-right: 5px;"/>
+                                 <apex:outputPanel id="datePanel" rendered="true">
+                                    
+                                      <apex:selectList multiselect="false" id="grpEligDateId" label="Date" value="{!dateSelected}" size="1" onchange="getInsuringRules();acet.autodoc.saveStateAutodocOnSearch();false"> 
+                                          <apex:selectOptions value="{!datesList}" id="datId"/> 
+                                          <!-- <apex:actionSupport event="onchange" rerender="insRule" action="{!getInsuringRules}" status="refreshMemberStatus1" oncomplete="acet.autodoc.startAutodoc();"/> --> 
+                                      </apex:selectList>
+                                 </apex:outputPanel>
+                            </apex:outputPanel>
+                         </apex:outputPanel>       
+                           <apex:pageBlockTable value="{!GroupInsuringResults}" var="ins" captionStyle="text-align:left;margin-bottom:3px;" id="insRulesTableId" columnsWidth="10%,40%,50%" width="100%" style="margin-top: 1pc;">
+                                <apex:column id="grpinspop">
+                                   {!populationSelected}_{!dateSelected}_{!ins.insRules}_{!ins.insRulesDesc}
+                                </apex:column>
+                                <apex:column value="{!ins.insRules}" headerValue="Insuring Rules" />
+                                <apex:column value="{!ins.insRulesDesc}" headerValue="Description"/>
+                            </apex:pageBlockTable>
+                            </apex:outputPanel>
+                    </apex:pageBlockSection>
+                    <apex:pageBlockSection columns="1">
+                        <apex:pageBlockTable value="{!GroupInsuringResults}" var="r"
+                            rendered="{!NOT(ISNULL(GroupInsuringResults)) && GroupInsuringResults.size == 0}">
+                           <apex:column headerValue="No Insuring Rules found." styleClass="headerResultStyle"/>
+                        </apex:pageBlockTable> 
+                    </apex:pageBlockSection>
+                </apex:pageBlock>  
+             <apex:outputPanel >
+                  <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveButton="true" attrShowMisdirectButton="true" 
+                            attrSourceOriginator="{!wrapper.SourceOriginator}" attrInteractionId="{!wrapper.Interaction.Id}" attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="{!wrapper.CaseObj.Topic__c}" attrLocation=""/>   
+             </apex:outputPanel>             
+        
+    </apex:form> 
+       <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" /> 
+</apex:page>

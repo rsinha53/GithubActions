@@ -1,0 +1,869 @@
+<aura:component controller="ACET_FAST_PIRDetailCtrl" implements="force:lightningQuickActionWithoutHeader,flexipage:availableForRecordHome,force:hasRecordId">
+    <!-- Attributes -->
+    <aura:attribute name="activeSections" type="List" default="['A','B','C','D','E','F','G','H']" />
+    <aura:attribute name="editPIRVar" type="boolean" default="false"/>
+    <aura:attribute name="recordId" type="id"/>
+    <aura:attribute name="pirId" type="id"/>
+    <aura:attribute name="caseRec" type="Case" default="{'sObjectType':'Case', 'CaseNumber':''}"/>
+    <aura:attribute name="pirRec" type="PIR_Detail__c" default="{'sObjectType':'PIR_Detail__c'}"/>
+    <aura:attribute name="userDetails" type="User"/>
+    <aura:attribute name="closeMandate" type="boolean" default="false"/>
+    <aura:attribute name="parentRecordType" type="string" default=""/>
+    <aura:attribute name="OPOuser" type="boolean" default="false"/>
+    <aura:attribute name="RorPuser" type="boolean" default="false"/>
+    <aura:attribute name="availableProductList" type="List" default="[]" description="Product List"/>
+    <aura:attribute name="selectedProductList" type="List" default="[]" description="Selected Products"/>
+    
+    <!-- Root Cause Attributes -->
+    <aura:attribute name="rootCause1" type="string" />
+    <aura:attribute name="rootCause1Value" type="string" />
+    <aura:attribute name="rootCause1List" type="List" />
+    <aura:attribute name="rootCause2" type="string"/>
+    <aura:attribute name="rootCause2Value" type="string"/>
+    <aura:attribute name="rootCause2List" type="List" />
+    <aura:attribute name="rootCause3" type="string"/>
+    <aura:attribute name="rootCause3Value" type="string"/>
+    <aura:attribute name="rootCause3List" type="List" />
+    <aura:attribute name="rootCause4" type="string"/>
+    <aura:attribute name="rootCause4Value" type="string"/>
+    <aura:attribute name="rootCause4List" type="List" />
+    <aura:attribute name="rootCause5" type="string"/>
+    <aura:attribute name="rootCause5Value" type="string"/>
+    <aura:attribute name="rootCause5List" type="List" />
+    <!-- Root Cause Attributes -->
+    
+    <aura:attribute name="isPMOContact" type="boolean" default="true" />
+    
+    <!-- Attributes -->
+    
+    <!-- WorkSpace -->
+    <lightning:workspaceAPI aura:id="workspace" />
+    <!-- Workspace -->
+    
+    <!-- Notification Library -->
+    <lightning:notificationsLibrary aura:id="notificationsLibrary"/>
+    <!-- Notification Library -->
+    
+    <!-- Handlers -->
+    <aura:handler name="init" value="{!this}" action="{!c.getCaseRec}"/>
+    <aura:handler name="change" value="{!v.caseRec}" action="{!c.getPIRID}"/>
+    <!-- Handlers -->
+    
+    <!-- Spinner -->
+    <div style="text-align:center">
+        <lightning:spinner class="slds-hide" aura:id="dropdown-spinner" alternativeText="Loading.." title="Loading.." variant="brand" size="large" style="z-index:99" />        
+    </div>
+    <!-- Spinner -->
+    
+    <!-- Card -->
+    <lightning:card class="slds-text-heading_small slds-card_boundary ">
+        <div class="slds-p-around_medium">
+            <div class="slds-box" style="padding:0px;">    
+                <div class="slds-page-header">
+                    <div class="slds-page-header__row">
+                        <div class="slds-page-header__col-title">
+                            <div class="slds-media">
+                                <div class="slds-media__figure" >
+                                    <span class="slds-icon_container slds-icon-standard-opportunity" title="Case">
+                                        <lightning:icon iconName="standard:case" alternativeText="Case" title="Case" />
+                                        <span class="slds-assistive-text" >Case</span>
+                                    </span>
+                                </div>
+                                <div class="slds-media__body">
+                                    <div class="slds-page-header__name">
+                                        <div class="slds-page-header__name-title">
+                                            <h1>
+                                                <span class="slds-page-header__title slds-truncate" title="Case Overview" style="font-weight:bold;">Case Overview</span>
+                                            </h1>
+                                        </div>
+                                    </div>
+                                    <p class="slds-page-header__name-meta">{!v.caseRec.CaseNumber}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Body -->
+        
+        <!-- New -->
+        
+        <!-- New -->
+        <aura:if isTrue="{!v.parentRecordType=='Proactive Action'}">
+            
+            <!-- Proactive Record Type -->
+            <lightning:recordEditForm aura:id="form"
+                                      recordId="{!v.pirId}"
+                                      objectApiName="PIR_Detail__c"     
+                                      onload="{!c.handleonLoad}"
+                                      onsubmit="{!c.handleOnSubmit}"
+                                      onsuccess="{!c.handleOnSuccess}">
+                
+                <lightning:messages/>
+                <lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="{!v.activeSections}">
+                    <div class="slds-p-around_small">
+                        <lightning:accordionSection name="A" label="PIR Issue Detail">
+                            <div class="slds-grid slds-wrap slds-p-top_small">
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="pipStatusId">
+                                            Status
+                                            <lightning:helptext content="Status listed as open when case is open and must be closed to close the case."/>
+                                        </label>
+                                        <lightning:inputfield class="hideIcon"
+                                                              aura:id="pipStatusId" 
+                                                              fieldName="Status__c" 
+                                                              variant="label-hidden"/>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="subStatusId">Sub Status</label>
+                                        <lightning:inputfield aura:id="subStatusId" 
+                                                              fieldName="Substatus__c" 
+                                                              variant="label-hidden" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-grid slds-wrap slds-p-top_small">
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="PMOPRId">PMO Provider Relationship</label>
+                                        <lightning:inputfield aura:id="PMOPRId" 
+                                                              fieldName="PMO_Provider_Relationship__c" 
+                                                              variant="label-hidden"/>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="PMOconId">PMO Contact</label>
+                                        <lightning:inputField aura:id="PMOconId" 
+                                                              fieldName="PMO_Contact__c"
+                                                              variant="label-hidden"/>
+                                                              
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-grid slds-wrap slds-p-top_small">
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="inSourceId">Insight Source</label>
+                                        <lightning:inputfield aura:id="inSourceId" 
+                                                              fieldName="Insight_Source__c" 
+                                                              variant="label-hidden" />
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="inSourceOthId">Insight Source Other</label>
+                                        <lightning:inputField aura:id="inSourceOthId" 
+                                                              fieldName="Insight_Source_Other__c"
+                                                              variant="label-hidden"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-grid slds-wrap slds-p-top_small">
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="sAwareIssueId">SWAT Awareness of Issue?</label>
+                                        <lightning:inputfield aura:id="sAwareIssueId" 
+                                                              fieldName="SWAT_Awareness_of_Issue__c" 
+                                                              variant="label-hidden"/>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="sWATConPartId">SWAT Contact/Partner</label>
+                                        <lightning:inputField aura:id="sWATConPartId" 
+                                                              fieldName="SWAT_Contact_Partner__c"  
+                                                              variant="label-hidden" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-grid slds-wrap slds-p-top_small">
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="proExpDataAttId">Provider Experience Data Attached</label>
+                                        <lightning:inputfield aura:id="proExpDataAttId" 
+                                                              fieldName="Provider_Experience_Data_Attached__c" 
+                                                              variant="label-hidden"/>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="progNameId">Program Name</label>
+                                        <lightning:inputField aura:id="progNameId" 
+                                                              fieldName="Program_Name__c"  
+                                                              variant="label-hidden" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-grid slds-wrap slds-p-top_small">
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="projAreaFocId">Project Area Focus</label>
+                                        <lightning:inputfield aura:id="projAreaFocId" 
+                                                              fieldName="Project_Area_Focus__c" 
+                                                              variant="label-hidden"/>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="projAreaFocOthId">Project Area Focus Other</label>
+                                        <lightning:inputField aura:id="projAreaFocOthId" 
+                                                              fieldName="Project_Area_Focus_Other__c"  
+                                                              variant="label-hidden" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-grid slds-wrap slds-p-top_small">
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="platFormSysId">PlatForm/System</label>
+                                        <lightning:inputfield aura:id="platFormSysId" 
+                                                              fieldName="Platform_System__c" 
+                                                              variant="label-hidden" />
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="platFormSysOthId">Platform/System Other</label>
+                                        <lightning:inputField aura:id="platFormSysOthId" 
+                                                              fieldName="Platform_System_Other__c"  
+                                                              variant="label-hidden" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-grid slds-wrap slds-p-top_small">
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="mboCheckListId">MBO Check List</label>
+                                        <lightning:inputfield aura:id="mboCheckListId" 
+                                                              fieldName="MBO_Check_List__c" 
+                                                              variant="label-hidden" />
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="mboCheckListOthId">MBO Check List Other</label>
+                                        <lightning:inputField aura:id="mboCheckListOthId" 
+                                                              fieldName="MBO_Check_List_Other__c"  
+                                                              variant="label-hidden" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-grid slds-wrap slds-p-top_small">
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="provTypeId">Provider Type</label>
+                                        <lightning:inputfield aura:id="provTypeId" 
+                                                              fieldName="Provider_Type__c" 
+                                                              variant="label-hidden"/>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="provTypeotId">Provider Type Other</label>
+                                        <lightning:inputField aura:id="provTypeotId" 
+                                                              fieldName="Provider_Type_Other__c"  
+                                                              variant="label-hidden" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-grid slds-wrap slds-p-top_small">
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="MeasurSysId">Measurement System</label>
+                                        <lightning:inputfield aura:id="MeasurSysId" 
+                                                              fieldName="Measurement_System__c" 
+                                                              variant="label-hidden"  />
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="sourceOfDataId">Sources of Data</label>
+                                        <lightning:inputField aura:id="sourceOfDataId" 
+                                                              fieldName="Sources_of_Data__c"  
+                                                              variant="label-hidden" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-grid slds-wrap slds-p-top_small">
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="queriesId">Queries</label>
+                                        <lightning:inputfield aura:id="queriesId" 
+                                                              fieldName="Queries__c" 
+                                                              variant="label-hidden" />
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="dataAnalysisId">Data Analysis</label>
+                                        <lightning:inputField aura:id="dataAnalysisId" 
+                                                              fieldName="Data_Analysis__c" 
+                                                              variant="label-hidden" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-grid slds-wrap slds-p-top_small">
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="e2ePriorId">E2E Priority</label>
+                                        <lightning:inputField aura:id="e2ePriorId" 
+                                                              fieldName="E2E_Priority__c"  
+                                                              variant="label-hidden" />
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="issueDetecId">Issue Detection?</label>
+                                        <lightning:inputField aura:id="issueDetecId" 
+                                                              fieldName="Issue_Detection__c"  
+                                                              variant="label-hidden" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-grid slds-wrap slds-p-top_small">
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="issuePrvenId">Issue Prevention?</label>
+                                        <lightning:inputfield aura:id="issuePrvenId" 
+                                                              fieldName="Issue_Prevention__c" 
+                                                              variant="label-hidden"/>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="oiaRequiredId">OIA Required</label>
+                                        <lightning:inputfield aura:id="oiaRequiredId" 
+                                                              fieldName="OIA_Required__c" 
+                                                              variant="label-hidden"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-grid slds-wrap slds-p-top_small">
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="govStatusId">Governance Status</label>
+                                        <lightning:inputField aura:id="govStatusId" 
+                                                              fieldName="Governance_Status__c"  
+                                                              variant="label-hidden" />    
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="GovCommentsId">Governance Comments</label>
+                                        <lightning:inputfield aura:id="GovCommentsId" 
+                                                              fieldName="Governance_Comments__c" 
+                                                              variant="label-hidden"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-grid slds-wrap slds-p-top_small">	
+                                <div class="slds-col slds-size_6-of-12">
+                                    <div class="slds-p-horizontal_small">
+                                        <label for="caseOwnerId">Case Owner</label>
+                                        <lightning:inputfield aura:id="caseOwnerId" 
+                                                              fieldName="Case_Owner__c" 
+                                                              variant="label-hidden"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </lightning:accordionSection>
+                    </div>
+                    
+                    <!-- Root cause Edit Section -->
+                    <div class="slds-p-around_small">
+                        <lightning:accordionSection name="B" label="Root Cause">
+                            <div class="slds-p-top_small slds-p-horizontal_small">
+                                <lightning:select name="Root Cause 1" 
+                                                  label="Root Cause 1" 
+                                                  value="{!v.rootCause1}"
+                                                  onchange="{!c.handleRC1Change}"
+                                                  aura:id="rc1CodeId">
+                                    <option value="">--Select--</option>
+                                    <aura:iteration items="{!v.rootCause1List}" var="rc1">
+                                        <option value="{!rc1.rcCode}" text="{!rc1.rcName}"
+                                                selected="{!if(rc1.rcCode==v.rootCause1,'selected','')}"></option>
+                                    </aura:iteration>
+                                </lightning:select>
+                            </div>
+                            <div class="slds-p-top_small slds-p-horizontal_small">
+                                <lightning:select name="Root Cause 2" 
+                                                  label="Root Cause 2" 
+                                                  value="{!v.rootCause2}"
+                                                  onchange="{!c.handleRC2Change}"
+                                                  aura:id="rc2CodeId"
+                                                  disabled="{!or(v.rootCause1=='',v.rootCause1==null)}">
+                                    <option value="">--Select--</option>
+                                    <aura:iteration items="{!v.rootCause2List}" var="rc2">
+                                        <option value="{!rc2.rcCode}" text="{!rc2.rcName}"
+                                                selected="{!if(rc2.rcCode==v.rootCause2,'selected','')}"></option>
+                                    </aura:iteration>
+                                </lightning:select>
+                            </div>
+                            <div class="slds-p-top_small slds-p-horizontal_small">
+                                <lightning:select name="Root Cause 3" 
+                                                  label="Root Cause 3" 
+                                                  value="{!v.rootCause3}"
+                                                  onchange="{!c.handleRC3Change}"
+                                                  aura:id="rc3CodeId"
+                                                  disabled="{!or(v.rootCause2=='',v.rootCause2==null)}">
+                                    <option value="">--Select--</option>
+                                    <aura:iteration items="{!v.rootCause3List}" var="rc3">
+                                        <option value="{!rc3.rcCode}" text="{!rc3.rcName}"
+                                                selected="{!if(rc3.rcCode==v.rootCause3,'selected','')}"></option>
+                                    </aura:iteration>
+                                </lightning:select>
+                            </div>
+                            <div class="slds-p-top_small slds-p-horizontal_small">
+                                <lightning:select name="Root Cause 4" 
+                                                  label="Root Cause 4" 
+                                                  value="{!v.rootCause4}"
+                                                  onchange="{!c.handleRC4Change}"
+                                                  aura:id="rc4CodeId"
+                                                  disabled="{!or(v.rootCause3=='',v.rootCause3==null)}">
+                                    <option value="">--Select--</option>
+                                    <aura:iteration items="{!v.rootCause4List}" var="rc4">
+                                        <option value="{!rc4.rcCode}" text="{!rc4.rcName}"
+                                                selected="{!if(rc4.rcCode==v.rootCause4,'selected','')}"></option>
+                                    </aura:iteration>
+                                </lightning:select>
+                            </div>
+                            <div class="slds-p-top_small slds-p-horizontal_small">
+                                <lightning:select name="Root Cause 5" 
+                                                  label="Root Cause 5" 
+                                                  value="{!v.rootCause5}"
+                                                  onchange="{!c.handleRC5Change}"
+                                                  aura:id="rc5CodeId"
+                                                  disabled="{!or(v.rootCause4=='',v.rootCause4==null)}">
+                                    <option value="">--Select--</option>
+                                    <aura:iteration items="{!v.rootCause5List}" var="rc5">
+                                        <option value="{!rc5.rcCode}" text="{!rc5.rcName}"
+                                                selected="{!if(rc5.rcCode==v.rootCause5,'selected','')}"></option>
+                                    </aura:iteration>
+                                </lightning:select>
+                            </div>
+                        </lightning:accordionSection>
+                    </div>
+                    <!-- Root cause EDIT Section -->
+                </lightning:accordion>
+                <div class="slds-align_absolute-center">
+                    <lightning:button variant="brand" label="Save" type="submit" />
+                    <lightning:button variant="Neutral" label="Cancel" onclick="{!c.closeAction}" />
+                </div>
+            </lightning:recordEditForm>
+            
+            <aura:set attribute="else">
+                <!-- Reactive Record Type -->
+                <lightning:recordEditForm aura:id="FASTform"
+                                          recordId="{!v.pirId}"
+                                          objectApiName="PIR_Detail__c"     
+                                          onload="{!c.handleonLoad}"
+                                          onsubmit="{!c.handleOnSubmit}"
+                                          onsuccess="{!c.handleOnSuccess}"
+                                          onerror="{!c.handleError}">
+                    
+                    <lightning:messages aura:id="fastMessage"/>
+                    <lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="{!v.activeSections}">
+                        <!-- PIR Issue Detail -->
+                        <div class="slds-p-around_small">
+                            <lightning:accordionSection name="A" label="PIR Issue Detail">
+                                <div class="slds-grid slds-wrap slds-p-top_small">
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="statusId">
+                                                Status
+                                            	<lightning:helptext content="Status listed as open when case is open and must be closed to close the case."/>
+                                            </label>
+                                            <lightning:inputfield aura:id="statusId" 
+                                                                  fieldName="Status__c" 
+                                                                  variant="label-hidden"
+                                                                  class="hideIcon"/>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="caseOwnerId">Case Owner</label>
+                                            <lightning:inputfield aura:id="caseOwnerId" 
+                                                                  fieldName="Case_Owner__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                </div> 
+                                <div class="slds-grid slds-wrap slds-p-top_small">
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="issueCtgryId">Issue Category</label>
+                                            <lightning:inputfield aura:id="issueCtgryId" 
+                                                                  fieldName="Issue_Category__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="issueSubCtgryId">Issue Subcategory</label>
+                                            <lightning:inputfield aura:id="issueSubCtgryId"
+                                                                  fieldName="Issue_Subcategory__c" 
+                                                                  variant="label-hidden"
+                                                                  value="{!v.pirRec.Issue_Subcategory__c}"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="slds-grid slds-wrap slds-p-top_small">
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="rSubDelayId">Reason for Submission Delay</label>
+                                            <lightning:inputfield aura:id="rSubDelayId" 
+                                                                  fieldName="Reason_for_Submission_Delay__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                     <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="interestBearingId">Interest Bearing?</label>
+                                            <lightning:inputfield aura:id="interestBearingId" 
+                                                                  fieldName="Interest_Bearing__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="slds-grid slds-wrap slds-p-top_small">
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="fastGlobalWorkedId">Global Worked</label>
+                                            <lightning:inputfield aura:id="fastGlobalWorkedId" 
+                                                                  fieldName="FAST_Global_Worked__c" 
+                                                                  variant="label-hidden"/>
+                                        </div> 
+                                    </div>
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="SASID">SAS</label>
+                                            <lightning:inputfield aura:id="SASID" 
+                                                                  fieldName="SAS__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <br/>
+                                            <label for="caseResolutionId">Do NOT Call for Case Resolution</label>
+                                            <lightning:inputfield aura:id="caseResolutionId" 
+                                                                  fieldName="Do_NOT_Call_for_Case_Resolution__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </lightning:accordionSection>
+                        </div>
+                        <!-- PIR Issue Detail -->
+                        
+                        <!-- PIR Details -->
+                        <div class="slds-p-around_small">
+                            <lightning:accordionSection name="B" label="State Specific Information Only">
+                                
+                                <div class="slds-grid slds-wrap slds-p-top_small">
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="RIComplaintTypeID">RI Complaint Type</label>
+                                            <lightning:inputfield aura:id="RIComplaintTypeID" 
+                                                                  fieldName="RI_Complaint_Type__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="RISummaryID">RI Summary of Provider Issue</label>
+                                            <lightning:inputfield aura:id="RISummaryID" 
+                                                                  fieldName="RI_Summary_of_Provider_Issue__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>    
+                                    
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="rpIssueId">LA C and S Reason for Provider Issue</label>
+                                            <lightning:inputfield aura:id="rpIssueId" 
+                                                                  fieldName="LA_C_S_Reason_for_Provider_Issue__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="spIssueId">LA C and S Summary of Provider Issue</label>
+                                            <lightning:inputfield aura:id="spIssueId" 
+                                                                  fieldName="LA_C_S_Summary_of_Provider_Issue__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </lightning:accordionSection>
+                        </div>
+                        <!-- PIR Details -->
+                        
+                        <!-- Progress To Date -->
+                      <!--  <div class="slds-p-around_small">
+                            <lightning:accordionSection name="H" label="Progress To Date">
+                                <div class="slds-grid slds-wrap slds-p-top_small">
+                                    <div class="slds-col slds-size_12-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="progresstoDateId">Progress To Date</label>
+                                            <lightning:inputfield aura:id="progresstoDateId" 
+                                                                  fieldName="Progress_to_Date__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </lightning:accordionSection>
+                        </div>  -->
+                        <!-- Progress To Date -->
+                        
+                        <!-- Global Details -->
+                        <!--div class="slds-p-around_small">
+                            <lightning:accordionSection name="C" label="Global Details">
+                                <div class="slds-grid slds-wrap slds-p-top_small">
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="fstGlbWorkedId">FAST Global Worked</label>
+                                            <lightning:inputfield aura:id="fstGlbWorkedId" 
+                                                                  fieldName="FAST_Global_Worked__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="fstGlbContactNameId">FAST On Shore Contact Name</label>
+                                            <lightning:inputfield aura:id="fstGlbContactNameId" 
+                                                                  fieldName="FAST_On_Shore_Contact_Name__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="fstGlbEligibleId">OGA Sub Status</label>
+                                            <lightning:inputfield aura:id="fstGlbEligibleId" 
+                                                                  fieldName="OGS_Sub_Status__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                </div>                       
+                            </lightning:accordionSection>           
+                        </div-->
+                        <!-- Global Details -->
+                        
+                        <!-- Provider Contact Info -->
+                      <!--  <div class="slds-p-around_small">
+                            <lightning:accordionSection name="F" label="Provider Contact info">
+                                <div class="slds-grid slds-wrap slds-p-top_small">
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="pContactId">Provider Contact</label>
+                                            <lightning:inputfield aura:id="pContactId" 
+                                                                  fieldName="Provider_Contact__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="pcPrefId">Provider Contact Preference</label>
+                                            <lightning:inputfield aura:id="pcPrefId" 
+                                                                  fieldName="Provider_Contact_Preference__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="slds-grid slds-wrap slds-p-top_small">
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="pcPhoneId">Provider Contact Phone</label>
+                                            <lightning:inputfield aura:id="pcPhoneId" 
+                                                                  fieldName="Provider_Contact_Phone__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="pcEmailId">Provider Contact Email</label>
+                                            <lightning:inputfield aura:id="pcEmailId" 
+                                                                  fieldName="PC_External_Contact_Email__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="slds-grid slds-wrap slds-p-top_small">
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="parProviderId">Par Provider</label>
+                                            <lightning:inputfield aura:id="parProviderId" 
+                                                                  fieldName="Par_Provider__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="sCPrdClsId">Submitter to Contact Provider at Closure</label>
+                                            <lightning:inputfield aura:id="sCPrdClsId" 
+                                                                  fieldName="Submitter_to_Contact_Provider_at_Closure__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                </div>                            
+                            </lightning:accordionSection>
+                        </div>    -->
+                        <!-- Provider Contact Info -->
+                        
+                        <!-- Closure Details -->
+                        <div class="slds-p-around_small">
+                            <lightning:accordionSection name="G" label="Closure Details">
+                                <div class="slds-grid slds-wrap slds-p-top_small">
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="wtbciPMgmtId">Will this be closed in Practice Mgmt?</label>
+                                            <lightning:inputfield aura:id="wtbciPMgmtId" 
+                                                                  fieldName="Will_this_be_closed_in_Practice_Mgmt__c" 
+                                                                  variant="label-hidden" />
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="ifNoWhyNotId">If no, why not?</label> 
+                                            <lightning:inputfield aura:id="ifNoWhyNotId" 
+                                                                  fieldName="If_no_why_not__c" 
+                                                                  variant="label-hidden" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="slds-grid slds-wrap slds-p-top_small">
+
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small" >
+                                            <label for="pWasContctedId">Provider Was contacted?</label>
+                                            <lightning:inputfield aura:id="pWasContctedId" 
+                                                                  fieldName="Provider_Was_contacted__c" 
+                                                                  variant="label-hidden" />
+                                        </div>
+                                    </div>
+                                                                        <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="howContactId">How Was Provider Contacted?</label>
+                                            <lightning:inputfield aura:id="howContactId" 
+                                                                  fieldName="How_Was_Provider_Contacted__c"
+                                                                  variant="label-hidden" />
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+                                <div class="slds-grid slds-wrap slds-p-top_small">
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="cloSubStatusId">Closure Status</label>
+                                            <lightning:inputfield aura:id="cloSubStatusId" 
+                                                                  fieldName="Closure_Sub_Status__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="subContactId">
+                                                Submitter to Contact Provider at Closure
+                                            	<lightning:helptext content="Submitter is responsible to contact the Provider upon closure."/>
+                                            </label>
+                                            <lightning:inputfield class="hideIcon"
+                                                                  aura:id="subContactId" 
+                                                                  fieldName="Submitter_to_Contact_Provider_at_Closure__c" 
+                                                                  variant="label-hidden"/>
+                                        </div>
+                                    </div>                                 
+                                </div>
+                            </lightning:accordionSection>
+                        </div>
+                        <!-- Closure Details -->
+                        
+                        <!-- Reopen Details -->
+                        <div class="slds-p-around_small">
+                            <lightning:accordionSection name="H" label="ReOpen Details">
+                                <div class="slds-grid slds-wrap slds-p-top_small">
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="ReOpenedDate">ReOpened Date</label>
+                                            <lightning:inputfield aura:id="ReOpenedDate" 
+                                                                  fieldName="Reopened_Date__c" 
+                                                                  variant="label-hidden" 
+                                                                  disabled="true" 
+                                                                  readonly="true"/>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="ReOpenReason">ReOpen Reason</label>
+                                            <lightning:inputField aura:id="ReOpenReason" 
+                                                                  fieldName="Reopen_Reason__c"  
+                                                                  variant="label-hidden" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="slds-grid slds-wrap slds-p-top_small">
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="ReOpenedDetails">ReOpened Details</label>
+                                            <lightning:inputfield aura:id="ReOpenedDetails" 
+                                                                  fieldName="Reopened_Details__c" 
+                                                                  variant="label-hidden" />
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_6-of-12">
+                                        <div class="slds-p-horizontal_small">
+                                            <label for="OrgDateTime">Original Date Time Closed</label>
+                                            <lightning:inputField aura:id="OrgDateTime" 
+                                                                  fieldName="Original_Date_Time_Closed__c"  
+                                                                  variant="label-hidden" />
+                                        </div>
+                                    </div>
+                                    <aura:if isTrue="{!v.OPOuser}">
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:helptext content="This field is used to override the closed date for TAT purposes. This field can only be edited by members of the OPO PIR Team." class="customIcon" />
+                                                <label for="OverrideDateforClosed">Override Date for Closed</label>
+                                                <lightning:inputField aura:id="OverrideDateforClosed" 
+                                                                      fieldName="Override_Date_for_Closed__c" 
+                                                                      variant="label-hidden" />                                           
+                                            </div>                                        
+                                        </div>
+                                    </aura:if>
+                                </div>
+                            </lightning:accordionSection>
+                        </div>
+                        <!-- Reopen Details -->
+                        
+                        <!-- Root cause Edit Section -->
+                       
+                        <!-- Root cause EDIT Section -->
+                        
+                    </lightning:accordion>
+                    <div class="slds-align_absolute-center">
+                        <lightning:button variant="brand" label="Save" type="submit" />
+                        <lightning:button variant="Neutral" label="Cancel" onclick="{!c.closeAction}" />
+                    </div>
+                </lightning:recordEditForm>
+            </aura:set>
+        </aura:if>
+        
+        <!-- Body -->
+    </lightning:card>
+    <!-- Card -->
+    <aura:html tag="style">
+        .slds-modal__container{
+        width: 80%;
+        max-width: 80rem;
+        }
+    </aura:html>
+    <aura:html tag="style">.toastMessage.forceActionsText{
+        white-space : pre-line !important;
+        }
+    </aura:html>
+</aura:component>

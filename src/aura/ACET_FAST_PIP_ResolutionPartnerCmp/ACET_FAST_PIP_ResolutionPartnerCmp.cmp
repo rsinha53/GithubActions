@@ -1,0 +1,148 @@
+<aura:component controller="ACET_FAST_PIP_ResolutionPartnerCtrl" implements="flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:lightningQuickAction,lightning:isUrlAddressable,lightning:actionOverride" access="global" >
+    
+    <!-- Attributes -->
+    <aura:attribute name="caseRecType" type="String" default=""/> 
+    <aura:attribute name="caseNum" type= "Integer" default=""/> 
+    <aura:attribute name="dispFg" type="boolean" default="True"/>
+    <aura:attribute name="resolutionType" type="string"  default="Reactive Resolution Partners"/>
+    <aura:attribute name="caseWrap" type="ACET_FAST_PIP_ResolutionPartnerCtrl.caseResolutionWrapper"/>
+    <aura:attribute name="rpReactiveRecordtypeId" type="String" default=""/>
+    <aura:attribute name="rpProactiveRecordtypeId" type="String" default=""/>
+    <!-- Attributes -->
+    
+    <!-- handlers -->
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" /> 
+    <!-- handlers -->
+    
+    <!-- Notification Library -->
+    <lightning:notificationsLibrary aura:id="notificationsLibrary"/>
+    <!-- Notification Library --> 
+    
+    <!-- WorkSpace -->
+    <lightning:workspaceAPI aura:id="workspace" />
+    <!-- Workspace -->
+    
+    <!-- Pop Up -->
+    <aura:if aura:id="memberCardSpinnerAI" isTrue="{!v.dispFg }">
+      <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close">
+                        <lightning:icon iconName="utility:close" size="x-large" alternativeText="Close" onclick="{!c.goBackToCase}" />
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 id="modal-heading-01" class="slds-modal__title slds-hyphenate">{!v.resolutionType}</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                    <!-- FAST Type -->
+                    <aura:if isTrue="{!v.caseRecType=='Reactive Resolution'}">
+                        <lightning:recordEditForm aura:id="FastPipForm" 
+                                                  objectApiName="PIR_Resolution_Partner__c"
+                                                  onsuccess="{!c.handleOnSuccess}"
+                                                  onsubmit="{!c.onRecordSubmit}"
+                                                  recordTypeId="{!v.rpReactiveRecordtypeId}"> 
+                          <lightning:messages aura:id="fastMessage"/>
+                            <div class="slds-card slds-card_boundary"> 
+                                <lightning:inputField aura:id="fastRPName" fieldName="Provider_Matrix_Reactive__c"  />
+                                <lightning:inputField aura:id="escalNote" fieldName="Escalation_Notes__c" />       
+                               <!-- <lightning:inputField aura:id="slaRoute" fieldName="SLA_Routed_Date__c" />-->
+                                <lightning:inputField aura:id="rpOutcome" fieldName="Resolution_Partner_Outcome__c"  />
+                                <lightning:inputField aura:id="slaComplete" fieldName="SLA_Completion_Date__c" />
+                              <!-- <aura:if isTrue="{!v.caseWrap.objectName =='Case'}"> -->
+                                <lightning:inputField fieldName="Case__c" 
+                                                      value="{!v.caseWrap.caseRec.Id}" 
+                                                      disabled="true"/>
+                             <!-- </aura:if> -->
+                                <aura:if isTrue="{!v.caseWrap.objectName =='Case_Item__c'}">
+                                <lightning:inputField fieldName="Case_Item__c" 
+                                                      value="{!v.caseWrap.caseItemRec.Id}" 
+                                                      disabled="true"/>
+                                </aura:if>
+                            </div>
+                            <div class="slds-align_absolute-center">             
+                                <lightning:button variant="brand" type="submit" name="Save" label="Save"/>
+                                <lightning:button variant="brand" name="Cancel" label="Cancel" onclick="{!c.goBackToCase}" /> 
+                            </div> 
+                        </lightning:recordEditForm>
+                    </aura:if>
+                    <!-- FAST Type -->
+                    
+                    <!-- PIP Type -->
+                    <aura:if isTrue="{!v.caseRecType=='Proactive Action'}">
+                        <lightning:recordEditForm aura:id="FastPipForm" 
+                                                  objectApiName="PIR_Resolution_Partner__c" 
+                                                  onsuccess="{!c.handleOnSuccess}"
+                                                  onsubmit="{!c.onRecordSubmit}"
+                                                  recordTypeId="{!v.rpProactiveRecordtypeId}">
+                          <lightning:messages aura:id="pipMessage"/>
+                            <div class="slds-card slds-card_boundary"> 
+                                <lightning:inputField fieldName="Case__c" 
+                                                      value="{!v.caseWrap.caseRec.Id}"
+                                                      disabled="true"/>                            
+                                <lightning:inputField aura:id="pipRPName"  fieldName="Provider_Matrix_Proactive__c"/>
+                                <lightning:inputField fieldName="Partner_Reference_Number__c" />
+                                <lightning:inputField fieldName="Comments__c" />
+                            </div>
+                            <div class="slds-align_absolute-center">
+                                
+                                <lightning:button variant="brand" type="submit" name="Save" label="Save" />
+                                <lightning:button variant="brand" name="Cancel" label="Cancel" onclick="{!c.goBackToCase}" />
+                            </div>
+                        </lightning:recordEditForm>
+                    </aura:if>
+                    <!-- PIP Type -->
+                </div>
+            </div>
+       </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+    <!--Case Item Popup-->
+    <!--
+    <aura:if aura:id="memberCardSpinnerAI" isTrue="{!and(v.dispFg, v.caseWrap.objectName =='Case_Item__c')}">
+        <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close">
+                        <lightning:icon iconName="utility:close" size="x-large" alternativeText="Close" onclick="{!c.goBackToCase}" />
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 id="modal-heading-01" class="slds-modal__title slds-hyphenate">{!v.resolutionType}</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                    <lightning:recordEditForm aura:id="CaseItemForm" 
+                                                  objectApiName="PIR_Resolution_Partner__c"
+                                                  onsuccess="{!c.handleOnSuccess}"
+                                                  onsubmit="{!c.onRecordSubmitCaseItem}"
+                                                  recordTypeId="{!v.rpReactiveRecordtypeId}"> 
+                          <lightning:messages aura:id="fastMessage"/>
+                            <div class="slds-card slds-card_boundary"> 
+                                <lightning:inputField aura:id="fastRPName" fieldName="Provider_Matrix_Reactive__c"  />
+                                <lightning:inputField aura:id="escalNote" fieldName="Escalation_Notes__c" />       
+                                <lightning:inputField aura:id="slaRoute" fieldName="SLA_Routed_Date__c" />
+                                <lightning:inputField aura:id="rpOutcome" fieldName="Resolution_Partner_Outcome__c"  />
+                                <lightning:inputField aura:id="slaComplete" fieldName="SLA_Completion_Date__c" />
+                                <lightning:inputField fieldName="Case_Item__c" 
+                                                      value="{!v.caseWrap.caseItemRec.Id}" 
+                                                      disabled="true"/>
+                            </div>
+                            <div class="slds-align_absolute-center">             
+                                <lightning:button variant="brand" type="submit" name="Save" label="Save"/>
+                                <lightning:button variant="brand" name="Cancel" label="Cancel" onclick="{!c.goBackToCase}" /> 
+                            </div> 
+                        </lightning:recordEditForm>
+                </div>
+                </div>
+                </section>
+    </aura:if>
+    -->
+    <!-- Pop Up -->
+    
+    <!-- HTML Styles -->
+    <aura:html tag="style">
+        .slds-modal__container{
+        width: 50%;
+        max-width: 50rem;
+        }
+    </aura:html>
+    <!-- HTML Styles -->
+</aura:component>

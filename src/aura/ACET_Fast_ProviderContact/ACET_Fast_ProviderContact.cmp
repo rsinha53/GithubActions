@@ -1,0 +1,177 @@
+<aura:component controller="ACET_Fast_ProviderContactCtrl" implements="flexipage:availableForAllPageTypes,force:appHostable,lightning:isUrlAddressable,force:lightningQuickAction,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes"
+                access="global">
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute name="enableContinuebutton" type="boolean" default="false"/>
+    <aura:attribute name="dataFromTrigger" type="boolean" default="false"/>
+    <aura:attribute name="contactValues" type="boolean" default="false"/>
+    <aura:attribute name="enableContinue" type="boolean" default="false"/>
+    <aura:attribute name="profileName" type="String"/>
+    <aura:attribute name="caseRecordType" type="String"/>
+    <ltng:require scripts="{!$Resource.ACET_SAESessionData}" />
+    <aura:registerEvent name="updateInteractionDetails" type="c:ACET_UpdateInteractionDetailsAppEvt"/>
+    <aura:registerEvent name="SAE_ProviderValidationFromMemberEvent" type="c:SAE_ProviderValidationFromMemberEvent"/>    
+    <lightning:navigation aura:id="navService"/>
+    <aura:attribute name="pageReference" type="Object"/>
+    <aura:attribute name="contacts" type="String"/>
+    <aura:attribute name="selectedProviderDetails" type="Object"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:attribute name="interactionType" type="String" default="" />
+    <aura:attribute name="flowDetails" type="Object" />
+    <aura:attribute name="providerDetails" type="Object" />
+    <aura:attribute name="selectedProviderRecord" type="Object" />
+    <aura:attribute name="providerDataVar" type="Object" />
+    <aura:attribute name="noProviderDataVar" type="Object" />
+    <aura:attribute name="contactPreferenceOptions" type="List" default="[{'label':'Both','value':'both'},
+                                                                         {'label':'Phone','value':'phone'},
+                                                                         {'label':'Email','value':'email'}]"/>
+    <aura:attribute name="parProviderOptions" type="List" default="[{'label':'Yes','value':'Yes'},
+                                                                   {'label':'No','value':'No'}]"/>
+    <aura:attribute name="providerContactDetails" type="Object" />
+    <aura:attribute name="isMemSearchDisabledFromPrv" type="Boolean" />
+    <!-- <aura:handler name="change" value="{!v.isMemSearchDisabledFromPrv}" action="{!c.handleMemSearchDisabledFromPrvChange}" />-->
+    <aura:handler name="change" value="{!v.selectedProviderRecord}" action="{!c.handleSelectedProvider}" />
+    <aura:attribute name="calloutMemberNotFound" type="Boolean" default="false" />
+    <aura:attribute name="stateOptions" type="List" />
+    <aura:handler event ="c:ACETFast_ProviderFlowDetailsEvent" action="{!c.appEventTriggMethod}"/>
+    <c:ACET_Silk_Spinner></c:ACET_Silk_Spinner>
+    
+    <lightning:layoutItem flexibility="grow" size="8" class="headerSectionHeight" >
+        <div class="headerClass" style="margin-bottom:5%">Provider Contact</div>
+    </lightning:layoutItem>
+    <aura:if isTrue="{!v.caseRecordType == 'Reactive Resolution' }">
+        
+        <lightning:layoutItem flexibility="grow" size="10">
+            <lightning:layout multipleRows="true">
+                <lightning:layoutItem flexibility="grow" size="6">
+                    <label for="providerContactNameAI"><span style="color:red;">*</span>Provider Contact</label>
+                    <lightning:input type="text" aura:id="providerContactNameAI" name="providerContactName" label="Provider Contact"
+                                     value="{!v.providerContactDetails.Provider_Contact__c}" 
+                                     class="slds-m-right_x-small" required="true" onchange="{!c.enableButton}" variant="label-hidden"/>
+                </lightning:layoutItem>
+                
+                <lightning:layoutItem flexibility="grow" size="6">
+                    <label for="providerContactPreferenceAI"><span style="color:red;">*</span>Provider Contact Preference</label>
+                    <lightning:combobox aura:id="providerContactPreferenceAI" name="providerContactPreference" label="Provider Contact Preference"
+                                        value="{!v.providerContactDetails.Provider_Contact_Preference__c}" 
+                                        options ="{!v.contactPreferenceOptions}"
+                                        class="slds-m-right_x-small" required="true" onchange="{!c.enableButton}" variant="label-hidden"/>
+                </lightning:layoutItem>
+            </lightning:layout>
+            
+            <br/>
+            <lightning:layout multipleRows="true">
+                <lightning:layoutItem flexibility="grow" size="6">
+                    <label for="providerContactPhoneAI"><span style="color:red;">*</span>Provider Contact Phone</label>
+                    <lightning:input type="tel" 
+                                     aura:id="providerContactPhoneAI" 
+                                     name="providerContactPhone" 
+                                     label="Provider Contact Phone"
+                                     value="{!v.providerContactDetails.Provider_Contact_Phone__c}" 
+                                     class="slds-m-right_x-small" 
+                                     pattern="[0-9]{10}"  
+                                     messageWhenPatternMismatch ="Enter 10 digits" 
+                                     required="true" 
+                                     maxlength="10" 
+                                     minlength="10"
+                                     onblur="{!c.validatePhone}"
+                                     variant="label-hidden"/>
+                </lightning:layoutItem> 
+                
+                <br/>
+                
+                <lightning:layoutItem flexibility="grow" size="6">
+                    <label for="providerContactEmailAI"><span style="color:red;">*</span>Provider Contact Email</label>
+                    <lightning:input type="email" aura:id="providerContactEmailAI" name="providerContactEmail" label="Provider Contact Email"
+                                     value="{!v.providerContactDetails.Provider_Contact_Email__c}" 
+                                     class="slds-m-right_x-small" required="true" onchange="{!c.enableButton}" variant="label-hidden"/>
+                </lightning:layoutItem>
+            </lightning:layout>
+            <br/>
+            <lightning:layout multipleRows="true">
+                <lightning:layoutItem flexibility="grow" size="6">
+                    <label for="parProviderAI"><span style="color:red;">*</span>Par Provider</label>
+                    <lightning:combobox aura:id="parProviderAI" name="parProvider" label="Par Provider"
+                                        value="{!v.providerContactDetails.Par_Provider__c}" 
+                                        options ="{!v.parProviderOptions}" required="true" onchange="{!c.enableButton}"
+                                        class="slds-m-right_x-small" disabled= "{!not(v.dataFromTrigger)}" variant="label-hidden"/>
+                </lightning:layoutItem>
+            </lightning:layout>
+        </lightning:layoutItem>    
+        
+        <lightning:layoutItem flexibility="grow" size="9" class="slds-m-top_medium">
+            <lightning:button variant="brand" label="Continue" name="continueButton" aura:id="continueBtnID" 
+                              class="searchButton slds-float_right" onclick="{!c.openInteractionOverview}"
+                              disabled= "{!not(v.enableContinue)}"/>
+        </lightning:layoutItem> 
+        
+        <aura:set attribute="else">
+            
+            <lightning:layoutItem flexibility="grow" size="10">
+                <lightning:layout multipleRows="true">
+                    <lightning:layoutItem flexibility="grow" size="6">
+                        <label for="providerContactNameAI">Provider Contact</label>
+                        <lightning:input type="text" aura:id="providerContactNameAI" name="providerContactName" label="Provider Contact"
+                                         value="{!v.providerContactDetails.Provider_Contact__c}" 
+                                         class="slds-m-right_x-small"
+                                         variant="label-hidden"/>
+                    </lightning:layoutItem>
+                    
+                    <lightning:layoutItem flexibility="grow" size="6">
+                        <label for="providerContactPreferenceAI">Provider Contact Preference</label>
+                        <lightning:combobox aura:id="providerContactPreferenceAI" name="providerContactPreference" label="Provider Contact Preference"
+                                            value="{!v.providerContactDetails.Provider_Contact_Preference__c}" 
+                                            options ="{!v.contactPreferenceOptions}"
+                                            class="slds-m-right_x-small"
+                                            variant="label-hidden"/>
+                    </lightning:layoutItem>
+                </lightning:layout>
+                
+                <br/>
+                
+                <lightning:layout multipleRows="true">
+                    <lightning:layoutItem flexibility="grow" size="6">
+                        <label for="providerContactPhoneAI">Provider Contact Phone</label>
+                        <lightning:input type="tel" 
+                                         aura:id="providerContactPhoneAI" 
+                                         name="providerContactPhone" 
+                                         label="Provider Contact Phone"
+                                         value="{!v.providerContactDetails.Provider_Contact_Phone__c}" 
+                                         class="slds-m-right_x-small" 
+                                         pattern="[0-9]{10}"  
+                                         messageWhenPatternMismatch ="Enter 10 digits" 
+                                         maxlength="10" 
+                                         minlength="10"
+                                         onblur="{!c.validatePIPPhone}"
+                                         variant="label-hidden"/>
+                    </lightning:layoutItem>
+                    
+                    
+                    <lightning:layoutItem flexibility="grow" size="6">
+                        <label for="providerContactEmailAI">Provider Contact Email</label>
+                        <lightning:input type="text" aura:id="providerContactEmailAI" name="providerContactEmail" label="Provider Contact Email"
+                                         value="{!v.providerContactDetails.Provider_Contact_Email__c}" 
+                                         class="slds-m-right_x-small" 
+                                         variant="label-hidden"/>
+                    </lightning:layoutItem>
+                </lightning:layout>    
+                
+                <br/>
+                
+                <lightning:layout multipleRows="true">
+                    <lightning:layoutItem flexibility="grow" size="6">
+                        <label for="parProviderAI">Par Provider</label>
+                        <lightning:combobox aura:id="parProviderAI" name="parProvider" label="Par Provider"
+                                            value="{!v.providerContactDetails.Par_Provider__c}" 
+                                            options ="{!v.parProviderOptions}" class="slds-m-right_x-small" 
+                                            variant="label-hidden"/>
+                    </lightning:layoutItem>
+                </lightning:layout>                 
+            </lightning:layoutItem>    
+            
+            <lightning:layoutItem flexibility="grow" size="9" class="slds-m-top_medium">
+                <lightning:button variant="brand" label="Continue" name="continueButton" aura:id="continueBtnID" 
+                                  class="searchButton slds-float_right" onclick="{!c.openInteractionOverview}" disabled= "{!not(v.enableContinuebutton)}"/>
+            </lightning:layoutItem>
+        </aura:set>
+    </aura:if>   
+</aura:component>

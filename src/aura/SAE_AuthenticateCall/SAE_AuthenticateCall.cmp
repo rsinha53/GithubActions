@@ -1,0 +1,276 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes" access="global" controller="SAEProviderSearch">
+    <!-- US1909477 - Thanish - (30th July 2019)
+	     Purpose - To hide the default page header, use !important style to other components to display page header in those components -->
+    <ltng:require styles="{!$Resource.slds_page_header_hide}" />
+	<ltng:require scripts="{!$Resource.ACET_SAEContactDetails}" />
+    <!-- US1996765 - Thanish - 29th Aug 2019 -->
+    <ltng:require styles="{!$Resource.ACETLink_MasterStyle}" />
+
+	 <!-- Added by Ravindra for interaction tab close -->
+	<!-- close tab after refreshing tab or logout session -->
+    <ltng:require scripts="{!$Resource.ACET_SAEInteractionOverviewStatus}" />
+
+
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:registerEvent name="SAE_GetProviderDetailsAE" type="c:SAE_GetProviderDetailsAE" />
+    <aura:handler event="c:SAE_SetProviderDetailsAE" action="{!c.setProviderDetails}" />
+    <aura:attribute name="providerValidated" type="Boolean" default="false"/>
+    <aura:attribute name="providerDetails" type="Object" />
+    <aura:attribute name="isProviderSearchDisabled" type="Boolean" default="false" />
+    <aura:attribute name="noMemberToSearch" type="Boolean" default="false"/>
+
+    <aura:registerEvent name="SAE_ProviderToMember" type="c:SAE_ProviderToMember" />
+    <aura:handler event="c:SAE_ProviderToMember" action="{!c.disableContinueBtn}" />
+    <aura:attribute name="memberNotFound" type="Boolean" default="false"/>
+    <aura:attribute name="providerNotFound" type="Boolean" default="false"/>
+    <aura:attribute name="interactionType" type="string" default="Incoming Call" />
+    <aura:attribute name="isMemSearchDisabledFromPrv" type="Boolean" default="false" />
+
+    <aura:attribute name="chooseOptions" type="List" default="[
+                                                              {'label': 'Incoming Call', 'value': 'Incoming Call'},
+                                                              {'label': 'Outbound Call', 'value': 'Outbound Call'},
+                                                              {'label': 'Research', 'value': 'Research'},
+                                                              {'label': 'Email', 'value': 'Email'},
+                                                              {'label': 'Fax', 'value': 'Fax'},
+                                                              {'label': 'Portal', 'value': 'Portal'},
+                                                              {'label': 'Mail', 'value': 'Mail'},
+                                                              {'label': 'Text', 'value': 'Text'},
+                                                              {'label': 'Walk-In', 'value': 'Walk-In'},
+                                                              {'label': 'Chat', 'value': 'Chat'},
+                                                              {'label': 'Claim', 'value': 'Claim'}
+                                                              ]" />
+    <!-- US1807554 - Thanish - 19/08/2019 - To transfer dummy provider type from SAE_AuthenticateCall to SAE_MemberCard -->
+    <aura:attribute name="providerType" type="String" default="Physician"/>
+    <aura:attribute name="provTypeOptions" type="List" default="[
+    {'label': 'Physician', 'value': 'Physician'},
+    {'label': 'Facility', 'value': 'Facility'}, ]"/>
+     <!--DE260181 - Sanka -->
+    <aura:attribute name="memberValidated" type="Boolean" default="true" />
+    <aura:registerEvent name="SAE_GetMemberDetailsAE" type="c:SAE_GetMemberDetailsAE" />
+
+    <!-- US1727075: Explorer - Other (Third Party) - Kavinda -->
+    <aura:attribute name="isOtherSearch" type="Boolean" default="false" />
+    <aura:attribute name="isValidOtherSearch" type="Boolean" default="false" />
+
+    <!-- US2031725 - Validation for Explore - Other (Third party) - Kavinda -->
+    <aura:handler name="change" value="{!v.isOtherSearch}" action="{!c.changeOtherSearch}"/>
+    <aura:handler name="change" value="{!v.isValidOtherSearch}" action="{!c.changeOtherSearch}"/>
+
+    <!-- US1909381 - Sarma - 04/09/2019 - Interaction Overview - Other (Third Party) -->
+    <aura:attribute name="otherDetails" type="Object"/>
+
+    <!-- US2039716 - Thanish - 19th Sept 2019 -->
+    <aura:handler event="c:SAE_GetRowDataFromExlporePage" action="{!c.getProviderRowInfoFromResults}" />
+    <aura:attribute name="selectedPrvdDetails" type="Object"/>
+    <aura:attribute name="providerContactName" type="String" default=""/>
+    <aura:attribute name="providerContactNumber" type="String" default=""/>
+
+    <!-- US2070352  Added by Avish 09/25/2019 -->
+    <aura:handler event="c:SAE_SelectedMemberRowEvent" action="{!c.getMemberRowInfoFromResults}" />
+    <aura:attribute name="selectedMemberDetails" type="Object"/>
+    <aura:attribute name="flowType" type="String"/>
+    <aura:attribute name="subjectCard" type="Object"/>
+    <aura:attribute name="findIndividualFlag" type="Boolean"/>
+    <aura:attribute name="memUniqueId" type="String"/>
+    <aura:attribute name="interactionCard" type="Object" />
+    <aura:attribute name="providerSearchFlag" type="Boolean"/>
+    <aura:attribute name="memberContactName" type="String" />
+    <aura:attribute name="memberContactNumber" type="String" />
+    <aura:handler event="c:InteractionEvent" action="{!c.assignInteractionID}"/>
+    <aura:attribute name="interactionID" type="String"/>
+    <aura:attribute name="memberSearches" type="List" />
+    <aura:handler event="c:SAE_SearchedMembersAE" action="{!c.addSearchedMember}"/>
+    <!-- US2070352 -->
+
+    <!-- US1699139 - Continue button - Sanka -->
+    <aura:attribute name="disableContinue" type="Boolean" default="false" />
+    <aura:attribute name="validFlowProvider" type="Boolean" default="false" />
+    <aura:attribute name="validFlowMember" type="Boolean" default="false" />
+    <aura:handler name="change" value="{!v.providerContactName}" action="{!c.providerValidation}"/>
+
+    <!-- US1944108 - Accommodate Multiple Payer ID's - Kavinda -->
+    <aura:attribute name="payerValue" type="String" />
+    <aura:attribute name="payerLabel" type="String" />
+
+    <aura:attribute name="providerSelected" type="Boolean" default="false"/>
+    <aura:registerEvent name="SAE_RefreshProviderCardAE" type="c:SAE_RefreshProviderCardAE"/>
+    <aura:attribute name="mnf" type="String" default=""/>
+    <!--US2132239 : Member Only - No Provider to Search-->    
+    <aura:attribute name="TabsAsHouseHoldsMap" type="Map"/>
+    <aura:attribute name="TabsAsProviderMap" type="Map"/>
+    <aura:attribute name="OpenedOtherTabs" type="Map"/>
+    <aura:attribute name="isNoMemberToSearch" type="Boolean" default="false"/>
+
+    <!-- US2291032: Pilot Minot Changes - Move Continue Button to the Top - KAVINDA -->
+    <aura:handler name="ACET_OpenInteractionFindIndividual" event="c:ACET_OpenInteractionFindIndividual" action="{!c.handleOpenInteractionFindIndividual}"/>
+
+    <!--VCCD Handler Jitendra-->
+    <aura:handler event="c:ACET_VCCDInBoundRouting" action="{!c.handleVCCDEvent}"/>
+    <!--US2631703 - Durga- 08th June 2020-->
+    <aura:attribute name="isVCCD" type="Boolean" default="false"/>
+    <aura:attribute name="VCCDObjRecordId" type="String"/>
+    <!--US2570805 - Sravan -->
+    <aura:attribute name="VCCDQuestionType" type="String"/>
+
+
+    <!--US2076634 - HIPAA Guidelines Button - Sravan-->
+    <aura:handler name="init" value="{!this}" action="{!c.init}"/>
+    <aura:attribute name="hipaaEndpointUrl" type="String" default=""/>
+
+
+    <!-- US1909477 - Thanish - (30th July 2019)
+		 CUSTOM PAGE HEADER -->
+    <div class="slds-card card_padding" style="background: rgb(243, 242, 242);"> <!-- US2045625 - Thanish - 26th Sept 2019 -->
+        <div class="slds-grid">
+            <div class="slds-col slds-has-flexi-truncate">
+                <div class="slds-media slds-no-space slds-grow">
+                    <div class="slds-media__figure">
+                        <span class="slds-icon_container slds-icon-standard-contact_list" title="Explore">
+                            <lightning:icon iconName="custom:custom39" alternativeText="Explore" />
+                        </span>
+                    </div>
+                    <div class="slds-media__body slds-p-top_x-small">
+                        <div class="slds-page-header__name">
+                            <div class="slds-page-header__name-title">
+                                <h1 class="page_header_label slds-m-right_small slds-align-middle slds-truncate" >Explore</h1>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- ACTION BUTTONS -->
+            <!--US2058123 - Pilot - Sanka D.-->
+            <lightning:buttonGroup>
+             <!--US2076634 - HIPAA Guidelines Button - Sravan-->
+             <button class="slds-button slds-button_neutral"  onclick="{!c.handleHippaGuideLines}">HIPAA Guidelines</button>
+            <lightning:button variant="neutral" label="Misdirect" name="misDirectBtnName" class="misdirect_button" onclick="{!c.openMisdirectComp}"/>
+            </lightning:buttonGroup>
+        </div>
+        <!-- PUT PAGE HEADER DETAIL ROW HERE -->
+    </div>
+
+    <!-- US2045625 - Thanish - 26th Sept 2019 -->
+    <div class="slds-is-relative slds-card card_padding" style="width:80%;">
+        <lightning:layout class="card_bottom_margin"> <!-- Regression issue 13 - Thanish - 11th Oct 2019 -->
+            <lightning:layoutItem flexibility="auto">
+                <div>
+                    <div class="component_title field_label_padding">Search</div> <!-- Regression issue 13 - Thanish - 11th Oct 2019 -->
+                    <div style="width: 27%">
+                        <lightning:combobox name="callOptionsName" label="Interaction Type" value="Incoming Call"
+                            placeholder="" options="{!v.chooseOptions}" class="excludeInputPad" onchange="{!c.chooseCallOPtions}" />
+                    </div>
+                </div>
+            </lightning:layoutItem>
+        </lightning:layout>
+        <!-- End of Code - US2045625 - Thanish - 26th Sept 2019 -->
+
+	<!-- US1727075: Explorer - Other (Third Party) - Kavinda: START -->
+        <lightning:layout class="paddingLayouts" > <!-- Regression issue 13 - Thanish - 11th Oct 2019 -->
+            <lightning:layoutItem class="toggle-provider-title" > <!-- Regression issue 13 - Thanish - 11th Oct 2019 -->
+                <div class="component_title boxHeadings">{! if(v.isOtherSearch, 'Other', 'Provider') }</div> <!-- Regression issue 13 - Thanish - 11th Oct 2019 -->
+            </lightning:layoutItem>
+            <lightning:layoutItem class="slds-p-left_x-small">
+                <div class="form-toggle" >
+                    <label class="slds-checkbox_toggle">
+                        <input type="checkbox" class="toggleProvider" name="toggleProvider" value="toggleProvider" aria-describedby="toggleProvider" onclick="{! c.handleOtherToggle }" />
+                        <span id="toggleProvider" class="slds-checkbox_faux_container toggle-faux_container" aria-live="assertive">
+                            <span class="{! ' slds-checkbox_faux toggle-faux_faux ' + ( v.isOtherSearch ? ' active-grey tgl-text-left ' : ' active-blue tgl-text-right ' ) }"><b>{! if(v.isOtherSearch, 'Provider', 'Other') }</b></span>
+                        </span>
+                    </label>
+                </div>
+            </lightning:layoutItem>
+        </lightning:layout>
+        <!-- US1727075: Explorer - Other (Third Party) - Kavinda: END -->
+
+
+        <lightning:layout class="slds-p-top_small">
+            <lightning:layoutItem size="6" class="provider-other-cards border card_right_padding" > <!-- US2045625 - Thanish - 26th Sept 2019 -->
+                <!-- US1727075: Explorer - Other (Third Party) - Kavinda: START --> <!-- US1909381 - Sarma - 04/09/2019 - Interaction Overview - Other (Third Party) : Passing object into child comp-->
+                <aura:If isTrue="{! v.isOtherSearch }" >
+                    <c:ACETLink_OtherSearchCard isValidOtherSearch="{! v.isValidOtherSearch }" otherDetails="{!v.otherDetails}" />
+                    <aura:set attribute="else">
+                        <c:SAE_ProviderCard providerNotFound="{!v.providerNotFound}" providerType="{!v.providerType}"
+                            isMemSearchDisabledFromPrv="{!v.isMemSearchDisabledFromPrv}"
+                            providerContactName="{!v.providerContactName}" providerSelected="{!v.providerSelected}"
+                            validFlowProvider="{!v.validFlowProvider}" isProviderSearchDisabled="{!v.isProviderSearchDisabled}" />
+                        <!-- US2039716 - Thanish - 23rd Sept 2019 -->
+                        <!--<c:SAE_ProviderSearchCard isMemSearchDisabledFromPrv="{!v.isMemSearchDisabledFromPrv}"
+                                                  providerDetails="{!v.providerDetails}" />-->
+                    </aura:set>
+                </aura:If>
+                <!-- US1727075: Explorer - Other (Third Party) - Kavinda: END -->
+            </lightning:layoutItem>
+            <!-- US2045625 - Thanish - 26th Sept 2019 - removed unwanted layout items -->
+            <lightning:layoutItem size="6" class="card_left_padding"> <!-- US2045625 - Thanish - 26th Sept 2019 -->
+                <!--DE260181 - Updated -->
+                <div class="slds-is-relative">
+                    <!--loading spinner start-->
+                    <lightning:spinner class="slds-hide" aura:id="AuthenticateSearch-spinner"
+                                        alternativeText="Loading.." title="Loading.."
+                                        variant="brand" size="medium"/>	
+                    <!-- Loading spinner end-->
+                    <!-- US2291032: Pilot Minot Changes - Move Continue Button to the Top - KAVINDA -->
+                    <c:SAE_MemberCard providerDetails="{!v.providerDetails}"
+                        isMemSearchDisabledFromPrv="{!v.isMemSearchDisabledFromPrv}" otherDetails="{!v.otherDetails}"
+                        isOtherSearch="{!v.isOtherSearch}" mnfCheckBox="{!v.memberNotFound}"
+                        disableMemberSec="{!v.noMemberToSearch}" providerType="{!v.providerType}"
+                        memberValidated="{!v.memberValidated}" isValidOtherSearch="{! v.isValidOtherSearch }"
+                        memberContactNameVal="{!v.providerContactName}"
+                        validFlowMember="{!v.validFlowMember}"
+                        payerValue="{! v.payerValue }" payerLabel="{! v.payerLabel }"
+                        validFlowProvider="{! v.validFlowProvider }"
+                        providerSearchFlag="{! v.providerSearchFlag }"
+                 /> <!-- US1944108 - Accommodate Multiple Payer ID's -->
+             <!-- US1944108 - Accommodate Multiple Payer ID's -->
+                </div>
+                </lightning:layoutItem>
+        </lightning:layout>
+        <lightning:layout> <!-- US2045625 - Thanish - 26th Sept 2019 -->
+            <lightning:layoutItem size="7">
+                <c:SAE_ProviderResultsExplorePage/>
+            </lightning:layoutItem>
+        </lightning:layout>
+        <lightning:layout> <!-- US2045625 - Thanish - 26th Sept 2019 -->
+            <lightning:layoutItem size="12">
+                <div style="float:right">
+                    <!-- <lightning:button variant="brand" label="Continue" title="Brand action" name="continueName"
+                        class="continueBtn brand_button" onclick="{!c.navigateToInteraction}"
+                        disabled="{!(!v.providerNotFound &amp;&amp; v.memberNotFound) ||
+                            v.isMemSearchDisabledFromPrv ||
+                            ( v.noMemberToSearch &amp;&amp; v.isOtherSearch &amp;&amp; v.isValidOtherSearch ) }" /> -->
+
+                    <!-- US1699139 - Continue button - Sanka -->
+                    <!-- US2291032: Pilot Minot Changes - Move Continue Button to the Top - KAVINDA: START -->
+                    <!--<aura:if isTrue="{! v.validFlowMember &amp;&amp; v.validFlowProvider}">
+                        <lightning:button variant="brand" label="Continue" name="continueName"
+                            class="continueBtn brand_button" onclick="{!c.navigateToInteraction}"
+                            disabled="{!(!v.providerNotFound &amp;&amp; v.memberNotFound) ||
+                                v.isMemSearchDisabledFromPrv ||
+                                ( v.noMemberToSearch &amp;&amp; v.isOtherSearch &amp;&amp; v.isValidOtherSearch ) ||
+                                ( v.noMemberToSearch &amp;&amp; v.providerSearchFlag)}" />
+                    </aura:if>
+                    <aura:if isTrue="{! !(v.validFlowMember &amp;&amp; v.validFlowProvider)}">
+                        <lightning:button variant="brand" label="Continue" title="Continue" name="disabledContinue"
+                            class="continueBtn brand_button" onclick="" disabled="true" />
+                    </aura:if>-->
+                    <!-- US2291032: Pilot Minot Changes - Move Continue Button to the Top - KAVINDA: END -->
+
+                    <!-- Temp -->
+                    <!-- <lightning:button variant="brand" label="Continue" title="Continue" name="continueName"
+                            class="continueBtn brand_button" onclick="{!c.navigateToInteraction}"
+                            disabled="{!(!v.providerNotFound &amp;&amp; v.memberNotFound) ||
+                                v.isMemSearchDisabledFromPrv ||
+                                ( v.noMemberToSearch &amp;&amp; v.isOtherSearch &amp;&amp; v.isValidOtherSearch ) ||
+                                ( v.noMemberToSearch &amp;&amp; v.providerSearchFlag)}" /> -->
+
+                    <!--US2058123 - Pilot - Sanka D.-->
+                    <!--<div class="slds-p-top_x-small">
+                        <a href="#" class="link_field_value"> HIPAA Guidelines </a>
+                    </div>-->
+
+                </div> <!-- US2045625 - Thanish - 26th Sept 2019 -->
+            </lightning:layoutItem>
+        </lightning:layout>
+    </div>
+
+</aura:component>

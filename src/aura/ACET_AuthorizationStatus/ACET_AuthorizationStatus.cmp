@@ -1,0 +1,171 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes" access="global" controller="ACET_AuthorizationController">
+    
+    <!-- ATTRIBUTES -->
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute name="AuthorizationStatusInfo" type="Object" access="public" />
+    <aura:attribute name="compName" type="String" />
+    <!-- US2325822 	View Authorizations - ECAA Letter Button Landing Page UI - Sarma - 30-01-2020 -->
+    <aura:attribute name="isMainComponent" type="Boolean" default="true" />
+    <aura:attribute name="interactionRec" type="Interaction__c" />
+    <aura:attribute name="isMedicaidPlan" type="boolean" />
+    <!-- US2263100 - View Authrizations and Notifications - Results and Status Wrap Text UI -->
+    <aura:attribute name="memberTabId" type="string" access="public" />
+    <!-- US2154803 - View Authrizations and Notifications - Inpatient Details Integration -->
+    <aura:attribute type="String" name="authID" />
+    <aura:attribute type="String" name="xrefID" />
+    <aura:attribute type="Object" name="authStatusDetails" />
+    <aura:attribute type="String" name="authType" />
+    <aura:attribute type="String" name="SRN" />
+    <aura:attribute type="String" name="LengthOfStay" />
+    <aura:attribute name="ICUEURL" type="String" access="global" />
+    <!-- US2308090 -->
+    <aura:attribute type="Map" name="TabMap" />
+    <!-- US2061071 - Auto Doc Attributes -->
+    <aura:attribute name="AutodocPageFeature" type="String" />
+    <aura:attribute name="initialClick" type="boolean" default="true" />
+    <aura:attribute name="componentId" type="String" />
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+    <aura:attribute name="spinnerFlag" type="boolean" default="false" />
+    <!-- US2428601 -->
+    <aura:attribute name="isEditSrnBtnClicked" type="boolean" default="false" />
+    <aura:attribute name="isICUEBtnClicked" type="boolean" default="false" />
+    <aura:attribute name="isECAABtnClicked" type="boolean" default="false" />
+    <aura:attribute name="cmpId" type="string" access="public" />
+    <!-- US2271237 - View Authorizations - Update Policies in Auto Doc : Kavinda -->
+	<aura:attribute name="IsAutoDocEnable" type="Boolean" default="true" />
+    <aura:attribute name="assignmentFlag" type="boolean" default="false"/> <!-- US2382470 - Avish -->
+	<aura:attribute name="contactUniqueId" type="string" access="public" />
+    <!--DE334279 - Avish -->
+    <aura:attribute name="uniqueSRN" type="List" default="[]"/>
+    <aura:attribute name="docIdLst" type="List" />
+    <!--DE334279-->
+    <!-- US2382581 -->
+    <aura:attribute name="cardOrder" type="String" />
+    <!--US2076634 - HIPAA Guidelines Button - Sravan-->
+    <aura:attribute name="hipaaEndpointUrl" type="String" default=""/>
+    <aura:attribute name="originatorType" type="string" access="public"/>
+    <!-- DE349016 -->
+    <aura:attribute name="isComponentFullyLoaded" type="boolean" default="true"/>
+	<!-- US2830300 - Thanish - 17th Sep 2020 -->
+    <aura:attribute name="cardDetails" type="Object"/>
+    <aura:attribute name="autodocUniqueId" type="String" default=""/>
+	<aura:attribute name="autodocUniqueIdCmp" type="String" default=""/>
+    <aura:attribute name="enclosingTabId" type="String" default=""/>
+    <aura:attribute name="enableRefreshAutodoc" type="Boolean" default="true"/> <!-- US3125332 - Thanish - 7th Jan 2021-->
+    <!-- /ATTRIBUTES -->
+     <!-- Swapna -->
+    <aura:attribute name="claimNo" type="String" default="" />
+    <aura:attribute name="currentIndexOfOpenedTabs" type="Integer"/>
+    <aura:attribute name="maxAutoDocComponents" type="Integer" default="20"/>
+    <aura:attribute name="isClaimDetail" type="Boolean" default="false"/>
+    <aura:attribute name="currentIndexOfAuthOpenedTabs" type="Integer" />
+    <aura:attribute name="maxAutoDocAuthComponents" type="Decimal" default="0.1"/>
+    <!-- Swapna -->
+    <!-- HANDLERS -->
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:handler event="c:ACET_ECAAUniqueTabEvent" action="{!c.checkduplicateTab}" />
+    <aura:handler event="c:ACET_ECAATabClosed" action="{!c.handleClosedTabID}" />
+    <aura:handler event="lightning:tabClosed" action="{! c.onTabClosed }" />
+    <aura:handler name="change" value="{!v.authStatusDetails}" action="{!c.authStatusDetailsChanged}"/>
+	<!-- DE378121 - Thanish - 22nd Oct 2020  -->
+    <aura:handler name="change" value="{!v.autodocUniqueId}" action="{!c.authStatusDetailsChanged}"/>
+    <aura:handler name="change" value="{!v.autodocUniqueIdCmp}" action="{!c.authStatusDetailsChanged}"/>
+    <aura:handler event="c:ACET_AutoDocRefreshEvent" action="{!c.handleAutodocRefresh}"/> <!-- US3125332 - Thanish - 7th Jan 2021-->
+    <!-- /HANDLERS -->
+
+    <!-- EVENTS -->
+    <aura:registerEvent name="ACET_AuthorizationStatusClose" type="c:ACET_AuthorizationStatusClose" />
+    <!-- /EVENTS -->
+
+    <!-- US2330408  - Avish -->
+    <aura:attribute name="interactionOverviewTabId" type="String" /> 
+    <aura:attribute name="memberId" type="String" />
+
+    <aura:attribute name="callTopicLstSelected" type="sObject[]"/>
+    <aura:attribute name="callTopicTabId" type="String" />
+
+    <!-- US2670259 Swapnil -->
+    <aura:attribute name="isShowLink" type="Boolean" default="true" />
+    <aura:attribute name="currentTabId" type="String" />
+
+    <!--US3653687-->
+    <aura:attribute name="policy" type="SAEPolicyDetailsResult" access="public"/>
+    <aura:attribute name="memberCardData" type="Object" />
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0"/>
+
+    <div style="height: 100%;" class="card_padding slds-card">
+        <!-- HEADER -->
+        <div>
+            <div class="slds-float_left">
+                <lightning:input type="checkbox" checked="{!v.cardDetails.allChecked}" disabled="false" variant="label-hidden" onchange="{!c.selectAll}"/>
+            </div>
+            <div class="slds-float_left component_title">{!'Authorization ' + (v.isMainComponent ? '' : 'Detail ') + 'Status :'}&nbsp;</div>
+            <div class="slds-float_left component_title">
+                <aura:if isTrue="{! and(v.isMainComponent,v.isShowLink) }"> <!-- US2670259 Swapnil -->
+                    <a href="javascript:void(0)" style="color:rgb(0, 109, 204)" onclick="{!c.openAuthorizationDetail}">
+                        {!v.SRN}
+                    </a>
+                    <aura:set attribute="else">
+                        {!v.SRN}
+                    </aura:set>
+                </aura:if>
+            </div>
+
+            <div class="slds-float_right" style="text-align: right;">
+                <lightning:buttonGroup>
+                    <lightning:button label="Edit/Escalate Auth" onclick="{!c.editSRN}"/>
+                    <lightning:button label="ICUE Letter" onclick="{!c.loadICUE}"/>
+                    <lightning:button label="ECAA" onclick="{!c.loadECAA}"/> <!--US3225477 --> <!-- US3172880: UI Change- Change ECAA letter to ECAA - Krishna -->
+                </lightning:buttonGroup>
+                <aura:if isTrue="{!v.isMainComponent}">
+                    <div class="slds-float_right" style="padding-left: 4px;">
+                        <div title="Close Authorization Status" class="slds-icon-action-close slds-icon_container" style="padding:0; cursor: pointer;" onclick="{!c.closeAuthStatus}">
+                            <img src="{!$Resource.SLDS_Close_Icon+'/icons/close_60_black.png'}" style="background: white;" class="slds-icon"/>
+                        </div>
+                     </div>
+                </aura:if>
+            </div>
+        </div>
+
+        <!-- BODY -->
+        <div class="slds-grid slds-wrap" style="width: 100%;">
+            <aura:iteration items="{!v.cardDetails.cardData}" var="i" indexVar="index">
+                <aura:if isTrue="{!i.fieldType != 'hiddenOutputText'}">
+                    <div class="{!v.cardDetails.noOfColumns + ' slds-col card_element_top_margin'}">
+                        <table>
+                            <tr>
+                                <td style="width: 25px; vertical-align: top;">
+                                    <lightning:input type="checkbox" checked="{!i.checked}" disabled="{!i.disableCheckbox}" variant="label-hidden" onchange="{!c.handleSelectCheckBox}" />
+                                </td>
+                                <td>
+                                    <aura:if isTrue="{!i.fieldType == 'outputText'}">
+                                        <div class="slds-form-element">
+                                            <span class="slds-form-element__label">
+                                                {!i.fieldName}
+                                            </span>
+                                            <div class="slds-form-element__control" >
+                                                <div title="{!i.fieldValueTitle}" class="slds-form-element__static">{!i.fieldValue}</div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </aura:if>
+            </aura:iteration>
+        </div>
+        <!-- US2834816	Auto Doc Fast Follower View Authorization - Update Authorization Detail Integration for Work Assignments - Sarma - 05/11/2020 -->
+        <aura:if isTrue="{!v.assignmentFlag}">
+            <div class="slds-card card_top_margin" style="height: 100%;">
+                <c:ACET_AuthAssignments authDetailsObj= "{!v.authStatusDetails.AuthDetailsResponse}" autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}" SRN="{!v.SRN}"/>
+            </div>
+        </aura:if>
+
+        <aura:if isTrue="{!v.isMainComponent}">
+            <div class="slds-card card_top_margin" style="height: 100%;">
+                <c:ACET_AuthorizationNotes authDetailsObj="{!v.authStatusDetails.AuthDetailsResponse}" autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}" SRN="{!v.SRN}" IsAutoDocEnable="{!v.IsAutoDocEnable}"/>
+            </div>
+        </aura:if>
+    </div>
+</aura:component>

@@ -1,0 +1,174 @@
+<!--
+ Name           : OPTUM_NotionalClaimTransactions
+ Created By     : Sanjay Pandey
+ Created Date   : Oct 7th, 2020
+ Description    : US2881450: View Claims
+-->
+<aura:component implements="lightning:isUrlAddressable" controller="OPTUM_MemberSearchService">
+    <aura:attribute name="data" type="List" />
+    <aura:attribute name="Syntheticid" type="String" />
+    <aura:attribute name="nonExpiringPlan" type="Integer" />
+    <aura:attribute name="acctPlanYearEffectiveDate" type="String" />
+    <aura:attribute name="acctPlanYearExpirationDate" type="String" />
+    <aura:attribute name="acctOpenedDate" type="String" />
+    <aura:attribute name="employerAlias" type="String" />
+    <aura:attribute name="memberDetails" type="Object" />
+    <aura:attribute name="acctType" type="List" />
+    <aura:attribute name="Columns" type="List" />
+    <aura:attribute name="options" type="List" />
+    <aura:attribute name="selectedValue" type="String" />
+    <aura:attribute name="Spinner" type="boolean" default="false" />
+    <!-- US3819975 -->
+    <aura:attribute name="errorInResponse" type="boolean" default="false" />
+    <aura:attribute name="noNotionalFound" type="boolean" default="true" />
+    <aura:attribute name="listNotFound" type="boolean" default="false" />
+
+    <aura:attribute name="Flag" type="boolean" />
+    <aura:attribute name="APIResponse" type="boolean" default="false" />
+    <aura:attribute name="response" type="boolean" default="false" />
+    <aura:attribute name="startPage" type="Integer" />
+    <aura:attribute name="endPage" type="Integer" />
+    <aura:attribute name="totalResults" type="Integer" />
+    <aura:attribute name="filteredData" type="boolean" default="false" />
+    <aura:attribute name="pageSize" type="Integer" default="25" />
+    <aura:attribute name="isSending" type="boolean" />
+    <aura:attribute name="ClaimLists" type="List" />
+    <aura:attribute name="filLists" type="List" />
+    <aura:attribute name="claimStatusList" type="List" />
+    <aura:attribute name="receiptStatusList" type="List" />
+    <aura:attribute name="filteredLists" type="List" />
+	<!-- Added by Santhi to Create New Case From Claims Page-->
+     <aura:attribute name="originator" type="String" />
+     <aura:attribute name = "optumInt" type = "Interaction__c"/>
+    <aura:attribute name = "optumEID" type = "String"/>
+     <aura:attribute name="userInfo" type="user" access="public"/> 
+     <aura:attribute name="OriginatorId" type="String" access="global" default=""/>   
+     <!--END Create New Case-->
+	<!-- Added by Dimpy DE386495 Prod-11-12: Claims Tab is blank with no message or claims table-->
+    <aura:attribute name="notionalFilteredList" type="List" />
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:handler name="OPTUM_FilterDataEvent" event="c:OPTUM_FilterDataEvent" action="{!c.showResults}" />
+	<aura:handler name="OPTUM_ResetDataEvent" event="c:OPTUM_ResetDataEvent" action="{!c.clearResults}" />
+	<!--for view Claim Details-->
+    <aura:registerEvent name="appEvent" type="c:OPTUM_SelectedClaimRowEvent" />
+    <aura:attribute name="ShowSelectedClaim" type="Boolean" default="false" />
+    <aura:attribute name="SelectedRow" type="List" />
+    <aura:attribute name="selectedData" type="Object" />
+    <!--sorting-->
+    <aura:attribute name="sortBy" type="String" />
+    <aura:attribute name="sortDirection" type="String" />
+	<aura:attribute name="checkNext" type="Boolean" default="false" />
+    <aura:attribute name="selectedRows" type="List" default="[]" description="reset selected rows..." />
+	<aura:attribute name="faroId" type="String" />
+    <aura:attribute name="accountId" type="String" />
+    <aura:attribute name="selectedClaim" type="String" />
+	<aura:registerEvent name="addClaimDetails" type="c:OPTUM_AddClaimDetailsEvent" />
+	<!-- Added by Dimpy US3223310 Case Comment - Claims Page-->
+	<aura:handler name="caseCommentEvent" event="c:OPTUM_CaseCommentEvent" action= "{!c.handleCaseComments}"/>
+	<aura:attribute name="comments" type="String" access="public"/>
+    <!--END Case Comment-->
+	
+	<!-- Added by Srikanya for auto audoc -->
+    <ltng:require scripts="{!$Resource.ACET_AutodocJS}" />
+    <ltng:require styles="{!$Resource.ACET_MasterStyle}" />
+    <aura:attribute name="autodocUniqueId" type="String" default="claimssnapshot"/>
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default="notionalclaimssnapshot" />
+    <aura:attribute name="tableDetails_prev" type="Object" />
+    <aura:attribute name="showpreview" type="Boolean" default="false" />
+	<aura:attribute name="developerName" type="String" access="public" default="Rollstone"/>
+	<!-- End auto doc-->
+	<!--US3703234: Member with No Accounts-->
+    <aura:attribute name="memAccDetails" type="boolean"/>
+	
+    <div class="white">
+        <aura:if isTrue="{!not(empty(v.options))}">
+            <div class="slds-grid slds-grid--align-spread slds-p-top_small ">
+                        <div class="slds-col--padded slds-p-top_small slds-m-left_x-large ">
+                    <lightning:select name="Account" label="Account" aura:id="Account" value="{!v.selectedValue}" onchange="{!c.onChange}">
+                        <aura:iteration items="{!v.options}" var="item">
+                            <option value="{!item}">{!item}</option>
+                        </aura:iteration>
+                    </lightning:select>
+                </div>
+            
+                <div class="slds-col--padded slds-p-top_small slds-m-top_xx-small">
+			<!--	<lightning:buttonGroup>
+                <lightning:button class="slds-button slds-button_neutral neutral_button" variant="neutral" label="Preview Autodoc" onclick="{!c.openPreview}" />
+                <c:ACETLGT_TTSModal aura:id="cComp" cseTopic="View Claims" int="{!v.optumInt}" intId="{!v.optumInt.Id}"  showCirrus="false" showMemAlerts="false" showSave="true" showMisdirect="false" memberId="{!v.memberDetails.member.faroId}" 
+                                 noAutoDoc = "true" developerName="{!v.developerName}"  autodocUniqueId="{!v.autodocUniqueId}" OriginatorId ="{!v.optumInt.Originator__c}" originator="{!v.optumInt.Originator__c}" isOriginatorModal="true" userInfo="{!v.userInfo}" SubjectId = "{!v.optumInt.Originator__c}" comments="{!v.comments}"/>
+			     </lightning:buttonGroup> -->
+               </div>
+           </div>
+	    <c:OPTUM_FilterData aura:id="childCmp" statusValues="{!v.claimStatusList}" receiptstatusValues="{!v.receiptStatusList}" claimList="{!v.ClaimLists}" />
+            <aura:if isTrue="{!not(empty(v.data))}">
+                <div class="slds-p-left_xx-large slds-p-top_xx-large cls-cart">
+                    Claims: (Total Count: {!v.totalResults})
+                </div>
+                <br />
+                <lightning:datatable keyField="id" data="{! v.ClaimLists }" sortedBy="{!v.sortBy}" sortedDirection="{!v.sortDirection}" onsort="{!c.handleSort}" columns="{!v.Columns}" maxRowSelection="1" resizeColumnDisabled="true"  class="slds-m-top_medium" onrowselection="{!c.selectRow}" selectedRows="{!v.selectedRows}" />
+                <div class="slds-m-top_medium slds-p-bottom_xx-small slds-p-left_xx-small">
+                    <lightning:buttonGroup>
+                        <lightning:button label="Previous" disabled="{!v.startPage == 0}" onclick="{!c.previous}" variant="brand" iconName='utility:back' />
+                        &nbsp; &nbsp; &nbsp;
+                        <lightning:button label="Next" disabled="{!v.endPage >= v.totalResults}" onclick="{!c.next}" variant="brand" iconName='utility:forward' iconPosition='right' />
+                    </lightning:buttonGroup>
+                </div>
+            </aura:if>
+            <aura:if isTrue="{!v.Spinner}">
+                <lightning:spinner alternativeText="Loading, Please Wait..." title="Loading, Please Wait..." variant="brand" size="medium" />
+            </aura:if>
+        </aura:if>
+        <!-- US3819975 -->
+        <br/>
+        <aura:if isTrue="{!(v.APIResponse)}">
+            <div class="slds-box box slds-box_x-small slds-m-left_medium slds-m-bottom_medium slds-m-right_medium">
+                <div class="slds-media slds-p-top_xxx-small slds-p-bottom_x-small slds-p-bottom_small">
+                    <div class="slds-media__figure slds-p-left_x-small slds-p-top_xxx-small ">
+                        <lightning:icon iconName="utility:error" variant="error" size="small"></lightning:icon>
+                    </div>
+                    <div class="slds-media__body">
+                        <p class="slds-card__header-title slds-m-top_x-small">
+                            <p class="cls-cart">System Error</p>
+                        </p>
+                        <p class="cls-cart-title">Please try again later and report if problem persists.</p>
+                    </div>
+                </div>
+            </div>
+        </aura:if>
+        <!-- US3819975 -->
+        <aura:if isTrue="{!and((v.listNotFound),(not(v.noNotionalFound)),(v.memAccDetails))}">
+            <div class="cls-cart slds-text-align_center slds-m-left_medium slds-m-bottom_medium">
+                <p class="cls-cart">No Claim found for this account.</p>
+            </div>
+        </aura:if>
+        <!-- US3819975 -->
+        <aura:if isTrue="{!and((v.noNotionalFound),(v.memAccDetails),(empty(v.data)))}">
+            <div class="cls-cart slds-text-align_center slds-m-left_medium slds-m-bottom_medium">
+                <p class="cls-cart">No notional account found.</p>
+            </div>
+        </aura:if>
+        <!-- US3819975 -->
+        <aura:if isTrue="{!and((not(v.memAccDetails)), (not(v.APIResponse)) )}">
+            <div class="cls-cart slds-text-align_center slds-m-left_medium slds-m-bottom_medium">
+                <p class="cls-cart">No Account found.</p>
+            </div>
+        </aura:if>
+        <br />
+		<div>
+            <aura:if isTrue="{!v.ShowSelectedClaim}">
+                <c:OPTUM_ViewClaimDetails data="{!v.selectedData}" autodocUniqueId="{!v.autodocUniqueId}" />
+            </aura:if>
+        </div>
+		<div>
+            <aura:if isTrue="{!v.ShowSelectedClaim}">
+                <c:OPTUM_AddClaimDetails aura:id="addCD" sid="{!v.Syntheticid}" fid="{!v.faroId}" sClaim="{!v.selectedClaim}" aid="{!v.accountId}" autodocUniqueId="{!v.autodocUniqueId}" />
+            </aura:if>
+        </div>
+    </div>
+	<aura:if isTrue="{!not(empty(v.options))}">
+		<c:OPTUM_CaseComments aura:id="claims"/>
+    </aura:if>
+	<aura:if isTrue="{!v.showpreview}">
+        <c:ACET_PreviewAutoDoc tableDetails_prev="{!v.tableDetails_prev}" isModalOpen="{!v.showpreview}" />
+    </aura:if>
+</aura:component>

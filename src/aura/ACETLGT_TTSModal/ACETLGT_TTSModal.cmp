@@ -1,0 +1,460 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId" access="global" controller="ACETLGT_CaseActionsController" >
+         <aura:handler name="RelatedCases_Support_event" event="c:ACETLGT_RelatedCases_Support_event" action="{!c.handleRelatedCases_Support_event}"/>
+            <aura:attribute name="ExternalIDs" type="list[]" />
+ <aura:attribute name="showrelatedcases" type="boolean" />
+            <aura:attribute name="showrelatedcases1" type="boolean" />
+            <aura:attribute name="parentcaseid" type="string" />
+    <aura:attribute name="highlightPanel_String" type="string"/>
+    <aura:attribute name="isRestrict" type="boolean" default="false"/> <!--For misdirect Reason when coming from Restricted page--> 
+    <aura:attribute name="disabled" type="boolean" default="true"/>
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+    <aura:handler event="c:ACETLGT_COBValidationEvent" action="{!c.updateSaveButton}" />
+    <aura:attribute name="SubjectId" type="String"/>
+    <aura:attribute name="bookOfBusinessTypeCode" type="String"/>
+    <aura:handler event="c:ACETLGT_BookOfBusinessTypeCodeUpdateEvent" action="{!c.updateBookOfBusinessTypeCode}"/>
+    <aura:attribute name="pageNum" type="Integer" default="1"/>
+    <aura:attribute name="originator" type="String" access="public"/>
+    <aura:attribute name="cseTopic" type="String" access="public" />
+    <aura:attribute name="cseTopicHolder" type="String" access="public" />
+    <aura:attribute name="srk" type="String" access="public"/>
+    <aura:attribute name="cseType" type="String" access="public"/>
+    <aura:attribute name="cseSubtype" type="String" access="public"/>
+    <aura:attribute name="sourceOrig" type="String" access="public"/>
+    <aura:attribute name="int" type="Interaction__c" access="public"/>
+    <aura:attribute name="pagefeature" type="String" access="public" />
+    <aura:attribute name="intId" type="String" access="public"/>
+    <aura:attribute name="isModalOpen" type="boolean" default="false"/>
+    <aura:registerEvent name="ttsevent" type="c:ACETLGT_TTSModalEvent" />
+    <aura:registerEvent name="misdirectEvent" type="c:ACETLGT_MisdirectClearSearch" />
+    <aura:registerEvent name="SENSevent" type="c:ACETLGT_SENS_buttonSupportevent" />
+    <aura:attribute name="topicOptions" type="List" access="public"/>
+    <aura:attribute name="typeOptions" type="List" access="public"/>
+    <aura:attribute name="subtypeOptions" type="List" access="public"/>
+    <aura:handler name="init" value="{!this}" action="{!c.init}" />
+    <aura:attribute name="comments" type="String" access="public"/>
+    <aura:attribute name="caseDataWrapper" type="ACETHighlightsPanelAdditionalInfo" access="public"/>
+    <aura:attribute name="highlightPanel" type="ACETLGT_HighlightPanelInfo" access="public"/>
+    <aura:attribute name="highlightPanelstring" type="string" access="public"/>
+	<aura:attribute name="developerName" type="String" access="public" default=""/>
+    <aura:attribute name="autodocHidden" type="String" access="public" />
+    <aura:attribute name="autodocCommentHidden" type="String" access="public" /> 
+    <aura:attribute name="autodocCaseItemsHidden" type="String" access="public" />  
+    <aura:attribute name="callTopicTypeHidden" type="String" access="public"/>
+    <aura:attribute name="callTopicSubTypeHidden" type="String" access="public" />    
+    <aura:attribute name="MigrationIssueHidden" type="String" access="public" />
+    <!-- US2357303 Begin -->
+    <aura:attribute name="EscalatedHidden" type="String" access="public" />
+    <aura:attribute name="ComplaintHidden" type="String" access="public" />
+    <!-- US2357303 End -->
+    <aura:attribute name="selectedCaseIdHidden" type="String" access="public"/>
+    <aura:attribute name="showPCPButton" type="boolean" default="false"/>
+	<aura:attribute name="PCPallowedUser" type="string" access="public" default="false"/>
+	<aura:attribute name="createPCPLink" type="string" access="public" />
+    <aura:attribute name="flwupRequired" type="Boolean" default="false" />
+    <aura:attribute name="flwupDisabled" type="Boolean" />
+    <aura:attribute name="taskRecordTypeId" type="Id" />
+    <aura:attribute name="pageReference" type="Object"/>
+    <aura:attribute name="submitDisabled" type="boolean" default="true"/>
+    
+    <div id="autodocParams">
+    <input type="hidden" id="autodocHidden" />
+    <input type="hidden" id="autodocCommentHidden" />
+    <input type="hidden" id="autodocCaseItemsHidden" aura:id="autodocCaseItemsHidden"/>
+    <input type="hidden" id="callTopicTypeHidden"  value="{!v.callTopicTypeHidden}"/>
+    <input type="hidden" id="callTopicSubTypeHidden"  value="{!v.callTopicSubTypeHidden}"/>
+    <input type="hidden" id="MigrationIssueHidden"  value="{!v.MigrationIssueHidden}"/>
+    <!-- US2357303 Begin -->
+    <input type="hidden" id="EscalatedHidden"  value="{!v.EscalatedHidden}"/>
+    <input type="hidden" id="ComplaintHidden"  value="{!v.ComplaintHidden}"/>
+    <!-- US2357303 End -->
+    <input type="hidden" id="selectedCaseIdHidden"  value="{!v.selectedCaseIdHidden}"/>
+    </div>
+    <aura:attribute name="alertsSize" type="Integer" access="public"  />
+    <aura:attribute name="isMemberAlertModalOpen" type="boolean" default="false"/>
+    <aura:attribute name="memberAlerts" type="List" access="public"/>
+    <aura:attribute name="memberId" type="String" access="public"/>
+    <aura:attribute name="groupId" type="String" access="public"/>
+    <aura:attribute name="showSave" type="boolean" access="public" default="true"/>
+    <aura:attribute name="showConsoleButton" type="boolean" access="public" default="false"/>
+    <aura:attribute name="showMisdirect" type="boolean" access="public" default="true"/>
+    <aura:attribute name="showMisdirectSearch" type="boolean" access="public" default="false"/>
+    <aura:attribute name="showCirrus" type="boolean" access="public" default="true"/>
+    <aura:attribute name="showMemAlertsActive" type="boolean" access="public" default="false"/>
+    <aura:attribute name="showMemAlerts" type="boolean" access="public" default="true"/>
+    <aura:attribute name="showConsumerAccounts" type="boolean" access="public" default="false"/>
+	<aura:attribute name="showSENSButton" type="Boolean" access="public" default="false"/>
+    <aura:attribute name="showEZCommAndContactHistoryButton" type="boolean" access="public" default="true"/>
+    <aura:attribute name="memFirstName" type="String" access="public" default=""/>
+    <aura:attribute name="memLastName" type="String" access="public" default=""/>
+    <aura:attribute name="memDOB" type="String" access="public" default=""/>
+    <aura:attribute name="landingPageOnMemberDetail" type="boolean" access="public" default="false"/>
+    <aura:attribute name="widget" type="String" access="public" default=""/>
+    <aura:attribute name="validTypeForSub" type="String" access="public" default="false"/>
+    <aura:attribute name="validTypeForSub2" type="boolean" access="public" default="false"/>
+    <aura:attribute name="result" type="boolean" default="false"/>
+
+    <aura:attribute name="dropDownSelectedValue" type="String" access="global" />  
+    
+    <!-- MOI Function-->
+    <aura:attribute name="isDropDownHasValue" type="String" access="global" />    
+    <aura:attribute name="isCommentsHasValue" type="String" access="global" />     
+
+    
+    <!-- MOI Errors Section -->
+    <aura:attribute name="isCommentSetError" type="boolean" access="public"/>
+ 	<aura:attribute name = "isSetDropDownError" type= "boolean" access="public"/>    
+	
+    <!-- MOI Boolean-->
+    <aura:attribute name = "isMemberOtherInquiryModal" type= "boolean" access = "global" default = "false"/>  
+    
+    <!-- Pharmacy Boolean-->
+    <aura:attribute name="isPharmacyModal" type="boolean" access = "global" default = "false"/> 
+        
+    <!-- Pharmacy Validation Variables -->
+    <aura:attribute name="PharmacyCommentsValue" type="String" access="public"/>
+    <aura:attribute name="PharmacyCSRFValue" type="String" access="public"/>
+    
+  	<!-- Yes / No Variables -->
+	<aura:attribute name="PharmacyCSRFYes" type="boolean" access="global"/>
+    <aura:attribute name="PharmacyCSRFNo" type="boolean" access="global"/> 
+    
+    <!-- Pharmacy Errors Section -->
+    <aura:attribute name = "isPharCommentSetError" type= "boolean" access = "public"/>
+    <aura:attribute name = "isPharCheckSetError" type= "boolean" access = "public" />
+    <aura:attribute name = "isPharCSRFSetError" type= "boolean"  access="public" />
+    
+    <!-- Pharmacy Inquiry ListDropDown -->
+    <aura:attribute name="valList" type="String[]" access="public"/>    
+
+    <aura:attribute name = "isPharmacyListEmptyError" type= "boolean" access = "public"/> 
+    <aura:attribute name = "isPharInvalidValueError" type= "boolean" access = "public"/> 
+    
+    <aura:attribute name="userInfo" type="user" access="public"/>
+    <aura:attribute name="Spinner" type="boolean" default="false"/>
+    <!-- nadeem, friday -->
+    <aura:attribute name="isOriginatorModal" type="boolean" default="false"/>
+    <aura:attribute name="originatorSelected" type="boolean" default="false"/>
+    
+    <!--DE310475 - Abhinav -->
+    <aura:attribute name="OriginatorId" type="String" access="global" default=""/>     
+    <aura:handler name="change" value="{!v.OriginatorId}" action="{!c.handleOriginatorChanged}"/>  
+    
+    <!-- This event will be fired when the originator value is not selected -->
+    <aura:registerEvent name="showOriginatorError" type="c:ACETLGT_ShowOriginatorErrorEvt"/>
+
+
+    <!-- Onshore Restriction -->
+    <aura:attribute name="onshoreRestrictionDisp" type="String" default="" access="public"/>
+
+    <!-- Onshore Restriction Save Handler-->
+    <aura:attribute name="OnshoreRestTrigger" type="Boolean"/>
+
+    
+	<!--Consumer Dashboard validations -->    
+	<aura:attribute name="isConsumerDashboardModal" type="boolean" access = "global" default = "false"/>     
+    <!--Consumer Dashboard validations -->  
+    <aura:attribute name = "accTypeList" type="String[]" access="public"/>   
+    <aura:attribute name = "isAccountListEmptyError" type= "boolean" access = "public"/>   
+    <aura:attribute name = "isConsumerAccountsModal" type="boolean" access = "global" default = "false"/>   
+    <!-- View Consumer Dashboard : Error Boolean Logger Values -->
+    <aura:attribute name="isValid_VCD_Opportunity" type="boolean" access="public"/>    
+    <aura:attribute name="isValid_VCD_Appointment" type="boolean" access="public"/>
+    <aura:attribute name="isValid_VCD_Date" type="boolean" access="public" />
+    <aura:attribute name="isValid_VCD_PriorDate" type="boolean" access="public" />
+    <aura:attribute name="isValid_VCD_Time" type="boolean" access="public" />
+    <aura:attribute name="isValid_VCD_PriorTime" type="boolean" access="public" />
+    <aura:attribute name="isValid_VCD_ncName" type="boolean" access="public" default="false"/>
+    <aura:attribute name="isProgramsListEmpty" type="Boolean" default="false" />
+    <!-- View Consumer Dashboard : Values -->
+    <aura:attribute name="programsSelected" type="String[]" access="public"/>
+    <aura:attribute name="opportunity"  type="string"/>
+    <aura:attribute name = "isCDDropdownSetError" type= "boolean" access = "public" default="false"/>
+    <!-- View Consumer Dashboard : Values -->
+    <aura:attribute name="vcTime"  type="string" default=""/>
+    <aura:attribute name="vcDate"  type="string" default=""/>    
+    <!-- Nurse Coach : Name Error Validation -->
+    <aura:attribute name="ncName"  type="string" />   
+    <aura:attribute name="show_ncNameError" type="boolean" access="public" default="false"/>
+    <!-- Date Validation Error-->
+    <aura:attribute name="show_vcDateError" type="boolean" access="public" default="false"/>
+    <aura:attribute name="show_vcTimeError" type="boolean" access="public" default="false"/>
+    <aura:attribute name="show_vcPriorDateError" type="boolean" access="public" default="false"/>
+    <aura:attribute name="show_vcPriorTimeError" type="boolean" access="public" default="false"/>
+
+    <!-- Disaster / Epidemic Attributes -->
+    <aura:attribute name="disasterEpidemicValue" type="String" access="public"/>
+    <aura:attribute name="disasterEpidemicOptions" type="List" access="public"/>
+
+    <!-- Migration Issue Attributes -->
+    <aura:attribute name="migIssueRequired" type="Boolean" default="false"/>
+    <aura:attribute name="migIssueDisabled" type="Boolean" />
+     <!-- US2357303 Begin -->
+    <aura:attribute name="escalatedRequired" type="Boolean" default="false"/>
+    <aura:attribute name="escalatedDisabled" type="Boolean" />
+    <aura:attribute name="complaintRequired" type="Boolean" default="false"/>
+    <aura:attribute name="complaintDisabled" type="Boolean" />
+     <!-- US2357303 End -->
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:method name="childMethodForAlerts" action="{!c.loadAllAlerts}" access="public">
+    	<aura:attribute name="param1" type="String" /> 
+        <aura:attribute name="param2" type="String" /> 
+        <aura:attribute name="param3" type="String" /> 
+        <aura:attribute name="param4" type="String" />  
+        <aura:attribute name="param5" type="String" /> 
+    </aura:method>
+    <aura:method name="childMethodForloadType" action="{!c.loadType}" access="public">
+    	<aura:attribute name="topicstr" type="String" />   
+    </aura:method>
+    <!-- Dimpy US2904956: Capture Case Details -->
+     <aura:attribute name="noAutoDoc" type="Boolean" default="false" />
+    
+    <!-- US3120970: Validate Motion Inquiry Start-->
+    <aura:attribute name="motionValidCnd" type="boolean" default="true"/>
+    <!-- US3120970 End-->
+    
+	<!--Case to member Search-->
+    <aura:attribute name="motionTTS" type="boolean" default="false"/>
+	<!-- US3002366: Validate and open the Derm URL-->
+    <aura:attribute name="memberregisterId" type="String" default=''></aura:attribute>
+    <aura:attribute name="isMembernotfound" type="boolean" default="false"></aura:attribute>
+    <!--End-->
+						 
+	<aura:attribute name="autodocUniqueId" type="String"/>												  
+    <div >
+        
+        <lightning:buttonGroup>
+		    <aura:if isTrue="{!and(or(v.userInfo.Profile_Name__c == $Label.c.ACETMemberProfile, v.userInfo.Profile_Name__c == $Label.c.ACETEZCommAdminProfile), v.showEZCommAndContactHistoryButton)}">
+              <lightning:button label="EZComm" onclick="{!c.callEZcomm}"  />
+              <lightning:button label="Contact History" onclick="{!c.callContactHistory}"  />
+            </aura:if>
+            <aura:if isTrue="{!and(v.userInfo.Profile_Name__c != $Label.c.ACETResearchUserProfile, v.showSave)}">
+                <lightning:button label="Save" onclick="{!c.openModal}"  />
+            </aura:if>
+            <aura:if isTrue="{!v.showConsoleButton}">
+                <lightning:button label="DERM" onclick="{!c.openDermPage}"/>
+                <lightning:button label="CONSOLE" onclick="{!c.openConsolePage}"/>
+            </aura:if>  
+            <aura:if isTrue="{!and(v.userInfo.Profile_Name__c != $Label.c.ACETResearchUserProfile, v.showMisdirectSearch)}">
+                <!-- US2237162 - added buttonBorderRadius -->
+                <lightning:button label="Misdirect" iconName="utility:end_call" class="buttonBorderRadius slds-button_brand" onclick="{! c.misdirect}"/>
+            </aura:if>
+            <aura:if isTrue="{!and(v.userInfo.Profile_Name__c != $Label.c.ACETResearchUserProfile, v.showMisdirect)}">
+                <lightning:button label="Misdirect" onclick="{!c.misdirect}"/>
+            </aura:if>
+            
+            <aura:if isTrue="{!v.showCirrus}">
+                <c:ACETLGT_LoadCirrusButton aura:id="cirrusComp" memberId="{!v.memberId}" gorupId="{!v.groupId}" subjectType="Member" topicName="{!v.cseTopic}" landingPageinCirrus="memberDetail"/>
+            </aura:if>
+            
+            <!--This should be always at the last-->    
+            <aura:if isTrue="{!v.showMemAlerts}">           
+            <lightning:button label="{!'Alerts ('+v.alertsSize+')'}" onclick="{!c.openAlertsModal}"/>
+            </aura:if>
+            <aura:if isTrue="{!and(v.PCPallowedUser == 'true', v.showPCPButton)}">
+                <lightning:button label="Create PCP Referral" onclick="{!c.createPCPReferral}"/>
+            </aura:if>
+            <aura:if isTrue="{!v.showConsumerAccounts}">
+            	<c:ACETLGT_LoadCirrusButton aura:id="comp" memberId="{!v.memberId}" gorupId="{!v.groupId}" subjectType="Member" topicName="{!v.cseTopic}" landingPageinCirrus="memberDetail" showConsumerAccounts="true"  />
+             </aura:if>
+            <aura:if isTrue="{!and(v.showSENSButton,not(empty(v.memberId)))}">
+                <lightning:button label="SENS" onclick="{!c.openSENSApplication}"/>
+            </aura:if>
+        </lightning:buttonGroup>
+        
+    </div>
+    
+
+    <aura:if isTrue="{!v.isModalOpen}">
+        <section aura:id="modalSection1" role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" style="position: fixed !important;" class="slds-modal slds-fade-in-open slds-modal_large" >
+            <div class="slds-modal__container">
+                <!-- Modal/Popup Box Header Starts here-->
+                <header class="slds-modal__header">
+                    <lightning:buttonIcon iconName="utility:close"
+                                          onclick="{! c.closeModal }"
+                                          alternativeText="close"
+                                          variant="bare-inverse"
+                                          class="slds-modal__close"/>
+                    <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Save a case</h2>
+                </header>
+                <!--Modal/Popup Box Body Starts here-->
+                <div class="slds-modal__content slds-p-around_medium slds-is-relative" id="modal-content-id-1" >
+                    
+                    <div class="slds-form-element">
+                        <div >
+                            <lightning:select name="topic" label="Topic" aura:id="csetopic" value="{!v.cseTopic}" onchange="{!c.onTopicChange}">
+                                <aura:iteration items="{!v.topicOptions}" var="option">
+                                    <option text="{!option}" value="{!option}" selected="true"/>
+                                </aura:iteration>
+                            </lightning:select>
+                            <!--<ui:inputSelect  aura:id="accIndustry" class="slds-select"  change="{!c.onTopicChange}"/>-->
+                        </div>
+                    </div>
+                    <div class="slds-form-element">
+                        <div >
+                            <lightning:select name="type" label="Type" aura:id="csetype" value="{!v.cseType}" onchange="{!c.onTypeChange}">
+                                <aura:iteration items="{!v.typeOptions}" var="option">
+                                    <option text="{!option}" value="{!option}" />
+                                </aura:iteration>
+                            </lightning:select>
+                            <ui:inputtext aura:id="typeError" class="slds-hide"/>
+                        </div>
+                    </div>
+                    <div class="slds-form-element">
+                        <div>
+                            <lightning:select name="subtype" label="Subtype" aura:id="csesubtype" value="{!v.cseSubtype}" >
+                                <aura:iteration items="{!v.subtypeOptions}" var="option">
+                                    <option text="{!option}" value="{!option}" />
+                                </aura:iteration>
+                            </lightning:select>
+                            <ui:inputtext aura:id="subTypeError" class="slds-hide"/>
+                        </div>
+                        <br></br>
+                    </div>
+                    <!-- US2470022 -->
+                    <!-- US2442061 -->
+                    <div class="slds-grid slds-gutters" id="scrollLocation">
+                        
+                        <div class="slds-col slds-size_1-of-4">
+                             <span>
+                        
+                            <lightning:input type="checkbox" checked="{!v.flwupRequired}" label="Follow-up Required"
+                                             name="followup" disabled="{!v.flwupDisabled}"/>
+                                 </span>
+                        </div>
+                        <div class="slds-col slds-size_1-of-4">
+                        
+                        <span>
+                            <lightning:input aura:id="migrationIssue" type="checkbox" checked="{!v.migIssueRequired}" label="Migration Issue"
+                                             name="migrationIssue" disabled="{!v.migIssueDisabled}" />
+                            </span>
+                        </div>
+                        <div class="slds-col slds-size_1-of-4">
+                             <span>
+                        
+                            <lightning:input aura:id="complaint" type="checkbox" checked="{!v.complaintRequired}" label="Complaint"
+                                             name="complaint" disabled="{!v.complaintDisabled}" />
+                                 </span>
+                        </div>
+                         <div class="slds-col slds-size_1-of-4">  
+                             
+                        <span>  
+                            <lightning:input aura:id="escalated" type="checkbox" checked="{!v.escalatedRequired}" label="Escalated"
+                                             name="escalated" disabled="{!v.escalatedDisabled}"/>
+                        
+                           </span>
+                    </div>     
+                   <br></br>      
+                </div>
+     <div class="slds-form-element">
+         			<br></br>
+                        <div>
+                            <lightning:select name="disasterEpidemic" label="Disaster/Epidemic" aura:id="disasterEpidemic" value="{!v.disasterEpidemicValue}" >
+                                <option text="None" value="" selected="true"/>
+                                <option text="Coronavirus Suspected" value="Coronavirus Suspected" />
+                                <option text="Natural Disaster" value="Natural Disaster" />
+                                <option text="Other" value="Other" />
+                            </lightning:select>
+                        </div>
+                        <br></br>
+                    </div>               
+                    <!-- US2357303 End -->
+                    
+                    <div class="slds-form-element">
+                        <br />
+                        <div>
+                           <aura:if isTrue="{!v.showrelatedcases}">
+
+                          <c:ACETLGT_RelatedCases aura:id="relatedcasescmp" highlightPanel_String="{!v.highlightPanelstring}" InteractionId="{!v.intId}" SurrogateKey="{!v.srk}" ExternalIDs="{!v.ExternalIDs}" Calltopic="{!v.cseTopic}" interactiontype="Phone Call" submitDisabled="{!v.submitDisabled}"/>
+                     </aura:if>
+                        </div>
+               <!--<aura:if isTrue="{!v.Spinner}">
+                    <div class="">
+                        <lightning:spinner alternativeText="Loading" size="small" variant="brand" />
+                    </div>
+                </aura:if>-->
+                    </div>
+                </div>
+                <!--Modal/Popup Box Footer Starts here-->
+                <footer class="slds-modal__footer">
+                    <lightning:button variant="neutral"
+                                      label="Cancel"
+                                      title="Cancel"
+                                      onclick="{! c.closeModal }"/>
+                    <lightning:button variant="brand"
+                                      label="Submit"
+                                      title="Submit case"
+                                      onclick="{!c.submitDetails}"
+                                      disabled="{!v.submitDisabled}"/>
+                </footer>   
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" style="position: fixed !important;"></div>
+    </aura:if>
+    <aura:if isTrue="{!v.isMemberAlertModalOpen}">
+        <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" style="position: fixed !important;" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container" >
+                <!-- Modal/Popup Box Header Starts here-->
+                <header class="slds-modal__header">
+                    <lightning:buttonIcon iconName="utility:close"
+                                          onclick="{! c.closeAlertsModal }"
+                                          alternativeText="close"
+                                          variant="bare-inverse"
+                                          class="slds-modal__close"/>
+                    <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Alerts</h2>
+                </header>
+                <!--Modal/Popup Box Body Starts here-->
+                <ui:scrollerWrapper class="outerScroller" >
+                <div class="slds-modal__content slds-p-around_medium"  id="modal-content-id-1">
+                    <aura:if isTrue="{!v.alertsSize == 0}">
+                        Member does not have any active alerts.
+                    </aura:if>
+                    <aura:if isTrue="{!v.alertsSize > 0}">
+                        <table class="slds-table slds-table_bordered coverage-tbl slds-no-row-hover" style="width:100%; table-layout: fixed;">
+                        <thead>
+                            <tr>
+                                <th class="slds-cell-wrap" width="10%">Type</th>
+                                <th class="slds-cell-wrap" width="12%">Group Number</th>
+                                <th class="slds-cell-wrap" width="12%">Benefit Bundle Option ID</th>
+                                <th class="slds-cell-wrap" width="12%">ID Number</th>
+                                <th class="slds-cell-wrap" width="22%">Alert Title</th>
+                                <th class="slds-cell-wrap" width="22%">Alert Comment</th>
+                                <th class="slds-cell-wrap" width="11%">Effective Date</th>
+                                <th class="slds-cell-wrap" width="11%">End Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <lightning:workspaceAPI aura:id="MemberAlerts"/>
+                            <aura:iteration items="{!v.memberAlerts}" var="dt" aura:id="item">
+                                
+                            <!-- Changes made 21-01-2020 : Description : Because Alerts were getting highlighted
+                            <tr class="activecol" > -->        
+                            <tr class="" >	
+                                    <td class="slds-cell-wrap" width="10%"><ui:outputText value="{!dt.Type__c}"/>
+                                    </td>
+                                    <td class="slds-cell-wrap" width="12%"><ui:outputText value="{!dt.Group_Number__c}"/></td>
+                                    <td class="slds-cell-wrap" width="12%"><ui:outputText value="{!dt.Benefit_Bundle_Option_ID__c}"/></td>
+                                    <td class="slds-cell-wrap" width="12%"><ui:outputText value="{!dt.ID_Number__c}"/></td>
+                                    <td class="slds-cell-wrap" width="22%"><ui:outputText value="{!dt.Alert_Title__c}"/></td>
+                                    <td class="slds-cell-wrap" width="22%"><ui:outputText value="{!dt.Alert_Comments__c}"/></td>
+                                    <td class="slds-cell-wrap" width="11%"><ui:outputdate value="{!dt.Effective_Date__c}" format="MM/DD/YYYY"/></td>
+                                    <td class="slds-cell-wrap" width="11%"><ui:outputdate value="{!dt.End_Date__c}" format="MM/DD/YYYY"/></td>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+        			</table>
+                    </aura:if>
+                </div>
+                </ui:scrollerWrapper>
+                <!--Modal/Popup Box Footer Starts here-->
+                <footer class="slds-modal__footer">
+                    <lightning:button variant="brand"
+                                      label="Close"
+                                      title="Close"
+                                      onclick="{! c.closeAlertsModal }"/>
+                    
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" style="position: fixed !important;"></div>
+    </aura:if>
+</aura:component>

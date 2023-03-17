@@ -1,0 +1,302 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,lightning:isUrlAddressable" access="global"> 
+	<ltng:require styles="{!$Resource.ACETLink_MasterStyle}" />
+
+	<aura:attribute type="Object" name="authDetailsObj" />
+	<!-- US2325822 	View Authorizations - ECAA Letter Button Landing Page UI - Sarma - 30-01-2020 -->
+	<aura:attribute type="Object" name="authDetailsObj_StatusCard" />
+	<aura:attribute name="interactionRec" type="Interaction__c"/>
+	<aura:attribute name="isMedicaidPlan" type="boolean"/>
+     <!-- Swapna -->
+    <aura:attribute name="claimNo" type="String" default="" />
+    <aura:attribute name="currentIndexOfOpenedTabs" type="Integer"/>
+    <aura:attribute name="maxAutoDocComponents" type="Integer" default="20"/>
+     <aura:attribute name="isClaimDetail" type="Boolean" default="false"/>
+    <aura:attribute name="currentIndexOfAuthOpenedTabs" type="Integer" />
+    <aura:attribute name="maxAutoDocAuthComponents" type="Integer" default="10"/>
+    <!-- Swapna -->
+    <!-- US2330408  - Avish -->
+	<aura:attribute name="interactionOverviewTabId" type="String" /> 
+    <aura:attribute name="memberId" type="String" />
+    <!-- US2330408  - Ends -->
+	<!-- Attr to determine inpatient or outpatient -->
+	<aura:attribute name="authType" type="string" access="public"/>
+	<aura:attribute type="String" name="LengthOfStay" />
+	<aura:attribute type="String" name="SRN" />
+
+	<!-- US2301790 - Auto Doc on View Authorizations - Inpatient Details -->
+	<aura:attribute name="AutodocPageFeature" type="String" />
+    <aura:attribute name="initialClick" type="boolean" default="true" />
+    <aura:attribute name="componentId" type="String" />
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+	
+	<!-- Autodoc multiple pages - Lahiru - 3rd Mar 2020 -->
+	<aura:attribute name="uniqueKey" type="string" default="unique"/>
+
+	<aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+
+	<!-- US2271237 - View Authorizations - Update Policies in Auto Doc : Kavinda -->
+	<aura:attribute name="IsAutoDocEnable" type="Boolean" default="true" />
+    <aura:handler event="c:ACET_AuthResultAutoDocActivation" action="{!c.handlePolicyClick}" />
+    <aura:attribute name="assignmentFlag" type="boolean" default="false"/> <!-- US2382470 - Avish -->
+    <lightning:workspaceAPI aura:id="workspace"/>
+    <aura:attribute name="contactUniqueId" type="string" access="public" />
+	
+	<!--US2076634 - HIPAA Guidelines Button - Sravan-->
+    <aura:attribute name="hipaaEndpointUrl" type="String" default=""/>
+	<aura:attribute name="isHipaa" type="Boolean" default="false"/>
+
+    <!--US2554307: View Authorizations Details Page - Add Alerts Button-->
+    <aura:attribute name="memberIdAuthDtl" type="string" access="public"/>
+    <aura:attribute name="groupIdAuthDtl" type="string" access="public"/>
+    <aura:attribute name="alertProviderId" type="String" access="public"/>
+    <aura:attribute name="alertTaxId" type="String" access="public"/>
+    <aura:handler event="c:ACET_SetMmberIdGroupIdAuthDtl" action="{!c.setMmberIdGroupIdAuthDtl}" />
+    <aura:registerEvent name="ACET_GetMemberIdGroupIdAuthDtl" type="c:ACET_GetMemberIdGroupIdAuthDtl" />
+    <aura:handler name="change" value="{!v.memberIdAuthDtl}" action="{!c.getAlertsAuthDetails}" />
+
+    <aura:attribute name="autodocUniqueId" type="String" default=""/>
+	<aura:attribute name="autodocUniqueIdCmp" type="String" default=""/>
+
+    <!-- ketki 12/18 claim status showup on auth detail while opening from claim detail -->
+    <aura:attribute name="isClaim" type="Boolean" default="false"/>
+	<!-- US2917421 -->
+    <aura:attribute name="tabId" type="String" default="tab"/>
+
+    <!--US3653687-->
+    <aura:attribute name="policy" type="SAEPolicyDetailsResult" access="public"/>
+    <aura:attribute name="memberCardData" type="Object" />
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0"/>
+
+    <aura:attribute name="callTopicLstSelected" type="sObject[]"/>
+        <aura:attribute name="showHighlightsPanel" type="Boolean" default="false"/><!--US3189884-->
+        <aura:attribute name="callTopicTabId" type="String" />
+        <aura:attribute name="callTopicName" type="String" default=""/>
+        <aura:registerEvent name="navigateToCallTopic" type="c:ACET_navigateToCallTopic"/>
+        <aura:attribute name="contactNameFreeze" type="String" />
+    <aura:attribute name="isSandbox" type="Boolean" default="false"/>
+	<c:ACET_OrgType isSandbox="{!v.isSandbox}"/>
+
+	<!-- Autodoc multiple pages - Lahiru - 3rd Mar 2020 -->
+	<div id="{!v.AutodocKey + v.uniqueKey}" class="{!v.AutodocKey}">
+	<div id="{!v.AutodocKey}">
+        <!-- US2718111: View Authorizations - Switching Policies and Auto Doc -->
+        <div class="{!v.AutodocKey + 'viewauthorizationsdetails'}" >
+
+        <lightning:spinner class="slds-hide" aura:id="AuthDetailSpinner" alternativeText="Loading.." title="Loading.."
+                           variant="brand" size="medium" />
+		<c:ACETLGT_AutoDoc></c:ACETLGT_AutoDoc>
+		<div class="slds-card card_padding" style="background: rgb(243, 242, 242);">
+			<div class="slds-grid">
+				<div class="slds-col slds-has-flexi-truncate">
+					<div class="slds-media slds-no-space slds-grow">
+						<div class="slds-media__figure">
+							<span class="slds-icon_container slds-icon-standard-feed" title="Authorization Detail">
+								<lightning:icon style="background-color:rgb(242,121,171);" iconName="standard:feed" alternativeText="Authorization Detail" />
+							</span>
+						</div>
+						<div class="slds-media__body">
+							<div class="slds-page-header__name">
+								<div class="slds-page-header__name-title slds-p-top_x-small">
+									<h1 class="page_header_label slds-m-right_small slds-align-middle slds-truncate" >Authorization Detail</h1>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+                <lightning:buttonGroup>
+					<!--US2076634 - HIPAA Guidelines Button - Sravan-->
+                    <button class="slds-button slds-button_neutral" style="width: 150px;" onclick="{!c.handleHippaGuideLines}">HIPAA Guidelines</button>
+            <lightning:button variant="neutral" label="Misdirect" name="misDirectBtnName"
+                class="slds-button  misdirect_button" onclick="{!c.openMisdirectComp}" />
+                    <c:SAE_Alerts aura:id="alertsAI_AuthDetails"
+                                  memberId="{!v.memberIdAuthDtl}"
+                                  groupId=""
+                                  providerNotFound="{!v.providerNotFound}"
+                                  noMemberToSearch="{!v.noMemberToSearch}"
+                                  memberNotFound="{!v.mnf}"
+                                  isProviderSearchDisabled="{!v.isProviderSearchDisabled}"
+                                  taxId="{!v.alertTaxId}"
+                                  providerId ="{!v.alertProviderId}"
+                                  isMemberSnapshot="true"
+                                  houseHoldMemberId="{!v.houseHoldMemberId}"
+                                  interactionRecId="{!v.interactionRec.Id}"
+                                  policyGroupId="{!v.groupIdAuthDtl}"
+                                  policyMemberId="{!v.memberIdAuthDtl}"
+                                  />
+            </lightning:buttonGroup>
+			</div>
+			<!-- PUT PAGE HEADER DETAIL ROW HERE -->
+		</div>
+            <div class="{! v.isSandbox ? 'highlightPanelPositionSandbox card_top_margin' : 'highlightPanelPosition card_top_margin'}" id="highlightPanelProviderSnapdhot">
+            <lightning:layoutItem size="12" class="slds-card">
+                <div class="slds-section slds-is-close" aura:id="highLightSection">
+                	<h3 class="slds-section__title" style="background: rgb(243, 242, 242);">
+                        <!--<button aria-controls="highLightList" class="slds-button slds-section__title-action">-->
+                        <div class="slds-grid slds-size_12-of-12">
+                            <div class="slds-col slds-m-left_x-small slds-size_5-of-12" onclick="{!c.toggleSection}" data-auraId="highLightSection" style="font-weight: bold;">
+                                <!--<span onclick="{!c.toggleSection}" data-auraId="highLightSection">-->
+                                <lightning:icon iconName="utility:switch"
+                                                size="x-small"
+                                                class="slds-section__title-action-icon slds-button__icon_left"
+                                                alternativeText="button icon"
+                                                />
+                                Highlight Panel: {!v.contactNameFreeze}
+                            </div>
+                            <!--<div class="slds-col  slds-size_2-of-12" onclick="{!c.toggleSection}" data-auraId="highLightSection"></div>-->
+                            <div class="slds-col  slds-size_7-of-12">
+                                <!--<div class="{!v.showHighlightsPanel == true ? 'slds-hide' : 'slds-show'}">-->
+                                <div class="slds-grid slds-m-right_medium slds-grid_align-end slds-wrap" style="font-weight: bold;">
+                                        <div class="slds-col" style="padding-top: 3px;">Topic:</div> 
+
+                                        <aura:iteration items="{!v.callTopicLstSelected}" var="sr">
+                                        <div class="slds-col">
+                                            <lightning:pill class="slds-m-around_xx-small" label="{!sr.Name}" name="{!sr.Id}" onclick="{! c.navigateToCallTopic }">
+                                                <aura:set attribute="media">
+                                                    <lightning:icon iconName="standard:account" size="x-small" alternativeText="icon"/>
+                                                </aura:set>
+                                            </lightning:pill>
+                                        </div>
+                                        </aura:iteration>
+
+                                </div>
+                            <!--</div>-->
+                        </div>
+                        </div>
+                    </h3>
+                    <div class="slds-card slds-m-top_small">
+                        <div class="{!v.showHighlightsPanel == true ? 'slds-show' : 'slds-hide'}">
+                            <lightning:layout verticalAlign="stretch" class="slds-card">
+                                <lightning:layoutItem size="12" class="slds-card">
+                                    <div style="height: 100%">
+                                        <c:ACET_HighlightPanel displayChevron="false"
+                                                               interactionOverviewTabId="{!v.interactionOverviewTabId}"
+                                                               memberId="{!v.memberId}"
+                                                               isMemberFlow="true"
+                                                               displayName="true"
+                                                               contactNameFreeze="{!v.contactNameFreeze}"
+                                        					   changeMemberAlignment="true"/>
+
+                                    </div>
+                                </lightning:layoutItem>
+                                <!--<div class="slds-border_right">
+                                    <br/>
+                                </div>
+                                <lightning:layoutItem size="6" class="slds-card">
+                                    <div style="height: 100%">
+                                        <div class="slds-m-left_medium slds-m-top_small">
+                                            <b>Topic</b>
+                                        </div>
+                                        <div class="slds-box slds-m-left_medium slds-m-right_medium slds-m-top_medium">
+                                            <aura:iteration items="{!v.callTopicLstSelected}" var="sr">
+                                                <lightning:pill class="slds-m-around_xx-small" label="{!sr.Name}" name="{!sr.Id}" onclick="{! c.navigateToCallTopic }">
+                                                    <aura:set attribute="media">
+                                                        <lightning:icon iconName="standard:account" size="x-small" alternativeText="icon"/>
+                                                    </aura:set>
+                                                </lightning:pill>
+                                            </aura:iteration>
+                                        </div>
+                                    </div>
+                                </lightning:layoutItem> Commented as part of US3259545 - Sravan-->
+                            </lightning:layout>
+                        </div>
+                    </div>
+                </div>
+            </lightning:layoutItem>
+        </div>
+
+		<lightning:layout verticalAlign="center" class="" multipleRows="true" >
+			<!-- US2330408  - Avish -->
+			<!-- <lightning:layoutItem size="12" >
+				<div class="slds-card card_padding" style="height: 100%;"> 
+					<c:ACET_HighlightPanel interactionOverviewTabId="{!v.interactionOverviewTabId}" memberId="{!v.memberId}" isMemberFlow="true" displayName="true"/>
+				</div>
+			</lightning:layoutItem> -->
+			<!-- US2330408  - Ends -->
+			<lightning:layoutItem size="12" class="slds-p-top_small">
+				<div style="height: 100%;">
+					<c:ACET_AuthorizationStatus SRN="{!v.SRN}" authStatusDetails="{!v.authDetailsObj_StatusCard}" isMainComponent="false" interactionRec="{!v.interactionRec}"
+												autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}" IsAutoDocEnable="{!v.IsAutoDocEnable}"
+                                                claimNo="{!v.claimNo}" currentIndexOfOpenedTabs="{!v.currentIndexOfOpenedTabs}" isClaimDetail="{!v.isClaimDetail}"
+                                                currentIndexOfAuthOpenedTabs="{!v.currentIndexOfAuthOpenedTabs}" maxAutoDocAuthComponents="{!v.maxAutoDocAuthComponents}"  />
+				</div>
+			</lightning:layoutItem> <!-- US2382474	Auth Details -  Work Assignment Integration - 19/08/2020 - Sarma -->         <!-- US2834816	Auto Doc Fast Follower View Authorization - Update Authorization Detail Integration for Work Assignments - Sarma - 05/11/2020 -->
+			<lightning:layoutItem size="12" class="slds-p-top_small"> <!-- US2382470 --> <!-- US2654830	Performance Improvement - View Authorizations - Notes Section  -->
+			<div class="slds-card card_padding" style="height: 100%;">
+                    <c:ACET_AuthAssignments authDetailsObj="{!v.authDetailsObj}" isMainComponent="false" autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}" SRN="{!v.SRN}"
+                                             claimNo="{!v.claimNo}" currentIndexOfOpenedTabs="{!v.currentIndexOfOpenedTabs}" isClaimDetail="{!v.isClaimDetail}"
+                                            currentIndexOfAuthOpenedTabs="{!v.currentIndexOfAuthOpenedTabs}" maxAutoDocAuthComponents="{!v.maxAutoDocAuthComponents}" />
+                </div>
+            </lightning:layoutItem> <!-- US2382470 -->
+			<lightning:layoutItem size="12" class="slds-p-top_small">
+				<div class="slds-card" style="height: 100%;">
+					<c:ACET_AuthFacilityDetails facilityDetails="{!v.authDetailsObj}" authType="{!v.authType}" LengthOfStay="{! v.LengthOfStay }" 
+												IsAutoDocEnable="{!v.IsAutoDocEnable}" SRN="{!v.SRN}" autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"
+												tabId="{!v.callTopicTabId}" claimNo="{!v.claimNo}" currentIndexOfOpenedTabs="{!v.currentIndexOfOpenedTabs}" isClaimDetail="{!v.isClaimDetail}"
+                                                currentIndexOfAuthOpenedTabs="{!v.currentIndexOfAuthOpenedTabs}" maxAutoDocAuthComponents="{!v.maxAutoDocAuthComponents}"/> <!-- DE426662 - Thanish - 25th Mar 2021 -->
+                    <!-- US2619431 --> <!-- US2271237 -->
+				</div>
+			</lightning:layoutItem>
+			<aura:If isTrue="{!v.authType == 'InPatient'}">
+				<lightning:layoutItem size="12" class="slds-p-top_small">
+					<div class="slds-card card_top_padding card_bottom_padding" style="height: 100%;">
+						<c:ACET_AuthBedDayDecision authDetailsObj="{!v.authDetailsObj}" IsAutoDocEnable="{!v.IsAutoDocEnable}" SRN="{! v.SRN }" autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"
+                                                   claimNo="{!v.claimNo}" currentIndexOfOpenedTabs="{!v.currentIndexOfOpenedTabs}" isClaimDetail="{!v.isClaimDetail}"
+                                                   currentIndexOfAuthOpenedTabs="{!v.currentIndexOfAuthOpenedTabs}" maxAutoDocAuthComponents="{!v.maxAutoDocAuthComponents}" />
+						<!-- US2271237 --> <!-- US2619431 -->
+					</div>
+				</lightning:layoutItem>
+			</aura:If>
+			<lightning:layoutItem size="12" class="slds-p-top_small" >
+				<div class="slds-card card_top_padding card_bottom_padding" style="height: 100%;">
+					<!-- US2619431 -->
+					<c:ACET_AuthServiceLineDetails authType="{!v.authType}" authDetailsObj="{!v.authDetailsObj}" IsAutoDocEnable="{!v.IsAutoDocEnable}" SRN="{! v.SRN }" autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"
+                                                   claimNo="{!v.claimNo}" currentIndexOfOpenedTabs="{!v.currentIndexOfOpenedTabs}" isClaimDetail="{!v.isClaimDetail}"
+                                                   currentIndexOfAuthOpenedTabs="{!v.currentIndexOfAuthOpenedTabs}" maxAutoDocAuthComponents="{!v.maxAutoDocAuthComponents}"/> <!-- US2271237 -->
+				</div>
+			</lightning:layoutItem>
+		</lightning:layout>
+		<lightning:layout multipleRows="true" verticalAlign="stretch" class="slds-p-top_small">
+			<lightning:layoutItem size="3" class="">
+				<div class="slds-card card_top_padding card_bottom_padding" style="height: 100%;">
+					<!-- US2619431 -->
+					<c:ACET_AuthDiagnosisDetails authDetailsObj="{!v.authDetailsObj}" IsAutoDocEnable="{!v.IsAutoDocEnable}" SRN="{!v.SRN}" autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"
+                                                  claimNo="{!v.claimNo}" currentIndexOfOpenedTabs="{!v.currentIndexOfOpenedTabs}" isClaimDetail="{!v.isClaimDetail}"
+                                                 currentIndexOfAuthOpenedTabs="{!v.currentIndexOfAuthOpenedTabs}" maxAutoDocAuthComponents="{!v.maxAutoDocAuthComponents}"/> <!-- US2271237 -->
+				</div>
+			</lightning:layoutItem>
+			<lightning:layoutItem size="9" class="slds-p-left_small" >
+				<div class="slds-card card_top_padding card_bottom_padding" style="height: 100%;">
+					<!-- US2619431 -->
+					<c:ACET_AuthProviderDetails policySelectedIndex="{!v.policySelectedIndex}" memberCardData="{!v.memberCardData}" policy="{!v.policy}" interactionOverviewTabId="{!v.interactionOverviewTabId}" hipaaEndpointUrl="{!v.hipaaEndpointUrl}" contactUniqueId="{!v.contactUniqueId}" interactionRec="{!v.interactionRec}" authDetailsObj="{!v.authDetailsObj}" IsAutoDocEnable="{!v.IsAutoDocEnable}" SRN="{! v.SRN }" autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"
+                                                 claimNo="{!v.claimNo}" currentIndexOfOpenedTabs="{!v.currentIndexOfOpenedTabs}" isClaimDetail="{!v.isClaimDetail}"
+                                                currentIndexOfAuthOpenedTabs="{!v.currentIndexOfAuthOpenedTabs}" maxAutoDocAuthComponents="{!v.maxAutoDocAuthComponents}"/> <!-- US2271237 -->
+				</div>
+			</lightning:layoutItem>
+		</lightning:layout>
+		<lightning:layout multipleRows="true" verticalAlign="stretch" class="slds-p-top_small">
+			<lightning:layoutItem size="12" class="">
+				<div class="slds-card" style="height: 100%;">
+					<!-- US2619431 -->
+					<c:ACET_AuthFollowUpInfo authDetailsObj="{!v.authDetailsObj}" IsAutoDocEnable="{!v.IsAutoDocEnable}" SRN="{! v.SRN }" autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"
+                                             claimNo="{!v.claimNo}" currentIndexOfOpenedTabs="{!v.currentIndexOfOpenedTabs}" isClaimDetail="{!v.isClaimDetail}"
+                                             currentIndexOfAuthOpenedTabs="{!v.currentIndexOfAuthOpenedTabs}" maxAutoDocAuthComponents="{!v.maxAutoDocAuthComponents}" /> <!-- US2271237 -->
+				</div>
+			</lightning:layoutItem>
+		</lightning:layout>
+		<lightning:layout multipleRows="true" verticalAlign="stretch" class="slds-p-top_small slds-m-bottom-medium">
+			<lightning:layoutItem size="12" class="">
+				<div class="slds-card card_padding" style="height: 100%;">
+					<c:ACET_AuthorizationNotes authDetailsObj="{!v.authDetailsObj}" IsAutoDocEnable="{!v.IsAutoDocEnable}" SRN="{! v.SRN }" isMainComponent="false" autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"
+                                               claimNo="{!v.claimNo}" currentIndexOfOpenedTabs="{!v.currentIndexOfOpenedTabs}" isClaimDetail="{!v.isClaimDetail}"
+                                               currentIndexOfAuthOpenedTabs="{!v.currentIndexOfAuthOpenedTabs}" maxAutoDocAuthComponents="{!v.maxAutoDocAuthComponents}" />
+				</div>
+			</lightning:layoutItem>
+		</lightning:layout>
+	</div>
+	<!-- Autodoc multiple pages - Lahiru - 3rd Mar 2020 -->
+	</div>
+    </div>
+    <!-- US3533564 - Thanish - 5th Jul 2021 -->
+    <c:acet_ScrollToTop/>
+	<br/>
+</aura:component>

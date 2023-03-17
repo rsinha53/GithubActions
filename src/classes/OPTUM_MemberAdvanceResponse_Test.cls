@@ -1,0 +1,7 @@
+@isTest
+public with sharing class OPTUM_MemberAdvanceResponse_Test {
+    @isTest static void testCallout() {
+        String json='{"meta":{},"result":{"resultMeta":{},"data":{"member":[{"firstName":"CASSEY","middleName":null,"lastName":"RETHMAN","birthDate":"1992-02-27","gender":null,"ssn":"920003129","homeAddressLine1":null,"homeAddressLine2":null,"homeAddressLine3":null,"homeAddressLine4":null,"homeAddressLine5":null,"homeAddressCity":null,"homeAddressState":null,"homeAddressZip":null,"homeAddressCountry":null,"homeForeignAddressFl":null,"mailAddressLine1":"999 Queen St  P.O. Box 123","mailAddressLine2":null,"mailAddressLine3":null,"mailAddressLine4":null,"mailAddressLine5":null,"mailAddressCity":"Tampa","mailAddressState":"FL","mailAddressZip":"96321-6514","mailAddressCountry":null,"mailForeignAddressFl":null,"addressPreferred":"H","phoneHome":"9624912345","phoneWork":"3216542563","phoneMobile":"9206549874","phonePreferred":"W","emailAddress":"pratik.surti@optum.com","faroId":"73939F194FBA4104E053326C750A8837","bankHold":0}]}},"status":{"messages":[{"code":"0000","name":"Success","severity":"INFO","description":"Request Successfully Processed"}]}}';
+	    OPTUM_MemberAdvanceResponse.parse(json);
+    }
+}

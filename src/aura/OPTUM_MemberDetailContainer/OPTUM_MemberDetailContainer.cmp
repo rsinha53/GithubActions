@@ -1,0 +1,171 @@
+<!--
+ Name           : OPTUM_MemberDetailContainer
+ Created By     : Dimpy Arora
+ Created Date   : Sep 4th, 2020
+ Description    : Main component for Member Details -->
+
+<aura:component controller= "OPTUM_MemberAccountController" implements = "lightning:isUrlAddressable,force:appHostable,flexipage:availableForAllPageTypes,force:hasRecordId">
+
+	<!-- DE432638 Autodoc selection stays in memory -->
+	<aura:attribute name="autodocUniqueId" type="String"/>
+	<aura:attribute name="autodocUniqueIdCmp" type="String"/>
+	
+    <aura:attribute name="memberDetails" type="Object"/>
+    <aura:attribute name="accountList" type="List"/>
+    <aura:attribute name="rowIndex" type="Integer"/>
+    <aura:attribute name ="accountType" type="String"/>
+    <!-- Added by Prasad for US2967182: Originator -->
+   <lightning:workspaceAPI aura:id="workspace" />
+     <aura:attribute name="md" type="Object" />
+    <aura:attribute name="acctType" type="List" />
+    <aura:attribute name="colorPalette" type="String[]" default="['red', 'green', 'blue']" />
+    <aura:attribute name = "optumInt" type = "Interaction__c"/>
+     <aura:attribute name="int" type="Interaction__c" access="public"/>
+    <aura:attribute name="intId" type="String" access="public"/>
+    <aura:attribute name = "optumEID" type = "String"/>
+    <aura:attribute name="FamilyMembersList" type="list" default="[]" />
+    <aura:attribute name="SubjectId" type="String"/>
+    <aura:attribute name="detailPgName" type="string" default="Optum Financial Detail"/>
+     <aura:attribute name="isOrigSelected" type="Boolean" default="false" access="public"/>
+    <aura:attribute name="originatorError" type="String" default="" access="public"/>
+    <aura:attribute name="showOriginatorErrorFired" type="boolean" default="false" access="public"  />
+    <aura:attribute name="isTPModalOpen" type="boolean" access="public" default="false" />
+    <aura:attribute name="originator" type="String" />
+     <aura:attribute name="selectedLookUpRecords" type="sObject[]" default="[]"/>
+     <aura:attribute name="topicError" type="String" default="" access="public"/>
+    <aura:attribute name="tpRelation" type="String" access="public"/>
+    <aura:attribute name="originatorval" type="String" access="global" />
+	<aura:attribute name="highLightPanel" type="Object" />
+	<!-- SCRIPTS -->
+    <ltng:require scripts="{!$Resource.ACET_AutodocJS}" />
+    <ltng:require styles="{!$Resource.ACETLink_MasterStyle}" />
+    <!-- /SCRIPTS -->
+	<aura:handler name="tpevent" event="c:ACETLGT_TPModalEvent" action="{!c.handleTPEvent}"/>
+	 <aura:registerEvent name="showOriginatorError" type="c:OPTUM_ShowOriginatorErrorMsgEvt"/>
+    <aura:handler name="ttsevent" event="c:ACETLGT_TTSModalEvent" action="{!c.handleCaseEvent}"/>
+   <aura:handler name="getOriginatorEvent" event="c:ACETLGT_OriginatorChanged" action="{!c.onOriginatorChange}"/> 
+  <aura:handler name="showOriginatorError" event="c:ACETLGT_ShowOriginatorErrorEvt"  action="{!c.handleShowOriginatorErrstop}" />
+    <!--View Claims details-->
+    <aura:registerEvent name="rowEvent" type="c:OPTUM_SelectedClaimRowEventChild" />
+	<aura:handler event="c:OPTUM_SelectedClaimRowEvent" action="{!c.handleClaimEvent}"/>
+    <!--Originator -->
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:handler name = 'Event' action="{!c.updateData}" event="c:OPTUM_SelectedAccountEvent"/>
+    <aura:registerEvent name="selectEvent" type="c:OPTUM_SelectedEventChild"/>
+    <aura:attribute name = "middleName" type = "String" default =""/>
+    <!-- Added by Iresh US3223268: Case Comment - Member Details Page -->
+    <aura:attribute name="comments" type="String" access="public"/>
+    <!-- Added by Dimpy US2881441: Apply sort on HSA Account-->
+    <aura:handler action="{!c.FireEvent}" event="c:OPTUM_TransactionChildEvent"/>
+     <aura:registerEvent name="appEvent" type="c:OPTUM_SelectedTransactionEvent"/> 
+    <!--Added by Dimpy US2904971: Create New Case-->
+	<aura:attribute name="userInfo" type="user" access="public"/> 
+     <aura:attribute name="OriginatorId" type="String" access="global" default=""/> 
+	 <aura:attribute name="memberDetailsTemp" type="Object"/>
+	 <aura:attribute name="accountListTemp" type="List"/>
+	 <aura:handler event="lightning:tabFocused" action="{! c.onTabFocused }"/> 
+     <aura:handler name="showOriginatorError" event="c:ACETLGT_ShowOriginatorErrorEvt" action="{!c.handleShowOriginatorError}"/>
+     <aura:handler event="c:OPTUM_FocusTopicTextEvent" action="{!c.handleOriginatorValue}"/>
+	 <!-- Added by Dimpy US3223310 Case Comment - Claims Page-->
+	 <aura:handler name="caseCommentEvent" event="c:OPTUM_CaseCommentEvent" action= "{!c.handleCaseComments}"/>
+    <!-- END US2904971: Create New Case--> 
+	<div id="originatorlocationscroll"/> 
+     <div class="slds-grid slds-wrap">
+
+
+        <div class="slds-size_1-of-3 ">
+            <!-- US3732654 'Account' navigation component error -->
+            <aura:if isTrue="{!not(empty(v.optumInt))}">
+            <lightning:card >
+			<!-- Added by prasad: US2967182 Originator screen and Topic selection -->  
+           <div class="slds-p-top_x-small slds-m-top_x-small   slds-p-left_xx-large slds-p-right_xx-large" >
+           <!-- Added isOFProfile as part of US3329760  -->
+            <c:ACETLGT_OriginatorAndTopic aura:id="OriginatorAndTopic"
+							 FamilyMembersList="{!v.FamilyMembersList}"                                               
+							 showOriginatorErrorFired="{!v.showOriginatorErrorFired}"                                                           
+							 showTPpopUp= "{!v.isTPModalOpen}"                                                                                  
+							 originator= "{!v.optumInt.Originator__c}"
+                             interId="{!v.optumInt.Id}"                     
+                             subjectID ="{!v.SubjectId}"                     
+                             originatorId=  "{!v.OriginatorId}"
+                             isOFProfile="true"
+                            ></c:ACETLGT_OriginatorAndTopic>
+
+                     <div class="{!v.isOrigSelected? 'slds-show': 'slds-hide'}" >
+                        <label class="slds-text-color_error">{!v.originatorError}</label>
+                    </div>
+                    <div class="card_element_bottom_margin"/>
+                   
+                    <span onkeypress="{!c.onClickOfEnter}">
+                    <c:ACETLGT_GlobalAutocomplete aura:id="GlobalAutocomplete"
+                                                  objectAPIName="Call_Topic_Access__c"
+                                                  IconName="standard:account"	
+                                                  lstSelectedRecords="{!v.selectedLookUpRecords}"
+                                                  label="Topic"
+                                                  detailPgName="{!v.detailPgName}"
+                                                  originatorName="Member"
+                                                  topicError="{!v.topicError}"
+                                                  interaction="{!v.int}"   />
+                    <div class="{!v.isTopicSelected? 'slds-show': 'slds-hide'}">
+                        <label class="slds-text-color_error">{!v.topicError}</label>
+                    </div>
+		    <aura:if isTrue="{!(empty(v.selectedLookUpRecords))}">
+                    <p class="slds-text-color_error cls-error">{!v.topicError}</p>
+                    </aura:if>
+                <div class="slds-align_absolute-center" style="width:8rem">
+            <lightning:button label="Search Topic" onclick="{!c.openNewTab}"
+                class="header-text buttonBorderRadius slds-m-top--large slds-col slds-m-right--small" variant="brand"
+                aura:id="searchbtn" type="submit" />
+        </div>
+                </span>  
+             <!--   <div class="slds-p-top_x-small slds-m-top_x-small" >
+                    <aura:if isTrue="{!not(empty(v.memberDetails))}">
+                        <c:OPTUM_OriginatorSelection md="{!v.memberDetails}"/>
+                    </aura:if> -->
+                </div>
+            </lightning:card>
+            </aura:if>
+            <lightning:card >
+                <aura:if isTrue="{!not(empty(v.memberDetails))}">
+                    <c:OPTUM_GeneralInformation memberDetails="{!v.memberDetails}" autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"/>
+                </aura:if>
+            </lightning:card>
+            <lightning:card >
+                <div class="slds-p-top_x-small slds-m-top_x-small" >
+                    <aura:if isTrue="{!not(empty(v.memberDetails))}">
+                        <c:OPTUM_DemographicsInfo memberDetails="{!v.memberDetails}" autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"/>
+                    </aura:if> 
+                </div>
+            </lightning:card>
+            
+        </div>  
+        <!--SLDS Changed as part of US3329760 by Venkat-->
+        <div class=" slds-size_2-of-3 slds-m-bottom_x-small slds-p-left_medium" >
+            <!--Moved AccountHolderBasicDetails Component here as part of US3329760 by Venkat-->
+             <!-- changed by Dimpy US2904971: Create New Case-->
+             <aura:if isTrue="{!not(empty(v.memberDetails))}">
+                    <c:OPTUM_AccountHolderBasicDetails highLightPanel = "{!v.highLightPanel}" memberDetails="{!v.memberDetails}" optumEID = "{!v.optumEID}" optumInt= "{!v.int}" OriginatorId = "{!v.OriginatorId}" comments="{!v.comments}" autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"/>
+                </aura:if>
+              <!-- END US2904971: Create New Case-->
+              
+               <!--US3703234: Member with No Accounts-->            
+                <aura:if isTrue="{!not(empty(v.memberDetails.accountDetails))}">
+                    <lightning:card >    
+                <c:OPTUM_MemberAccountSelection memberDetails="{!v.memberDetails}"/>
+            </lightning:card>    
+            </aura:if>            
+
+            <div class="slds-m-top_x-small" id="member" >
+                
+                <aura:if isTrue="{!not(empty(v.accountList))}">  
+                    
+                    <lightning:card >
+                        <c:OPTUM_MemberAccountDetails memberDetails="{!v.memberDetails}" autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"/>
+                    </lightning:card>
+                </aura:if>
+            </div>
+        </div>
+    </div>
+	 <!-- Added by Dimpy US3223310 Case Comment - Claims Page-->
+	<c:OPTUM_CaseComments aura:id="Details"/>
+</aura:component>

@@ -1,0 +1,376 @@
+<aura:component controller="ADBDashboardParentController" implements="flexipage:availableForAllPageTypes" access="global" >
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:attribute name="memberXrefId" type="String" />	<!--	xref id from the ISET hiddend fields -->
+    <aura:attribute name="memberId" type="String" />	<!-- eeid from the ISET screen	-->
+    <!-- set from helper after decoding the memberId.. This should be used for all service calls and other operations-->
+    <aura:attribute name="decodedMemberId" type="String"/>
+    <aura:attribute name="xrefPartitionID" type="String"/>
+    <aura:attribute name="memberFirstName" type="String" />
+    <aura:attribute name="memberLastName" type="String" />
+    <aura:attribute name="callerFirstName" type="String" />
+    <aura:attribute name="callerLastName" type="String" />
+    <aura:attribute name="agentUserRole" type="String" />
+    <aura:attribute name="isIntegrationUser" type="Boolean" default="true" /> <!-- Added for US2620797 - sunil vennam -->
+    <aura:attribute name="agentUserId" type="String" />
+    <aura:attribute name="officeId" type="String" />
+    <aura:attribute name="agentId" type="String" />
+    <aura:attribute name="memberGender" type="String" />
+    <aura:attribute name="memberPolicy" type="String" />
+    <aura:attribute name="memberPlanYear" type="String" />
+    <aura:attribute name="memberDateofBirth" type="String" />
+    <aura:attribute name="memberTypeId" type="String" default="CDB_XREF_ID"/>
+    <aura:attribute name="noOfOffers" type="Integer" default="10" />
+    <aura:attribute name="showUpDate" type="Boolean" default="true" />
+    <aura:attribute name="currentCall" type="String" /> 
+    <aura:attribute name="sameCallerSubject" type="Boolean" default="false" />
+    <aura:attribute name="windowHostName" type="String"/>
+    <aura:attribute name="windowName" type="String"/>
+    <aura:attribute name="callerDateofBirth" type="String"/>
+    <aura:attribute name="memberRelationID" type="String"/>
+    <aura:attribute name="topsPolicyNumber" type="String"/>
+    <!--Adding below attribute to differentiate between caller DOB and the selected memebr DOB : Sai Kolluru -->
+    <aura:attribute name="selectedMemberDOB" type="String"/>
+    <aura:handler name="rxDetailsEvent" event="c:ADB_MemberSearchEvent" action="{!c.handleComponentEvent}"/>
+    <aura:attribute name="rxDetails" type="ADBMemberDetailWrapper" />
+    <aura:attribute name="displayPops" type="ADBCallerProfilePopupDetailsWrapper" />
+    
+    <!-- Eligibility Section -->
+    <aura:attribute name="activeSections" type="List" default="[]" />
+    
+    <!-- handling event for the member click refresh -->
+    <aura:handler name="memberRefresh" event="c:ADB_RefreshDashboardEvent" action="{!c.handleRefresh}" />
+    
+    <!-- Event to send data to Member Eligibility Cmp -->
+    <!--<aura:handler name="MemEliCmpEvent" event="c:ADB_MemEligibilityEvent" action="{!c.setMemEliData}"/>-->
+    
+    <aura:attribute name="memberDOB" type="String"/>
+    <aura:attribute name="memFirstName" type="String" />
+    <aura:attribute name="memLastName" type="String" />
+    <aura:attribute name="employerName" type="String"/>
+    <aura:attribute name="prefMsg" type="String" />
+    <aura:attribute name="emailMsg" type="String" />
+    <aura:attribute name="phoneMsg" type="String" />
+    <aura:attribute name="customMsg" type="String" />
+    <aura:attribute name="prefFlag" type="boolean" />
+    <aura:attribute name="emailFlag" type="boolean" />
+    <aura:attribute name="phoneFlag" type="boolean" /> 
+    <aura:attribute name="selectedMemberAge" type="String" />
+    <aura:attribute name="transactionId" type="String" />
+    <aura:attribute name="isEligProfShow" type="String" default="true" /> 
+    <aura:attribute name="isMemberPrefFlagsExist" type="boolean" default="false"/> 
+    <aura:attribute name="togglehoverMasterFlag" type="boolean" default="false"/>
+    <aura:attribute name="memberAgeAboveThirteen" type="boolean" default="false"/>
+    <aura:attribute name="selectedMemberSubscriber" type="boolean" default="false"/>
+    <!-- attribute for Alerts API : US2382023 - Sunil Vennam -->
+    <aura:attribute name="alertsDetails" type="ADBEpmpAlertsResponseWrapper"/>
+    <aura:attribute name="FIMWrapper" type="Object" access="public"/>
+    <aura:registerEvent name="ADB_OutofPocketEvent" type="c:ADB_OutofPocketEvent"/>
+    <aura:attribute name="policyTerminated" type="Boolean" default="false"/>
+    <aura:handler name="empEvent" event="c:ADBEmployerEvent" action="{!c.getEmpName}"/>
+    <div class="c-container">
+        <!--	Parent layout	-->
+        <lightning:layout horizontalAlign="space" multipleRows="true">
+            <!--	First Row - Dashboard header	-->
+            <lightning:layoutItem size="12" class="slds-p-top_small slds-p-left_small slds-p-right_small" flexibility="auto" >  
+                <lightning:card title="" class="page-header"> 
+                    <div class="headline"> 
+                        <p style="color:white;font-size:28px">
+                            Advocate Dashboard
+                        </p>
+                    </div> 
+                </lightning:card>
+            </lightning:layoutItem> 
+            <lightning:layoutItem size="12" class="slds-p-top_small slds-p-left_small slds-p-right_small">
+                <lightning:card title="" class= "page-top">
+                    <div class="sub-headline">Caller Profile</div>
+                    <c:ADB_CallerProfileComponent aura:id = "callerProfileCard" 
+                                                                      decodedMemberId="{!v.decodedMemberId}"
+                                                                      firstName="{!v.callerFirstName}"
+                                                                      lastName="{!v.callerLastName}"
+                                                                      callerDateofBirth="{!v.callerDateofBirth}"
+								      selectedMemberDOB="{!v.selectedMemberDOB}"
+								      sameCallerSubject="{!v.sameCallerSubject}"
+                                                                      memFirstName ="{!v.memberFirstName}"
+                                                                      memLastName = "{!v.memberLastName}"
+                                                                      gender="{!v.memberGender}"
+                                                                      policy="{!v.memberPolicy}"												 
+                                                                      memberDOB="{!v.memberDateofBirth}"
+                                                                      currentCall ="{!v.currentCall}"
+                                                                      agentId ="{!v.agentUserId}"
+                                                                      officeId ="{!v.officeId}"
+                                                                      logonId ="{!v.agentId}"/>  
+                </lightning:card>
+            </lightning:layoutItem>
+            <lightning:layoutItem size="12" class="slds-p-top_small slds-p-left_small slds-p-right_small">
+           <lightning:card title="" class="page-right">
+                                    <div id="cardTitle_carePathOpportunities" class="sub-headline">Care Path Opportunities</div>
+               <c:ADB_OpportunityComponent aura:id="opportunityCard" memberXrefId="{!v.memberXrefId}"
+                                                                memberId="{!v.memberId}"
+                                                                decodedMemberId="{!v.decodedMemberId}"
+                                                                memFirstName ="{!v.callerFirstName}"
+                                                                memLastName = "{!v.callerLastName}"
+                                                                memberDOB = "{!v.callerDateofBirth}"
+                                                                policy="{!v.memberPolicy}"
+                                                                memberTypeId = "{!v.memberTypeId}"
+                                                                noOfOffers = "{!v.noOfOffers}"
+                                                                showUpDate = "{!v.showUpDate}"
+                                                                agentUserId = "{!v.agentUserId}"
+                                                                isIntegrationUser = "{!v.isIntegrationUser}"
+                                                                xrefPartitionID="{!v.xrefPartitionID}"
+                                                                policyTerminated = "{!v.policyTerminated}"/>
+                </lightning:card>
+            </lightning:layoutItem>
+            <!--	/First Row	- Dashboard header-->     
+            
+            <!--	Second Row - the body of the dashboard	--> 
+            <lightning:layoutItem size="12" class="slds-p-left_small" flexibility="auto" >
+                <lightning:layout>
+                    <!--	Column One  -->
+                    <lightning:layoutItem size="3" flexibility="auto" >   
+                        <lightning:layout multipleRows="true">
+                            <!--	Client Event Tracker Lightning Card	-->
+                            <lightning:layoutItem size="12" class="slds-p-top_small">
+                                <lightning:card title="" class= "page-right">
+                                    <div class="sub-headline">Client Event Tracker </div> 
+                                    <div align="">
+                                        <c:ADB_ClientEventTrackerComponent policy="{!v.memberPolicy}"
+                                                                           agentMSID="{!v.agentUserId}"
+                                                                           memberDateofBirth ="{!v.memberDateofBirth}"
+                                                                           memberId="{!v.decodedMemberId}"
+                                                                           memberFirstName = "{!v.memberFirstName}"
+                                                                           memberLastName = "{!v.memberLastName}"
+                                                                           memberPolicy = "{!v.memberPolicy}"
+                                                                           memberXrefId="{!v.memberXrefId}" />
+                                    </div> 
+                                </lightning:card>
+                            </lightning:layoutItem>
+                            <!--	/ Client Event Tracker Lightning Card	-->
+                            <!--	My FollowUps Lightning Card	Not for QA201 -->
+                            <lightning:layoutItem size="12" class="slds-p-top_small">
+                                <lightning:card title="" class= "page-right">
+                                    <div class="sub-headline cardHeading" >Commitments</div>
+                                    <div align="">
+                                        <div class="slds-p-top_large slds-p-left_small">
+                                        <c:ADB_ORSFollowUpsComponent memberXrefId="{!v.memberXrefId}"
+                                                                                 decodedMemberId="{!v.decodedMemberId}"
+                                                                                 officeId ="{!v.officeId}"
+                                                                                 logonId ="{!v.agentId}"/>
+                                        </div>
+                                        <div class="slds-p-top_large slds-p-left_small">
+                                        <c:ADB_FollowUpsComponent memberXrefId="{!v.memberXrefId}"/>
+                                            </div>
+                                        <div class="slds-p-top_large slds-p-left_small">
+                                        <c:ADB_MyFollowUpsComponent logonId="{!v.agentId}" officeId="{!v.officeId}" />
+                                    </div>
+                                        </div>
+                                </lightning:card>
+                            </lightning:layoutItem>
+                            <!-- / My FollowUps Lightning Card	-->
+                            
+                            <!--	Tools & Resources Lightning Card	-->
+                            <lightning:layoutItem size="12" class="slds-p-top_small slds-p-bottom_small">
+                                <lightning:card title="" class= "page-right">
+                                    <div class="sub-headline" >Tools &amp; Resources </div> 
+                                    <div align="">
+                                        <!-- Added attributes: US2991881 - Sunil Vennam --> 
+                                        <c:ADB_ToolsAndResources decodedMemberId = "{!v.decodedMemberId}" 
+                                                                 memberXrefId = "{!v.memberXrefId}" 
+                                                                 agentUserId = "{!v.agentUserId}"
+                                                                 memberFirstName = "{!v.callerFirstName}" 
+                                                                 memberLastName = "{!v.callerLastName}"
+                                                                 memberDateofBirth = "{!v.callerDateofBirth}" 
+                                                                 memberPolicy = "{!v.memberPolicy}"
+                                                                 FIMWrapper = "{!v.FIMWrapper}" />
+                                    </div>
+                                </lightning:card>
+                            </lightning:layoutItem>
+                            <!--	/ Tools & Resources Lightning Card	-->                                                        
+                        </lightning:layout>
+                    </lightning:layoutItem>
+                    <!--	/Column One	-->
+                    
+                    <!--	Column Two	- right hand side components -->
+                    <lightning:layoutItem size="9" class="slds-p-right_small slds-p-left_small" flexibility="grow" >
+                        <lightning:layout multipleRows="true">
+
+                            <!-- Chevron Eligibility Profile -->
+                            <lightning:layoutItem size="12" class="slds-p-top_small">
+                                <lightning:card title="" class="page-right">
+                                    <aura:if isTrue="{!v.isEligProfShow}">   
+                                        <!-- content renders if true --> 
+                                        <div class="chevron slds-grid slds-gutters">
+                                            <div class="slds-col slds-size_9-of-12">
+                                                <div class="slds-float--left ">
+                                                    <img id="rightArrow" src="{!$Resource.ADB_Chevron + '/ADB_Chevron/Right.png'}" style="width:20px;height:20px;"
+                                                         onclick="{!c.showCard}"/>
+                                                </div>
+                                                <div class="sub-headline-chevron slds-m-left--large">Eligibility Profile</div>
+                                            </div>
+                                            <aura:if isTrue="{!v.isMemberPrefFlagsExist}">
+                                                <div class="slds-col slds-size_3-of-12">
+                                                    <div class ="popoverFlag-wrapper slds-float--left" align="right"
+                                                         onmouseenter="{!c.handleMouseOverMasterFlag}" 
+                                                         onmouseleave="{!c.handleMouseOutMasterFlag}">
+                                                        <img src="{!$Resource.ADB_CallerProfileCardImages + '/ADB_CallerProfileCardImages/orangeflag.png'}"
+                                                             style="width:20px;height:20px;" />
+                                                        <aura:if isTrue="{!v.togglehoverMasterFlag}">
+                                                            <div class="slds-popover slds-popover slds-nubbin_bottom-right slds-popover_tooltip popoverIcon-content" style="position:absolute;top:-70px;left:-170px;height:60px;width:200px;" role="tooltip">
+                                                                <div class="slds-popover__body" align="left">Advocate actions are available. Expand the card to address.</div>
+                                                            </div>
+                                                        </aura:if>
+                                                    </div>
+                                                    <div class="slds-m-left--large">Advocate Action Available</div>
+                                                </div>                                                        
+                                            </aura:if>
+                                        </div>
+                                        <aura:set attribute="else">
+                                            <div class="chevron slds-grid slds-gutters">
+                                                <div class="slds-col slds-size_9-of-12">
+                                                    <div class="slds-float--left ">
+                                                        <img src="{!$Resource.ADB_Chevron + '/ADB_Chevron/Down.png'}" style="width:20px;height:20px;"
+                                                             onclick="{!c.hideCard}"/>
+                                                    </div>
+                                                    <div class="sub-headline-chevron slds-m-left--large">Eligibility Profile</div>
+                                                </div>
+                                                <aura:if isTrue="{!v.isMemberPrefFlagsExist}">
+                                                    <div class="slds-col slds-size_3-of-12">
+                                                        <div class ="popoverFlag-wrapper slds-float--left" align="right"
+                                                             onmouseenter="{!c.handleMouseOverMasterFlag}" 
+                                                             onmouseleave="{!c.handleMouseOutMasterFlag}">
+                                                            <img src="{!$Resource.ADB_CallerProfileCardImages + '/ADB_CallerProfileCardImages/orangeflag.png'}"
+                                                                 style="width:20px;height:20px;"/>
+                                                            <aura:if isTrue="{!v.togglehoverMasterFlag}">
+                                                                <div class="slds-popover slds-popover slds-nubbin_bottom-right slds-popover_tooltip popoverIcon-content" style="position:absolute;top:-70px;left:-170px;height:60px;width:200px;" role="tooltip">
+                                                                    <div class="slds-popover__body" align="left">Advocate actions are available. Expand the card to address.</div>
+                                                                </div>
+                                                            </aura:if>
+                                                        </div>
+                                                        <div class="slds-m-left--large">Advocate Action Available</div>
+                                                    </div>
+                                                </aura:if>
+                                            </div>
+                                            
+                                            <!--	Eligibility Profile Lightning Card	-->
+                                            <lightning:layoutItem size="12">
+                                                <!-- Code Added : 10.21.2020--> <!-- parent="{! this }" -->
+                                                <c:ADB_MemberProfileEligibilityComponent parent="{!this}"
+                                                                                         memberDOB ="{!v.selectedMemberDOB}"
+                                                                                         decodedMemberId="{!v.decodedMemberId}"
+                                                                                         memFirstName = "{!v.memberFirstName}"
+                                                                                         memLastName = "{!v.memberLastName}"
+                                                                                         memberPolicy = "{!v.memberPolicy}"
+                                                                                         agentId="{!v.agentUserId}"
+                                                                                         employerName = "{!v.employerName}"
+                                                                                         prefMsg = "{!v.prefMsg}"
+                                                                                         emailMsg ="{!v.emailMsg}"
+                                                                                         phoneMsg = "{!v.phoneMsg}"
+                                                                                         customMsg= "{!v.customMsg}"
+                                                                                         prefFlag = "{!v.prefFlag}"
+                                                                                         emailFlag = "{!v.emailFlag}"
+                                                                                         phoneFlag = "{!v.phoneFlag}"
+                                                                                         rxDetails = "{!v.rxDetails}"
+                                                                                         displayPops = "{!v.displayPops}"
+                                                                                         transactionId = "{!v.transactionId}"
+                                                                                         memberXrefId = "{!v.memberXrefId}"
+                                                                                         selectedMemberSubscriber="{!v.selectedMemberSubscriber}"
+                                                                                         memberAgeAboveThirteen="{!v.memberAgeAboveThirteen}"
+                                                                                         callerFirstName="{!v.callerFirstName}"
+                                                                                         callerLastName="{!v.callerLastName}"
+                                                                                         callerDateofBirth="{!v.callerDateofBirth}"/>  
+                                                
+                                            </lightning:layoutItem>
+                                        </aura:set>
+                                    </aura:if> 
+                                </lightning:card>
+                            </lightning:layoutItem>
+                            <!-- / Eligibility Profile Lightning Card -->        
+                            <!--	Health Spend Lightning Card	-->
+                            <lightning:layoutItem size="12" class="slds-p-top_small">
+                                <lightning:card title="" class="page-right">
+                                    <div class="sub-headline">Health Spend</div>
+                                    <c:ADB_ProviderUtilizationComponent memberId="{!v.memberId}"
+                                                                        memberDateofBirth="{!v.callerDateofBirth}"
+                                                                        decodedMemberId="{!v.decodedMemberId}"
+                                                                        firstName ="{!v.callerFirstName}"
+                                                                        lastName = "{!v.callerLastName}"
+                                                                        displayPops = "{!v.displayPops}"
+                                                                        windowHostName = "{!v.windowHostName}"
+                                                                        windowName = "{!v.windowName}"
+                                                                        memberRelationID = "{!v.memberRelationID}"
+                                                                        memberPolicy = "{!v.memberPolicy}"
+                                                                        topsPolicyNumber = "{!v.topsPolicyNumber}"
+                                                                        agentUserId = "{!v.agentUserId}"/>
+                                    
+                                </lightning:card>
+                            </lightning:layoutItem>
+                            <!--	/ Health Spend Lightning Card	-->
+                            
+                            <!--	/ Lightning Card - Spending Account	-->
+                            <lightning:layoutItem size="12" class="slds-p-top_small">
+                                <lightning:card title="" class="page-right">
+                                    <!-- Agent userId Attribute : US2923041 - sunil vennam-->
+                                    <c:ADB_SpendingAccountsComponent agentUserId="{!v.agentUserId}"
+                                                                     memberId="{!v.decodedMemberId}"
+                                                                     firstName="{!v.callerFirstName}"
+                                                                     lastName="{!v.callerLastName}"
+                                                                     birthdate="{!v.callerDateofBirth}"
+                                                                     planNumber="{!v.memberPolicy}"
+                                                                     FIMWrapper="{!v.FIMWrapper}"/>
+                                </lightning:card>
+                            </lightning:layoutItem>
+                            <!--/  Spending Account Card -->
+							
+                            <!-- Lightning Card	- Authorizations & 	-->	
+                            <lightning:layoutItem size="12" class="slds-p-top_small">	
+                                <lightning:card title="" class="page-right">	
+                                    <div class="sub-headline">Authorizations</div>
+                                    <c:ADB_Authorizations windowHostName = "{!v.windowHostName}"	
+                                                          windowName = "{!v.windowName}"
+                                                          decodedMemberId="{!v.decodedMemberId}"
+                                                          firstName ="{!v.callerFirstName}"
+                                                          memberRelationID = "{!v.memberRelationID}"
+                                                          memberPolicy = "{!v.memberPolicy}"
+                                                          agentUserId = "{!v.agentUserId}"/>	
+                                    
+                                    <!-- <lightning:layoutItem size="12" class="slds-p-bottom_large left-align">	
+                                            <c:ADB_AppealsComponent decodedMemberId="{!v.decodedMemberId}"
+                                                                                        memberFirstName ="{!v.memberFirstName}"
+                                                                                        memberLastName = "{!v.memberLastName}"
+                                                                                        memberDateofBirth="{!v.memberDateofBirth}"/>
+                                        </lightning:layoutItem>	-->
+                                </lightning:card>	
+                            </lightning:layoutItem>	
+                            
+                            <lightning:layoutItem size="12" class="slds-p-bottom_small slds-p-top_small">
+                                <lightning:card title="" class="page-right">
+									<div class="">
+									    <c:ADB_ContactHistory xrefId="{!v.memberXrefId}"/>
+									</div>
+				                </lightning:card>
+                            </lightning:layoutItem>
+                            
+							              <lightning:layoutItem size="12" class="slds-p-bottom_small">
+                                <lightning:card title="" class="page-right">
+                                    <div class="">
+                                        <c:ADB_HealthAssessmentComponent aura:id="healthAssessmentCard" decodedMemberId = "{!v.decodedMemberId}"
+                                                                         memFirstName="{!v.callerFirstName}"
+                                                                         memLastName = "{!v.callerLastName}"
+                                                                         memberDob="{!v.callerDateofBirth}"
+                                                                         memberPolicy="{!v.memberPolicy}"
+                                                                         agentUserId = "{!v.agentUserId}" 
+                                                                         memberXrefId="{!v.memberXrefId}" />
+                                    </div>
+                                </lightning:card>
+                            </lightning:layoutItem>
+							
+                        </lightning:layout>
+                    </lightning:layoutItem>
+                    <!--	/Column Two	right hand side components -->
+                </lightning:layout>
+            </lightning:layoutItem>
+            <!--	/Second Row	the body of the dashboard -->
+            
+        </lightning:layout>
+        <!--	/ Parent layout	-->
+    </div>
+</aura:component>

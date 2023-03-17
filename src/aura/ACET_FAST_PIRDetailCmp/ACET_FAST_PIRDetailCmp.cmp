@@ -1,0 +1,730 @@
+<aura:component controller="ACET_FAST_PIRDetailCtrl" implements="lightning:actionOverride,lightning:hasPageReference,force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" >
+    <!-- Attributes -->
+    <aura:attribute name="activeSections" type="List" default="[]" />
+    <aura:attribute name="editPIR" type="boolean" default="false"/>
+    <aura:attribute name="recordId" type="id"/>
+    <aura:attribute name="pirId" type="id"/>
+    <aura:attribute name="hideorcollapseTitle" type="string" default="Expand All"/>
+    <aura:attribute name="saveButtonTitle" type="string" default="Add PIR Detail"/>
+    <aura:attribute name="disableEditPIR" type="boolean" default="false" />
+    <aura:attribute name="caseRec" type="Case" default="{'sObjectType':'Case', 'CaseNumber':''}"/>
+    <aura:attribute name="caseStatus" type="string" default=""/>
+    <aura:attribute name="CaseType" type="string" default=""/>
+    <aura:attribute name="pirRecType" type="String" default="" />
+    <aura:attribute name="OPOuser" type="boolean" default="false"/>
+    <aura:attribute name="caseEventdateNotification" type="boolean" default="false"/>
+    <!-- Attributes -->
+    
+    <!-- Handlers -->
+    <aura:handler name="init" value="{!this}" action="{!c.getCaseRec}"/>
+    <aura:handler name="change" value="{!v.caseStatus}" action="{!c.getPIRID}"/>
+    <aura:handler name="change" value="{!v.editPIR}" action="{!c.getPIRID}"/>
+    <aura:handler event="force:refreshView" action="{!c.getPIRID}" /> 
+   
+    <!-- Handlers -->
+    
+    <!-- Pop Up Ratna -->
+    <aura:if aura:id="memberCardSpinnerAI" isTrue="{!v.caseEventdateNotification}">
+        <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close">
+                        <lightning:icon iconName="utility:close" size="x-large" alternativeText="Close" onclick="{! c.closeAction}" />
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 id="modal-heading-00" class="slds-modal__title slds-hyphenate">Alert</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                    <!-- <h1 class="slds-text-color_error">Your case is now over 10 days, please be sure to escalate your Business Partners even if they have not passed their SLA</h1> -->
+                    <h1 class="slds-text-color_error" style="text-align: center;">Your case is now over 50 days, please follow up with your business partners.<br/></h1>
+                    <div class="slds-align_absolute-center" style="height:1rem;padding-top: 20px;">
+                        <button class="slds-button slds-button_neutral"  onclick="{! c.closeAction}">Ok</button>
+                    </div>
+                    
+                </div>
+                
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+    
+    
+    <!--Pop Up Ratna-->
+    
+    <!-- Pop Up -->
+    <aura:if aura:id="memberCardSpinnerAI" isTrue="{!v.editPIR}">
+        <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close">
+                        <lightning:icon iconName="utility:close" size="x-large" alternativeText="Close" onclick="{! c.closeAction}" />
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 id="modal-heading-01" class="slds-modal__title slds-hyphenate">PIR Details</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                    <c:ACET_FAST_PIRDetail parentRecordType="{!v.CaseType}" editPIRVar="{!v.editPIR}" recordId="{!v.recordId}"/>
+                </div>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+    <!-- Pop Up -->
+    <aura:if isTrue="{!v.pirId==null || v.pirId==''}">
+        <lightning:card >
+            <div class="slds-align_absolute-center">
+                <lightning:button variant="brand" aura:id="saveId" label="{!v.saveButtonTitle}" title="{!v.saveButtonTitle}" onclick="{!c.openPopUpEdit}"/>
+            </div>
+        </lightning:card>
+    </aura:if>
+    
+    <aura:if isTrue="{!v.pirId!=null}">
+        <!-- Reactive Form -->
+        <lightning:card class="slds-text-heading_small slds-card_boundary ">
+            
+            <!---US3347009 - Buttons on Top of the PIR layout/Santhosh-->
+            <div class="slds-align_absolute-center">
+                <lightning:button variant="brand" aura:id="saveId" label="{!v.saveButtonTitle}" title="{!v.saveButtonTitle}" onclick="{!c.openPopUpEdit}" disabled="{!v.disableEditPIR}"/>
+                <!--lightning:button variant="brand" aura:id="saveId" label="{!v.saveButtonTitle}" title="{!v.saveButtonTitle}" onclick="{!c.openPopUpEdit}"/-->
+                <lightning:button variant="Neutral" aura:id="collapseOrHideBtnId" label="{!v.hideorcollapseTitle}" title="{!v.hideorcollapseTitle}" onclick="{!c.hideorCollapseAll}"/>
+            </div>
+            
+            <aura:if isTrue="{!or(v.CaseType=='Reactive Resolution',v.CaseType=='Reactive Resolution Closed')}">
+                <lightning:recordEditForm aura:id="pirCreationId" 
+                                          objectApiName="PIR_Detail__c"
+                                          recordId="{!v.pirId}"
+                                          onload="{!c.getPIRID}">
+                    <lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="{!v.activeSections }">
+                        
+                        <!-- PIR Issue Detail -->
+                        <div class="slds-p-around_small">
+                            <lightning:accordionSection name="A" label="PIR Issue Detail">
+                                <div class="slds-p-horizontal_large" >
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Status__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Case_Owner__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div> 
+                                    </div>  
+									<div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Issue_Category__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Issue_Subcategory__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                    </div>
+									<div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Reason_for_Submission_Delay__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Interest_Bearing__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <!--lightning:outputfield fieldName="Products__c"/-->
+                                                <lightning:outputfield fieldName="FAST_Global_Worked__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="SAS__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Do_NOT_Call_for_Case_Resolution__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                    </div>                          
+                                </div>
+                            </lightning:accordionSection>
+                        </div>
+                        <!-- PIR Issue Detail -->
+                        
+                        <!-- PIR Details -->
+                        <div class="slds-p-around_small">
+                            <lightning:accordionSection name="B" label="State Specific Information Only">
+                                <div class="slds-p-horizontal_large" >
+                                    
+                                    
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="RI_Complaint_Type__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+										<div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="RI_Summary_of_Provider_Issue__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+									
+							  
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="LA_C_S_Reason_for_Provider_Issue__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="LA_C_S_Summary_of_Provider_Issue__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </lightning:accordionSection>
+                        </div>
+                        <!-- PIR Details -->
+                        
+                        <!-- Progress TO Date -->
+                     <!--   <div class="slds-p-around_small">
+                            <lightning:accordionSection name="H" label="Progress To Date">
+                                <div class="slds-p-horizontal_large" >
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_12-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Progress_to_Date__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </lightning:accordionSection>
+                        </div>  -->
+                        <!-- Progress TO Date -->
+                        
+                        <!-- Global Details -->
+                      <!--  <div class="slds-p-around_small">
+                            <lightning:accordionSection name="C" label="Global Details">
+                                <div class="slds-p-horizontal_large" >
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="FAST_Global_Worked__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="FAST_On_Shore_Contact_Name__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_12-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="OGS_Sub_Status__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </lightning:accordionSection>
+                        </div>-->
+                        <!-- Global Details -->
+                        
+                        <!-- Provider Contact info -->
+                      <!--  <div class="slds-p-around_small">
+                            <lightning:accordionSection name="D" label="Provider Contact info">
+                                <div class="slds-p-horizontal_large" >
+                    
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Par_Provider__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Submitter_to_Contact_Provider_at_Closure__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </lightning:accordionSection>
+                        </div> -->
+                        <!-- Provider Contact info -->
+                        
+                        <!-- Closure Details -->
+                        <div class="slds-p-around_small">
+                            <lightning:accordionSection name="E" label="Closure Details">
+                                <div class="slds-p-horizontal_large" >
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Will_this_be_closed_in_Practice_Mgmt__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="If_no_why_not__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-grid slds-wrap">
+                                  
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Provider_Was_contacted__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                    
+                                          <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="How_Was_Provider_Contacted__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div> 
+                                    
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Closure_Sub_Status__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Submitter_to_Contact_Provider_at_Closure__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </lightning:accordionSection>
+                        </div>
+                        <!-- Closure Details -->
+                        
+                        <!-- Reopen Details -->
+                        <div class="slds-p-around_small">
+                            <lightning:accordionSection name="F" label="ReOpen Details">
+                                <div class="slds-p-horizontal_large" >
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Reopened_Date__c" />
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Reopen_Reason__c" />
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Reopened_Details__c" />
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Original_Date_Time_Closed__c" />
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                        
+                                        <aura:if isTrue="{!v.OPOuser}">
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:helptext content="This field is used to override the closed date for TAT purposes. This field can only be edited by members of the OPO PIR Team" class="customIcon" />
+                                                    <lightning:outputfield fieldName="Override_Date_for_Closed__c" /> 
+                                                    <hr/>
+                                                </div>                                        
+                                            </div>
+                                        </aura:if>
+                                    </div>
+                                </div>
+                            </lightning:accordionSection>
+                        </div>
+                        <!-- Reopen Details -->
+                        
+                        <!-- US3225117 - Root Cause for FAST Layout -->
+                        <!-- <div class="slds-p-around_small">
+                            <lightning:accordionSection name="G" label="Root Cause Details">
+                               <div class="slds-p-horizontal_large" >
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_12-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Root_Cause_1__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_12-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Root_Cause_2__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_12-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Root_Cause_3__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_12-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Root_Cause_4__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_12-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Root_Cause_5__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </lightning:accordionSection>
+                        </div>  -->
+                        <!-- US3225117 - Root Cause for FAST Layout -->
+                    </lightning:accordion>
+                </lightning:recordEditForm>
+                
+                <aura:set attribute="else">
+                    <lightning:recordEditForm aura:id="pirCreationId" 
+                                              objectApiName="PIR_Detail__c"
+                                              recordId="{!v.pirId}"
+                                              onload="{!c.getPIRID}">
+                        <lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="{!v.activeSections }">
+                            
+                            <!-- Proactive PIR Detail -->
+                            <div class="slds-p-around_small">
+                                <lightning:accordionSection name="A" label="Proactive Action PIR Details">
+                                    <div class="slds-p-horizontal_large" >
+                                        <div class="slds-grid slds-wrap">
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Status__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Substatus__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="slds-grid slds-wrap">
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="PMO_Provider_Relationship__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="PMO_Contact__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="slds-grid slds-wrap">
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Insight_Source__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Insight_Source_Other__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-wrap">
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="SWAT_Awareness_of_Issue__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="SWAT_Contact_Partner__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-wrap">
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Provider_Experience_Data_Attached__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Program_Name__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>  
+                                        </div>
+                                        <div class="slds-grid slds-wrap">
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Project_Area_Focus__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Project_Area_Focus_Other__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-wrap">
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Platform_System__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Platform_System_Other__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-wrap">
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="MBO_Check_List__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="MBO_Check_List_Other__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-wrap">
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Provider_Type__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div> 
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Provider_Type_Other__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-wrap">
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Measurement_System__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Sources_of_Data__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-wrap">
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Queries__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Data_Analysis__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-wrap">
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="E2E_Priority__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Issue_Detection__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-wrap">
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Issue_Prevention__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="OIA_Required__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-wrap">
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Governance_Status__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Governance_Comments__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-wrap">
+                                            <!--div class="slds-col slds-size_6-of-12">
+                                            <div class="slds-p-horizontal_small">
+                                                <lightning:outputfield fieldName="Root_Cause__c"/>
+                                                <hr/>
+                                            </div>
+                                        </div-->
+                                            <div class="slds-col slds-size_6-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Case_Owner__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </lightning:accordionSection>
+                            </div>
+                            <!-- US3661951 - Case Management: Proactive Action - PIR Level Root Cause-->
+                            <div class="slds-p-around_small">
+                                <lightning:accordionSection name="B" label="Root Cause">
+                                    <div class="slds-p-horizontal_large" >
+                                        <div class="slds-grid slds-wrap">
+                                            <div class="slds-col slds-size_12-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Root_Cause_1__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-p-horizontal_large" >
+                                        <div class="slds-grid slds-wrap">
+                                            <div class="slds-col slds-size_12-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Root_Cause_2__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-p-horizontal_large" >
+                                        <div class="slds-grid slds-wrap">
+                                            <div class="slds-col slds-size_12-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Root_Cause_3__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-p-horizontal_large" >
+                                        <div class="slds-grid slds-wrap">
+                                            <div class="slds-col slds-size_12-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Root_Cause_4__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-p-horizontal_large" >
+                                        <div class="slds-grid slds-wrap">
+                                            <div class="slds-col slds-size_12-of-12">
+                                                <div class="slds-p-horizontal_small">
+                                                    <lightning:outputfield fieldName="Root_Cause_5__c"/>
+                                                    <hr/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </lightning:accordionSection>
+                            </div>
+                            <!-- US3661951 - Case Management: Proactive Action - PIR Level Root Cause-->
+                            <!-- US3196758 - E2E Root cause fields -->
+     
+                            <!-- US3196758 - E2E Root cause fields -->
+                            <!-- Proactive PIR Details -->
+                        </lightning:accordion>
+                    </lightning:recordEditForm> 
+                </aura:set>
+            </aura:if>
+            <!---<div class="slds-align_absolute-center">
+                <lightning:button variant="brand" aura:id="saveId" label="{!v.saveButtonTitle}" title="{!v.saveButtonTitle}" onclick="{!c.openPopUpEdit}" disabled="{!v.disableEditPIR}"/>
+                <lightning:button variant="Neutral" aura:id="collapseOrHideBtnId" label="{!v.hideorcollapseTitle}" title="{!v.hideorcollapseTitle}" onclick="{!c.hideorCollapseAll}"/>
+            </div>-->
+        
+        </lightning:card>
+        <!-- Form -->
+    </aura:if>
+    
+</aura:component>

@@ -1,0 +1,267 @@
+public class ACETGetBenefitAccWebservice extends ACETWebservice {
+    public override void GetEndpoint()
+    {
+         GetEndpointDetail('GetBenefitAccEndpoint');
+    }
+    
+    private void GetRequestBody() {
+        RequestBody = GetRequestBody('ACETGetBenefitAccRequestJSON', RequestParameters);        
+    }
+    
+    public Continuation StartRequest(String BenefitBundleOptId, String EnrolleeIdentifierType, String EnrolleeIdentifierId, String EffectiveStartDate, 
+            String EffectiveEndDate, String CoverageType, String BenefitVerIndicator, String BenefitCode, String CallbackMethodName, Continuation oContinuation)
+    {
+        system.debug(LoggingLevel.INFO, 'BenefitBundleOptionId: ' + BenefitBundleOptId + ', EnrolleeIdentifierType: ' + EnrolleeIdentifierType);
+        system.debug(LoggingLevel.INFO, 'EnrolleeIdentifierId: ' + EnrolleeIdentifierId + ', EffectiveStartDate: ' + EffectiveStartDate);
+        system.debug(LoggingLevel.INFO, 'EffectiveEndDate: ' + EffectiveEndDate + ', CoverageType: ' + CoverageType + ', BenefitVerIndicator: ' + BenefitVerIndicator);
+        system.debug(LoggingLevel.INFO, 'BenefitCode: ' + BenefitCode + ', CallbackMethodName: ' + CallbackMethodName + ', oContinuation: ' + oContinuation);
+        
+        GetEndpoint();
+        RequestParameters = new List<String>{BenefitBundleOptId, EnrolleeIdentifierType, EnrolleeIdentifierId, EffectiveStartDate, 
+            EffectiveEndDate, CoverageType, BenefitVerIndicator, BenefitCode};
+        GetRequestBody();
+        oContinuation = AddHttpRequest(OAuthConfig, CallbackMethodName, oContinuation);
+        return oContinuation;         
+    }
+  
+     
+      public ACETWSCalloutResult ProcessResponse(String BenefitPlanId, String CoverageType, String HttpRequestLabel,Map<String,String> mapBenefitPlans) {
+           
+
+           System.debug('Base Plans::::Rider Plans'+mapBenefitPlans);
+            ACETWSCalloutResult oACETWSCalloutResult = new ACETWSCalloutResult();
+            List<ACETPlanBenefitDetailController.Accumulator> Accumulators = new List<ACETPlanBenefitDetailController.Accumulator>();
+            List<ACETGroupPlanBenefitWrapper.Accumulator> accumLst = new List<ACETGroupPlanBenefitWrapper.Accumulator>();
+            Map<String,List<ACETGetBenefitAccJSON2Apex.PlanTier>> planTierBasePlanMap = new Map<String,List<ACETGetBenefitAccJSON2Apex.PlanTier>>();
+            //Map<String,List<ACETGroupPlanBenefitWrapper.Accumulator>> benefitAccumulatorMap = new Map<String,List<ACETGroupPlanBenefitWrapper.Accumulator>>();
+            Map<String,ACETGetBenefitAccJSON2Apex.PlanTier> planTierRiderPlanMap = new Map<String,ACETGetBenefitAccJSON2Apex.PlanTier>();
+            Set<String> planTierSet = new Set<String>();
+            String planTierStr;
+            String costShareTypeDED;
+            String costShareTypeOOP;
+            String coverageLevelIndividual;
+            String coverageLevelFamily;
+            ACETGroupPlanBenefitWrapper.AccumulatorP Accumulator;
+            ACETGroupPlanBenefitWrapper.Accumulator objAccumulator;
+            ACETGroupPlanBenefitWrapper.DateRangeVersion ObjdateRangeVersion;
+            ACETGroupPlanBenefitWrapper wrapper;
+            try
+            {
+                HttpResponse Response = GetHttpResponse(HttpRequestLabel);
+                //StaticResource ResponseJSONSR = [SELECT Body FROM StaticResource WHERE Name = 'getBenefitAccumlator_MockedJSON'];
+                //String ResponseBody = ResponseJSONSR.Body.toString();
+                String ResponseBody = Response.getBody();
+                System.debug('ResponseBody:::::'+ResponseBody);
+                if (Response.getStatusCode() != null && Response.getStatusCode() == 200)
+                //if (Response.getStatusCode() != null)
+                {
+                    wrapper = new ACETGroupPlanBenefitWrapper();
+                    ACETGetBenefitAccJSON2Apex ACETJSON2Apex = (ACETGetBenefitAccJSON2Apex)JSON.deserialize(ResponseBody, ACETGetBenefitAccJSON2Apex.class);
+                    system.debug('ACETJSON2Apex : ' + ACETJSON2Apex);
+                    if (ACETJSON2Apex.benefitAccumulatorRSResult.getBenefitsAccumulatorResponse.errors == null) {
+                        ACETGetBenefitAccJSON2Apex.BenefitsAccumulator benefitsAccumulator = ACETJSON2Apex.benefitAccumulatorRSResult.getBenefitsAccumulatorResponse.benefitsAccumulator;
+                        if (benefitsAccumulator != null && benefitsAccumulator.membership != null && mapBenefitPlans != null) {
+                            for (ACETGetBenefitAccJSON2Apex.Membership Membership :benefitsAccumulator.membership) {
+                                if (Membership.benefitPlan != null) {
+                                    
+                                    for (ACETGetBenefitAccJSON2Apex.BenefitPlan BenefitPlan :Membership.benefitPlan) {
+                                        if (mapBenefitPlans != null && BenefitPlan.benefitPlanId != null && BenefitPlan.coverageType == CoverageType && mapBenefitPlans.get(BenefitPlan.benefitPlanId) == 'BasePlan') {
+                                            if(BenefitPlan.planTier != null) {
+                                                for(ACETGetBenefitAccJSON2Apex.PlanTier planTier :BenefitPlan.planTier) {
+                                                    if(planTierBasePlanMap.containsKey(BenefitPlan.benefitPlanId) == false){
+                                                        planTierBasePlanMap.put(BenefitPlan.benefitPlanId, new List<ACETGetBenefitAccJSON2Apex.PlanTier>());
+                                                    }
+                                                    planTierBasePlanMap.get(BenefitPlan.benefitPlanId).add(planTier);
+                                                }
+                                            }
+                                        }
+                                        //System.debug('Benefit Cost Share::::::'+mapBenefitPlans.get(BenefitPlan.benefitPlanId)+BenefitPlan.coverageType+CoverageType);
+                                        if (mapBenefitPlans != null && BenefitPlan.benefitPlanId != null && BenefitPlan.coverageType == CoverageType && mapBenefitPlans.get(BenefitPlan.benefitPlanId) == 'RiderPlan') {
+                                            if(BenefitPlan.planTier != null) {
+                                                for (ACETGetBenefitAccJSON2Apex.benefitCode benefitCodePlan :BenefitPlan.benefitCode) {
+                                                    for(ACETGetBenefitAccJSON2Apex.BenefitCostShare BenefitCostShare :benefitCodePlan.BenefitCostShare) {
+                                                        if(BenefitCostShare.shareBasedPlanAccumulatorIndicator == '1' && (BenefitCostShare.costShareType == 'Deductible' || BenefitCostShare.costShareType == 'Out of Pocket'))  {
+                                                            planTierStr = BenefitPlan.planTier[0].tierTypeDescription;
+                                                            
+                                                            if(BenefitCostShare.costShareType.contains('Deductible') ) {
+                                                                costShareTypeDED = BenefitCostShare.costShareType;
+                                                            }
+                                                            else {
+                                                                costShareTypeOOP = BenefitCostShare.costShareType;
+                                                            }
+                                                            
+                                                            if(BenefitCostShare.coverageLevel == 'Individual') {
+                                                                coverageLevelIndividual = BenefitCostShare.coverageLevel;
+                                                            }
+                                                            else {
+                                                                coverageLevelFamily = BenefitCostShare.coverageLevel;
+                                                            }
+                                                            //System.debug('planTierStr:::'+planTierStr+'costShareType:::'+costShareTypeDED);
+                                                            planTierRiderPlanMap.put(BenefitPlan.planTier[0].tierTypeDescription,BenefitPlan.planTier[0]);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    
+                                        if(BenefitPlan.BenefitCode != null && mapBenefitPlans.get(BenefitPlan.benefitPlanId) == 'BasePlan') {
+                                            Integer sectionStartIndex = 1;
+                                            
+                                            ObjdateRangeVersion = new ACETGroupPlanBenefitWrapper.DateRangeVersion();
+                                            wrapper.mapDateVersion = new Map<String,ACETGroupPlanBenefitWrapper.DateRangeVersion>();//Added by Divya -06/17
+                                            wrapper.benefitAccumulatorMap = new Map<String,List<ACETGroupPlanBenefitWrapper.Accumulator>>();
+                                            for (ACETGetBenefitAccJSON2Apex.BenefitCode coPayBenefitCode :benefitPlan.BenefitCode) {
+                                                ObjdateRangeVersion.benefitVersion = (coPayBenefitCode.benefitVersion != null)?coPayBenefitCode.benefitVersion:'';
+                                                String strEffectiveDate = (ChangeDateFormat(coPayBenefitCode.benefitCodeEffectiveDate) != null)?ChangeDateFormat(coPayBenefitCode.benefitCodeEffectiveDate):''; 
+                                                String strExpireDate = (ChangeDateFormat(coPayBenefitCode.benefitCodeExpirationDate) != null)?ChangeDateFormat(coPayBenefitCode.benefitCodeExpirationDate):''; 
+                                                String strMatch = strEffectiveDate + ' - ' + strExpireDate;
+                                                ObjdateRangeVersion.dateRange = strMatch;
+                                                wrapper.mapDateVersion.put(coPayBenefitCode.benefitCode,ObjdateRangeVersion);
+                                                System.debug('Null check ----->'+wrapper.mapDateVersion); 
+                                                String sectionKey =  coPayBenefitCode.benefitCode;
+                                                if(coPayBenefitCode.BenefitCostShare != null && wrapper.benefitAccumulatorMap.containsKey(sectionKey) == false){                                          
+                                                    for (ACETGetBenefitAccJSON2Apex.BenefitCostShare BenefitCostShare :coPayBenefitCode.BenefitCostShare) {
+                                                        if(BenefitCostShare.costShareType == 'Benefit Maximum') {
+                                                            objAccumulator = new ACETGroupPlanBenefitWrapper.Accumulator();
+                                                            objAccumulator.coverageLevel = (BenefitCostShare.coverageLevel != null)?BenefitCostShare.coverageLevel:'';
+                                                            objAccumulator.costShareType = (BenefitCostShare.costShareType != null)?BenefitCostShare.costShareType:'';
+                                                            objAccumulator.benefitMaximumValue = (BenefitCostShare.benefitMaximumValue != null)?BenefitCostShare.benefitMaximumValue:'';
+                                                            objAccumulator.benefitMaximumUnit = (BenefitCostShare.benefitMaximumUnit != null)?BenefitCostShare.benefitMaximumUnit:'';
+                                                            objAccumulator.benefitYTDValue = (BenefitCostShare.benefitYTDValue != null)?BenefitCostShare.benefitYTDValue:'';
+                                                            objAccumulator.benefitRemainingValue = (BenefitCostShare.benefitRemainingValue != null)?BenefitCostShare.benefitRemainingValue:'';
+                                                            
+                                                            if(wrapper.benefitAccumulatorMap.containsKey(sectionKey) == false){
+                                                                wrapper.benefitAccumulatorMap.put(sectionKey, new List<ACETGroupPlanBenefitWrapper.Accumulator>());
+                                                            }
+                                                            
+                                                            wrapper.benefitAccumulatorMap.get(sectionKey).add(objAccumulator);
+                                                            wrapper.benefitAccumulatorMap.get(sectionKey).sort();
+                                                            
+                                                            //if(wrapper.benefitAccumulatorMap.get(sectionKey) == null) {
+                                                                //wrapper.benefitAccumulatorMap.get(sectionKey).add(objAccumulator);
+                                                                accumLst.add(objAccumulator);
+                                                            //}  
+                                                            
+                                                        }
+                                                    }
+
+                                                    System.debug('wrapper.benefitAccumulatorMap:::'+wrapper.benefitAccumulatorMap.keySet()); 
+                                                }
+                                            }
+                                            System.debug('Null check ----->'+wrapper.benefitAccumulatorMap+mapBenefitPlans);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if(planTierBasePlanMap != null) {
+                            wrapper.accumulatorList = new List<ACETGroupPlanBenefitWrapper.AccumulatorP>();
+                            for(String benefitPla: planTierBasePlanMap.keySet()) {
+                                List<ACETGetBenefitAccJSON2Apex.PlanTier> planTierList = planTierBasePlanMap.get(benefitPla);
+                                //System.debug('planTierSet:::::'+planTierSet);
+                                for(ACETGetBenefitAccJSON2Apex.PlanTier planTier:planTierList) {
+                                    //System.debug('planTier_Divya'+planTierRiderPlanMap+planTier.tierTypeDescription);
+                                    ACETGetBenefitAccJSON2Apex.PlanTier accPlanTier = planTierRiderPlanMap.get(planTier.tierTypeDescription);   
+                                    Accumulator = new ACETGroupPlanBenefitWrapper.AccumulatorP();
+                                    Accumulator.Section = 'Individual';
+                                    Accumulator.TypeCode = planTier.tierTypeCode == '1' ? 'INN' : 'OON';
+                                    Accumulator.MaxDeductible = String.isNotBlank(planTier.primaryIndividualDeductibleMaximum) ? Decimal.valueOf(planTier.primaryIndividualDeductibleMaximum) : 0;
+                                    /* if(accPlanTier != null && planTierStr == planTier.tierTypeDescription && coverageLevelIndividual.contains('Individual')) {
+                                        if(costShareTypeDED == 'Deductible' && costShareTypeOOP == 'Out of Pocket') {
+                                            Accumulator.YTDDeductible = (String.isNotBlank(PlanTier.primaryIndividualDeductibleYTD)?Decimal.valueOf(PlanTier.primaryIndividualDeductibleYTD) : 0)+(String.isNotBlank(accPlanTier.primaryIndividualDeductibleYTD) ? Decimal.valueOf(accPlanTier.primaryIndividualDeductibleYTD) : 0);
+                                            Accumulator.YTDOOP = (String.isNotBlank(PlanTier.primaryIndividualOOPYTD)?Decimal.valueOf(PlanTier.primaryIndividualOOPYTD) : 0)+(String.isNotBlank(accPlanTier.primaryIndividualOOPYTD) ? Decimal.valueOf(accPlanTier.primaryIndividualOOPYTD) : 0);
+                                        }
+                                        else if(costShareTypeDED == 'Deductible' && costShareTypeOOP != 'Out of Pocket') {
+                                            Accumulator.YTDDeductible = (String.isNotBlank(PlanTier.primaryIndividualDeductibleYTD)?Decimal.valueOf(PlanTier.primaryIndividualDeductibleYTD) : 0)+(String.isNotBlank(accPlanTier.primaryIndividualDeductibleYTD) ? Decimal.valueOf(accPlanTier.primaryIndividualDeductibleYTD) : 0);
+                                            Accumulator.YTDOOP = (String.isNotBlank(PlanTier.primaryIndividualOOPYTD)?Decimal.valueOf(PlanTier.primaryIndividualOOPYTD) : 0);
+                                        }
+                                        else if(costShareTypeDED != 'Deductible' && costShareTypeOOP == 'Out of Pocket') {
+                                            Accumulator.YTDDeductible = (String.isNotBlank(PlanTier.primaryIndividualDeductibleYTD)?Decimal.valueOf(PlanTier.primaryIndividualDeductibleYTD) : 0);
+                                            Accumulator.YTDOOP = (String.isNotBlank(PlanTier.primaryIndividualOOPYTD)?Decimal.valueOf(PlanTier.primaryIndividualOOPYTD) : 0)+(String.isNotBlank(accPlanTier.primaryIndividualOOPYTD) ? Decimal.valueOf(accPlanTier.primaryIndividualOOPYTD) : 0);
+                                        }
+                                    }*/
+                                    //System.debug('Accumulator.YTDDeductible:::'+Accumulator.YTDDeductible+'Accumulator.YTDOOP::::'+Accumulator.YTDOOP);
+                                    if(Accumulator.YTDDeductible == null) {
+                                        //System.debug('Accumulator.YTDDeductible:::'+Accumulator.YTDDeductible);
+                                        Accumulator.YTDDeductible = (PlanTier.primaryIndividualDeductibleYTD != null) ? Decimal.valueOf(PlanTier.primaryIndividualDeductibleYTD) : 0;
+                                    }
+                                    
+                                    if(Accumulator.YTDOOP == null) {
+                                        //System.debug('Accumulator.YTDOOP:::'+Accumulator.YTDOOP);
+                                        Accumulator.YTDOOP = (PlanTier.primaryIndividualOOPYTD != null) ? Decimal.valueOf(PlanTier.primaryIndividualOOPYTD) : 0;
+                                    }
+                                    //System.debug(Accumulator.YTDDeductible+'rt:::::::::::');
+                                    Accumulator.RemDeductible = Accumulator.MaxDeductible - Accumulator.YTDDeductible;
+                                    Accumulator.MaxOOP = String.isNotBlank(planTier.primaryIndividualOOPMaximum) ? Decimal.valueOf(planTier.primaryIndividualOOPMaximum) : 0;
+                                    Accumulator.RemOOP = Accumulator.MaxOOP - Accumulator.YTDOOP;
+                                    //Accumulators.add(Accumulator);
+                                    wrapper.accumulatorList.add(Accumulator);
+                                    Accumulator = new ACETGroupPlanBenefitWrapper.AccumulatorP();
+                                    Accumulator.Section = 'Family';
+                                    Accumulator.TypeCode = planTier.tierTypeCode == '1' ? 'INN' : 'OON';
+                                    Accumulator.MaxDeductible = String.isNotBlank(planTier.primaryFamilyDeductibleMaximum) ? Decimal.valueOf(planTier.primaryFamilyDeductibleMaximum) : 0;
+                                    /* if(accPlanTier != null && planTierStr == planTier.tierTypeDescription && coverageLevelIndividual.contains('Family')) {
+                                        if(costShareTypeDED == 'Deductible' && costShareTypeOOP == 'Out of Pocket') {
+                                            Accumulator.YTDDeductible = (String.isNotBlank(PlanTier.primaryFamilyDeductibleYTD)?Decimal.valueOf(PlanTier.primaryFamilyDeductibleYTD) : 0)+(String.isNotBlank(accPlanTier.primaryFamilyDeductibleYTD) ? Decimal.valueOf(accPlanTier.primaryFamilyDeductibleYTD) : 0);
+                                            Accumulator.YTDOOP = (String.isNotBlank(PlanTier.primaryFamilyOOPYTD)?Decimal.valueOf(PlanTier.primaryFamilyOOPYTD) : 0)+(String.isNotBlank(accPlanTier.primaryFamilyOOPYTD) ? Decimal.valueOf(accPlanTier.primaryFamilyOOPYTD) : 0);
+                                        }
+                                        else if(costShareTypeDED == 'Deductible' && costShareTypeOOP != 'Out of Pocket') {
+                                            Accumulator.YTDDeductible = (String.isNotBlank(PlanTier.primaryFamilyDeductibleYTD)?Decimal.valueOf(PlanTier.primaryFamilyDeductibleYTD) : 0)+(String.isNotBlank(accPlanTier.primaryFamilyDeductibleYTD) ? Decimal.valueOf(accPlanTier.primaryFamilyDeductibleYTD) : 0);
+                                            Accumulator.YTDOOP = (String.isNotBlank(PlanTier.primaryFamilyOOPYTD)?Decimal.valueOf(PlanTier.primaryFamilyOOPYTD) : 0);
+                                        }
+                                        else if(costShareTypeDED != 'Deductible' && costShareTypeOOP == 'Out of Pocket') {
+                                            Accumulator.YTDDeductible = (String.isNotBlank(PlanTier.primaryFamilyDeductibleYTD)?Decimal.valueOf(PlanTier.primaryFamilyDeductibleYTD) : 0);
+                                            Accumulator.YTDOOP = (String.isNotBlank(PlanTier.primaryFamilyOOPYTD)?Decimal.valueOf(PlanTier.primaryFamilyOOPYTD) : 0)+(String.isNotBlank(accPlanTier.primaryFamilyOOPYTD) ? Decimal.valueOf(accPlanTier.primaryFamilyOOPYTD) : 0);
+                                        }
+                                    }*/
+                                    //System.debug('Accumulator.YTDDeductible:::'+Accumulator.YTDDeductible+'Accumulator.YTDOOP::::'+Accumulator.YTDOOP);
+                                    if(Accumulator.YTDDeductible == null) {
+                                        //System.debug('Accumulator.YTDDeductible:::'+Accumulator.YTDDeductible);
+                                        Accumulator.YTDDeductible = (PlanTier.primaryFamilyDeductibleYTD != null) ? Decimal.valueOf(PlanTier.primaryFamilyDeductibleYTD) : 0;
+                                    }
+                                    
+                                    if(Accumulator.YTDOOP == null) {
+                                        //System.debug('Accumulator.YTDOOP:::'+Accumulator.YTDOOP);
+                                        Accumulator.YTDOOP = (PlanTier.primaryFamilyOOPYTD != null) ? Decimal.valueOf(PlanTier.primaryFamilyOOPYTD) : 0;
+                                    }
+                                    //System.debug(Accumulator.YTDDeductible+'rt:::::::::::');
+                                    Accumulator.RemDeductible = Accumulator.MaxDeductible - Accumulator.YTDDeductible;
+                                    Accumulator.MaxOOP = String.isNotBlank(planTier.primaryFamilyOOPMaximum) ? Decimal.valueOf(planTier.primaryFamilyOOPMaximum) : 0;
+                                    Accumulator.RemOOP = Accumulator.MaxOOP - Accumulator.YTDOOP;
+                                    //Accumulators.add(Accumulator);
+                                    wrapper.accumulatorList.add(Accumulator);
+                                }
+                            }
+                        }
+                        oACETWSCalloutResult.Success = true;
+                        oACETWSCalloutResult.Message = '';
+                        oACETWSCalloutResult.Response =  wrapper;
+                    } else {
+                        system.debug('SuccessanadD');
+                        oACETWSCalloutResult.Success = false;
+                        oACETWSCalloutResult.Message = GetOILErrorMessage(ACETJSON2Apex.benefitAccumulatorRSResult.getBenefitsAccumulatorResponse.errors);
+                        oACETWSCalloutResult.Response = null;
+                        oACETWSCalloutResult.MessageSeverity = ApexPages.Severity.INFO;
+                    }
+                }
+                else
+                {
+                    oACETWSCalloutResult = ParseFailureResponse(Response);
+                    oACETWSCalloutResult.Success = false;
+                    oACETWSCalloutResult.MessageSeverity = ApexPages.Severity.ERROR;        
+                }
+            }
+            catch(Exception ex)
+            {
+                system.debug(LoggingLevel.INFO, 'Exception in Get Benefit Accumulator. Details: ' + ex); 
+                System.debug('getStackTraceString ' + ex.getStackTraceString());
+                oACETWSCalloutResult.Success = false;
+                oACETWSCalloutResult.Message = ex.getMessage();
+                oACETWSCalloutResult.MessageSeverity = ApexPages.Severity.ERROR;
+            }
+            system.debug('oACETWSCalloutResult: ' + oACETWSCalloutResult);
+            return oACETWSCalloutResult;
+      }
+        
+}

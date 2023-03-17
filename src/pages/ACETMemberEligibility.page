@@ -1,0 +1,627 @@
+<apex:page controller="ACETMemberEligibilityController" sidebar="False"
+tabStyle="Member_Eligibility__tab" title="Member Eligibilty">  
+<script
+type="text/javascript" src="{!$Label.ACETDynatraceJSURL}"
+data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1"
+crossorigin="anonymous"></script>
+ <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+    <style>
+.apexp .detailList .list td, .apexp .detailList .list th, .apexp .editPage .bPageBlock .detailList .list tr td,
+    .apexp .editPage .bPageBlock .detailList .list tr th {
+    padding: 4px 2px 4px 5px;
+    color: #333;
+    border-bottom: 1px solid #e3deb8 !important;
+}
+
+body .pbBody table.list tr th, body .pbBody table.list tr td {
+    color: #000;
+}
+</style>
+    <style>
+.autodoc {
+    vertical-align: middle;
+}
+
+.active {
+  pointer-events: auto;     
+  background: #ffff00;       
+}
+
+.inactive {
+  pointer-events: none;     
+  background: #dddddd;      
+}        
+
+/*.errorM3{
+    border: solid #cc0000; 
+    border-radius: 0;
+}
+.errorM3 .msgIcon {
+    padding: 0px 0px 0px 0px;
+    margin-left: 0px;
+    width: 0px;
+        } */
+.messageTable {
+    border: none; 
+}
+
+/*.message {
+    margin: 4px 0px;
+   }*/
+
+</style>
+    <!-- Added By Prakash on 10/10/2016-->
+    <apex:form >
+        <c:ACETInteractionHighlightsPanel InteractionAtt="{!wrapper.interaction}"
+            SubjectAtt="{!wrapper.Subject}"
+            AdditionalInfoAtt="{!wrapper.AdditionalInfo}" html-auto-doc="auto" selectedOriginator="{!wrapper.interaction.Originator_Name__c}"></c:ACETInteractionHighlightsPanel>
+            <apex:outputPanel id="hippapopupPanel">
+                       <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+            </apex:outputPanel>
+        <apex:outputPanel rendered="{!!isCancelCaseCreation}">
+            <apex:sectionHeader title="Member Eligibility" />
+            <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+            <apex:includeScript value="{!$Resource.JqueryTableSorter}"></apex:includeScript>
+            <apex:includeScript value="/soap/ajax/30.0/connection.js" />
+            <apex:includeScript value="/support/console/30.0/integration.js" />
+            <apex:actionFunction name="toggleShowCoverages"
+                action="{!toggleShowCoverages}"
+                oncomplete="initCoverageTableSorter();acet.autodoc.startAutodoc('coveragesPageBlock');"
+                reRender="coverages,coverageHistoryPageBlock" />
+            <script>
+            
+            $(document).ready(function(){
+                localStorage.removeItem("table");
+                localStorage.removeItem("rowCheckHold");
+            
+                showMask();
+                callmemberService();
+                resetTable();
+            });  
+            //US1074007 starts
+            function disabilityLink(){
+                if($("span[id$='disability']").html() == 'Y') {
+                    $("span[id$='disability']").html("<a id='disability' href='#disabilityDiv' style='color:blue'>" + $("span[id$='disability']").html() +"</a>");
+                }
+            }  
+            //US1074007 ends 
+            function getUrlVars() {
+                var vars = [], hash;            
+                var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');            
+                for(var i = 0; i < hashes.length; i++) {
+                    
+                    hash = hashes[i].split('=');                
+                    vars.push(hash[0]);                
+                    vars[hash[0]] = hash[1];                
+                }
+                return vars;            
+            }
+            var newurl =window.location.href ;
+            function updateURL(additionalInfoStr) {
+              if (history.pushState) {
+               console.log('newurl:'+newurl);
+               if(!newurl.includes('&additionalInfo=')){
+                   newurl=newurl+ '&additionalInfo=' + additionalInfoStr;
+                   console.log('newurl@@@:'+newurl);
+                   
+                   window.location.replace(newurl);
+                       //window.history.replaceState("object or string", "Title",newurl);
+                   }
+              }
+            }
+            
+            //console.log('newurl:'+newurl);
+            //alert(newurl.includes('&additionalInfo='));
+            var counter=0;
+            if(!newurl.includes('&additionalInfo=')){
+                var childId = Math.floor((Math.random() * 500) + 1); 
+                var listener = function (result)        
+                 { 
+                   if(counter==0){
+                       //alert('counter='+counter);
+                       counter++ ;
+                       var additionalInfoStr = result.message; 
+                           if(additionalInfoStr != ''){
+                                     var res = decodeURI(additionalInfoStr);
+                                     res = res.replace(/%3A/g,':');
+                                     res = res.replace(/%2C/g,',');
+                                     console.log('res:');
+                                     console.log(res);
+                                     setTimeout(function(){
+                                         updateURL(res);
+                                       },1000); 
+                           }
+                   }
+                };        
+               sforce.console.addEventListener('ParentDataResponse_'.concat(childId), listener);        
+               var parentId = getUrlVars()["parentId"];        
+               sforce.console.fireEvent('RequestParentData_'.concat(parentId), childId);
+           
+               }
+            function checkHoldCode(){
+                var hold = $("[id*='MemberStatus2']").html();
+                    if(hold == 'PEND'){
+                        callHoldRestrictions();
+                     } 
+             }
+            </script>
+            <apex:actionFunction name="callHoldRestrictions" action="{!callHoldRestrictions}" status="PaymentSearchStatus" oncomplete="showMask();showHoldCode();" />
+            <apex:actionFunction name="callmemberService"
+                action="{!callMemberServices}"
+                reRender="status1, maindetailPageBlock" status="PaymentSearchStatus"
+                onComplete="callGetMembership();">
+                <apex:param value="" name="param1" />
+            </apex:actionFunction>
+            <apex:actionFunction name="callGetMembership"
+                action="{!CallGetMembership}"
+                reRender="status1, maindetailPageBlock, coveragesPageBlock, coverageHistoryPageBlock,pgmsg"
+                status="PaymentSearchStatus" oncomplete="childjsonfunction();">
+            </apex:actionFunction>
+            <apex:actionFunction name="childjsonfunction"
+                action="{!toggleShowCoverages}"
+                reRender="status1, maindetailPageBlock , coveragesPageBlock, planSection, coverageHistoryPageBlock"
+                status="PaymentSearchStatus"
+                oncomplete="checkCoverageRadioBtn();initCoverageTableSorter();acet.autodoc.startAutodoc();acet.autodoc.createCommentsbox();hideMask();disabilityLink();">
+            </apex:actionFunction>
+            <apex:actionFunction name="showHoldCode" action="{!showHoldCode}" reRender="alertHoldCode,accordscript" oncomplete="showMask();resetTable();"/>
+            <apex:actionFunction name="hideHoldCode" action="{!hideHoldCode}" reRender="alertHoldCode" oncomplete="hideMask()"/>
+            <apex:actionFunction name="mesgeRef" action="{!showHoldErrorMsgs}" reRender="pgmsgHold" status="HoldStatus"/>
+            <script>
+                function closeHoldCodeAlert()    {
+                    $("[id$='alertHoldCode']").css("display","none");
+                    hideHoldCode();
+                    return false;
+                }
+
+            </script>
+            <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+                attrShowSaveAndCloseButton="false" attrShowSaveButton="true"
+                attrShowMisdirectButton="true"
+                attrSourceOriginator="{!wrapper.SourceOriginator}"
+                attrInteractionId="{!wrapper.Interaction.Id}"
+                attrSubjectId="{!wrapper.Subject.Id}"
+                attrCallTopic="View Member Eligibility"/>
+            <apex:actionStatus id="PaymentSearchStatus">
+                <apex:facet name="start">
+                    <p style="text-align: center;">
+                        <img src="/img/loading.gif" />&nbsp;Loading...
+                    </p>
+                </apex:facet>
+            </apex:actionStatus>
+            <apex:pageMessages id="pgmsg" />
+            <apex:pageBlock mode="maindetail" id="maindetailPageBlock">
+                <apex:pageblockSection columns="3" collapsible="true"
+                    title="Member Eligibility Information" html-auto-doc="true">
+                    <apex:pageBlockSectionItem dataStyle="width:16.6%"
+                        labelStyle="width:16.6%">
+                        <apex:outputLabel value="Member Name" for="membername" />
+                        <apex:outputText value="{!memberFullname}" id="membername" />
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:16.6%"
+                        labelStyle="width:16.6%">
+                        <apex:outputLabel value="Date of Employment"
+                            for="dateofemployment" />
+                        <apex:outputText value="{!MemberDetail.EmploymentStartDate}" id="dateofemployment">
+                        </apex:outputText>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:16.6%"
+                            labelStyle="width:16.6%">
+                            <apex:outputLabel value="Funding Arrangement"
+                                for="fundingarrange" />
+                            <apex:outputText value="{!MemberDetail.FundingArragement}"
+                                id="fundingarrange" />
+                        </apex:pageBlockSectionItem>
+                         <apex:pageBlockSectionItem dataStyle="width:16.6%"
+                        labelStyle="width:16.6%">
+                        <apex:outputLabel value="Date of Birth" for="dateofbirth" />
+                        <apex:outputText value="{!MemberDetail.DOB}" id="dateofbirth" />
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:16.6%"
+                        labelStyle="width:16.6%">
+                        <apex:outputLabel value="Employment Status" for="employmentstatus" />
+                        <apex:outputText value="{!MemberDetail.EmploymentStatus}"
+                            id="employmentstatus" />
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:16.6%"
+                        labelStyle="width:16.6%">
+                        <apex:outputLabel value="COBRA" for="cobraindicator" />
+                        <apex:outputText value="{!IF(MemberDetail.EligibilityStatus == 'COBRA', 'Yes','No')}" id="cobraindicator" />
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:16.6%"
+                        labelStyle="width:16.6%">
+                        <apex:outputLabel value="Member ID" for="memberid" />
+                        <apex:outputText value="{!MemberDetail.MemberID}" id="memberid" />
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:16.6%"
+                        labelStyle="width:16.6%">
+                        <apex:outputLabel value="Termination Date" for="terminationdate" />
+                        <apex:outputText value="" id="terminationdate" />
+                    </apex:pageBlockSectionItem>
+                     <apex:pageBlockSectionItem dataStyle="width:16.6%"
+                        labelStyle="width:16.6%">
+                        <apex:outputLabel value="COBRA Plan Effective Date"
+                            for="cobraplaneffectivedate" />
+                        <apex:outputText value="" id="cobraplaneffectivedate" />
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:16.6%" rendered="{!MemberDetail.MemberStatus != 'PEND'}"
+                        labelStyle="width:16.6%">
+                        <apex:outputLabel value="Member Status"
+                            for="MemberStatus" />
+                        <apex:outputText value="{!MemberDetail.MemberStatus}" 
+                            id="MemberStatus" />
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:16.6%" rendered="{!MemberDetail.MemberStatus == 'PEND'}"
+                        labelStyle="width:16.6%">
+                        <apex:outputLabel value="Member Status"
+                            for="MemberStatus" />
+                        <apex:outputLink value="#" id="MemberStatus2" onclick="showMask();showHoldCode();" rendered="{!MemberDetail.MemberStatus == 'PEND'}" style="color:blue">{!MemberDetail.MemberStatus}</apex:outputLink>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:16.6%"
+                        labelStyle="width:16.6%">
+                        <apex:outputLabel value="Deceased Date" for="deceaseddate" />
+                        <apex:outputText value="" id="deceaseddate" />
+                    </apex:pageBlockSectionItem>
+       <apex:pageBlockSectionItem dataStyle="width:16.6%"
+                        labelStyle="width:16.6%">
+                        <apex:outputLabel value="Continuation Responsibility" for="continuationresponsibility" />
+                        <apex:outputText value="{!memberdetail.responsibilityType}" id="continuationresponsibility" />
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:16.6%"
+                        labelStyle="width:16.6%">
+                        <apex:outputLabel value="Coverage Level Code" for="clc" />
+                        <apex:outputText value="{!MemberDetail.CoverageLevelCode}" id="clc" />
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:16.6%"
+                        labelStyle="width:16.6%">
+                        <apex:outputLabel value="Disability" for="disability" />
+                        <apex:outputText value="{!MemberDetail.disability}" id="disability" />
+                    </apex:pageBlockSectionItem>
+                    
+                     <apex:pageBlockSectionItem dataStyle="width:16.6%"
+                        labelStyle="width:16.6%">
+                        <apex:outputLabel value="Continuation Type" for="continuationtype" />
+                        <apex:outputText value="{!memberdetail.continuationType}" id="continuationtype" />
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem dataStyle="width:16.6%"
+                        labelStyle="width:16.6%">
+                        <apex:outputLabel value="Plan Type" for="plantype" />
+                        <apex:outputText value="{!memberdetail.planType}" id="plantype" />
+                    </apex:pageBlockSectionItem>
+                    </apex:pageblockSection>
+                    <!-- Added by Rahul for US716955 -->
+                    
+                    <!--- apex:pageBlockSection title="Member Status Log" columns="1" id="memberStatusLogId"
+                        html-auto-doc="true" html-auto-doc-case-items="true" html-auto-doc-section-key="memberStatusLogId" 
+                        html-auto-doc-section-column-indexes="1,2,3,4,5,6,7">                       
+                         <apex:pageBlockTable value="{!MemberDetail.MemberStatusLogs}" var="stalog" >
+                            <apex:column value="{!stalog.StatusAction}" headerValue="Status Action" />
+                            <apex:column value="{!stalog.EffectiveDate}" headerValue="Effective Date" />
+                            <apex:column value="{!stalog.ChangedOn}" headerValue="Processed/Changed On" />
+                            <apex:column value="{!stalog.Changedby}" headerValue="Processed/Changed by" />
+                            <apex:column value="{!stalog.Reason}" headerValue="Reason"/>
+                            <apex:column value="{!stalog.OperationInitiatedby}" headerValue="Operation Initiated by" />
+                        </apex:pageBlockTable>
+
+                    </apex:pageBlockSection>
+
+                    <!-- US1074007 starts -->
+                    <div id="disabilityDiv">
+                        <!--<apex:pageBlock id="disabilityBlock" mode="mainDetail">-->
+                        <apex:pageblockSection id="disabilityBlock" columns="1"
+                            html-auto-doc="true" title="Dependent Disability Information">
+                               <!-- change value from Coverages to the proper variable -->
+                            <apex:pageBlockTable id="disability-table" value="{!memberDetail.disabilityInfo}"
+                                var="dis" captionStyle="text-align:left;margin-bottom:3px;">
+                                <apex:column value="{!dis.disabilityType}" headerValue="Disability Type" />
+                                <apex:column value="{!dis.diagnosisCode}" headerValue="Diagnosis Code" />
+                                <apex:column value="{!dis.diagnosisDesc}" headerValue="Diagnosis Description" />
+                                <apex:column value="{!dis.diagnosisCodeType}" headerValue="Diagnosis Code Type" />
+                                <apex:column value="{!dis.effectiveDate}" headerValue="Effective Date" />
+                                <apex:column value="{!dis.endDate}" headerValue="End Date" />
+                            </apex:pageBlockTable>
+                        </apex:pageblockSection>
+                            <!--<apex:pageBlockButtons location="bottom">
+                            </apex:pageBlockButtons>
+                        </apex:pageBlock>-->
+                    </div>
+                <!-- US1074007 ends -->
+        
+                    <apex:pageBlockSection title=" Member Address" columns="1" id="memberAddressId"
+                        html-auto-doc="true" html-auto-doc-case-items="true" html-auto-doc-section-key="memberAddressId" 
+                        html-auto-doc-section-column-indexes="1,2,3,4,5,6">
+                        <script>twistSection(document.getElementById('img_{!$Component.memberAddressId}'));
+                    </script>
+                        <apex:pageBlockTable value="{!MemberDetail.Addresses}" var="addr">
+                            <apex:column value="{!addr.AddressLine1}"
+                                headerValue="Address Line 1" />
+                            <apex:column value="{!addr.AddressLine2}"
+                                headerValue="Address Line 2" />
+                            <apex:column value="{!addr.City}" headerValue="City" />
+                            <apex:column value="{!addr.State}" headerValue="State" />
+                            <apex:column value="{!addr.Zip}" headerValue="Zip" />
+                            <apex:column value="{!addr.AddressType}"
+                                headerValue="Address Type" />
+                        </apex:pageBlockTable>
+                    </apex:pageBlockSection>
+                                </apex:pageBlock>
+            <apex:pageBlock id="coveragesPageBlock" mode="mainDetail" >
+                <apex:pageblockSection id="coverages" columns="1"
+                    html-auto-doc="true" html-auto-doc-case-items="true" html-auto-doc-section-key="coverages" 
+  html-auto-doc-section-column-indexes="1,2,3,4,5,6,7,8" title="Coverages"><!--html-auto-doc="true" -->
+                    <script>twistSection(document.getElementById('img_{!$Component.coverages}'));
+                    </script>
+                    <apex:inputHidden id="preferredCoverageGUID"
+                        value="{!ProferredCoverageGUID}" />
+                       
+                    <apex:pageBlockTable id="coverage-table" value="{!Coverages}"
+                        var="cl" captionStyle="text-align:left;margin-bottom:3px;">
+                       <apex:facet name="caption">
+                            <apex:outputPanel html-auto-doc-item="false">
+                                <apex:outputPanel rendered="{!IsShowActiveCoveragesOnly}">
+                                    <input type="radio" name="showCoverage" value="Active"
+                                        checked="checked" style="vertical-align: middle"
+                                        onclick="initCoverageTable()" />Active
+                                    <input type="radio"
+                                        name="showCoverage" value="All" style="vertical-align: middle"
+                                        onclick="initCoverageTable()" />All    
+                                </apex:outputPanel>
+                                <apex:outputPanel rendered="{!NOT(IsShowActiveCoveragesOnly)}">
+                                    <input type="radio" name="showCoverage" value="Active"
+                                        style="vertical-align: middle" onclick="initCoverageTable()" />Active
+                                    <input type="radio"
+                                        name="showCoverage" value="All" checked="checked"
+                                        style="vertical-align: middle" onclick="initCoverageTable()" />All    
+                                </apex:outputPanel>
+                            </apex:outputPanel>
+                        </apex:facet>
+                        <apex:column >
+                            <div auto-doc-item="false">
+                                <apex:inputHidden id="clGUID" value="{!cl.GUID}"
+                                    html-auto-doc-item="false" />
+                               
+                                    <img src="{!URLFOR($Resource.ACETResources, '/img/m/' +cl.Image+'.jpg')}" /> <!-- As per US1093663 -->
+                            </div>
+                        </apex:column>
+                        <apex:column value="{!cl.CoverageType}"
+                            headerValue="Coverage Type" />
+                         <apex:column value="{!cl.GroupNumber}"
+                            headerValue="Group Number" />
+                        <apex:column value="{!cl.GroupName}" headerValue="Group Name" />
+                        <apex:column value="{!cl.Product}" headerValue="Product" />
+                        <apex:column value="{!cl.EffectiveDate}"
+                            headerValue="Effective Date" />
+                        <apex:column value="{!cl.EndDate}" headerValue="End Date" />
+                        <apex:column value="{!cl.SourceCode}" headerValue="Source Code" />
+                        <apex:column value="{!cl.BenefitPlanId}"  headerValue="Benefit Plan ID" />
+                    </apex:pageBlockTable>
+                </apex:pageblockSection>
+                <apex:pageBlockButtons location="bottom">
+                </apex:pageBlockButtons>
+            </apex:pageBlock>
+             <apex:pageBlock id="coverageHistoryPageBlock" mode="mainDetail">
+                
+                <apex:pageblockSection id="covHis" columns="1" title="Coverage Level Change Log" html-auto-doc="true"> <!-- html-auto-doc="true" -->
+                    <script>twistSection(document.getElementById('img_{!$Component.covHis}'));
+                    </script>
+                    
+                    <apex:pageBlockTable id="coverageHis-table" value="{!CoverageHistory}"
+                        var="clh" captionStyle="text-align:left;margin-bottom:3px;">
+                         <apex:column value="{!clh.covLevelCode}" headerValue="Coverage Level Code" />
+                         <apex:column value="{!clh.covLevelDesc}" headerValue="Coverage Level Description" />
+                        <apex:column headerValue="Effective Date" >
+                                      <apex:outputText value="{0,date,MM/dd/yyyy}">
+                                            <apex:param value="{!clh.covLevelEffDate}" />
+                                      </apex:outputText>
+                            </apex:column>
+                            <apex:column headerValue="Expiration Date" >
+                                      <apex:outputText value="{0,date,MM/dd/yyyy}">
+                                            <apex:param value="{!clh.covLevelExpDate}" />
+                                      </apex:outputText>
+                            </apex:column>
+
+                    </apex:pageBlockTable>
+                </apex:pageblockSection>
+                
+            </apex:pageBlock>
+        </apex:outputPanel>
+    <apex:outputPanel id="alertHoldCode" style="position:absolute;top:-50px !important;left:30%">
+                             
+            <div style="background-color:white">
+                <apex:outputPanel style="display:{!IF(holdCodeAlert == true,'','none')}" rendered="{!holdCodeAlert}">
+                    <apex:outputPanel styleClass="popupBackground" layout="block" />
+                    <apex:outputPanel styleClass="custPopup" layout="block" style="width:55pc">
+                        <apex:pageBlock title="The following holds have been placed on this Member." >
+                            <apex:pageBlockButtons location="top">
+                               <apex:commandButton id="closeAlertBtnMemberId" value="Close" onclick="closeHoldCodeAlert(); return false;"  style="float:right;" />
+                            </apex:pageBlockButtons>
+                            <apex:outputPanel id="pgmsgHold">
+                                <apex:pageMessages />
+                            </apex:outputPanel>
+                        <apex:actionStatus id="HoldStatus">
+                            <apex:facet name="start">
+                                <p style="text-align: center;">
+                                    <img src="/img/loading.gif" />&nbsp;<b>Loading...</b>
+                                </p>
+                            </apex:facet>
+                        </apex:actionStatus>
+                            <apex:outputpanel id="holdid">
+                               <table >
+                                   <tr>
+                                      <th style="width:50px;"></th>
+                                      <th style="width:110px;">Hold Code </th>
+                                      <th style="width:265px;">Description</th>
+                                      <th style="width:130px;">Hold Level</th>
+                                      <th style="width:115px;">Effective Date</th>
+                                      <th style="width:200px;">Expiration Date</th>
+                                  </tr>
+                               </table>
+                             </apex:outputPanel>
+                             <apex:outputPanel >
+                                <div style="overflow:auto;height:250px !important">
+                                <table id="originalDrilldowns" >
+                                   <apex:repeat value="{!MemberDetail.holdCodeList}" var="wrap">
+                                    <tr>
+                                        <td>&nbsp;</td>
+                                        <td>&nbsp;</td>
+                                        <td>&nbsp;</td>
+                                        <td>&nbsp;</td>
+                                        <td>&nbsp;</td>
+                                        <td>&nbsp;</td>
+                                     </tr>
+                                      <tr class="odd">
+                                         <td style="padding-left:1pc;width:25px;"><apex:outputPanel layout="none"><div class="arrow"></div></apex:outputPanel></td>
+                                         <td style="padding-left:1pc;width:100px;"><apex:outputText value="{!wrap.holdCode}"/></td>
+                                         <td style="padding-left:1pc;width:265px;"><apex:outputText value="{!wrap.holdDescription}" /></td>
+                                         <td style="padding-left:1pc;width:130px;"><apex:outputText value="{!wrap.holdLevel}" /></td>
+                                         <td style="padding-left:1pc;width:115px;"><apex:outputText value="{!wrap.effectiveDate}" /></td>
+                                         <td style="padding-left:1pc;width:200px;"><apex:outputText value="{!wrap.expirationDate}" /></td>
+                                     </tr>
+                                      <apex:outputPanel layout="none">
+                                         <tr class="pleaseHideMe">
+                                            <td colspan="8">   
+                                                <br/><h2 class="slds-text-heading--small" style="font-weight:bold;font-size:110%;padding-left:227px;">This hold impacts the following process(s)</h2><br/><br/>
+                                                <div>
+                                                   <div class="slds-form-element" style="display:flex;">
+                                                      <div style="padding-left:100px;width:300px">
+                                                            <apex:dataTable value="{!wrap.holdRestriction}" var="restrictions" style="border:hidden !important;border-style:none !important;">
+                                                                <apex:column style="border:hidden !important;border-style:none !important;">
+                                                                    <apex:outputText value="{!restrictions}" />
+                                                                </apex:column>
+                                                            </apex:dataTable>
+                                                       </div>
+                                                       <apex:outputLabel value="Hold Reason" style="padding-right:5px"/>
+                                                       <div style="width:300px">
+                                                            <apex:inputTextarea id="newDesc" value="{!wrap.holdNote}" style="height:75px;" disabled="true" cols="30" rows="3"/>
+                                                       </div>
+                                                   </div>
+                                                 </div>
+                                              </td>
+                                          </tr>
+                                      </apex:outputPanel>
+                                   </apex:repeat>
+                                </table>
+                                </div>
+                            </apex:outputpanel>    
+                        </apex:pageBlock>
+                    </apex:outputPanel>
+                </apex:outputPanel>
+            </div>
+        </apex:outputPanel>
+        <div class = "popupBackground" >
+        </div>
+        
+    </apex:form>
+    <script>
+    function initCoverageTable(){     
+        toggleShowCoverages();                 
+    }    
+    
+    function checkCoverageRadioBtn(){
+        $("table[id*='coverage-table']").find("caption span span input").each(function(){
+            if($(this).attr("checked") == "checked" && $(this).val() != '{!coverageToggle}'){
+                $(this).click();
+                $("table[id*='coverage-table']").find("thead th:nth-child(2)").click();
+           }
+        });
+        initCoverageTableSorter();
+    }
+    function showMask(){
+        $(".popupBackground").css("display","block");
+    }
+    function hideMask(){
+       $(".popupBackground").css("display","none");
+    }
+    function initCoverageHisSorter(){
+    console.log('Entering the sorting part of coverageHis-table.....');
+       if($("table[id*='coverageHis-table'] > tbody > tr").length > 0){
+            $("table[id*='coverageHis-table']").tablesorter({ sortList: [[3,1]]});
+            
+        }
+    }
+    var initCoverageTableSorter = function(){
+        console.log('Entering the loop.....');
+        if($("table[id*='coverage-table'] > tbody > tr").length > 0){
+            $("table[id*='coverage-table']").tablesorter({ sortList: [[1,0],[7,1],[6,1]]});
+            
+        }    
+
+        //highlight table onload  
+        $("[id$='coverage-table']").find("tbody tr").each(function(){
+            if($(this).find("td:nth-child(2)").html() == '{!coverageType}' && $(this).find("td:nth-child(3)").html() == '{!coverageGroupNumber}' 
+                && $(this).find("td:nth-child(9)").html() == '{!coveragePlanBenId}' && $(this).find("td:nth-child(7)").html() == '{!coverageEndDate}'&& $(this).find("td:nth-child(6)").html() == '{!coverageStartDate}'){
+                $(this).parent().children().removeClass('active'); 
+                $(this).parent().children().addClass('inactive');
+                $(this).removeClass('inactive'); 
+                $(this).addClass('active');                
+                $(this).click();                
+            }
+
+         });
+            
+        initCoverageHisSorter();   
+        };
+   
+       
+    </script>
+    <style type="text/css">
+    .hideBenefitPlanIdClass {
+            display : none;
+        }
+    
+.imgclass:hover {
+    background-image: url('/img/help/helpOrbs.gif');
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 15px;
+    background-position: right;
+}
+
+.imgclass {
+    background-image: url('/img/help/helpOrbs.gif');
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 15px;
+}
+.pbHeader .pbTitle h2 {
+    width: 175%;
+}
+.popupBackground{
+            background-color:black;
+            opacity: 0.20;
+            filter: alpha(opacity = 20);
+            position: absolute;
+            width: 100%;
+            height: 1000%;
+            top: 0;
+            left: 0;
+            z-index: 9998;
+            display :none;
+        } 
+</style>
+<style type="text/css">
+         #originalDrilldowns { border-collapse:collapse;}
+         #originalDrilldowns h4 { margin:0px; padding:0px;}
+         #originalDrilldowns img { float:right;}
+         #originalDrilldowns ul { margin:10px 0 10px 40px; padding:0px;}  
+         #originalDrilldowns th { repeat-x scroll center left; padding:7px 15px; text-align:left;}
+         #originalDrilldowns div.arrow { background:transparent url({!URLFOR($Resource.ACETJExpand, '/jExpand/RightArrow.jpg')}) no-repeat scroll 0px 0px; width:21px; height:23px; display:block;}
+         #originalDrilldowns div.up { background:transparent url({!URLFOR($Resource.ACETJExpand, '/jExpand/DownArrow.jpg')}) no-repeat scroll 0px 0px; width:21px; height:23px; display:block;}
+     </style>
+<script>
+     function resetTable(){
+          $("[id$='originalDrilldowns']").find("tr.pleaseHideMe").hide();
+          $("[id$='originalDrilldowns']").find("tr:first-child").show();
+          
+          $("[id$='originalDrilldowns']").find("tr.odd").click(function()  
+          {
+             $(this).next("tr").toggle();
+             $(this).find(".arrow").toggleClass("up");
+          });
+         mesgeRef(); 
+     }
+</script>
+
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+</apex:page>

@@ -1,0 +1,175 @@
+<apex:page controller="ACETMisdirectedCallController"
+    action="{!checkMisdirectCase}">
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="/support/console/36.0/integration.js" />
+     <script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+    <apex:form >
+        <apex:actionFunction name="sf_save" action="{!save}" reRender="pb"
+            oncomplete="closeTab();" />
+        <apex:actionFunction name="fetchProfile" action="{!fetchProfile}" reRender="profileHidden"
+            oncomplete="modifyPicklistForProfile();" /> 
+        <apex:sectionHeader title="Misdirect" />
+        <apex:pageMessages />
+        <apex:pageBlock id="pb">
+        	<apex:outputPanel id="profileHidden">
+        		<input type="hidden" id="profileHiddenVal" value="{!profileName}"/>
+	        </apex:outputPanel>
+            <c:ValidateData typeval="Misdirect"/>
+            <apex:pageBlockSection columns="1">
+                <apex:pageBlockSectionItem rendered="{!NOT(ISNULL(CaseData.CaseObj.CaseNumber))}">
+                    <apex:outputLabel value="Case Number" />
+                    <apex:inputField value="{!CaseData.CaseObj.casenumber}"
+                        id="case_number" />
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Misdirect Reason" />
+                    <apex:inputField value="{!CaseData.CaseObj.Misdirected_Reason__c}"
+                        required="true" id="misdirectReason" />
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Comments" />
+                    <apex:inputTextArea value="{!Comments}" cols="60" rows="4" />
+                </apex:pageBlockSectionItem>
+            </apex:pageBlockSection>
+            <apex:pageBlockButtons location="bottom">
+                <apex:commandButton value="Save" onclick="return validate();" />
+                <apex:commandButton value="Clear" onclick="return resetForm();" />
+            </apex:pageBlockButtons>
+        </apex:pageBlock>
+    </apex:form>
+    <script> 
+        //The below code opens detail page on close of call topic page - Added by Divya
+        var subtabIds = new Array();
+        $(document).ready(function() {
+            sforce.console.getFocusedPrimaryTabId(function(result){
+               sforce.console.getSubtabIds(result.id, showsubtabIds);
+            }); 
+            fetchProfile();
+        });
+        var showsubtabIds = function showsubtabIds(result) {
+            subtabIds = result.ids;
+        };  
+        function modifyPicklistForProfile(){
+        	var profileVal = $("[id$='profileHiddenVal']").val();
+        	$("[id$='misdirectReason']").parent().find("option").each(function(){
+            });
+        	if(profileVal == 'ACET Member' || profileVal == 'ACET Provider' || profileVal == 'ACET EB Agent'){
+        		$("[id$='misdirectReason']").parent().find("option").each(function(){
+        			if($(this).val() == 'United Behavior Health'){
+			            $(this).remove();
+			        }
+	            });
+	        } else {
+	        	$("[id$='misdirectReason']").parent().find("option").each(function(){
+        			if($(this).val() == 'Optum Behavioral Health'){
+			            $(this).remove();
+			        }
+	            });
+	        }
+
+        }          
+        function closeTab(){            
+            sforce.console.getEnclosingTabId(function(result){                 
+                var refreshNavigationTab = "{!JSENCODE($CurrentPage.parameters.refreshNavigationTab)}";
+                var isProviderFlow = "{!JSENCODE($CurrentPage.parameters.isProviderFlow)}";
+                var closeCallTopicTab = "{!JSENCODE($CurrentPage.parameters.closeCallTopicTab)}";
+                console.log("refreshNavigationTab >>> "+refreshNavigationTab);
+                console.log("isProviderFlow >> "+isProviderFlow); 
+                                
+                var currentTabId = result.id;
+                                                                                                                                
+                if(refreshNavigationTab == 'true'){ 
+                    if(isProviderFlow == 'true'){
+                        console.log('before refresh sub tab');                                                 
+                        sforce.console.getEnclosingPrimaryTabId(function(result){
+                            //console.log('primaryId' + result.id);
+                            sforce.console.fireEvent('MemberSearchRefresh_'.concat(result.id), result.id); 
+                            sforce.console.closeTab(closeCallTopicTab);                                  
+                            sforce.console.closeTab(currentTabId);                                                          
+                        });                                                                         
+                    }else{
+                        sforce.console.refreshNavigationTab(); 
+                        sforce.console.closeTab(closeCallTopicTab);                                  
+                        sforce.console.closeTab(currentTabId);                                                     
+                    }                                                                   
+                }else{
+                    sforce.console.closeTab(closeCallTopicTab);                                  
+                    sforce.console.closeTab(currentTabId);
+                }
+                
+                
+                    //bhanu jain : below code will close all the sub tabs
+                    
+                    //sforce.console.getEnclosingPrimaryTabId(function(result){
+                                        //console.log("Primary : "+result.id);
+                                        //var pID = result.id;
+                                        //sforce.console.refreshPrimaryTabById(result.id, true, console.log("refesh done"));
+                                        //sforce.console.getSubtabIds(result.id, function(result){
+                                            //for(i=0;i<result.ids.length;i++){
+                                            //var tabid = result.ids[i];
+                                                    //sforce.console.getTabLink(sforce.console.TabLink.TAB_ONLY, result.ids[i], function(result){
+                                                                                //console.log(" >>> "+result.tabLink);
+                                                                            //});
+                                                //console.log(tabid ); 
+                                                //sforce.console.closeTab(tabid)
+                                            //}
+                                        //});                
+                                    //});  
+                                 
+
+            });
+            
+            var firstElement = subtabIds[0];
+            console.log('Display First Element'+firstElement);
+            sforce.console.focusSubtabById(firstElement,focusSuccess);
+        }
+        
+        var focusSuccess = function focusSuccess(result) {
+            //Report whether going to the subtab was successful
+            if (result.success == true) {
+                //console.log('Going to the subtab was successful');
+            } else {
+                //console.log('Going to the subtab was not successful');
+            }
+        };
+        
+        function validate(){            
+            /*var $reason = $("[id$='misdirectReason']");                        
+            
+            var retFlag = true;
+            $reason.removeClass("error").parent().find(".errorMsg").remove();                        
+            if(!$reason.val()){
+               var errorMsg = "You must enter a value."; 
+               $reason.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+               retFlag = false;                  
+            }
+                  
+            if(retFlag){                
+                sf_save();
+            }    */
+            
+            var validateFlag = true;
+            if(validateNew('','true') == false){
+                validateFlag =  false;
+            }
+            if(validate_comp('') == true){
+                sf_save();
+          
+           }
+            
+            return false;             
+        }
+        
+        function resetForm(){
+            $(".errorMsg").remove(); 
+            $("form").find('input:text,select, textarea').val('');                                    
+            return false; 
+        }
+        
+        $(document).ready(function() { 
+                   
+            $("[id$='misdirectReason']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');                                   
+        });
+    </script>
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+</apex:page>

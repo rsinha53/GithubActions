@@ -1,0 +1,253 @@
+<!--
+@Desc: TTS popup modal box for case creation (US1875495,US1852201)
+@Date: 01-08-2019
+-->
+<aura:component controller = "SAECaseCreationController"
+                implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,lightning:isUrlAddressable">
+    <!-- US2179925 - Thanish - 21st Feb 2020 -->
+    <ltng:require styles="{!$Resource.ACET_MasterStyle}"/>
+
+<aura:attribute name="Topic" type="String" access="public" />
+<aura:attribute name="cseTopic" type="String" access="public"/>
+<aura:attribute name="cseType" type="String" access="public" default="None"/>
+<aura:attribute name="cseSubtype" type="String" access="public" default="None"/>
+<aura:attribute name="topicOptions" type="List" access="public"/>
+<aura:attribute name="typeOptions" type="List" access="public"/>
+<aura:attribute name="subtypeOptions" type="List" access="public"/>
+<aura:attribute name="IsCaseSaved" type="Boolean" default="false"/>
+<aura:attribute name="caseWrapper" type="Object" access="public"/>
+<!-- US1851066	Pilot - Case - Save Button & Case Creation Validations - 15/10/2019 - Sarma -->
+<aura:attribute name="isShowTypeError" type="Boolean" default="false" />
+<aura:attribute name="isShowSubTypeError" type="Boolean" default="false" />
+    <aura:attribute name="isMemberLookup" type="Boolean" default="false"/>
+
+<aura:attribute name="pageNumber" type="Integer" access="public" />
+
+<aura:attribute name="isFacetsEnabled" type="String" access="public" default="{!$Label.c.ACET_FacetsEngineTrigger}"/>
+
+<aura:registerEvent name="closeModalBox" type="c:SAE_TtsModalCloseEvent"/>
+
+<aura:handler name="init" value="{!this}" action="{!c.init}" />
+    <aura:attribute name="uhcProduct" type="String"/>
+    <aura:attribute name="freeFormCommentsVal" type="String"/>
+<lightning:workspaceAPI aura:id="workspace"/>
+
+<!-- US2091974 - Sanka - Case Creation -->
+<aura:attribute name="isModalOpen" type="Boolean" default="false"/>
+<aura:attribute name="isProvider" type="Boolean" default="false"/>
+<aura:attribute name="disableTopic" type="Boolean" default="true"/>
+<!-- US2037798	Pilot - Create Additional  TTS for View Member Eligibility - 23/10/2019 - Sarma -->
+<aura:attribute name="isButtonDisabled" type="Boolean" default="false"/>
+
+    <!-- US2038277 - Autodoc Integration - Sanka -->
+    <aura:attribute name="pagefeature" type="String" access="public"/>
+    <aura:attribute name="autodocHidden" type="String" access="public" />
+    <aura:attribute name="autodocCommentHidden" type="String" access="public" />
+    <aura:attribute name="autodocCaseItemsHidden" type="String" access="public" />
+    <!-- DE322503 - Resetting button autodoc during case save - Sarma -->
+
+    <aura:attribute name="mapClaimSummaryDetails" type="Object" default="[]"/>
+    <aura:registerEvent name="ACET_ButtonAutodocResetEvent" type="c:ACET_ButtonAutodocResetEvent" />
+
+    <div id="autodocParams">
+        <input type="hidden" id="autodocHidden" />
+        <input type="hidden" id="autodocCommentHidden" value="{!v.autodocCommentHidden}"/>
+        <input type="hidden" id="autodocCaseItemsHidden"/>
+    <!-- US2038277 - Autodoc Integration - End -->
+    </div>
+
+    <!-- Autodoc Metallica Code Merge - Thanish - 19th Feb 2020 -->
+        <aura:attribute name="AutodocKey" type="string" access="public"/>
+
+    <!-- US1934396 - Thanish - 17th Feb 2020 - autodoc warning message -->
+    <aura:attribute name="showAutodocWarningMessage" type="Boolean" default="false"/>
+    <aura:attribute name="enableAutodocWarningMessage" type="Boolean" default="false"/>
+
+    <!-- US2509591 -->
+    <aura:attribute name="showResolvedMessage" type="Boolean" default="false" />
+    <aura:attribute name="showUnResolvedMessage" type="Boolean" default="false" />
+
+    <!--US2423120 - For multiple policies - Sravan -->
+    <aura:attribute name="selectedPolicies" type="List" default=""/>
+    <aura:attribute name="eligiblePolicies" type="List" default=""/>
+    <aura:attribute name="ignoredPolicies" type="Map" default=""/>
+    <aura:attribute name="memberMap" type="Map" access="public"/>
+    <aura:attribute name="policyMap" type="Map" default=""/>
+    <aura:attribute name="caseId" type="String" default=''/>
+
+    <!-- US2423120, US2517602, US2517604 Praveen CR-->
+    <!--<aura:handler event="c:ACET_SetPoliciesList" action="{!c.setSelectedPolicies}" />-->
+    <aura:registerEvent name="ACET_GetPoliciesList" type="c:ACET_GetPoliciesList" />
+
+    <!-- US2718112 - Thanish - 2nd Jul 2020 -->
+    <aura:registerEvent name="ACETCaseCreated" type="c:ACET_ACETCaseCreated"/>
+
+    <!--DE347387: ORS Issue - Provider information is missing in ORS routing Screen - Praveen  -->
+    <aura:attribute name="providerDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+	<aura:attribute name="autodocUniqueId" type="String"/>
+    <!--chandra US2904624-->
+		<aura:attribute name="isPaidorPre" type="Boolean" default="false"/>
+    <!--Chandra-->
+    <aura:attribute name="isClaimView" type="Boolean" default="false"/>
+    <aura:attribute name="selectedRows" type="Object[]"/>
+    <!-- DE378289 - Praveen - 10/22/2020 - Regression defect -->
+    <aura:attribute name="isMemberSnapshot" type="Boolean" default="true"/>
+    <aura:attribute name="isRoutingAllowed" type="boolean" default="true"/>
+    <!--US3071655-->
+    <aura:attribute name="showRoutingAvailabilityWarningMessage" type="Boolean" default="false"/>
+    <aura:attribute name="showRoutingMessageforFacetsANDORSCases" type="Boolean" default="false"/>
+
+    <aura:attribute name="interactionOverviewTabId" type="String" />
+    <aura:attribute name="freezePanelId" type="String" default=""/>
+
+    <!-- US3125332 - Thanish - 7th Jan 2021 -->
+    <aura:registerEvent name="ACET_AutoDocRefreshEvent" type="c:ACET_AutoDocRefreshEvent"/>
+
+     <aura:attribute name="orsFlowPolicies" type="List" default=""/>
+     <aura:attribute name="facetFlowPolicies" type="List" default=""/>
+     <aura:attribute name="finalPolicyMap" type="Map" default=""/>
+     <aura:attribute name="routingAvailabilityWarningMessage" type="String" default=""/>
+    <aura:attribute name="caseItemMap" type="Map" default=""/>
+
+     <!--US3117073 - Multiple Policies -  Creating Multiple Unique ORS Records Check In ISET - Sravan-->
+     <aura:attribute name="memberPolicyNumberMap" type="Map" default=""/>
+
+     <!--US2951245 - Sravan-->
+     <aura:attribute name="showRoutingOnlyNotForMedicaid" type="Boolean" default="false"/>
+
+     <!--US3149404 - Sravan-->
+     <aura:attribute name="topicData" type="Map" default=""/>
+     <aura:attribute name="relatedCaseItemMap" type="Map" default=""/>
+     <!--US3353397 - Sravan-->
+     <aura:attribute name="providerDetailItems" type="Map" default=""/>
+
+     <!--US3644559 - Sravan-->
+     <aura:attribute name="memberNotFoundCaseItems" type="Map" default=""/>
+     <!--US3691709 - Sravan-->
+     <aura:attribute name="providerNotFoundMap" type="Map" default=""/>
+     <aura:attribute name="isProviderSnapProviderLookUp" type="Boolean" default="false"/>
+
+      <!--US3259671 - Sravan-->
+      <aura:attribute name="flowDetails" type="Object" access="public" />
+	 
+    <!--US3182779 - Sravan-->
+    <aura:attribute name="isExchangePolicy" type="Boolean" default="false"/>
+    <!--US3182829 - Sravan-->
+    <aura:attribute name="state" type="String" />
+    <!--US3376219 - Sravan-->
+    <aura:attribute name="memberNotFoundDetails" type="String" default=""/>
+
+	<!-- DE411364: Reg-PreProd - Component error when saving case for Provider Not Found flow -->
+    <aura:registerEvent name="ACET_CaseHistoryRefreshEvt" type="c:ACET_CaseHistoryRefreshEvt" />
+    <!-- Save Case Consolidation - US3424763 -->
+    <aura:method name="routeCase" action="{!c.routePolicyIssue}" />
+    <aura:attribute name="onlyRoute" type="Boolean" default="false"/>
+    <aura:attribute name="omitRoute" type="Boolean" default="false"/>
+    <aura:attribute name="openedTopicUniqueIds" type="String[]" default="[]" />
+
+
+    <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+        <div class="slds-modal__container">
+            <!-- <lightning:spinner class="slds-show" aura:id="case-spinner"
+                    alternativeText="Loading.." title="Loading.."
+                    variant="brand" style="position:initial;" size="medium"/> -->
+
+            <!-- Modal/Popup Box Header Starts here-->
+            <header class="slds-modal__header card_padding"> <!-- US1934396 - Thanish - 17th Feb 2020 -->
+                <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Save a Case</h2>
+            </header>
+
+            <!-- US1934396 - Thanish - 17th Feb 2020 - autodoc warning message -->
+            <div style="width: 100%; text-align: center; background-color: white; padding-left: 10px; padding-right: 10px;" class="card_top_padding">
+                <aura:if isTrue="{!v.enableAutodocWarningMessage}">
+                    <aura:if isTrue="{!v.showAutodocWarningMessage}">
+                        <span style="color: red;">Warning! Nothing has been selected for auto doc.</span>
+                    </aura:if>
+                    <!-- US2509591 -->
+                    <aura:if isTrue="{!v.showResolvedMessage}">
+                        <span style="color: red;">You have selected a Type that requires 1 or more item(s) to be Resolved. Please change selected items to Resolved or correct the Type/Sub type selected if appropriate.</span>
+                    </aura:if>
+                    <aura:if isTrue="{!v.showUnResolvedMessage}">
+                        <span style="color: red;">You have selected a Type that requires 1 or more item(s) to be Unresolved. Please change appropriate items to Unresolved or correct the Type/Sub type selected if appropriate.</span>
+                    </aura:if>
+                    <!--US3071655-->
+                    <aura:if isTrue="{!v.showRoutingAvailabilityWarningMessage}">
+                        <span style="color: red;">{!v.routingAvailabilityWarningMessage}</span>
+                    </aura:if>
+                     <aura:if isTrue="{!v.showRoutingMessageforFacetsANDORSCases}">
+                        <span style="color: red;">Error! When routing select one policy at a time.</span>
+                    </aura:if>
+                    <!--US2951245 - Sravan-->
+                    <aura:if isTrue="{!v.showRoutingOnlyNotForMedicaid}">
+                        <span style="color: red;">Case creation for Issue Routed is only available for Medicaid plan type.</span> <!--US3692809 - Krish - Updating Error Message -->
+                    </aura:if>
+                </aura:if>
+            </div>
+
+            <!--Modal/Popup Box Body Starts here-->
+            <div class="slds-modal__content card_right_padding card_left_padding card_bottom_padding slds-is-relative"
+                id="modal-content-id-1">
+                <!-- US1934396 - Thanish - 17th Feb 2020 -->
+                <lightning:spinner class="slds-show" aura:id="case-spinner" alternativeText="Loading.."
+                    title="Loading.." variant="brand" size="medium" />
+
+                 <div class="slds-form-element card_element_bottom_margin"> <!-- US1934396 - Thanish - 17th Feb 2020 -->
+                     <div >
+                        <lightning:select disabled="{!v.disableTopic}" name="topic" label="Topic" aura:id="csetopic" value="{!v.cseTopic}" onchange="{!c.onTopicChange}">
+                            <aura:iteration items="{!v.topicOptions}" var="option">
+                                <option text="{!option}" value="{!option}"/>
+                            </aura:iteration>
+                        </lightning:select>
+                        <!--<ui:inputSelect  aura:id="accIndustry" class="slds-select"  change="{!c.onTopicChange}"/>-->
+                     </div>
+                 </div>
+                 <div class="slds-form-element card_element_bottom_margin"> <!-- US1934396 - Thanish - 17th Feb 2020 -->
+                     <div >
+                        <lightning:select name="type" label="Type" aura:id="csetype" value="{!v.cseType}" onchange="{!c.onTypeChange}">
+                            <aura:iteration items="{!v.typeOptions}" var="option">
+                                <option text="{!option}" value="{!option}" />
+                            </aura:iteration>
+                        </lightning:select>
+                        <!-- US1851066	Pilot - Case - Save Button & Case Creation Validations - 15/10/2019 - Sarma -->
+                        <div class="{! 'slds-text-color_error ' + (v.isShowTypeError ? 'slds-show' : 'slds-hide') }" >Error: You must select a Type</div>
+                     </div>
+                 </div>
+                 <div class="slds-form-element card_element_bottom_margin"> <!-- US1934396 - Thanish - 17th Feb 2020 -->
+                     <div>
+                        <lightning:select name="subtype" label="Subtype" aura:id="csesubtype" value="{!v.cseSubtype}" onchange="{!c.onsubtypeChange}" >
+                            <aura:iteration items="{!v.subtypeOptions}" var="option">
+                                <option text="{!option}" value="{!option}" />
+                            </aura:iteration>
+                        </lightning:select>
+                        <!-- US1851066	Pilot - Case - Save Button & Case Creation Validations - 15/10/2019 - Sarma -->
+                        <div class="{! 'slds-text-color_error ' + (v.isShowSubTypeError ? 'slds-show' : 'slds-hide') }" >Error: You must select a Subtype</div>
+                     </div>
+                 </div>
+                <!-- US1934396 - Thanish - 17th Feb 2020 - removed br -->
+                <div class="slds-form-element">
+                     <div>
+                        <lightning:input type="checkbox" label="Migration issue" name="chk-migration-issue"/>
+                     </div>
+                 </div>
+            </div>
+
+            <!--Modal/Popup Box Footer Starts here-->
+            <footer class="slds-modal__footer card_padding"> <!-- US1934396 - Thanish - 17th Feb 2020 -->
+                <lightning:button variant="neutral"
+                                  label="Cancel"
+                                  title="Cancel"
+                                  onclick="{! c.closeModal }"/>
+                <lightning:button variant="brand"
+                                  label="Submit"
+                                  aura:id="SubmitId"
+                                  title="Submit case"
+                                  onclick="{!c.saveCase}"
+                                  disabled="{!v.isButtonDisabled}"/> <!-- US2037798 -->
+            </footer>
+
+        </div>
+        </section>
+
+        <div class="slds-backdrop slds-backdrop_open"></div>
+</aura:component>

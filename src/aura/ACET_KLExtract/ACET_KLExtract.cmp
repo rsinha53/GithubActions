@@ -1,0 +1,109 @@
+<aura:component implements="flexipage:availableForAllPageTypes,forceCommunity:availableForAllPageTypes"
+    controller="ACET_KLController">
+
+    <!-- Attributes that can be set while component calling-->
+    <aura:attribute name="options" type="List" default="[]" />
+    <aura:attribute name="value" type="String" default="" description="Selected value in single Select" />
+    <aura:attribute name="values" type="List" default="" description="Selected value in Multi Select" />
+    <aura:attribute name="label" type="string" default="" description="Label will be displayed above input Box" />
+    <aura:attribute name="minChar" type="Integer" default="3" description="Minimum character to type for search" />
+    <aura:attribute name="disabled" type="Boolean" default="false" description="Disable the combobox" />
+    <aura:attribute name="loading" type="Boolean" default="false" description="Readonly the combobox" />
+
+    <aura:attribute name="required" type="Boolean" default="false" description="Reqired the combobox value" />
+    <aura:attribute name="conditionalRequired" type="Boolean" default="false" />
+
+    <!-- Internal Use Attributes -->
+    <!-- <aura:handler name="init" value="{!this}" action="{!c.doInit}" /> -->
+    <aura:attribute name="searchString" type="String" access="public" default="" description="String to search" />
+    <aura:attribute name="message" type="String" access="private" default="" />
+
+    <!-- <aura:attribute name="auraid" type="String" default="" required="true" />
+    <aura:attribute name="name" type="String" default="" required="true" /> -->
+
+    <aura:attribute name="hasError" type="Boolean" default="false" />
+    <aura:attribute name="errorMsg" type="String" default="" />
+
+    <aura:attribute name="timer" type="Integer" />
+    <aura:attribute name="delay" type="Integer" default="300" />
+    <aura:attribute name="isCopy" type="Boolean" default="false"/>
+
+    <aura:attribute name="codeType" type="String" required="true" />
+    <aura:attribute name="checkValidity" type="Boolean" required="false" />
+    <aura:attribute name="isshowHoverOnCode" type="Boolean" required="false" />
+    <aura:registerEvent name="sendData" type="c:ACET_SendKLDataToParentCmp"/>
+
+
+    <aura:method name="fireErrors" action="{!c.fireErrors}" access="public"></aura:method>
+    <aura:method name="makeRequired" action="{!c.makeRequired}" access="public"></aura:method>
+    <aura:method name="removeRequired" action="{!c.removeRequired}" access="public"></aura:method>
+    <aura:method name="makeHighlighted" action="{!c.makeHighlighted}" access="public"></aura:method>
+    <!-- US3437462	Plan Benefits: Benefit & PA Check Results: Validations - Sarma - 09 Mar 2021     -->
+    <aura:method name="addDeletedError" action="{!c.addDeletedError}" access="public"></aura:method>
+    <aura:attribute name="selectedCodeDesc" type="String" default="" description="Selected Code Desc" />
+
+    <!-- US3507481 To auto populate -->
+    <aura:attribute name="autoSelect" type="Boolean" default="false" />
+    <aura:attribute name="autoPopulateString" type="String" default="" />
+    <aura:handler name="change" value="{!v.autoPopulateString}" action="{!c.onChangeautoPopulateString }" />
+
+    <!-- US3518478 -->
+    <aura:attribute name="Procedure" type="Object"
+        default="{ 'ProcedureCode': '', 'ProcedureDesc': '', 'ProcedureType': '' }" />
+
+    <!-- Component Markup -->
+    <div onfocusout="{!c.blurEvent}">
+        <aura:if isTrue="{!!empty(v.label)}">
+            <label class="slds-form-element__label">
+                <aura:If isTrue="{! v.required }">
+                    <abbr class="slds-required" title="required">* </abbr>
+                </aura:If> {!v.label}
+            </label>
+        </aura:if>
+        <!--  -->
+        <div class="slds-combobox_container">
+            <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click" aura:id="resultsDiv"
+                aria-expanded="true" aria-haspopup="listbox" role="combobox">
+                <div class="{! ' slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right ' + (v.hasError ? ' slds-has-error ': '') }"
+                    role="none">
+                    <span onkeypress="{! c.alphanumericAndNoSpecialCharacters }"
+                        onpaste="{! c.alphanumericAndNoSpecialCharacters }">
+                        <lightning:input readonly="{!v.loading}" disabled="{!v.disabled}" class="inputBox"
+                            placeholder="Select an Option" onchange="{!c.filterOptions}" value="{!v.searchString}"
+                            autoComplete="off" variant="label-hidden" />
+                    </span>
+                    <lightning:icon class="{! ' slds-input__icon ' + (v.hasError ? ' sldsinputicon ': '') }"
+                        iconName="utility:down" size="xx-small" alternativeText="search" />
+                    <aura:if isTrue="{! v.hasError}">
+                        <div class="slds-form-element__help" id="error-message-unique-id">{!v.errorMsg}</div>
+                    </aura:if>
+                </div>
+
+                <!-- Dropdown List -->
+                <div id="listbox-id-1" class="slds-scrollable slds-dropdown slds-dropdown_length-5 slds-dropdown_fluid"
+                    style="{! 'max-height:' + (8 + (v.recordCount * 40)) + 'px' }">
+                    <ul class="slds-listbox slds-listbox_vertical recordListBox" role="presentation">
+                        <aura:if isTrue="{!empty(v.message)}">
+                            <!-- To display Drop down List -->
+                            <aura:iteration items="{!v.options}" var="option" indexVar="key">
+                                <li id="{!key}" class="slds-listbox__item eachItem" onmousedown="{!c.selectItem}"
+                                    title="{!option.key+' - '+option.value.Code_Description__c}">
+                                    <span class="slds-media slds-listbox__option_entity verticalAlign slds-truncate">
+                                        {!option.key} - {!option.value.Code_Description__c}
+                                    </span>
+                                    </li>
+                            </aura:iteration>
+                            <!-- To display Error Message -->
+                            <aura:set attribute="else">
+                                <li class="slds-listbox__item">
+                                    <span
+                                        class="slds-media slds-listbox__option_entity verticalAlign slds-truncate">{!v.message}</span>
+                                </li>
+                            </aura:set>
+                        </aura:if>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</aura:component>

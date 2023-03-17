@@ -1,0 +1,509 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,lightning:isUrlAddressable"
+                controller="ACET_InteractionOverviewCtrl" access="global">
+    <ltng:require scripts="{!$Resource.ACET_SAEContactDetails}" />
+    <ltng:require scripts="{!$Resource.ACET_SAESessionData}" />
+    <!-- <aura:handler event="c:ACET_UpdateInteractionDetailsAppEvt" action="{!c.updateInteractionDetails}" /> -->
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute name="currentTabId" type="String" />
+    <aura:attribute name="interactionDetails" type="Object" access="public" />
+    <aura:attribute name="providerDetails" type="Object" access="public" />
+    <aura:attribute name="flowDetails" type="Object" access="public" />
+    <!--aura:attribute name="contactName" type="String" default="" /-->
+    <aura:attribute name="memberDetails" type="Object[]" access="public" />
+    <aura:attribute name="interactionOverviewTabId" type="String" />
+    <!--US2631703 - Durga- 08th June 2020-->
+    <aura:attribute name="isVCCD" type="Boolean" default="false"/>
+    <aura:attribute name="VCCDObjRecordId" type="String"/>
+    <aura:attribute name="selectedMemberSource" type="String"/><!--US2699880-Interaction Overview Page - Remove EEID & SSN Fields and Add 'Source Code' Field-->
+    <!--US2570805 - Sravan -->
+    <aura:attribute name="VCCDQuestionType" type="String"/>
+
+    <!--US2076634 - HIPAA Guidelines Button - Sravan-->
+    <aura:attribute name="hipaaEndpointUrl" type="String" default=""/>
+    <!--US2717679: Interaction Overview Page - Member Card Alignment - Praveen-->
+    <aura:attribute name="addMembersToSearchList" type="Boolean" default="false"/>
+    <aura:attribute name="enableAddMembersToSearch" type="Boolean" default="false"/>
+    <aura:attribute name="enableAddMembersToSearchMnf" type="Boolean" default="false"/>
+    <aura:attribute name="enableAddMembersToSearchMf" type="Boolean" default="false"/>
+    <aura:attribute name="optionValue" type="Integer" default="1"/>
+    <aura:attribute name="showMembersSelction" type="Boolean" default="false"/>
+    <aura:attribute name="insuranceTypeCode" type="String" default=""/>
+     <aura:attribute name="hoursOfOperation" type="String" default=""/>
+	 <!--Jitendra-->
+    <aura:attribute name="strEmails" type="String" default=""/>
+    <!-- US2858385 -Rizwan-->
+    <aura:attribute name="iVRDetails" type="Object" access="public" />
+
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:handler event="lightning:tabFocused" action="{! c.onTabFocused }"/>
+    <aura:attribute name="focusedCount" type="Integer" default="0"/>
+    <aura:handler event="lightning:tabClosed" action="{! c.onTabClosed }" />
+    
+    <!--DE347387: ORS Issue - Provider information is missing in ORS routing Screen - Praveen-->
+    <aura:registerEvent name="ACET_SendContactNumber" type="c:ACET_SendContactNumber"/>
+    <aura:handler event="c:ACET_GetContactNumber" action="{!c.handlerGetContactNumber}"/>
+
+    <aura:if aura:id="interactionCardSpinnerAI" isTrue="false">
+        <lightning:spinner alternativeText="Loading" size="medium" />
+    </aura:if>
+    <div class="slds-card card_padding" style="background: rgb(243, 242, 242);">
+        <div class="slds-grid">
+            <div class="slds-col slds-has-flexi-truncate">
+                <div class="slds-media slds-no-space slds-grow">
+                    <div class="slds-media__figure">
+                        <span class="slds-icon_container slds-icon-standard-contact_list" title="Interaction_Overview">
+                            <lightning:icon iconName="standard:contact_list" alternativeText="Interaction Overview" />
+                        </span>
+                    </div>
+                    <div class="slds-media__body">
+                        <div class="slds-page-header__name">
+                            <div class="slds-page-header__name-title">
+                                <h1 class="page_header_label slds-m-right_small slds-align-middle slds-truncate">
+                                    Interaction Overview</h1>
+                                <p class="page_header_link">
+                                    <a href="javascript:void(0)" data-intId="{!v.interactionDetails.Id}"
+                                       onclick="{!c.navigateToInteractionDetail}">{!v.interactionDetails.Name}</a>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <lightning:buttonGroup>
+                <c:ACET_HippaGuidelines hipaaEndpointUrl="{!v.hipaaEndpointUrl}" showButton="true"/><!--US2705857 - Sravan-->
+                <lightning:button variant="neutral" label="Misdirect" name="misDirectBtnName" class="misdirect_button"
+                                  onclick="{!c.openMisdirectComp}" />
+                <c:SAE_Alerts aura:id="alertsAI" providerId="{!v.providerDetails.providerId}"
+                              taxId="{!v.providerDetails.taxId}" memberId="{!v.memberDetails.memberId}"
+                              groupId="{!v.memberDetails.groupNumber}" noMemberToSearch="{!v.memberDetails.isNoMemberToSearch}"
+                              memberNotFound="{!v.memberDetails.isMemberNotFound}" isProviderSearchDisabled="{!v.providerDetails.isNoProviderToSearch}" 
+                              isInteractionPage="true" isOtherSearch="{!v.providerDetails.isOther}" 
+                              interactionRecId="{!v.interactionDetails.Id}" providerNotFound="{!v.providerDetails.isProviderNotFound}"/>
+            </lightning:buttonGroup>
+        </div>
+    </div>
+    
+    <!--contact Card US2744897: Update Provider Not Found Card Changing condition to not display when PNF-->
+    <aura:if isTrue="{!or(and(!v.providerDetails.isProviderNotFound,!v.providerDetails.isOther),v.providerDetails.isNoProviderToSearch)}">
+        <lightning:layout verticalAlign="stretch" class="slds-p-top_small">
+            <lightning:layoutItem size="8">
+                <lightning:card class="slds-card_boundary providerCardWidthIo">
+                    <aura:set attribute="title">
+                        <h2 class="component_title">Contact Name: {!v.flowDetails.contactName}</h2>
+                    </aura:set>
+                    <aura:if isTrue="{!v.providerDetails.isProviderNotFound}">
+                        <lightning:layout multipleRows="true" class="leftMargins">
+                            <lightning:layoutitem padding="around-medium" size="3">
+                                <p class="field_label field_label_padding">Contact Number</p>
+                                <p class="field_value">
+                                    <aura:if isTrue="{!v.flowDetails.contactNumber}">
+                                        <lightning:formattedText value="{!v.flowDetails.contactNumber}" />
+                                        <aura:set attribute="else">
+                                            <div class="slds-truncate">--</div>
+                                        </aura:set>
+                                    </aura:if></p>
+                            </lightning:layoutitem>
+                            <lightning:layoutitem padding="around-medium" size="3">
+                                <p class="field_label field_label_padding">Ext</p>
+                                <p class="field_value">{!v.flowDetails.contactExt ? v.flowDetails.contactExt :
+                                    '--'}</p>
+                            </lightning:layoutitem>
+                            <aura:If isTrue="{!or(v.providerDetails.isValidProvider,and(!v.providerDetails.isNoProviderToSearch,v.providerDetails.isProviderNotFound))}">
+                            <lightning:layoutitem padding="around-medium" size="3">
+                                <p class="field_label field_label_padding">Hours of Operation</p>
+                                <p class="field_value">{!v.hoursOfOperation ? v.hoursOfOperation :
+                                    '--'}</p>
+                            </lightning:layoutitem>
+                            </aura:If>
+                        </lightning:layout>
+                    </aura:if>
+                    <aura:if isTrue="{!!v.providerDetails.isProviderNotFound}">
+                        <lightning:layout multipleRows="true">
+                            <lightning:layoutitem padding="around-medium" size="3">
+                                <p class="field_label field_label_padding">Contact Number</p>
+                                <p class="field_value">
+                                    <aura:if isTrue="{!v.flowDetails.contactNumber}">
+                                        <lightning:formattedText value="{!v.flowDetails.contactNumber}" />
+                                        <aura:set attribute="else">
+                                            <div class="slds-truncate">--</div>
+                                        </aura:set>
+                                    </aura:if></p>
+                            </lightning:layoutitem>
+                            <lightning:layoutitem padding="around-medium" size="3">
+                                <p class="field_label field_label_padding">Ext</p>
+                                <p class="field_value">{!v.flowDetails.contactExt ? v.flowDetails.contactExt :
+                                    '--'}</p>
+                            </lightning:layoutitem>
+                            <aura:If isTrue="{!or(v.providerDetails.isValidProvider,and(!v.providerDetails.isNoProviderToSearch,v.providerDetails.isProviderNotFound))}">
+                            <lightning:layoutitem padding="around-medium" size="3">
+                                <p class="field_label field_label_padding">Hours of Operation</p>
+                                <p class="field_value">{!v.hoursOfOperation ? v.hoursOfOperation :
+                                    '--'}</p>
+                            </lightning:layoutitem>
+                            </aura:If>
+                        </lightning:layout>
+                    </aura:if>
+                </lightning:card>
+            </lightning:layoutItem>
+        </lightning:layout>
+    </aura:if>
+    
+    <!--Provider Information-->
+    <aura:if isTrue="{!v.providerDetails.isValidProvider}">
+        <lightning:layout multipleRows="true" class="slds-p-top_small">
+            <lightning:layoutitem size="8">
+                <lightning:card aura:id="card" class="slds-card_boundary providerCardWidthIo">
+                    <aura:set attribute="title">
+                        <span class="component_title">Provider:&nbsp;</span>
+                        <span>
+                            <a href="javascript:void(0)" onclick="{!c.navigateToProviderSnapshot}"
+                               style="font-weight:normal !important; font-size: 16px;"> {!v.providerDetails.firstName + ' '
+                                +v.providerDetails.lastName}</a>
+                        </span>
+                    </aura:set>
+                    <span style="margin-left: 11px;font-weight:normal !important;font-size: 16px;">Educate the provider on the services that are available on </span>
+                        <span>
+                            <a title="http://knowledgecentral.uhc.com/SPA/LinkEducationTool/index.html#/" target="_blank" href="http://knowledgecentral.uhc.com/SPA/LinkEducationTool/index.html#/"
+                               style="font-weight:normal !important; font-size: 16px;"> LINK</a>
+                        </span>
+                    <lightning:layout multipleRows="true">
+                        <lightning:layoutitem padding="around-medium" size="3">
+                            <p class="field_label">Tax ID (TIN)</p>
+                            <p class="field_value">{!v.providerDetails.taxId.length == 9 ? v.providerDetails.taxId : '--'}</p>
+                        </lightning:layoutitem>
+                        
+                        <lightning:layoutitem padding="around-medium" size="3">
+                            <p class="field_label">NPI</p>
+                            <p class="field_value">{!v.providerDetails.npi.length == 10 ? v.providerDetails.npi : '--'}
+                            </p>
+                        </lightning:layoutitem>
+                        
+                        <lightning:layoutitem padding="around-medium" size="3">
+                            <p class="field_label">Phone #</p>
+                            <p class="field_value">{!v.providerDetails.phoneNumber.length > 0 ?
+                                v.providerDetails.phoneNumber : '--'}</p>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-medium" size="3">
+                            <p class="field_label">Primary Specialty</p>
+                            <p class="field_value">{!v.providerDetails.primarySpeciality.length > 0 ?
+                                v.providerDetails.primarySpeciality : '--'}</p>
+                        </lightning:layoutitem>
+                    </lightning:layout>
+                    <!--US2744897 Displaying Contact info in the provider card when Provider Not Found-->
+                    <aura:if isTrue="{!v.providerDetails.isProviderNotFound}">
+                    <lightning:layout multipleRows="true">
+                        <lightning:layoutitem padding="around-medium" size="3">
+                            <p class="field_label">Contact Name</p>
+                            <p class="field_value">{!v.flowDetails.contactName ? v.flowDetails.contactName : '--'}</p>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-medium" size="3">
+                            <p class="field_label">Contact Number</p>
+                            <p class="field_value">{!v.flowDetails.contactNumber ? v.flowDetails.contactNumber : '--'}
+                            </p>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-medium" size="3">
+                            <p class="field_label">Ext</p>
+                            <p class="field_value">{!v.flowDetails.contactExt ? v.flowDetails.contactExt : '--'}</p>
+                        </lightning:layoutitem>
+                        <aura:If isTrue="{!or(v.providerDetails.isValidProvider,and(!v.providerDetails.isNoProviderToSearch,v.providerDetails.isProviderNotFound))}">
+                        <lightning:layoutitem padding="around-medium" size="3">
+                                <p class="field_label field_label_padding">Hours of Operation</p>
+                                <p class="field_value">{!v.hoursOfOperation ? v.hoursOfOperation :
+                                    '--'}</p>
+                            </lightning:layoutitem>
+                            </aura:If>
+                    </lightning:layout>
+                    </aura:if>
+                </lightning:card>
+            </lightning:layoutitem>
+        </lightning:layout>
+    </aura:if>
+    
+    <!--Provider Not Found Information-->
+    <aura:if isTrue="{!v.providerDetails.isProviderNotFound}">
+        <lightning:layout multipleRows="true" class="slds-p-top_small">
+            <lightning:layoutitem size="8">
+                <lightning:card aura:id="card" class="slds-card_boundary providerCardWidthIo">
+                    <aura:set attribute="title">
+                        <span class="component_title">Provider:&nbsp;</span>
+                        <span>
+                            <a href="javascript:void(0)" onclick="{!c.navigateToProviderSnapshot}"
+                               style="font-weight:normal !important; font-size: 16px; text-transform: uppercase;"> {!v.providerDetails.firstName + ' '
+                                +v.providerDetails.lastName}</a>
+                        </span>
+                    </aura:set>
+                    <span style="margin-left: 11px;font-weight:normal !important;font-size: 16px;">Educate the provider on the services that are available on </span>
+                        <span>
+                            <a title="http://knowledgecentral.uhc.com/SPA/LinkEducationTool/index.html#/" target="_blank" href="http://knowledgecentral.uhc.com/SPA/LinkEducationTool/index.html#/"
+                               style="font-weight:normal !important; font-size: 16px;"> LINK</a>
+                        </span>
+                    <lightning:layout multipleRows="true">
+                        <lightning:layoutitem padding="around-medium" size="3">
+                            <p class="field_label">Tax ID (TIN)</p>
+                            <p class="field_value">{!v.providerDetails.taxId}</p>
+                        </lightning:layoutitem>
+                        <!--US3017101-->
+                        <!--<lightning:layoutitem padding="around-medium" size="3">
+                            <p class="field_label">Filter Type</p>
+                            <p class="field_value">{!v.providerDetails.filterType ? v.providerDetails.filterType : ''}
+                            </p>
+                        </lightning:layoutitem> -->
+                        
+                        <lightning:layoutitem padding="around-medium" size="3">
+                            <p class="field_label">Phone #</p>
+                            <p class="field_value">{!v.providerDetails.phoneNumber.length > 0 ?
+                                v.providerDetails.phoneNumber : '--'}</p>
+                        </lightning:layoutitem>
+                    </lightning:layout>
+                    <!-- US2744897: Update Provider Not Found Card -START- Adding Contact info in the provider card for PNF-->
+                    <lightning:layout multipleRows="true">
+                        <lightning:layoutitem padding="around-medium" size="3">
+                            <p class="field_label">Contact Name</p>
+                            <p class="field_value" style="font-weight:normal !important; font-size: 16px; text-transform: uppercase;">{!v.flowDetails.contactName ? v.flowDetails.contactName : '--'}</p>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-medium" size="3">
+                            <p class="field_label">Contact Number</p>
+                            <p class="field_value">{!v.flowDetails.contactNumber ? v.flowDetails.contactNumber : '--'}
+                            </p>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-medium" size="3">
+                            <p class="field_label">Ext</p>
+                            <p class="field_value">{!v.flowDetails.contactExt ? v.flowDetails.contactExt : '--'}</p>
+                        </lightning:layoutitem>
+                       <aura:If isTrue="{!or(v.providerDetails.isValidProvider,and(!v.providerDetails.isNoProviderToSearch,v.providerDetails.isProviderNotFound))}">
+                        <lightning:layoutitem padding="around-medium" size="3">
+                                <p class="field_label field_label_padding">Hours of Operation</p>
+                                <p class="field_value">{!v.hoursOfOperation ? v.hoursOfOperation :
+                                    '--'}</p>
+                            </lightning:layoutitem>
+                            </aura:If>
+                    </lightning:layout>
+                    <!--US2744897: Update Provider Not Found Card - END -->
+                </lightning:card>
+            </lightning:layoutitem>
+        </lightning:layout>
+    </aura:if>
+    
+    <!--Other Information-->
+    <aura:if isTrue="{!v.providerDetails.isOther}">
+        <lightning:layout multipleRows="true" class="slds-p-top_small">
+            <lightning:layoutitem size="8">
+                <lightning:card aura:id="card" class="slds-card_boundary providerCardWidthIo">
+                    <aura:set attribute="title">
+                        <span class="component_title">Other:&nbsp;</span>
+                        <span>{!v.flowDetails.contactName}</span> 
+                    </aura:set>
+                    <lightning:layout multipleRows="true">
+                        <lightning:layoutitem padding="around-medium" size="4">
+                            <p class="field_label">Contact Type</p>
+                            <p class="field_value">{!v.providerDetails.contactType ? v.providerDetails.contactType :
+                                '--'}</p>
+                        </lightning:layoutitem>
+                        
+                        <lightning:layoutitem padding="around-medium" size="4">
+                            <p class="field_label">Contact Number</p>
+                            <p class="field_value">{!v.flowDetails.contactNumber ? v.flowDetails.contactNumber : '--'}
+                            </p>
+                        </lightning:layoutitem>
+                        
+                        <lightning:layoutitem padding="around-medium" size="4">
+                            <p class="field_label">Ext</p>
+                            <p class="field_value">{!v.flowDetails.contactExt ? v.flowDetails.contactExt : '--'}</p>
+                        </lightning:layoutitem>
+                    </lightning:layout>
+                </lightning:card>
+            </lightning:layoutitem>
+        </lightning:layout>
+    </aura:if>
+    
+    <!--Member Details - US2717679: Interaction Overview Page - Member Card Alignment -->
+    <aura:if isTrue="{!v.enableAddMembersToSearchMnf == true ? true : v.enableAddMembersToSearchMf}">
+        <lightning:layout >
+            <lightning:layoutItem size="8">
+                <lightning:layout multipleRows="true" horizontalAlign="spread">
+
+                    <!--Member Details -->
+                    <aura:if isTrue="{!v.enableAddMembersToSearchMf}">
+    <aura:iteration items="{!v.memberDetails}" var="subjectCardRecord" indexVar="index">
+        <aura:if isTrue="{!subjectCardRecord.isValidMember &amp;&amp; subjectCardRecord.isFromExplore}">
+                                <lightning:layoutitem size="6" class="slds-p-top_small">
+                                    <div class="slds-box slds-card memCardWidthIo memCardHeightIo">
+                <lightning:layout multipleRows="true">
+                                            <lightning:layoutitem size="12" class="slds-p-top_small slds-p-bottom_medium">
+                                    <div class="slds-media__body">
+                                        <h2 class="slds-card__header-title">
+                                            <span class="component_title">Subject:&nbsp;</span>
+                                            <span>
+                                                <a href="javascript:void(0)" data-index="{!index}"
+                                                   data-memberType="Searched Member"
+                                                   onclick="{!c.navigateToMemberSnapshot}">
+                                                    {!subjectCardRecord.firstName+ ' ' + subjectCardRecord.lastName}</a>
+                                            </span>
+                                        </h2>
+                                    </div>
+                                </lightning:layoutitem>
+                                
+                                            <lightning:layoutitem size="4" class="slds-p-bottom_medium">
+                                    <span class="field_label">DOB: </span>
+                                                <!--<span class="field_value">{!subjectCardRecord.dob}</span> -->
+                                                <p style="text-transform:capitalize" class="field_value">
+                                                    {!subjectCardRecord.dob ? subjectCardRecord.dob : '--'}</p>
+                                </lightning:layoutitem>
+                                
+                                            <lightning:layoutitem size="4" class="slds-p-bottom_medium">
+                                    <span class="field_label">Member ID: </span>
+                                                <!--<span class="field_value">{!subjectCardRecord.memberId}</span> -->
+                                                <p style="text-transform:capitalize" class="field_value">
+                                                    {!subjectCardRecord.memberId ? subjectCardRecord.memberId : '--'}</p>
+                                            </lightning:layoutitem>
+
+                                            <lightning:layoutitem size="4" class="slds-p-bottom_medium">
+                                                <p class="field_label">Source Code</p>
+                                                <p style="text-transform:capitalize" class="field_value">
+                                                    {!subjectCardRecord.FISourceCode ? subjectCardRecord.FISourceCode : '--'}</p>
+                                </lightning:layoutitem>
+                                
+                                            <lightning:layoutitem size="4" class="slds-p-bottom_medium">
+                                    <p class="field_label">Relationship</p>
+                                    <p style="text-transform:capitalize" class="field_value">
+                                        {!subjectCardRecord.relationship ? subjectCardRecord.relationship : '--'}</p>
+                                </lightning:layoutitem>
+                                
+                                            <lightning:layoutitem size="4" class="slds-p-bottom_medium">
+                                    <p class="field_label">Group #</p>
+                                    <p style="text-transform:capitalize" class="field_value">
+                                        {!subjectCardRecord.groupNumber ? subjectCardRecord.groupNumber : '--'}</p>
+                                </lightning:layoutitem>
+                                
+                                <!-- <lightning:layoutitem size="3">
+                                    <p class="field_label field_label_padding">EEID</p>
+                                    <p class="field_value">
+                                        <aura:if isTrue="{!subjectCardRecord.eeId}">
+                                            <lightning:formattedText aura:Id="maskedEEID"
+                                                                     value="{!subjectCardRecord.maskedEEID}" />
+                                            <lightning:formattedText class="slds-hide" aura:Id="unMaskedEEID"
+                                                                     value="{!subjectCardRecord.eeId}" />
+                                            <lightning:buttonMenu variant="container" aura:id="menu" name="{!index}"
+                                                                  class="slds-p-left_small" onselect="{! c.handleSelect }"
+                                                                  alternativeText="Show menu">
+                                                <lightning:menuItem value="UnMaskEEID" label="UnMask" />
+                                                <lightning:menuItem value="CopyEEID" label="Copy" />
+                                            </lightning:buttonMenu>
+                                            <aura:set attribute="else">
+
+                                            </aura:set>
+                                        </aura:if>
+                                    </p>
+                                </lightning:layoutitem>
+                                
+                                <lightning:layoutitem size="3">
+                                    <p class="field_label field_label_padding">SSN</p>
+                                    <p class="field_value">
+                                        <aura:if isTrue="{!subjectCardRecord.ssn}">
+                                            <lightning:formattedText aura:Id="maskedSSN"
+                                                                     value="{!subjectCardRecord.maskedSSN}" />
+                                            <lightning:formattedText class="slds-hide" aura:Id="formattedSSN"
+                                                                     value="{!subjectCardRecord.formattedSSN}" />
+                                            <lightning:formattedText class="slds-hide" aura:Id="unMaskedSSN"
+                                                                     value="{!subjectCardRecord.ssn}" />
+                                            <lightning:buttonMenu variant="container" aura:id="menu" name="{!index}"
+                                                                  class="slds-p-left_small " onselect="{! c.handleSelect }"
+                                                                  alternativeText="Show menu">
+                                                <lightning:menuItem value="UnMaskSSN" label="UnMask" />
+                                                <lightning:menuItem value="CopySSN" label="Copy" />
+                                            </lightning:buttonMenu>
+                                            <aura:set attribute="else">
+
+                                            </aura:set>
+                                        </aura:if>
+                                    </p>
+                                </lightning:layoutitem>-->
+                            </lightning:layout>
+                        </div>
+                    </lightning:layoutitem>
+        </aura:if>
+    </aura:iteration>
+                    </aura:if>
+
+    <!--Member Not Found-->
+                    <aura:if isTrue="{!v.enableAddMembersToSearchMnf}">
+    <aura:iteration items="{!v.memberDetails}" var="subjectCardRecord" indexVar="index">
+        <aura:if isTrue="{!subjectCardRecord.isMemberNotFound &amp;&amp; subjectCardRecord.isFromExplore}">
+                                <!-- <div class="slds-col memCardHeightIo memCardWidthIo slds-has-flexi-truncate slds-size_6-of-12">-->
+                                <lightning:layoutitem size="6" class="slds-p-top_small">
+                <lightning:layout multipleRows="true">
+                                        <lightning:layoutitem size="12">
+                                            <div class="slds-box memCardWidthIo memCardHeightIo slds-card">
+                            <lightning:layout multipleRows="true">
+                                <lightning:layoutitem size="6" class="slds-p-bottom_medium">
+                                    <div class="slds-media__body">
+                                        <h2 class="slds-card__header-title">
+                                            <span class="component_title">Subject:&nbsp;</span>
+                                            <span>
+                                                <a href="javascript:void(0)" data-index="{!index}"
+                                                   data-memberType="Member not found" style="font-weight:normal !important; font-size: 16px; text-transform: uppercase;"
+                                                   onclick="{!c.navigateToMemberSnapshot}">
+                                                    {!subjectCardRecord.firstName+ ' ' + subjectCardRecord.lastName}</a>
+                                            </span>
+                                        </h2>
+                                    </div>
+                                </lightning:layoutitem>
+                                
+                                <lightning:layoutitem size="6" class="slds-p-bottom_medium">
+                                    <span class="field_label">DOB: </span>
+                                    <span class="field_value">{!subjectCardRecord.dob}</span>
+                                </lightning:layoutitem>
+                                
+                                <lightning:layoutitem size="6" class="slds-p-bottom_medium">
+                                    <p class="field_label">State</p>
+                                    <p style="text-transform:capitalize" class="field_value">{!subjectCardRecord.state ?
+                                        subjectCardRecord.state : '--'}</p>
+                                </lightning:layoutitem>
+                                
+                                <lightning:layoutitem size="6" class="slds-p-bottom_medium">
+                                    <p class="field_label">Phone #</p>
+                                    <p class="field_value">{!subjectCardRecord.phoneNumber ?
+                                        subjectCardRecord.phoneNumber : '--'}</p>
+                                </lightning:layoutitem>
+                            </lightning:layout>
+                        </div>
+                    </lightning:layoutitem>
+                </lightning:layout>
+                                </lightning:layoutitem>
+        </aura:if>
+    </aura:iteration>
+                    </aura:if>
+
+    <!--Add Members To Search-->
+                    <aura:if isTrue="{!v.enableAddMembersToSearch}">
+    <aura:if isTrue="{! and(!v.providerDetails.isOther, !v.providerDetails.isNoProviderToSearch)}">
+                            <lightning:layoutitem size="6" class="slds-p-top_small">
+                                <div class="slds-box slds-card memCardWidthIo memCardHeightIo">
+                                        <c:ACET_AddMembersToSearchButton optionValue="{!v.optionValue}"
+                                                                     showMembersSelction="{!v.showMembersSelction}"/>
+                                </div>
+                            </lightning:layoutitem>
+                        </aura:if>
+                    </aura:if>
+                </lightning:layout>
+            </lightning:layoutItem>
+        </lightning:layout>
+    </aura:if>
+
+    <!--Add Members To Search US2717679: Interaction Overview Page - Member Card Alignment -->
+    <aura:if isTrue="{! and(!v.providerDetails.isOther, !v.providerDetails.isNoProviderToSearch)}">
+        <lightning:layout class="slds">
+            <lightning:layoutItem size="8">
+                <c:ACET_AddMembersToSearch interactionOverviewTabId="{!v.interactionOverviewTabId}"
+                                           providerDetails="{!v.providerDetails}"
+                                           flowDetails="{!v.flowDetails}"
+										   interactionDetails="{!v.interactionDetails}"
+                                           enableAddMembersToSearch="{!v.enableAddMembersToSearch}"
+                                           optionValue="{!v.optionValue}"
+                                           showMembersSelction="{!v.showMembersSelction}"
+                                           hipaaEndpointUrl="{!v.hipaaEndpointUrl}"/><!-- DE347358 fix - Sravan-->
+            </lightning:layoutItem>
+        </lightning:layout>
+    </aura:if>
+</aura:component>

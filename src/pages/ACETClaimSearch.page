@@ -1,0 +1,1239 @@
+<apex:page controller="ACETClaimSearchController" sidebar="False" id="pageid" action="{!init}" tabStyle="ClaimSearch__tab">
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+
+    <style>
+        .errorMsg {
+            color: #c00;
+            margin-left: 2px;
+        }
+
+        .Required {
+            border: 2px solid #c00;
+        }
+
+        .myclass {
+            background-color: #c00; //
+            position: absolute;
+            left: 245px;
+            width: 3px;
+            top: 120px;
+            bottom: 95px;
+        }
+        /*.bPageBlock .requiredInput .requiredBlock {
+            position: absolute;
+            left: 6%;
+        }
+        .bPageBlock .dataCol {
+            position: relative;
+            left: 2%;
+        }*/
+        
+       </style>
+    
+   
+    <script>
+    
+    window.onload = function(){
+        //$("input[id$='startdate']").blur();
+        $("select[id$='taxid']").focus();
+    }
+    
+    
+    
+    function barFun(){
+        var x = document.getElementsByTagName("Input");
+        for(i = 0 ; i< x.length; i++){
+            if(x[i].getAttribute("title") == "Required")
+            {
+                x[i].parentNode.style ="border-left:3px #c00 solid;";
+            }
+        }    
+    }
+    
+    
+ 
+    function DateChangeFunction()
+    {
+        var $startDate = document.getElementById("{!$Component.Pageid.formid.Block1.section1.section1b.startDateSection.startdate}");
+        var $endDate = document.getElementById("{!$Component.Pageid.formid.Block1.section1.section1b.endDateSection.enddate}");
+       
+        var DateOfService = document.getElementById("{!$Component.Pageid.formid.Block1.section1.section1a.DateOfService}");                
+        var DateOfServiceValue = DateOfService.options[DateOfService.selectedIndex].value;
+        
+        if($startDate != null)
+        {
+            $startDate.value = "";
+            $startDate.setAttribute("class","");
+            var divs = $startDate.parentNode.parentNode.getElementsByClassName("errorMsg");
+            if(divs.length>0){
+                divs[0].style.display="none";
+            }            
+        }
+        
+        if($endDate != null)
+        {
+            $endDate.value = "";
+            $endDate.setAttribute("class","");
+            var divs = $endDate.parentNode.parentNode.getElementsByClassName("errorMsg");
+            if(divs.length>0){
+                divs[0].style.display="none";
+            }
+            
+        }
+ 
+        DateChangeAction();       
+
+            if(DateOfServiceValue == 'ThisYear'){
+                $("[id$='startdate']").attr("disabled","disabled"); 
+                $("[id$='enddate']").attr("disabled","disabled");              
+            }
+            if(DateOfServiceValue == 'LastYear'){
+                $("[id$='startdate']").attr("disabled","disabled");         
+                $("[id$='enddate']").attr("disabled","disabled");         
+            };              
+               
+    }
+    function searchByChangeFunction()
+    {
+               
+        if(document.getElementById("{!$Component.Pageid.formid.Block1.section1.section1b.startDateSection.startdate}"))
+            document.getElementById("{!$Component.Pageid.formid.Block1.section1.section1b.startDateSection.startdate}").value= null;
+        if(document.getElementById("{!$Component.Pageid.formid.Block1.section1.section1b.endDateSection.enddate}"))
+            document.getElementById("{!$Component.Pageid.formid.Block1.section1.section1b.endDateSection.enddate}").value= null;
+
+        searchByChangeAction();
+    }
+    
+    function newClearLogic(){
+        primaryDiagnosisCodeArray=[];//Code Added By Chandan-US1077822
+        encoderPromap = new Map();//Code Added By Chandan-US1077822
+        callCheck=0;//Code Added By Chandan-US1077822
+        $("input[id*='formid']").each(function(){
+            console.log($(this).val(''));
+        }); 
+        var searchByValue = $("select[id$='SearchBy']").val();       
+        if(searchByValue=='Subject'){
+            $("select[id$='DateOfService']").val('All');
+            $("select[id$='providers']").val('All');
+             $("select[id$='Encounters']").val('All');
+            $("select[id*='networkstatusid']").val('All');
+            $("input[id$='deductible']").prop('checked', false);            
+        }        
+        searchByChangeAction(); 
+        clearResults();
+    }
+    
+    
+    
+    
+        var authErrAdded = false;
+        var claimErrAdded = false;
+        var refErrAdded = false;
+        var startDtErrAdded = false;
+        var endDtErrAdded = false;
+        var startDtErr1Added = false;
+        
+        function hideMask(){
+        document.getElementById('opaque').style.display='none';
+          
+    }
+
+    function ValidateClaimSearch()
+    {   
+        
+        
+    
+        
+        //added by bhanu : for spinner bug
+        var returnFlag = true;
+        //for Popup
+        //document.getElementById('opaque').style.display='block';
+        //var popUp = document.getElementById('spinner');
+        //popUp.style.display = 'block';        
+        var $SearchBy = document.getElementById("{!$Component.Pageid.formid.Block1.section1.section1a.SearchBy}");
+        var $DateOfService=document.getElementById("{!$Component.Pageid.formid.Block1.section1.section1a.DateOfService}");
+        var $AuthorizationNumber = document.getElementById("{!$Component.Pageid.formid.Block1.section1.section1c.AuthorizationNoSec.AuthorizationNumber}");
+        var $ClaimNumber = document.getElementById("{!$Component.Pageid.formid.Block1.section1.section1c.ClaimNumberSection.ClaimNumber}");
+        var $ReferralNumber = document.getElementById("{!$Component.Pageid.formid.Block1.section1.section1c.ReferralNumberSection.ReferralNumber}");
+        var $startDate = document.getElementById("{!$Component.Pageid.formid.Block1.section1.section1b.startDateSection.startdate}");
+        var $endDate = document.getElementById("{!$Component.Pageid.formid.Block1.section1.section1b.endDateSection.enddate}");
+        var TaxId = document.getElementById("{!$Component.Pageid:formid:Block1:section1:section1c:taxidSec:taxid}");
+        var $startDateError = document.getElementById("{!$Component.StartDateError}");
+        
+        $(".errorMsg").css("display", "none");
+        if($endDate != null){
+            $endDate.setAttribute("class","");
+        }
+        if($startDate != null){
+            $startDate.setAttribute("class","");
+        }
+        
+        var validateFlag = true;
+        if(validateNew('','true') == false){
+            validateFlag =  false;
+        }
+        if($SearchBy.value != "ClaimID") {
+            if ($DateOfService.value == 'Day' || $DateOfService.value == 'DateRange') {
+                if($("[id$='startdate']").val()==null){
+                    $("[id$='startdate']").val('');
+                }
+                //$("[id$='startdate']").val($("[id$='startdate']").val().trim());
+                $startDate.setAttribute("class","");
+                //document.getElementById("StartDateError").innerHTML="<b>Error:</b> You must enter a value.";
+                if ($startDate.value == ''||$startDate.value==null) {
+                    var currentDt = new Date();
+                    var mm = currentDt.getMonth() + 1;
+                    var dd = currentDt.getDate();
+                    var yyyy = currentDt.getFullYear();
+                    var preyyyy = currentDt.getFullYear()-2;
+                    var date = mm + '/' + dd + '/' + yyyy;
+                    var datePrev = mm + '/' + dd + '/' + preyyyy;
+                    
+                    //document.getElementById("pageid:formid:Block1:section1:section1b:startDateSection:startdate").value = datePrev ; 
+                    //document.getElementById("pageid:formid:Block1:section1:section1b:endDateSection:enddate").value = date ;
+                    //$startDateError.style.display = "block";
+                    $("[id$='startdate']").next('span').after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;"> <strong>Error:</strong> You must enter a value </p> </span>');
+                    
+                    //$("[id$='startdate']").next('span').after('<div class="errorMsg" style="display: block; margin-left: -3px;"><b>Error:</b> You must enter a value.</div>');
+                    //$("[id$='StartDateError']").show();
+                    $startDate.setAttribute("class","Required");
+                    returnFlag  = false;
+                    //document.getElementById("spinner").style.display = "none";
+                   // popUp.style.display = 'none';
+
+
+
+                }
+            }
+            if ($DateOfService.value == 'DateRange') {
+                $("[id$='enddate']").val($("[id$='enddate']").val().trim());
+                $endDate.setAttribute("class","");
+                //document.getElementById("StartDateError").innerHTML="<b>Error:</b> You must enter a value.";
+                //document.getElementById("EndDateId").innerHTML="<b>Error:</b> You must enter a value."; 
+                //Check if both Start and End Dates are blank
+                if (document.getElementById("pageid:formid:Block1:section1:section1b:endDateSection:enddate").value == '' && 
+                    document.getElementById("pageid:formid:Block1:section1:section1b:startDateSection:startdate").value == '') {
+                    //Both Start Date and End Date are blank
+                    var currentDt = new Date();
+                    var mm = currentDt.getMonth() + 1;
+                    var dd = currentDt.getDate();
+                    var yyyy = currentDt.getFullYear();
+                    var preyyyy = currentDt.getFullYear()-2;
+                    var date = mm + '/' + dd + '/' + yyyy;
+                    var datePrev = mm + '/' + dd + '/' + preyyyy;
+                    document.getElementById("StartDateError").style.display = "block";
+                    document.getElementById("EndDateId").style.display = "block";
+                    $startDate.setAttribute("class","Required");
+                    $endDate.setAttribute("class","Required");
+                    returnFlag  = false;
+
+                    //document.getElementById("spinner").style.display = "none";
+
+                    //document.getElementById("pageid:formid:Block1:section1:section1b:startDateSection:startdate").value = datePrev ; 
+                    //document.getElementById("pageid:formid:Block1:section1:section1b:endDateSection:enddate").value = date ;
+                }
+                else if($("input[id$='enddate']").val()==''||$("input[id$='startdate']").val()==''){
+                    //Either Start Date is blank or End Date is blank
+                    returnFlag  = false;
+                    //document.getElementById("spinner").style.display = "none";
+                    if($("input[id$='enddate']").val()==''){
+                        //end date is blank
+                        //document.getElementById("EndDateId").style.display = "block";
+                        $("[id$='enddate']").next('span').after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;"> <strong>Error:</strong> You must enter a value </p> </span>');
+                        $endDate.setAttribute("class","Required");
+                    }
+                    else if($("input[id$='startdate']").val()==''){
+                        //start date is blank
+                        //document.getElementById("StartDateError").style.display = "block";
+                        //$("[id$='startdate']").next('span').after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;"> <strong>Error:</strong> You must enter a value </p> </span>');
+                        $startDate.setAttribute("class","Required");
+
+                    }                
+                }
+                else {
+                    //Both Start and End Dates not blank
+                    //document.getElementById("StartDateError").style.display = "none";
+                    //Check if End Date is not blank
+                    if (document.getElementById("pageid:formid:Block1:section1:section1b:endDateSection:enddate").value != '') {
+                        //End Date is not blank and check if Start Date is blank
+                        
+                        var arrEndDate1 = $endDate.value.split("/");
+                        var iEndDateCurrent = (((parseInt(arrEndDate1[2], 10) * 100) + parseInt(arrEndDate1[0], 10)) * 100) + parseInt(arrEndDate1[1], 10);                        
+                        
+                        var currDate = new Date();
+                        
+                        var datestring = (currDate.getFullYear().toString()+ "" + ("0" + (currDate.getMonth() + 1).toString()).substr(-2) + "" + ("0" + currDate.getDate().toString()).substr(-2));                        
+                        var IntDate = parseInt(datestring, 10);
+                        
+                        console.log('IntDate : '+IntDate);
+                        console.log('iEndDateCurrent : ' + iEndDateCurrent);
+                        
+                        if(iEndDateCurrent > IntDate ) {
+                            $endDate.setAttribute("class","Required");
+                            //var divs = $endDate.parentNode.parentNode.getElementsByClassName("errorMsg");
+                            //divs[0].innerHTML="<b>Error:</b>End Date must be less than or equal to current date.";
+                            $("[id$='enddate']").next('span').after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;"> <strong>Error:</strong> End Date must be less than or equal to current date. </p> </span>');
+                            //divs[0].style.display="block";
+                            returnFlag = false;                                              
+                        }   
+                        
+                        if (document.getElementById("pageid:formid:Block1:section1:section1b:startDateSection:startdate").value == '') {
+                            //Start Date is blank
+                            $("[id$='startdate']").next('span').after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;"> <strong>Error:</strong> You must enter a value </p> </span>');
+                            //document.getElementById("StartDateError").style.display = "block";
+                            returnFlag = false;
+                        }
+                        else {
+                            //Both Start and End Dates are not blank
+                            var arrStartDate = $startDate.value.split("/");
+                            var arrEndDate = $endDate.value.split("/");
+                            var iStartDate = (((parseInt(arrStartDate[2], 10) * 100) + parseInt(arrStartDate[0], 10)) * 100) + parseInt(arrStartDate[1], 10);
+                            var iEndDate = (((parseInt(arrEndDate[2], 10) * 100) + parseInt(arrEndDate[0], 10)) * 100) + parseInt(arrEndDate[1], 10);
+                            if(iStartDate > iEndDate) {
+                                $endDate.setAttribute("class","Required");
+                                $startDate.setAttribute("class","Required");
+                                //var divs = $endDate.parentNode.parentNode.getElementsByClassName("errorMsg");
+                                //divs[0].innerHTML="<b>Error:</b> End Date must be later than Start Date.";
+                                //divs[0].style.display="block";
+                                $("[id$='enddate']").next('span').after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;"> <strong>Error:</strong> End Date must be later than Start Date. </p> </span>');
+
+                                returnFlag = false;
+                            }
+                        }
+                    }
+                    else {
+                        //End Date is blank
+                        if (document.getElementById("pageid:formid:Block1:section1:section1b:startDateSection:startdate").value != '') {
+                            //Start Date is not blank
+                            var currentDt = new Date();
+                            var mm = currentDt.getMonth() + 1;
+                            var dd = currentDt.getDate();
+                            var yyyy = currentDt.getFullYear();
+                            var preyyyy = currentDt.getFullYear()-2;
+                            var date = mm + '/' + dd + '/' + yyyy;
+                            var datePrev = mm + '/' + dd + '/' + preyyyy;
+                            document.getElementById("pageid:formid:Block1:section1:section1b:endDateSection:enddate").value = date ;
+                        }         
+                    }
+                }
+            }
+        }
+        if ($SearchBy.value == 'Subject') {
+            if(TaxId && TaxId.value) {
+                if(TaxId.value.length < 9) {                 
+                    if(document.getElementById("MyTaxId")){
+                         document.getElementById("MyTaxId").style.display = "block";  
+                    }
+                    returnFlag = false;
+                } else {
+                    if(document.getElementById("MyTaxId")){
+                         document.getElementById("MyTaxId").style.display = "none";  
+                    } 
+                }
+            }
+        }
+               
+        if ($SearchBy.value == 'ClaimID') {
+            
+            var $claimID = $("input[id$='ClaimNumber']");
+            console.log('claim ID value: ' + $claimID.val());
+            console.log(!$claimID.val());
+            if(!$claimID.val()){
+                $claimID.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + 'You must enter a value.' + '</div>');
+                returnFlag = false;
+            }else{
+                $claimID.removeClass("error").parent().find(".errorMsg").remove();  
+            }   
+        }
+        
+        var $errorMsg = document.getElementById("errorMessages");
+        var errorMsg = '';     
+        /*if($AuthorizationNumber != null)
+        {
+            $AuthorizationNumber.setAttribute("class","");
+            var divs = $AuthorizationNumber.parentNode.getElementsByClassName("errorMsg");
+            divs[0].style.display="none";
+        }*/
+        /*if($ClaimNumber != null)
+        {
+            $ClaimNumber.setAttribute("class","");
+            var divs = $ClaimNumber.parentNode.getElementsByClassName("errorMsg");
+            divs[0].style.display="none";
+        }
+        if($ReferralNumber != null)
+        {
+            $ReferralNumber.setAttribute("class","");
+            var divs = $ReferralNumber.parentNode.getElementsByClassName("errorMsg");
+            divs[0].style.display="none";
+        }*/
+        
+        if($SearchBy.value == "AuthorizationNumber" 
+           && ($AuthorizationNumber != null && $AuthorizationNumber.value == "" || $AuthorizationNumber.value == undefined))
+        {
+            $AuthorizationNumber.setAttribute("class","Required");
+            var divs = $AuthorizationNumber.parentNode.getElementsByClassName("errorMsg");
+            divs[0].style.display="block";
+            returnFlag = false;
+        }
+        
+         if($SearchBy.value == "ClaimNumber" && ($ClaimNumber != null && $ClaimNumber.value == "" || $ClaimNumber.value == undefined))
+        {
+            $ClaimNumber.setAttribute("class","Required");
+            var divs = $ClaimNumber.parentNode.getElementsByClassName("errorMsg");
+            divs[0].style.display="block";
+            returnFlag = false;
+        }
+        if($SearchBy.value == "ReferralNumber" && ($ReferralNumber != null && $ReferralNumber.value == "" || $ReferralNumber.value == undefined))
+        {
+            $ReferralNumber.setAttribute("class","Required");
+            var divs = $ReferralNumber.parentNode.getElementsByClassName("errorMsg");
+            divs[0].style.display="block";
+            returnFlag = false;
+        }
+          
+        if($startDate != null && $startDate.value != undefined && $startDate.value.search("[a-z,A-Z<>!@#$%^&*']")>=0)
+        { 
+            returnFlag = false;
+
+        }
+        else if($startDate != null && new Date($startDate.value) > new Date())
+        {
+            $startDate.setAttribute("class","Required");
+            $("[id$='startdate']").next('span').after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;"> <strong>Error:</strong> Start Date must be less than or equal to today\'s date. </p> </span>');
+            returnFlag = false;
+        }
+        
+        if($endDate != null && $endDate.value != undefined && $endDate.value.search("[a-z,A-Z<>!@#$%^&*]")>=0)
+        {
+            returnFlag = false;
+        }
+        
+        if($SearchBy.value != "ClaimID") {
+            if ($DateOfService.value == 'Day' || $DateOfService.value == 'DateRange') {
+                if($startDate !=null && $startDate.value != undefined){
+                    if(!$startDate.value.length<1){
+                        var validStartDate = true;
+                        var SDValue = $startDate.value.split("/");
+                        if(SDValue.length!=3){
+                            console.log("wrong number of slashes in Start Date");
+                            validStartDate = false;
+                        }
+                        else if(SDValue[0].length>2||SDValue[1].length>2||SDValue[2].length>4||SDValue[0].length<1||SDValue[1].length<1||SDValue[2].length<1){
+                            console.log("wrong number of digits in Start Date");
+                            validStartDate = false;
+                        }
+                            else if($startDate.value.search("[a-z,A-Z<>!@#$%^&*']")>=0){
+                                console.log("Start Date contains invalid characters");
+                                validStartDate = false;
+                            }
+                                else if(parseInt(SDValue[0],10)>12||parseInt(SDValue[0],10)<1||parseInt(SDValue[1],10)<1||parseInt(SDValue[1],10)>31){
+                                    console.log("Start Date contains invalid number of months and/or days");
+                                    validStartDate = false;
+                                }
+                                    else if(parseInt(SDValue[0],10)==2){
+                                        if(parseInt(SDValue[2],10)%4==0){
+                                            if(parseInt(SDValue[1],10)>29){
+                                                console.log("Start Date has invalid number of days in february for leap year");
+                                                validStartDate = false;
+                                            }
+                                        }
+                                        else if(parseInt(SDValue[1],10)>28){
+                                            console.log("Start Date has invalid number of days in february for nonleap year");
+                                            validStartDate = false;
+                                        }
+                                    }
+                                        else if(parseInt(SDValue[0],10)==4||parseInt(SDValue[0],10)==6||parseInt(SDValue[0],10)==9||parseInt(SDValue[0],10)==11){
+                                            if(parseInt(SDValue[1],10)>30){
+                                                console.log("Start Date has invalid number of days in month");
+                                                validStartDate = false;
+                                            }
+                                        }
+                        
+                        if(!validStartDate){
+                            returnFlag = false;
+                        }
+                    }
+                }
+            }
+            
+            if ($DateOfService.value == 'DateRange'){
+                if($endDate !=null && $endDate.value != undefined){
+                    if(!$endDate.value.length<1){
+                        var validEndDate = true;
+                        var EDValue = $endDate.value.split("/");
+                        if(EDValue.length!=3){
+                            console.log("wrong number of slashes in End Date");
+                            validEndDate = false;
+                        }
+                        else if(EDValue[0].length>2||EDValue[1].length>2||EDValue[2].length>4||EDValue[0].length<1||EDValue[1].length<1||EDValue[2].length<1){
+                            console.log("wrong number of digits in End Date");
+                            validEndDate = false;
+                        }
+                            else if($endDate.value.search("[a-z,A-Z<>!@#$%^&*']")>=0){
+                                console.log("End Date contains invalid characters");
+                                validEndDate = false;
+                            }
+                                else if(parseInt(EDValue[0],10)>12||parseInt(EDValue[0],10)<1||parseInt(EDValue[1],10)<1||parseInt(EDValue[1],10)>31){
+                                    console.log("End Date contains invalid number of months and/or days");
+                                    validEndDate = false;
+                                }
+                                    else if(parseInt(EDValue[0],10)==2){
+                                        if(parseInt(EDValue[2],10)%4==0){
+                                            if(parseInt(EDValue[1],10)>29){
+                                                console.log("End Date has invalid number of days in february for leap year");
+                                                validEndDate = false;
+                                            }
+                                        }
+                                        else if(parseInt(EDValue[1],10)>28){
+                                            console.log("End Date has invalid number of days in february for nonleap year");
+                                            validEndDate = false;
+                                        }
+                                    }
+                                        else if(parseInt(SDValue[0],10)==4||parseInt(SDValue[0],10)==6||parseInt(SDValue[0],10)==9||parseInt(SDValue[0],10)==11){
+                                            if(parseInt(SDValue[1],10)>30){
+                                                console.log("End Date has invalid number of days in month");
+                                                validEndDate = false;
+                                            }
+                                        }
+                        
+                        if(!validEndDate){
+                            returnFlag = false;
+                        }
+                    }
+                }
+            }
+        }
+        console.log('returnFlag   : '+returnFlag);
+        console.log('validateFlag   : '+validateFlag);
+        if(!returnFlag )
+        {
+            
+            if(document.getElementById('opaque')){
+                document.getElementById('opaque').style.display = 'none';
+            }
+            
+
+        }
+        else
+        {
+            if(returnFlag && validateFlag){
+                AFSearch();
+            }
+        } 
+        return false;
+    }
+    
+    </script>
+    <apex:form id="formid">
+        <c:ACETInteractionHighlightsPanel InteractionAtt="{!wrapper.interaction}"
+            SubjectAtt="{!wrapper.Subject}"
+            AdditionalInfoAtt="{!wrapper.AdditionalInfo}" html-auto-doc="auto" selectedOriginator="{!wrapper.interaction.Originator_Name__c}"></c:ACETInteractionHighlightsPanel>
+            <apex:outputPanel id="hippapopupPanel">
+                       <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+            </apex:outputPanel>
+        <apex:pageMessages id="pgMessage" />
+        <apex:outputPanel rendered="{!!isCancelCaseCreation}">
+            <apex:sectionHeader title="Claims Search" />
+            <c:ACETCaseActions attrRefreshNavigationTab="true"
+                attrCaseDataWrapper="{!wrapper}" attrShowSaveAndCloseButton="false"
+                attrShowSaveButton="true" attrShowMisdirectButton="true"
+                attrSourceOriginator="{!wrapper.SourceOriginator}"
+                attrInteractionId="{!wrapper.Interaction.Id}"
+                attrSubjectId="{!wrapper.Subject.Id}"
+                attrCallTopic="View Claims" rendered="{!notResearchUser}" />
+
+            <apex:pageBlock id="Block1">
+                <apex:actionFunction action="{!searchbyaction}"
+                    reRender="changeSearchBy,changeSearchByError,changeSearchBy1,section1"
+                    name="searchByChangeAction"/>
+                <apex:actionFunction action="{!dateServiceChange}"
+                    reRender="changeSearchBy,changeSearchByError,changeSearchBy1"
+                    name="DateChangeAction" />
+                <apex:outputPanel id="changeSearchByError">
+                    <strong>
+                        <apex:messages style="color:#c00;text-align:center;list-style-type:none;font-family:Arial,Helvetica,sans-serif;font-size:100%">
+                        </apex:messages>
+                    </strong>
+                </apex:outputPanel>
+                <apex:outputPanel id="changeSearchBy1">
+                    <c:ValidateData typeVal="View Claims"/>
+                    <apex:pageBlockSection columns="2" id="section1">
+                        <apex:pageBlockSection columns="2" id="section1a">
+                            <apex:selectList id="SearchBy" label="Search By"
+                                value="{!searchBy}" size="1" onchange="searchByChangeFunction()">
+                                <!--apex:selectOption itemValue="Subject" itemLabel="Subject" rendered="{!IF((Interaction.Originator_Type__c != 'Provider'), true, false)}" />
+                                <apex:selectOption itemValue="ClaimID"
+                                    itemLabel="Claim ID" ></apex:selectoption-->
+                                    <apex:selectOptions value="{!SearchbyOption}"></apex:selectOptions>
+                                    </apex:selectList>
+                            
+                            <apex:selectList id="DateOfService" label="Date Of Service"
+                                value="{!dateOfService}" size="1"
+                                rendered="{!dateofservicedisabled}"
+                                onchange="DateChangeFunction();">
+                                <apex:selectOption itemValue="ALL" itemLabel="All" />
+                                <apex:selectOption itemValue="Day" itemLabel="Day" />
+                                <apex:selectOption itemValue="DateRange" itemLabel="Date Range" />
+                                <apex:selectOption itemValue="ThisYear"
+                                    itemLabel="This Calendar Year" />
+                                <apex:selectOption itemValue="LastYear"
+                                    itemLabel="Last Calendar Year" />
+                            </apex:selectList>
+                        </apex:pageBlockSection>
+                        <apex:pageBlockSection columns="2" id="section1b">
+                           <apex:pageBlockSectionItem rendered="{!startdatedisabled}" id="startDateSection" datastyle="padding-left: 46px;">
+                                <apex:outputlabel >Start Date</apex:outputlabel>
+                                <apex:outputPanel >
+                                    <apex:outputPanel id="startDatePanel"
+                                        rendered="{!!disableDates}">
+                                        <div class="requiredInput">
+                                        <div class="requiredBlock"></div>
+                                            <apex:inputField id="startdate"
+                                            value="{!startdate.tst_Date_Field__c}"
+                                            styleClass="{!startDateReqd}" style="padding-bottom:3px;padding-top:0px;"
+                                            rendered="{!startdatedisabled}">
+                                            <div class="errorMsg" id="StartDateError"
+                                                style="display: none; margin-left: -3px;">
+                                                <b>Error:</b> You must enter a value.
+                                              </div>
+                                            </apex:inputField>
+                    </div>
+                                    </apex:outputPanel>
+                                    <apex:outputPanel id="startDatePanel1"
+                                        rendered="{!disableDates}">
+                                        <apex:inputField id="startdate1" html-disabled="true"
+                                            value="{!startdate.tst_Date_Field__c}"
+                                            style="margin-left: 22px;padding-bottom:3px;padding-top:0px;" styleClass="{!startDateReqd}"
+                                            rendered="{!startdatedisabled}" />
+                                    </apex:outputPanel>
+                                </apex:outputPanel>
+                            </apex:pageBlockSectionItem>
+                            <apex:pageBlockSectionItem rendered="{!enddatedisabled}" id="endDateSection" datastyle="padding-left: 46px;">
+                                <apex:outputPanel >
+                                    <apex:outputLabel value="End Date" style="margin-right:17px;font-weight: bold;font-size: 91%;color: #4a4a56;position:absolute;left:79%;" />
+                                    <apex:outputPanel >
+                                    <apex:outputPanel id="endDatePanel" rendered="{!!disableDates}">
+                                        <div class="requiredInput">
+                                            <div class="requiredBlock"></div>
+                                            <apex:inputField id="enddate"
+                                            value="{!enddate.tst_Date_Field__c}"
+                                            styleClass="{!endDateReqd}" rendered="{!enddatedisabled}" />
+                                            <div class="errorMsg" id ="EndDateId"
+                                                    style="display: none; margin-left: -3px;">
+                                                <b>Error:</b> You must enter a value.
+                                            </div>
+                                            </div>
+                                    </apex:outputPanel>
+                                    <apex:outputPanel id="endDatePanel1" rendered="{!disableDates}">
+                                        <apex:inputField id="enddate1" html-disabled="true"
+                                            value="{!enddate.tst_Date_Field__c}"
+                                            styleClass="{!endDateReqd}" rendered="{!enddatedisabled}">
+                                            </apex:inputfield>
+                                    </apex:outputPanel>
+                                    </apex:outPutPanel>
+                                    </apex:outputPanel>
+                            </apex:pageBlockSectionItem>
+                            <apex:outputPanel rendered="{!!enddatedisabled && !claimnumberhide}"></apex:outputPanel>
+                        </apex:pageBlockSection>
+                        <apex:pageBlockSection columns="2" id="section1c">
+                            <apex:pageBlockSectionItem rendered="{!claimnumberhide}"
+                                id="ClaimNumberSection">
+                                <apex:outputLabel value="Claim ID" />
+                                <apex:outputPanel >
+                                    <div class="requiredInput">
+                                        <div class="requiredBlock"></div>
+                                        <apex:inputText value="{!claimnumber}" label="Claim ID"
+                                            id="ClaimNumber" rendered="{!claimnumberhide}"
+                                            style="margin-left:3px" styleClass="{!ClaimNoReqd}">
+                                            
+                                         </apex:inputtext>
+                                            
+                                    </div>
+                                </apex:outputPanel>
+                            </apex:pageBlockSectionItem>
+                         
+                            <apex:pageBlockSectionItem rendered="{!taxidhide}" id="taxidSec">
+                                <apex:outputLabel value="Tax ID"></apex:outputLabel>
+                                <apex:inputText id="taxid" value="{!taxid}" rendered="{!taxidhide}">
+                                    </apex:inputtext>
+                            </apex:pageBlockSectionItem>
+                            <apex:pageBlockSectionItem rendered="{!(!claimnumberhide)}">
+                            
+                                <apex:outputLabel value="Provider Type"></apex:outputLabel>
+                                <apex:outputpanel >
+                                <apex:selectList id="providers" 
+                                    value="{!providers}" size="1" >
+                                    <apex:selectOption itemValue="All" itemLabel="All" />
+                                    <apex:selectOption itemValue="Facility" itemLabel="Facility" />
+                                    <apex:selectOption itemValue="Physician" itemLabel="Physician" />
+                                </apex:selectList>
+                                </apex:outputpanel>
+                            </apex:pageBlockSectionItem>
+                            <apex:pageBlockSectionItem rendered="{!authnumberhide}"
+                                id="AuthorizationNoSec">
+                                <apex:outputLabel value="Authorization Number" style="white-space:nowrap;" />
+                                <apex:outputPanel >
+                                        <apex:inputText value="{!AuthorizationNumber}"
+                                            
+                                            id="AuthorizationNumber" rendered="{!authnumberhide}"
+                                            style="margin-left:3px" styleClass="{!authorizationNoReqd}"/>
+                                       
+                                </apex:outputPanel>
+                            </apex:pageBlockSectionItem>
+                            <apex:pageBlockSectionItem rendered="{!referralhide}"
+                                id="ReferralNumberSection">
+                                <apex:outputLabel value="Referral Number" />
+                                <apex:outputPanel >
+                                        <apex:inputText value="{!ReferralNumber}"
+                                             id="ReferralNumber"
+                                            rendered="{!referralhide}" style="margin-left:3px"
+                                            styleClass="{!referralNoReqd}"/>
+                                            
+                                </apex:outputPanel>
+                            </apex:pageBlockSectionItem>
+                        </apex:pageBlockSection>
+                        <apex:pageBlockSection columns="2" id="section1d">
+                            <apex:pageBlockSectionItem rendered="{!networkstatushide}"
+                                id="networkstatusid">
+                                <apex:outputLabel value="Network Status"></apex:outputLabel>
+                                <apex:selectList id="inNetwork" value="{!inNetwork}" size="1"
+                                    rendered="{!networkstatushide}">
+                                    <apex:selectOption itemValue="All" itemlabel="All" />
+                                    <apex:selectOption itemValue="In Network"
+                                        itemlabel="In Network" />
+                                    <apex:selectOption itemValue="Out of Network"
+                                        itemlabel="Out of Network" />
+                                        <apex:selectOption itemValue="Combination"
+                                    itemLabel="Combination" />
+                                </apex:selectList>
+                            </apex:pageBlockSectionItem>
+                            <apex:inputCheckbox id="deductible" label="Deductible Only"
+                                value="{!deductible}" rendered="{!deductiblehide}" />
+                             <apex:pageBlockSectionItem rendered="{!(!claimnumberhide)}"
+                                id="EncountersSection">
+                             <apex:outputLabel value="Encounters" />
+                                <apex:outputPanel >
+                                     <apex:outputpanel >
+                                <apex:selectList id="Encounters" 
+                                    value="{!Encounters}" size="1" >
+                                    <apex:selectOption itemValue="All" itemLabel="All" />
+                                    <apex:selectOption itemValue="Y" itemLabel="Encounter Claims Only" />
+                                    <apex:selectOption itemValue="N" itemLabel="Non-Encounter Claims Only" />
+                                </apex:selectList>
+                                </apex:outputpanel>
+
+                                </apex:outputPanel>
+                         </apex:pageBlockSectionItem>
+                        </apex:pageBlockSection>
+                    </apex:pageBlockSection>
+                </apex:outputPanel>
+                <apex:outputPanel id="changeSearchBy">
+                    <apex:pageBlockSection columns="2" id="sectionid">
+                        </apex:pageblocksection>
+                </apex:outputPanel>
+                <apex:pageBlockButtons location="bottom">
+                    <apex:actionFunction action="{!search}" name="AFSearch" status="loadpanel"
+                        reRender="outpanleSearchResult,pgMessage"
+                        oncomplete="acet.datatables['datatable'].initDatatable();hideMask();" />
+                    <!-- reRender="outpanleSearchResult,loadpanel" -->
+                    <apex:actionFunction action="{!clear}" name="clear"
+                        reRender="pgMessage" />
+                    <apex:actionFunction action="{!clearResults}" name="clearResults"
+                        reRender="outpanleSearchResult,pgMessage" />
+                    <input type="button" class="btn" id="searchBtn" value="Search"
+                        onclick="return ValidateClaimSearch();" />
+                    <input type="reset" id="btnClear" class="btn" value="Clear"
+                        onclick="newClearLogic();" />
+
+                </apex:pageBlockButtons>
+
+            </apex:pageBlock>
+            <apex:outputPanel id="outpanleSearchResult">
+                <apex:pageBlock id="pbSearchResult" title="Claim Search Results" rendered="{!NOT(ISNULL(DTWrapper))}"  html-auto-doc-section-key="pbSearchResults" html-auto-doc-section-column-indexes="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16" >
+                    <apex:pageBlockSection id="pbSearchSection" columns="1" html-auto-doc="true" html-auto-doc-case-items="true" html-auto-doc-pagination="true" collapsible="false" rendered="{!NOT(ISNULL(DTWrapper))}" >
+                        <apex:outputPanel html-auto-doc-pagination="true" styleClass="enablePagination" html-auto-doc-section-combinedkey="pbSearchResults" >
+                        <c:ACETDataTable attrDatatableWrapper="{!DTWrapper}"/>
+                        </apex:outputpanel>
+                    </apex:pageBlockSection>
+                </apex:pageBlock>
+                
+            </apex:outputPanel>
+
+        </apex:outputPanel>
+        <c:ACETCaseActions attrRefreshNavigationTab="true"
+            attrCaseDataWrapper="{!wrapper}" attrShowSaveAndCloseButton="false"
+            attrShowSaveButton="true" attrShowMisdirectButton="true"
+            attrSourceOriginator="{!wrapper.SourceOriginator}"
+            attrInteractionId="{!wrapper.Interaction.Id}"
+            attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="View Claims"
+            rendered="{!notResearchUser}" 
+            attrLocation="bottom" />
+    </apex:form>
+    <apex:actionStatus id="loadpanel">
+        <apex:facet name="start">
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                &nbsp;
+            </div>
+            <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 9999; margin: 15% 50%">
+                <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                    <img src="/img/loading.gif" style="float: left; margin: 8px;" />
+                    <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                </div>
+            </div>
+        </apex:facet>
+    </apex:actionStatus>
+    <style>
+#spinner {<!--
+    display: none; -->
+    width: 100px;
+    height: 20px;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    text-align: center;
+    padding: 10px;
+    font: normal 16px Tahoma, Geneva, sans-serif;
+    margin-left: -100px;
+    margin-top: -100px;
+    z-index: 2;
+    overflow: auto;
+    border: 1px solid #CCC;
+    background-color: white;
+    z-index: 100;
+    padding: 5px;
+    line-height: 10px;
+}
+
+#opaque {
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+    height: 100%;
+    z-index: 1; <!--v
+    display: none; -->
+    background-color: gray;
+    filter: alpha(opacity = 30);
+    opacity: 0.3;
+    -moz-opacity: 0.3;
+    -khtml-opacity: 0.3
+}
+
+* html #opaque {
+    position: absolute;
+}
+</style>
+    <style type="text/css">
+.imgclass:hover {
+    background-image: url('/img/help/helpOrbs.gif');
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 15px;
+    background-position: right;
+}
+
+.imgclass {
+    background-image: url('/img/help/helpOrbs.gif');
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 15px;
+}
+</style>
+    <apex:outputPanel rendered="{!isCancelCaseCreation}">
+
+    </apex:outputPanel>
+    <script>          
+    
+   
+    
+    $(document).ready(function(){
+        localStorage.removeItem("table");
+        localStorage.removeItem("rowCheckHold");
+        var subjectId = '{!Subject.Id}';
+        console.log('Subject Id:::'+subjectId);
+       //acet.autodoc.startAutodoc();                        
+
+       acet.autodoc.createCommentsbox();        
+       acet.autodoc.subTabIds = []; 
+        $("[id$='searchBtn']").focus();
+       $(document).keypress(
+            function(event){
+                if (event.which == '13') {
+                    event.preventDefault();
+                    $("[id$='searchBtn']").trigger('click');
+                }
+});
+       var primaryCalltopicTabId = '{!JSENCODE($CurrentPage.parameters.primaryCalltopicTabId)}';
+        
+       var noAutoSearch = '{!JSENCODE($CurrentPage.parameters.noAutoSearch)}';
+       if(noAutoSearch != 'true'){
+           $("[id$='taxid']").val('');
+           if(vccdParams.ClaimID != undefined && vccdParams.ClaimID !=''){
+               $("[id$='SearchBy']").val('ClaimNumber');
+               searchByChangeAction();                                        
+           }
+           else if(vccdParams.startdate != undefined && vccdParams.startdate !=''){
+               //alert('test');
+               $("[id$='SearchBy']").val('Subject');               
+               $("[id$='DateOfService']").val('Day');    
+               $("[id$='taxid']").val('');     
+               $("[id$='startdate']").val(vccdParams.startdate); 
+               $("[id$='searchBtn']").click();          
+           }
+           else if(vccdParams.TaxID != undefined && vccdParams.TaxID !=''){
+               //alert('test');
+               $("[id$='SearchBy']").val('Subject');
+               $("[id$='taxid']").val(vccdParams.TaxID); 
+               $("[id$='searchBtn']").click();          
+           }
+           //
+       }    
+                     
+        //receive claim item request from detail page
+        sforce.console.addEventListener('RequestClaimItemOpened_'.concat(subjectId), function(r){            
+            $("#datatable").find("tbody").find("tr").each(function(){
+                var rowData;
+                var rowDataStr = $(this).attr("data-row");
+                if(rowDataStr){
+                    rowData = JSON.parse(rowDataStr);
+                }                                
+                if(rowData && rowData.ClaimID == r.message){                    
+                    sforce.console.fireEvent('ReceiveClaimItemOpened_'.concat(subjectId), rowDataStr);
+                }            
+            });  
+        });
+       
+        console.log('subject id: ' + subjectId);
+        //request autodoc comments from sub tabs        
+        acet.autodoc.getAutodocFromSubTabs = function(){
+            sforce.console.getEnclosingTabId(function(result) {
+                console.log('Request Sub Tab Autodoc:');
+                acet.autodoc.additionalInfo = '';                                               
+                sforce.console.fireEvent('RequestSubTabAutodoc', result.id); 
+            });
+        };
+        
+        //receive autodoc comments from sub tabs                      
+        sforce.console.addEventListener('ReceiveSubTabAutodoc', function(r){ 
+            sforce.console.getEnclosingTabId(function(result) {
+                var res = JSON.parse(r.message);     
+                console.log('res'+res); 
+                
+                if(res.primaryCalltopicTabId == result.id){
+                    acet.autodoc.subTabIds.push(res.subTabId);  
+                    if(res.doc){
+                        var spaceSeperator = '<div id="seperator" style="width:100%;height:50px;"></div>';                                 
+                        acet.autodoc.additionalInfo = acet.autodoc.additionalInfo + spaceSeperator + res.doc;   
+                    }              
+                    
+                    //close sub tab
+                    sforce.console.closeTab(res.subTabId); 
+                }   
+            });                                 
+        }); 
+        
+        //send over claim search autodoc to primary call topic, e.g the claim search is opened from view payments      
+        sforce.console.addEventListener('RequestSubTabAutodoc', function(r) {
+            console.log('sub tab autodoc request received in claim search');
+            sforce.console.getEnclosingTabId(function(result) {
+                if(r.message == primaryCalltopicTabId){
+                    var res = {};
+                    res.primaryCalltopicTabId = primaryCalltopicTabId;
+                    res.subTabId = result.id;
+                    res.doc = acet.autodoc.saveAutodoc();
+                    console.log('claim search autodoc is sent');
+                    sforce.console.fireEvent('ReceiveSubTabAutodoc', JSON.stringify(res));
+                }
+            });
+        });
+        
+        //close all sub tabs
+        //acet.autodoc.closeSubTabs = function(){
+            //sforce.console.fireEvent('CloseClaimDetailSubTab_'.concat(subjectId),'CloseAuthorizationDetailSubTab_'.concat(subjectId), subjectId);    
+        //}
+        
+        //sforce.console.addEventListener(
+            //'RequestClaimPaymentDetail_'.concat(subjectId), function(r) {
+                //sforce.console.getEnclosingTabId(function(result) {
+                    //var res = {};
+                    //res.subTabId = result.id;
+                    //res.doc = acet.autodoc.saveAutodoc();
+                    //sforce.console.fireEvent('ReceiveClaimPaymentDetail_'.concat(subjectId), JSON.stringify(res));
+                //});
+        //});
+        
+        //sync comments between claim search and claim details tabs
+        //only fire at last keyup
+        var timer;
+        $("#autodocComments").keyup(function(){
+            clearTimeout(timer);  
+            timer = setTimeout(function(){
+                sforce.console.fireEvent('ClaimCommentsUpdated_'.concat(subjectId), $("#autodocComments").val()); 
+            }, 800);   
+        }); 
+        
+        sforce.console.addEventListener('ClaimCommentsUpdated_'.concat(subjectId), function(r){
+        if(r.message != $("#autodocComments").val()){
+            $("#autodocComments").val(r.message); 
+            }               
+        }); 
+        
+        //send comments to detail page when requested
+        sforce.console.addEventListener('RequestClaimComments_'.concat(subjectId), function(r){            
+            sforce.console.fireEvent('ClaimCommentsUpdated_'.concat(subjectId), $("#autodocComments").val());                   
+        }); 
+        
+        //auto search with date of service = 'All' per US1668355 - Jacob Wagoner - Nirvana
+       	if('{!searchBy}'=='Subject'){
+        	$("[id$='searchBtn']").click();
+       	}
+       
+       //end doc ready function
+    });  
+    //});       
+            
+   /* setTimeout(function(){
+    var vccdParams =  JSON.parse('{!$CurrentPage.parameters.vccdParams}');       
+       var noAutoSearch = '{!JSENCODE($CurrentPage.parameters.noAutoSearch)}';
+       if(noAutoSearch != 'true'){
+           
+           if(vccdParams.ClaimID != undefined && vccdParams.ClaimID !=''){
+                $("[id$='taxid']").val('');
+                $("[id$='ClaimNumber']").val(vccdParams.ClaimID);
+                $("[id$='searchBtn']").click();                 
+           }
+       }
+    }, 5000);*/
+    
+    function isValidDate(dateStr) {
+            var datePat = /^(\d{1,2})(\/|-)(\d{1,2})\2(\d{2}|\d{4})$/;
+            var matchArray = dateStr.match(datePat);
+            if (matchArray == null) {
+                return false;
+            }
+            month = matchArray[1]; // parse date into variables
+            day = matchArray[3];
+            year = matchArray[4];
+            if (month < 1 || month > 12) { // check month range
+                return false;
+            }
+            if (day < 1 || day > 31) {
+                return false;
+            }
+            if ((month==4 || month==6 || month==9 || month==11) && day==31) {
+                return false
+            }
+            if (month == 2) { // check for february 29th
+            var isleap = (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+            if (day>29 || (day==29 && !isleap)) {
+                return false;
+               }
+            }
+            return true;  // date is valid
+    }
+    var primaryDiagnosisCodeArray=[];//Code Added By Chandan-US1077822
+    var encoderPromap = new Map();//Code Added By Chandan-US1077822
+    var callCheck=0;//Code Added By Chandan-US1077822
+    function processDatatable(row, data, dataIndex) { 
+        var check=0;
+        console.log('claim data');       
+        console.log(data);
+        recLength = dataIndex ;  //Code Added By Chandan
+        console.log('row @@ ' + row + ' >>>data>>> ' + JSON.stringify(data) + ' ###dataIndex## ' + dataIndex);    //Code Added By Chandan
+        console.log(' >>>dataServ.PrimaryDiagnosisCode>>> ' + data.PrimaryDiagnosisCode);    //Code Added By Chandan
+        primaryDiagnosisCodeArray.push(data.PrimaryDiagnosisCode);
+        console.log('primaryDiagnosisCodeArray='+primaryDiagnosisCodeArray);
+        //callEncodePro(primaryDiagnosisCodeArray);
+        /*$(row).attr("data-row", JSON.stringify(data));
+        $(row).children().first().html("<a id='lnkClaimId' href='#'>" + data.ClaimID + "</a>");        
+        $(row).children().first().on('click', function(e){ 
+            var primaryCalltopicTabId = '{!JSENCODE($CurrentPage.parameters.primaryCalltopicTabId)}';
+            sforce.console.getEnclosingTabId(function(result) {
+                var url = '/apex/ACETClaimDetail?claimId='+data.ClaimID+ '&'+ 'claimType=' + data.claimType + '&' + 'claimstatus=' + data.Status + '&'+'interactionId={!wrapper.Interaction}' +'&' + 'contactId={!JSENCODE(Subject.Id)}'+ '&' + 'sourceOriginator={!sourceOriginator}'+ '&' +'additionalInfo={!JSENCODE(SUBSTITUTE(hpAdditionInfoStr,'&','AND'))}' + '&SRK={!surrogateKey}' + '&vccdParams=' + vccdParams + '&' + 'claimstatuscode=' + data.Statuscode + '&EIDString={!EID}' + '&bookOfBusinessTypeCode={!bookOfBusinessTypeCode}';                                            
+                url = url + '&primaryCalltopicTabId=' + (primaryCalltopicTabId ? primaryCalltopicTabId : result.id);
+                console.log('url1'+url);
+                sforce.console.getFocusedPrimaryTabId(function(result){
+                    sforce.console.openSubtab(result.id, url, true,'Claim - '+ data.ClaimID, null);
+                });       
+            });
+            return false;
+        });*/
+        $(row).attr("data-row", JSON.stringify(data));
+        $(row).children().first().html("<a id='lnkClaimId' href='#'>" + data.ClaimID + "</a>");        
+        $(row).children().first().on('click', function(e){ 
+            var primaryCalltopicTabId = '{!JSENCODE($CurrentPage.parameters.primaryCalltopicTabId)}';
+             var additionalInfoStr = '{!JSENCODE(hpAdditionInfoStr)}';
+
+            sforce.console.getEnclosingTabId(function(result) {
+                var url = '/apex/ACETClaimDetail?claimId='+data.ClaimID+ '&'+ 'claimType=' + data.claimType + '&' + 'claimstatus=' + data.Status + '&'+'interactionId={!wrapper.Interaction}' +'&' + 'contactId={!JSENCODE(Subject.Id)}'+ '&' + 'sourceOriginator={!sourceOriginator}'+ '&additionalInfo='+encodeURIComponent(additionalInfoStr) + '&SRK={!surrogateKey}' + '&vccdParams=' + vccdParams + '&' + 'claimstatuscode=' + data.Statuscode + '&EIDstring={!EID}' + '&bookOfBusinessTypeCode={!bookOfBusinessTypeCode}';                                          
+                url = url + '&primaryCalltopicTabId=' + (primaryCalltopicTabId ? primaryCalltopicTabId : result.id);
+                console.log('url2'+url);
+                               
+                sforce.console.getFocusedPrimaryTabId(function(result){
+                    sforce.console.openSubtab(result.id, url, true,'Claim - '+ data.ClaimID, null);
+                });       
+            });
+            return false;
+        });
+        $(row).children(":nth-child(4)").html("<a id='lnkClaimId' href='#'>" + data.TaxID + "</a>");        
+        $(row).children(":nth-child(4)").on('click', function(e){ 
+            var primaryCalltopicTabId = '{!JSENCODE($CurrentPage.parameters.primaryCalltopicTabId)}';
+                         var additionalInfoStr = '{!JSENCODE(hpAdditionInfoStr)}';
+
+            sforce.console.getEnclosingTabId(function(result) {
+                 var pageurl = '/apex/ACETProviderLookup?taxid=' + data.TaxID + '&grpnum={!AdditionalInfo.GroupNumber}' + '&benefitPlanId={!AdditionalInfo.BenefitPlanId}' + '&interactionId={!wrapper.Interaction}' +'&' + 'contactId={!JSENCODE(Subject.Id)}'+ '&' + 'sourceOriginator={!sourceOriginator}'+ '&additionalInfo='+encodeURIComponent(additionalInfoStr) + '&SRK={!surrogateKey}' + '&vccdParams=' + vccdParams;                                       
+                pageurl = pageurl + '&primaryCalltopicTabId=' + (primaryCalltopicTabId ? primaryCalltopicTabId : result.id);
+                //  pageurl = pageurl + '&id={!AdditionalInfo.MemberId}';
+                console.log('url'+pageurl);
+                
+                sforce.console.getFocusedPrimaryTabId(function(result){
+                    sforce.console.openSubtab(result.id, pageurl, true,'Provider Lookup', null);
+                });     
+            });
+            return false;
+        });
+        $(row).children().last().on('mouseenter', function(e){ 
+        //$("#datatable").find("tbody").find("tr").find("Primary Dx").on('mouseenter', function(e){ 
+            check=1;
+            var thisForm = this;
+            var ev = event.type;
+            var e=event;
+            var relatedTarget=event.relatedTarget;
+            
+            console.log('event.type='+ev);
+            var tagName=relatedTarget!=null?event.relatedTarget.tagName:null;
+            //var posX=event.clientX + 'px'; 
+            //var posY = event.clientY -20 + 'px';
+            //console.log(posX + " :: " +posY)
+            console.log('Testing mouseover@@ ');           
+            $(".eptooltip-modal").remove();
+            var selected=data.PrimaryDiagnosisCode;
+            console.log("selected:"+selected);
+            var currentCode=encoderPromap.get(selected);
+            console.log("currentCode="+currentCode);
+            /*if(currentCode=="undefined"){
+                var pdCodeArray=[selected];
+                callEncodePro(pdCodeArray);
+                currentCode=encoderPromap.get(selected);
+            }*/
+            var toolTip =  document.createElement("div");
+            $(toolTip).addClass("eptooltip-modal");
+            var descHtml = "<ul style = 'padding:1%'>"
+            descHtml = descHtml + "<li>" +currentCode+ "</li>";  
+            console.log('descHtml ' + descHtml);
+            descHtml = descHtml +"</ul>";
+            $(toolTip).html(descHtml);
+            $(thisForm).append(toolTip);
+            if(tagName!=null){
+                   console.log("The cursor just exited the " +tagName );
+            }
+            console.log("check="+check);
+            if(check==1){
+                $(toolTip).show();
+            }
+            //$(toolTip).css("top",posY);                
+            //$(toolTip).css("left",posX);
+            $(toolTip).position({my: "top+20px",at:"left+20",of: e,collision: "flipfit"});
+            return false;  
+        });
+        $(row).children().last().on('mouseleave', function(e){ 
+             check=2;
+             console.log('Testing mouseout@@ ');
+             console.log('event.type='+event.type);
+             $(".eptooltip-modal").remove();
+            return false;
+            
+        });
+        }
+    
+    //Code Added By Chandan -US1077822
+    function callEncodePro(pdcodeArray){
+        //alert('Called callEncodePro')
+        Visualforce.remoting.Manager.invokeAction(
+           '{!$RemoteAction.ACETClaimSearchController.getEncoderProDescriptionMap}',
+           pdcodeArray,
+           function(result, event){
+        
+                if(result.Success){
+                var codeArray = Object.keys(result.Response);
+                    console.log('result.Response@@ ' + result.Response);
+                    for(var i = 0 ;i < codeArray.length ; i++){
+                        console.log('codeArray$$$ ' + codeArray[i]);
+                        var currentCode = codeArray[i];
+                        //if($(this).text() == currentCode){
+                           
+                            var descArray = result.Response[currentCode];
+                            
+                            var descHtml = "";
+                            console.log('descHtml ' + descHtml);
+                            for(var j=0; j<descArray.length; j++){
+                                console.log('test@@@ ' + JSON.stringify(descArray[j]));
+                                if(JSON.stringify(descArray[j]).indexOf(":") > 0)
+                                    descHtml = descHtml +  JSON.stringify(descArray[j]).slice(JSON.stringify(descArray[j]).indexOf(":")+2,JSON.stringify(descArray[j]).lastIndexOf("\"")) ;
+                                else
+                                    descHtml = descHtml +  JSON.stringify(descArray[j]).slice(1,JSON.stringify(descArray[j]).lastIndexOf("\"")) ;    
+                            if(encoderPromap.get(currentCode)==null)
+                               encoderPromap.set(currentCode,descHtml);
+                            }
+                            console.log('encoderPromap@@ ' + encoderPromap);
+                            
+                            
+                        //}
+                    }
+                }
+                
+            
+               //});
+                         
+           }, 
+           {escape: true}
+        );
+        console.log('primaryDiagnosisCodeArray='+primaryDiagnosisCodeArray);
+        
+    }
+    function resetEncoderProData() { 
+        primaryDiagnosisCodeArray=[];
+        encoderPromap = new Map();
+        callCheck=0;
+    }
+    function drawCallback(settings){
+        //display autodoc checkboxes
+        //Code Added By Chandan -US1077822
+        console.log('primaryDiagnosisCodeArray@@@'+primaryDiagnosisCodeArray);
+        callEncodePro(primaryDiagnosisCodeArray);
+        //Code End By Chandan -US1077822
+        acet.autodoc.startAutodoc(); 
+    }
+     // added by sumit jain    
+    var vccdParams =  '{!$CurrentPage.parameters.vccdParams}';
+    if(vccdParams != 'undefined'){
+        vccdParams  = JSON.parse('{!$CurrentPage.parameters.vccdParams}');  
+    }
+    
+    
+    </script>
+    <style type="text/css">
+        .eptooltip-modal{
+            background-color: #f5f5f5;
+            z-index: 9999;
+            position: fixed; 
+            display:none;
+            /* opacity: .5; */
+            /*maximum-width: 15%;*/
+            /* border-radius: 5px; */
+            box-shadow: 1px 1px 1px #bbbbbb;
+            border-style: ridge; 
+            border-width: 1px;  
+
+            }     
+        
+    </style>
+   
+            <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+
+    <div align="left"> <a href="#" id="backToToP" style="color:Blue" >Back To Top</a> </div>  
+    </apex:page>

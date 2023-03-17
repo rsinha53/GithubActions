@@ -1,0 +1,599 @@
+<apex:page controller="ACETCobController" sidebar="False" 
+tabStyle="Coordination_of_Benefits__tab"
+title="Cordination Of Benefits" id="COBPage">
+    <script
+type="text/javascript" src="{!$Label.ACETDynatraceJSURL}"
+data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1"
+crossorigin="anonymous"></script>
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+     <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+     
+     <script>
+            $(document).ready(function(){
+                
+                $("[id$='pnlUpdateCOMM']").css('display','none');
+                $("[id$='pnlUpdateGov']").css('display','none');    
+                              
+                afOnPageLoad1();
+                  
+                acet.autodoc.startAutodoc();
+                acet.autodoc.createCommentsbox();                 
+                $(".backgroundMask").css("display","block");
+                $("[id$='listCoverageType']").val('Medical Care');
+                $("[id$='effectiveCommDate']").val('');
+                
+                var $effectiveDate = $("[id$='effectiveCommDate']");
+                $effectiveDate.removeClass("error").parent().find(".errorMsg").remove();
+                var $endDate =  $("[id$='endCommDate']");
+                $endDate.removeClass("error").parent().find(".errorMsg").remove();
+                var $effectiveGovDate = $("[id$='effectivegovDate']");
+                $effectiveGovDate.removeClass("error").parent().find(".errorMsg").remove();
+                var $endGovDate = $("[id$='endGovDate']");
+                $endGovDate.removeClass("error").parent().find(".errorMsg").remove();                                   
+            
+            });    
+         
+     </script>     
+     
+    <script type="text/javascript"
+        src="https://js-cdn.dynatrace.com/jstag/145e12d594f/xob29014/1077eb28288ea333_bs.js"
+        crossorigin="anonymous"></script>
+    <apex:form id="COBForm">
+        <c:ACETInteractionHighlightsPanel InteractionAtt="{!wrapper.interaction}"
+            SubjectAtt="{!wrapper.Subject}"
+            AdditionalInfoAtt="{!wrapper.AdditionalInfo}" html-auto-doc="auto" selectedOriginator="{!wrapper.interaction.Originator_Name__c}"></c:ACETInteractionHighlightsPanel>
+            <apex:outputPanel id="hippapopupPanel">
+                       <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+            </apex:outputPanel>
+            
+        <apex:outputPanel rendered="{!!isCancelCaseCreation}">
+            <apex:sectionHeader title="Coordination of Benefits" />
+            <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+                attrShowSaveAndCloseButton="false" attrShowSaveButton="true"
+                attrShowMisdirectButton="true"
+                attrSourceOriginator="{!wrapper.SourceOriginator}"
+                attrInteractionId="{!wrapper.Interaction.Id}"
+                attrSubjectId="{!wrapper.Subject.Id}"
+                attrCallTopic="Coordination Of Benefits" />
+            <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+            <apex:includeScript value="{!$Resource.JqueryTableSorter}"></apex:includeScript>
+            <apex:includeScript value="/soap/ajax/30.0/connection.js" />
+            <apex:includeScript value="/support/console/30.0/integration.js" />
+            <script>
+
+          function hideUpdatesections(){
+               $("[id$='pnlUpdateCOMM']").css('display','none');
+               $("[id$='pnlUpdateGov']").css('display','none');
+               $("[id$='listCoverageType']").val('Medical Care');
+               $("[id$='effectiveCommDate']").val('');
+               
+                var $effectiveDate = $("[id$='effectiveCommDate']");
+                    $effectiveDate.removeClass("error").parent().find(".errorMsg").remove();
+                var $endDate =  $("[id$='endCommDate']");
+                    $endDate.removeClass("error").parent().find(".errorMsg").remove();
+                var $effectiveGovDate = $("[id$='effectivegovDate']");
+                    $effectiveGovDate.removeClass("error").parent().find(".errorMsg").remove();
+                var $endGovDate = $("[id$='endGovDate']");
+                    $endGovDate.removeClass("error").parent().find(".errorMsg").remove();
+                $(".backgroundMask").css("display","none");
+          }
+           function toggleComm(){
+           
+               $("[id$='pnlUpdateCOMM']").toggle();
+           }
+            function toggleGov(){
+           
+               $("[id$='pnlUpdateGov']").toggle();
+           }
+          
+        function cleargovupdate(){
+                     $("[id$='listgovCoverageType']").val('--None--');
+                      $("[id$='listentitlementreason']").val('--None--');
+                     $("[id$='effectivegovDate']").val('');
+                     $("[id$='endGovDate']").val(''); 
+                     $("[id$='theRadio']").val(''); 
+        }
+        function clearupdate(){
+                     $("[id$='otherInsuranceType']").val('--None--');
+                      $("[id$='listCoverageType']").val('Medical Care');
+                     $("[id$='effectiveCommDate']").val('');
+                     $("[id$='endCommDate']").val(''); 
+                      $("[id$='carrierName']").val('');
+                     $("[id$='otherInsuranceIdNumber']").val(''); 
+        }
+        
+        function setvalue(e){
+        //alert($(e).val());
+            //$(e).attr('selected','selected');
+        }
+        function getUrlVars()        
+        {            
+            var vars = [], hash;            
+            var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');            
+            for(var i = 0; i < hashes.length; i++)                
+            {                
+                hash = hashes[i].split('=');                
+                vars.push(hash[0]);                
+                vars[hash[0]] = hash[1];                
+            }            
+            return vars;            
+        }        
+           
+        </script>
+<style>
+#popupDiv {
+    background: #ffffff; /*BG color is a must for IE6*/
+    text-decoration: none;
+    width: 15%;
+    height: 70px;
+    display: none;
+    position: absolute;
+    top: 80px;
+    left: 30px;
+    border: solid 1px #ccc;
+    padding-left: 20px;
+}
+.bPageBlock .detailList .dataCol {
+    width: 10%;
+}
+.bPageBlock .detailList .labelCol {
+    width: 5%;
+}
+</style>
+        <apex:actionFunction name="afOnPageLoad1" action="{!CallWSonPageLoad11}" reRender="maindetailPageBlock,CommercialTableToRender,medicareToRender" status="loadpanel" oncomplete="hideUpdatesections();acet.autodoc.startAutodoc();updateDOM();"/>            
+             
+        <apex:actionStatus id="loadpanel">
+            <apex:facet name="start">
+                <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                    &nbsp;
+                </div>
+                <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 9999; margin: 15% 50%">
+                    <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                        <img src="/img/loading.gif" style="float: left; margin: 8px;" />
+                        <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                    </div>
+                </div>
+            </apex:facet>
+        </apex:actionStatus>
+
+            <apex:pageBlock mode="maindetail" id="maindetailPageBlock">
+              <apex:pageMessages /> 
+                <apex:pageBlocksection title="Other Commercial Insurance"
+                    id="CommercialPageBlock" columns="1" html-auto-doc="true"
+                    html-auto-doc-case-items="true">
+                    <apex:pageBlockSectionItem >
+            <apex:outputPanel layout="none">
+            <div align="center" draggable="false" >
+                <apex:commandButton value="Submit COB Update" id="UpdateCOBComm" onclick="validateRequiredFieldsOIN('button');return false;" /> 
+                </div>             
+            </apex:outputPanel>
+        </apex:pageBlockSectionItem>
+                    <!-- <apex:commandButton action="{!updateCommercial}" rerender="maindetailPageBlock" value="Update" oncomplete="alert('{!showUpdateSection}');"/> -->
+                    <apex:outputPanel id="CommercialTableToRender">
+                        <apex:pageBlockTable value="{!commercialcobList}" var="com"
+                            title="Commercial" id="CommercialTable">
+                            <!--<apex:column headerValue="Name" value="{!com.comName}" onmouseout="hidePopup()" onmouseover="showPopup('{!com.comRelationship}','{!com.comDob}','{!com.comAge}')"/>-->
+                            <apex:column headerValue="Name" value="{!com.Name}" />
+			    <apex:column headerValue="Member ID" value="{!com.MemberId}" />
+                            <apex:column headerValue="Relationship"
+                                value="{!com.Relationship}" />
+                            <apex:column headerValue="Date of Birth"
+                                value="{!com.DateOfBirth}" />
+                            <!-- mapping is yet to be done -->
+                            <apex:column headerValue="Age" value="{!com.Age}" />
+                            <!-- <apex:column headerValue="Member has Other Insurance?"/> -->
+                            <apex:column headerValue="Insurance Type"
+                                value="{!com.InsuranceType}" />
+                            <!-- Other Insurance Carrier Name<apex:column headerValue="Is Other Insurance Primary?" value="{!com.IsOtherInsurancePrimary}"/> -->
+                            <apex:column headerValue="Other Insurance Carrier Name"
+                                value="{!com.OtherInsuranceCarrierName}" />
+                            <apex:column headerValue="Coverage Type"
+                                value="{!com.COBTypeDesc}" />
+                            <!-- mapping is yet to be done -->
+                            <apex:column headerValue="Order of Benefits"
+                                value="{!com.OrderOfBenefit}" />
+                            <!-- mapping is yet to be done -->
+                            <apex:column headerValue="Start">
+                                <apex:outputText value="{0,date,MM/dd/yyyy}" id="Startdt">
+                                    <apex:param value="{!com.Startdt}" />
+                                </apex:outputText>
+                            </apex:column>
+                            <apex:column headerValue="End">
+                                <apex:outputText value="{0,date,MM/dd/yyyy}" id="Enddt">
+                                    <apex:param value="{!com.Enddt}" />
+                                </apex:outputText>
+                            </apex:column>
+                            <apex:column headerValue="Custodial Parent" />
+                            <apex:column headerValue="Last Update">
+                                <apex:outputText value="{0,date,MM/dd/yyyy}" id="LastUpdate">
+                                    <apex:param value="{!com.LastUpdate}" />
+                                </apex:outputText>
+                            </apex:column>
+                            <apex:column headerValue="Source" />
+                        </apex:pageBlockTable>
+                    </apex:outputPanel>
+                    <!-- Added by Avish as a part of US630782 -->
+                    </apex:pageblocksection>
+                    
+                     <apex:outputPanel id="pnlUpdateCOMM">
+                     <apex:pageBlocksection title="Other Commercial Insurance COB" id="UpdateCommblock" collapsible="false" columns="3"
+                         html-auto-doc="true" html-auto-doc-case-items="true">                           
+                            <apex:pageBlockSectionItem dataStyle="width:20%" labelStyle="width:17%">
+                                <apex:outputLabel value="Does Other Commercial Insurance Exist?" />
+                                
+                                <input type = "radio" value = "Yes" onchange="validateRequiredFieldsOIN('radio');" name = "CIE"/>Yes
+                                <input type = "radio" value = "No" onchange="validateRequiredFieldsOIN('radio');" name = "CIE"/>No
+                                                                       
+                            </apex:pageBlockSectionItem>
+                            <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                            </apex:pageBlockSectionItem>
+                            <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                            </apex:pageBlockSectionItem>
+                            <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                                 <apex:outputLabel id="pbOtherInsuranceType" value="Other Insurance Type"/>
+                                    <apex:selectList value="{!otherInsuranceTypeval}" size="1"  id="otherInsuranceType">
+                                        <apex:selectOptions value="{!OtherInsuranceTypes}" id="selinsType"/>                                
+                                    </apex:selectList>                             
+                            </apex:pageBlockSectionItem>
+                            <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                                <apex:outputLabel value="Other Insurance Carrier Name" />
+                                <apex:inputText id="carrierName" value="{!otherInsuranceCarrierName}"/>                             
+                            </apex:pageBlockSectionItem>
+                             <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                                <apex:outputLabel value="Effective Date" />
+                                <apex:inputField id="effectiveCommDate" value="{!caseEffectiveCommDate.tst_Date_Field__c}"/>                             
+                            </apex:pageBlockSectionItem>
+                            <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                                 <apex:outputLabel id="pbcoverageType" value="Coverage Type"/>
+                                    <apex:selectList value="{!coverageTypeval}" size="1"  id="listCoverageType">
+                                        <apex:selectOptions value="{!CoverageTypes}" id="selCovType"/>                                
+                                    </apex:selectList>                             
+                            </apex:pageBlockSectionItem>
+                            <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                                <apex:outputLabel value="Other Insurance ID Number" />
+                                <apex:inputText id="otherInsuranceIdNumber" value="{!otherInsuranceIdNumber}" onchange="validateRequiredFieldsOIN('input');"/>
+                            </apex:pageBlockSectionItem>
+                             <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                                <apex:outputLabel value="End Date" />
+                                <apex:inputField id="endCommDate" value="{!caseEndCommDate.tst_Date_Field__c}" />                             
+                            </apex:pageBlockSectionItem>
+                             
+                             </apex:pageblockSection>  
+                         
+                      <apex:pageBlockSection id="pbsClear" columns="1">   
+                     <apex:pageBlockSectionItem >
+                                    <apex:outputPanel layout="none">
+                                    <div align="center" draggable="false" >
+                                        <apex:commandButton value="Clear" id="clear" onclick="clearupdate();return false;"/> 
+                                        </div>             
+                                    </apex:outputPanel>
+                                </apex:pageBlockSectionItem>
+                             </apex:pageblockSection> 
+                      </apex:outputPanel> 
+                    <div id="popupDiv">
+                        <!-- apex:pageBlock id="popup" -->
+                        <apex:pageBlockSection id="popupsec" columns="1">
+                            <apex:outputText id="Relationship" value="" label="Relationship" />
+                            <apex:outputText id="dob" value="" label="Date Of Birth" />
+                            <apex:outputText id="age" value="" label="Age" />
+                        </apex:pageBlockSection>
+                        <!-- /apex:pageBlock -->
+                    </div>
+                    <apex:pageBlocksection title="Government" id="Medicarepageblock"
+                        columns="1" html-auto-doc="true" html-auto-doc-case-items="true">
+                        <apex:pageBlockSectionItem >
+            <apex:outputPanel layout="none">
+            <div align="center" draggable="false" >
+                <apex:commandButton value="Submit COB Update" id="UpdateCOBGov" onclick="validateRequiredFieldsGOIN('button');return false;" /> 
+                </div>             
+            </apex:outputPanel>
+        </apex:pageBlockSectionItem>
+            <apex:outputPanel id="medicareToRender">                
+                <apex:pageBlockTable value="{!governmentcobList}" var="md"
+                    title="medicare" id="medicare">
+                    <apex:column headerValue="Name" value="{!md.Name}" />
+                    <apex:column headerValue="ID Number" value="{!md.otherInsuranceCardholderId}" />
+                    <apex:column headerValue="Relationship"
+                        value="{!md.Relationship}" />
+                    <apex:column headerValue="Date of Birth"
+                        value="{!md.DateOfBirth}" />
+                    <apex:column headerValue="Age" value="{!md.Age}" />
+                    <apex:column headerValue="Government Benefit Type" value="{!md.medicareEntitlementType}"/>
+                    <!-- apex:column headerValue="Is Medicare Primary?"
+                        value="{!md.IsMedicarePrimary}" / --->
+                    <apex:column headerValue="Order of Benefits"
+                        value="{!md.OrderOfBenefit}" />
+                    <apex:column headerValue="Start">
+                        <apex:outputText value="{0,date,MM/dd/yyyy}" id="PartAStartdt">
+                            <apex:param value="{!md.Startdt}" />
+                        </apex:outputText>
+                    </apex:column>
+                    <apex:column headerValue="End">
+                        <apex:outputText value="{0,date,MM/dd/yyyy}" id="PartAEnddt">
+                            <apex:param value="{!md.Enddt}" />
+                        </apex:outputText>
+                    </apex:column>
+                    <apex:column headerValue="Crossover Indicator" />
+                    <apex:column headerValue="Entitlement Reason"
+                        value="{!md.EntitlementReason}" />
+                          <apex:column headerValue="Last Update">
+                    <apex:outputText value="{0,date,MM/dd/yyyy}" id="LastUpdate">
+                        <apex:param value="{!md.LastUpdate}" />
+                    </apex:outputText>
+                </apex:column>
+                          <apex:column headerValue="Source" />
+                </apex:pageBlockTable>
+            </apex:outputPanel>                  
+                        </apex:pageblocksection>
+                         <apex:outputPanel id="pnlUpdateGov">
+                                 <apex:pageBlocksection title="Government COB" id="UpdateGovblock" collapsible="false"
+                                    columns="3" html-auto-doc="true" html-auto-doc-case-items="true">                        
+                                        <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                                            <apex:outputLabel value="Does Government  Insurance Exist?" />
+                                          <!--  
+                                           <apex:selectRadio value="{!selectedValue}" id="theRadio" >                           
+                                                <apex:selectOption itemValue="Yes" itemlabel="Yes"/>
+                                                <apex:selectOption itemValue="No" itemlabel="No"/>
+                                           </apex:selectRadio>-->
+                                           <input type = "radio" value = "Yes" onchange="validateRequiredFieldsGOIN('radio');" name = "GIE"/>Yes
+                                           <input type = "radio" value = "No" onchange="validateRequiredFieldsGOIN('radio');" name = "GIE"/>No
+                                                                       
+                                        </apex:pageBlockSectionItem>
+                                         <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:19%">
+                                             <apex:outputLabel id="pbgovcoverageType" value="Coverage Type"/>
+                                                <apex:selectList value="{!govcoverageTypeval}" size="1"  id="listgovCoverageType">
+                                                    <apex:selectOptions value="{!GovCoverageTypes}" id="selGovCovType"/>                                
+                                                </apex:selectList>                             
+                                        </apex:pageBlockSectionItem>
+                                         <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                                            <apex:outputLabel value="Effective Date" />
+                                            <apex:inputField id="effectivegovDate" value="{!caseEffectiveGovDate.tst_Date_Field__c}"/>                             
+                                        </apex:pageBlockSectionItem>
+                                        <!--<apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%"><apex:inputField id="goveffectiveDate" value="{!effectiveDate.tst_Date_Field__c}" rendered="false"/>
+                                         </apex:pageBlockSectionItem>-->
+                                         <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                                        	<apex:outputLabel value="Other Insurance ID Number" />
+                               				<apex:inputText id="govtOtherInsuranceIdNumber"  onchange="validateRequiredFieldsGOIN('input');" value="{!OtherInsuranceIdNumber}"/>  
+                                        </apex:pageBlockSectionItem>
+                                        <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                                             <apex:outputLabel id="pbentitlementreason" value="Entitlement Reason"/>
+                                                <apex:selectList value="{!entitlementreasonval}" size="1"  id="listentitlementreason">
+                                                    <apex:selectOptions value="{!Entitlementreason}" id="selentitlementreason"/>                                
+                                                </apex:selectList>                             
+                                        </apex:pageBlockSectionItem>
+                                         <apex:pageBlockSectionItem dataStyle="width:15%" labelStyle="width:17%">
+                                            <apex:outputLabel value="End Date" />
+                                            <apex:inputField id="endGovDate" value="{!caseEndGovDate.tst_Date_Field__c}" />                             
+                                         </apex:pageBlockSectionItem>
+                                  </apex:pageblockSection>
+                                     <apex:pageBlockSection id="pbsgovClear" columns="1">   
+                                         <apex:pageBlockSectionItem >
+                                    <apex:outputPanel layout="none">
+                                    <div align="center" draggable="false" >
+                                        <apex:commandButton value="Clear" id="govclear" onclick="cleargovupdate();return false;"/> 
+                                        </div>             
+                                    </apex:outputPanel>
+                                </apex:pageBlockSectionItem>
+                             </apex:pageblockSection>  
+                         </apex:outputPanel> 
+            </apex:pageBlock>
+        </apex:outputPanel>
+        <div class = "backgroundMask">
+        </div>
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+            attrShowSaveAndCloseButton="false" attrShowSaveButton="true"
+            attrShowMisdirectButton="true"
+            attrSourceOriginator="{!wrapper.SourceOriginator}"
+            attrInteractionId="{!wrapper.Interaction.Id}"
+            attrSubjectId="{!wrapper.Subject.Id}"
+            attrCallTopic="Coordination Of Benefits" attrLocation="bottom" /> 
+    </apex:form>
+    <script>
+    var otherValidation=null;
+    var govValidation=null;
+ var initCommercialTableSorter = function(){
+        $("table[id*='CommercialTable']").tablesorter();
+    };    
+  var initMedicareTableSorter = function(){
+       $("table[id*='Medicare']").tablesorter();
+  };  
+    function validateRequiredFieldsOIN(source){
+        var yesOrNo = $('input[name="CIE"]:checked').val();
+        $("#errorOtherInsuranceIdNumber").remove();  
+        if(otherValidation==null){
+            $('[acet-id="Save"]').hide();
+            otherValidation = true;
+            toggleComm();
+            return;
+        }
+        if(source == 'radio'){
+            if(yesOrNo!='No'){
+                $('[id$="otherInsuranceIdNumber"]').parent('div').addClass('requiredInput');
+            }
+            else{
+                otherValidation = false;
+                $('[id$="otherInsuranceIdNumber"]').parent('div').removeClass('requiredInput');
+                if(!govValidation){
+                    $('[acet-id="Save"]').show();
+                }
+            }
+        }
+        if($('[id$="otherInsuranceIdNumber"]').is(":visible") && !$('[id$="otherInsuranceIdNumber"]').val() && yesOrNo!='No'){
+            $('[id$="otherInsuranceIdNumber"]').parent('div').parent('td').append('<span id="errorOtherInsuranceIdNumber" style="color:#c00;">You must enter value</span>');
+            otherValidation =  true;
+            $('[acet-id="Save"]').hide();
+            return true;
+        }
+        else if(source=='button'){
+            toggleComm();
+        }
+        otherValidation=false;
+        if(!govValidation){
+            $('[acet-id="Save"]').show();
+        }
+        return false;
+    }
+    function validateRequiredFieldsGOIN(source){
+        var yesOrNo = $('input[name="GIE"]:checked').val();
+        $("#errorGovOtherInsuranceIdNumber").remove(); 
+        if(govValidation==null){
+            $('[acet-id="Save"]').hide();
+            govValidation = true;
+            toggleGov();
+            return;
+        }
+         if(source == 'radio'){
+            if(yesOrNo!='No'){
+                $('[id$="govtOtherInsuranceIdNumber"]').parent('div').addClass('requiredInput');
+            }
+            else{
+                $('[id$="govtOtherInsuranceIdNumber"]').parent('div').removeClass('requiredInput');
+                govValidation = false;
+                if(!otherValidation){
+                    $('[acet-id="Save"]').show();
+                }
+            }
+        }
+        if($('[id$="govtOtherInsuranceIdNumber"]').is(":visible") && !$('[id$="govtOtherInsuranceIdNumber"]').val() && yesOrNo!='No'){
+            $('[id$="govtOtherInsuranceIdNumber"]').parent('div').parent('td').append('<span id="errorGovOtherInsuranceIdNumber" style="color:#c00;">You must enter value</span>');
+            govValidation=true;
+            $('[acet-id="Save"]').hide();
+            return true;
+        }
+        else if(source=='button'){
+            toggleGov();
+        }
+        govValidation=false;
+        if(!otherValidation){
+            $('[acet-id="Save"]').show();
+        }
+        return false;
+    }
+  function validate(){
+     var result = true;
+     var $effectiveDate = $("[id$='effectiveCommDate']");
+     var $endDate = $("[id$='endCommDate']");
+     var $effectiveGovDate = $("[id$='effectivegovDate']");
+     var $endGovDate = $("[id$='endGovDate']");
+     
+     
+     // Invalid date
+     $effectiveDate.removeClass("error").parent().find(".errorMsg").remove();
+     $endDate.removeClass("error").parent().find(".errorMsg").remove();
+     if($effectiveDate.val() != null && $effectiveDate.val() !=''){
+            if(!isValidDate($effectiveDate.val())){
+                    var errorMsg = "Invalid Date";
+                    $effectiveDate.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>');
+                    result = false;
+                }
+     }
+      // Invalid gov date
+     $effectiveGovDate.removeClass("error").parent().find(".errorMsg").remove();
+     $endGovDate.removeClass("error").parent().find(".errorMsg").remove();
+     if($effectiveGovDate.val() != null && $effectiveGovDate.val() !=''){
+            if(!isValidDate($effectiveGovDate.val())){
+                    var errorMsg = "Invalid Date";
+                    $effectiveGovDate.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>');
+                    result = false;
+            }
+     }      
+     //End date cannot be prior to Effective Date
+     
+      var arrNewEffDate = $effectiveDate.val().split("/");
+      var arrEndDate = $endDate.val().split("/");
+      var iNewEffDate  = (((parseInt(arrNewEffDate[2], 10) * 100) + parseInt(arrNewEffDate[0], 10)) * 100) + parseInt(arrNewEffDate[1], 10);
+      var iEndDate = (((parseInt(arrEndDate[2], 10) * 100) + parseInt(arrEndDate[0], 10)) * 100) + parseInt(arrEndDate[1], 10);
+      if(iEndDate < iNewEffDate) {
+              var errorMsgNew = "End date cannot be prior to Effective Date";
+              $endDate.addClass("error").parent().append('<div class="errorMsg" ><strong>Error:</strong> ' + errorMsgNew + '</div>');
+              result = false;
+      }
+      
+      //Gov -- End date cannot be prior to Effective Date
+     
+      var arrGovNewEffDate = $effectiveGovDate.val().split("/");
+      var arrGovEndDate = $endGovDate.val().split("/");
+      var iGovNewEffDate  = (((parseInt(arrGovNewEffDate[2], 10) * 100) + parseInt(arrGovNewEffDate[0], 10)) * 100) + parseInt(arrGovNewEffDate[1], 10);
+      var iGovEndDate = (((parseInt(arrGovEndDate[2], 10) * 100) + parseInt(arrGovEndDate[0], 10)) * 100) + parseInt(arrGovEndDate[1], 10);
+      if(iGovEndDate < iGovNewEffDate) {
+              var errorMsgNew1 = "End date cannot be prior to Effective Date";
+              $endGovDate.addClass("error").parent().append('<div class="errorMsg" ><strong>Error:</strong> ' + errorMsgNew1 + '</div>');
+              result = false;
+      }
+     
+      acet.autodoc.saveAutodoc();
+      return result;
+  }
+   
+  function isValidDate(dateStr) {
+            var datePat = /^(\d{1,2})(\/|-)(\d{1,2})\2(\d{2}|\d{4})$/;
+            var matchArray = dateStr.match(datePat);
+            if (matchArray == null) {
+                return false;
+            }
+            month = matchArray[1]; // parse date into variables
+            day = matchArray[3];
+            year = matchArray[4];
+            if (month < 1 || month > 12) { // check month range
+                return false;
+            }
+            if (day < 1 || day > 31) {
+                return false;
+            }
+            if ((month==4 || month==6 || month==9 || month==11) && day==31) {
+                return false
+            }
+            if (month == 2) { // check for february 29th
+            var isleap = (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+            if (day>29 || (day==29 && !isleap)) {
+                return false;
+               }
+            }
+            return true;  // date is valid
+        }  
+    
+    function updateDOM(){
+        $('[id$="otherInsuranceIdNumber"]').parent("td").prepend("<div class='requiredBlock'></div>");
+        $('[id$="otherInsuranceIdNumber"]').parent("td").contents().wrapAll("<div class='requiredInput'/>");
+        $('[id$="govtOtherInsuranceIdNumber"]').parent("td").prepend("<div class='requiredBlock'></div>");
+        $('[id$="govtOtherInsuranceIdNumber"]').parent("td").contents().wrapAll("<div class='requiredInput'/>");
+    }
+</script>
+    <style type="text/css">
+.imgclass:hover {
+    background-image: url('/img/help/helpOrbs.gif');
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 15px;
+    background-position: right;
+}
+.imgclass {
+    background-image: url('/img/help/helpOrbs.gif');
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 15px;
+}
+
+.errorM3{
+    border: solid #cc0000; 
+    border-radius: 0;
+}
+.errorM3 .msgIcon {
+    padding: 0px 0px 0px 0px;
+    margin-left: 0px;
+    width: 0px;
+        } 
+.messageTable {
+    border: none; 
+}
+
+.message {
+    margin: 4px 0px;
+        }
+
+
+</style>
+    
+</apex:page>

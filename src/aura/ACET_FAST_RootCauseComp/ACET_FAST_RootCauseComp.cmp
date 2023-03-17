@@ -1,0 +1,134 @@
+<aura:component controller="ACET_FAST_RootCauseCtrl" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" >
+    
+    <aura:attribute name="recordId" type="String" />
+    <aura:attribute name="rootCauseCaseItem" type="PIR_Root_Cause_Case_Item__c" default="{'sObjectType':'PIR_Root_Cause_Case_Item__c'}"/>
+    <aura:attribute name="rootcauseCaseItemId" type="string"/>
+    <aura:attribute name="activeSections" type="List" default="['A']" />
+    <aura:attribute name="editRootCause" type="boolean" default="false"/>
+    <aura:attribute name="rootCauseWrapper" type="ACET_FAST_RootCauseCtrl.PIRWrapper"/>
+    <aura:attribute name="rcJsonWrap" 
+                    type="object" default="{}"/>
+    
+    <!-- WorkSpace -->
+    <lightning:workspaceAPI aura:id="workspace" />
+    <!-- Workspace -->
+    
+    <!-- Handlers -->
+    <aura:handler name="init" value="{!this}" action="{!c.loadData}"/>
+    <!--aura:handler event="force:refreshView" action="{!c.loadData}" /-->
+    <aura:handler name="change" value="{!v.editRootCause}" action="{!c.loadData}"/>
+    <!-- Handlers -->
+    
+    <!-- Root Cause Edit Mode -->
+    <aura:if aura:id="rootCausePoPUpId" isTrue="{!v.editRootCause}">
+        <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close">
+                        <lightning:icon iconName="utility:close" size="x-large" alternativeText="Close" onclick="{!c.closePopUp}" />
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 id="modal-heading-01" class="slds-modal__title slds-hyphenate">Root Cause</h2>
+                </header>
+                <div class="slds-modal__content" id="modal-content-id-1">
+                    <div class="slds-box" style="padding:0px;"> 
+                        <!-- Spinner -->
+                        <div style="text-align:center">
+                            <lightning:spinner class="slds-hide" aura:id="dropdown-spinner" alternativeText="Loading.." title="Loading.." variant="brand" size="large" style="z-index:99" />        
+                        </div>
+                        <!-- Spinner -->
+                        <div class="slds-page-header">
+                            <div class="slds-page-header__row">
+                                <div class="slds-page-header__col-title">
+                                    <div class="slds-media">
+                                        <div class="slds-media__figure" >
+                                            <span class="slds-icon_container slds-icon-standard-opportunity" title="Case Item">
+                                                <lightning:icon iconName="standard:case" alternativeText="Case" title="Case Item" />
+                                                <span class="slds-assistive-text" >Case Item</span>
+                                            </span>
+                                        </div>
+                                        <div class="slds-media__body">
+                                            <div class="slds-page-header__name">
+                                                <div class="slds-page-header__name-title">
+                                                    <h1>
+                                                        <span class="slds-page-header__title slds-truncate" title="Case Item" style="font-weight:bold;">Case Item</span>
+                                                    </h1>
+                                                </div>
+                                            </div>
+                                            <p class="slds-page-header__name-meta">{!v.rootCauseWrapper.CaseItemName}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-box">
+                            <c:ACET_FAST_RootCauseUtility rcJson="{!v.rcJsonWrap}"/>
+                        </div>
+                        <div class="slds-box slds-theme_shade" style="text-align:center">
+                        	<lightning:button variant="brand" label="Save" title="Save" onclick="{!c.upsertRootCause}" />
+                            <lightning:button label="Cancel" title="Cancel" onclick="{!c.closePopUp}"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+    <!-- Root Cause Edit Mode -->
+    
+    <!-- Mark Up -->
+    <aura:if isTrue="{!!v.editRootCause}">
+        <lightning:recordEditForm recordId="{!v.rootCauseCaseItem.Id}"
+                                  objectApiName="PIR_Root_Cause_Case_Item__c"
+                                  aura:id="formId">
+            <lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="{!v.activeSections}">
+                <lightning:accordionSection name="A" label="Root Cause">
+                    <aura:set attribute="actions">
+                        <lightning:button label="Update Root Cause" 
+                                          title="Update Root Cause" 
+                                          onclick="{!c.updateRootCause}" />
+                        <!--lightning:buttonMenu aura:id="menu" 
+                                              alternativeText="Show menu" 
+                                              iconSize="x-small" 
+                                              menuAlignment="right"
+                                              onselect="{!c.handleSelect}">
+                            <lightning:menuItem value="updateRootCause" label="Update Root Cause" />
+                        </lightning:buttonMenu-->
+                    </aura:set>
+                    <div class="slds-p-horizontal_small">
+                        <div class="slds-grid slds-wrap">
+                            <div class="slds-col slds-size_12-of-12">
+                                <lightning:outputField fieldName="Root_Cause_1__c" />
+                                <hr/>
+                            </div>
+                            <div class="slds-col slds-size_12-of-12">
+                                <lightning:outputfield fieldName="Root_Cause_2__c"/>
+                                <hr/>
+                            </div>
+                            <div class="slds-col slds-size_12-of-12">
+                                <lightning:outputfield fieldName="Root_Cause_3__c"/>
+                                <hr/>
+                            </div>
+                            <div class="slds-col slds-size_12-of-12">
+                                <lightning:outputfield fieldName="Root_Cause_4__c"/>
+                                <hr/>
+                            </div>
+                            <div class="slds-col slds-size_12-of-12">
+                                <lightning:outputfield  fieldName="Root_Cause_5__c"/>
+                                <hr/>
+                            </div>
+                        </div>  
+                    </div>
+                </lightning:accordionSection>
+            </lightning:accordion>
+        </lightning:recordEditForm>
+    </aura:if>
+    <!-- Mark Up -->
+    
+    <aura:html tag="style">
+        .slds-modal__container{
+        width: 80%;
+        max-width: 80rem;
+        }
+    </aura:html>
+</aura:component>

@@ -1,0 +1,249 @@
+<apex:page controller="ACETHSAAccountsDetailController"  sidebar="false" docType="html-5.0" id="thepage">
+    
+    <apex:includeScript value="{!$Resource.JQuery}" />
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+    <apex:includeScript value="/support/console/38.0/integration.js" />
+    <apex:includeScript value="/soap/ajax/30.0/connection.js" /> 
+
+    <style >   
+    .make-background-grey { 
+            border-right: 1px solid #5c5d61;
+            border-bottom: 1px solid #5c5d61;
+            border-radius: 4px;
+            border-color: #c4c4c4;
+            color: #909090;
+            padding: 2px 3px;
+            font-size: .9em;
+            font-family: Arial,Helvetica,sans-serif;
+            font-weight: bold;
+            background: #e8e8e9 url(/img/alohaSkin/btn_sprite.png) repeat-x right top;
+         }
+
+        .messageTable {
+            border: solid #ffc;
+        }
+        body .helpIcon {
+            background: transparent url(/img/alohaSkin/help_orange.png) no-repeat !important;
+        }
+        body .ui-tooltip {
+            background: linear-gradient(to bottom, rgba(255,255,255,1) 0%,rgba(221,228,235,1) 97%,rgba(218,218,218,1) 100%) !important;
+            opacity: 1 !important;
+            color: #686868 !important;
+            filter:alpha(opacity=100) !important;
+            padding: 3px 4px !important;
+            font-size: 14px !important;
+            border-radius: 3px !important;
+            border-style: solid !important;
+            border-color: #686868 !important;
+            -webkit-box-shadow: 3px 3px 3px 0px #888888;
+            -moz-box-shadow: 3px 3px 3px 0px #888888;
+            box-shadow: 3px 3px 3px 0px #888888; 
+            width:43%
+        }
+        .ui-helper-hidden-accessible{
+            display : none ;
+        }
+    </style>
+    <script>
+      $(document).ready(function() {
+            
+            acet.autodoc.createCommentsbox();
+            
+            var subjectId = '{!wrapper.Subject}';
+            console.log("subjectId in detail page "+subjectId);
+            sforce.console.addEventListener('RequestHSADetail_'.concat(subjectId), function(r){
+            console.log("Event caught in detail page RequestHSADetail_"); 
+                sforce.console.getEnclosingTabId(function(result){                                        
+                    var res = {};   
+                    res.subTabId = result.id;           
+                    res.doc = acet.autodoc.saveAutodoc();
+                    console.log("Event fired ReceiveHSADetail_".concat(subjectId));                                                   
+                    sforce.console.fireEvent('ReceiveHSADetail_'.concat(subjectId), JSON.stringify(res)); 
+                }); 
+                                                       
+            });        
+            //sync comments between HSA Accounts and HSA Account details tabs
+            //only fire at last keyup
+            var timer;
+            $("#autodocComments").keyup(function(){
+                clearTimeout(timer);  
+                timer = setTimeout(function(){
+                    sforce.console.fireEvent('HSACommentsUpdated_'.concat(subjectId), $("#autodocComments").val()); 
+                }, 500);   
+            });
+            sforce.console.addEventListener('HSACommentsUpdated_'.concat(subjectId), function(r){
+            if(r.message != $("#autodocComments").val()){
+                $("#autodocComments").val(r.message);
+                }
+            });
+            
+            //sync comment from Accounts search when detail page is loaded
+            sforce.console.fireEvent('RequestHSAComments_'.concat(subjectId), subjectId);
+            afOnPageLoad();             
+                   
+      });
+       $( function() {
+        $(document).tooltip({
+                items: "[title]",
+                content: function(ui){
+                    return $(this).attr('title');
+                },
+                hide: { effect: "", duration: 0 } 
+            });
+       });
+       function btndisable(){
+            var stat = $('[id$=statusId]').val();            
+            console.log('-------status-------'+stat);
+            if(stat != 'All'){
+              document.getElementById("thepage:frmid:maindetailPageBlock:transInfo:btnrefresh").className = "make-background-grey";
+              document.getElementById("thepage:frmid:maindetailPageBlock:transInfo:btnrefresh").disabled = true;             
+            }
+          }
+       function drawCallback(settings){           
+                document.getElementById("thepage:frmid:maindetailPageBlock:transInfo:btnrefresh").className ="btn";
+                document.getElementById("thepage:frmid:maindetailPageBlock:transInfo:btnrefresh").disabled =false;
+          }          
+    </script>
+    
+    <apex:form id="frmid" >
+        <apex:actionFunction action="{!CallWSOnPageLoad}" name="afOnPageLoad" rerender="maindetailPageBlock,hlPanel,bankAuth,hsaAccounts" status="refreshMemberStatus1" oncomplete="CallWSTransactionOnPageLoad();"/>
+       <apex:actionFunction action="{!CallWSTransactionOnPageLoad}" name="CallWSTransactionOnPageLoad" rerender="maindetailPageBlock,viewPanel,hlPanel,transInfo,transResult,transAllResult,pageErrMsgTab1,hippapopupPanel" status="refreshMemberStatus1" onComplete="btndisable();acet.datatables['datatable'].initDatatable();"/>    
+        <apex:outputPanel id="hlPanel" layout="none">
+            <apex:inputHidden id="highlightPanelInfo" />
+            <c:ACETInteractionHighlightsPanel InteractionAtt="{!Interaction}" SubjectAtt="{!Subject}" AdditionalInfoAtt="{!AdditionalInfo}" selectedOriginator="{!interaction.Originator_Name__c}"/>
+            <apex:outputPanel id="hippapopupPanel">
+                       <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+            </apex:outputPanel>
+        </apex:outputPanel>
+        <apex:actionStatus id="refreshMemberStatus1">
+            <apex:facet name="start">
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                 
+            </div>
+            <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 1001; margin: 15% 50%">
+                <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                    <img src="/img/loading.gif" style="float: left; margin: 8px;" />
+                    <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                </div>
+            </div>
+            </apex:facet>
+        </apex:actionStatus>
+        
+        <apex:sectionHeader title="HSA Transactions" />
+        <br/><br/>
+        <apex:pageMessages id="pageErrMsgTab1"/>
+            <apex:pageBlock mode="mainDetail" id="maindetailPageBlock">
+                
+                <apex:pageBlockSection id="bankAuth" columns="1" Title="Bank Authentication"  >
+                    <apex:pageBlockTable value="{!hsaSummaryResult.accHolderList}" var="auth"
+                        captionStyle="text-align:left;margin-bottom:3px;" >
+                        <apex:column value="{!auth.accountHoldersName}" headerValue="Account Holder's Name" />
+                        <apex:column headerValue="SSN" >
+                            <c:ACETMaskSSNComponent SSNValue="{!auth.ssn}" EID="{!memberId}" Type="HSA Transactions" Showcopy="True"></c:ACETMaskSSNComponent> 
+                        </apex:column>
+                        <apex:column value="{!auth.address}" headerValue="Address"/>
+                        <apex:column value="{!auth.phone}" headerValue="Phone" />
+                        <apex:column value="{!auth.phoneType}" headerValue="Phone Type" />
+                        <apex:column value="{!auth.dob}" headerValue="Date of Birth"/>
+                   </apex:pageBlockTable>
+                   </apex:pageBlockSection>
+                 <apex:pageBlockSection columns="1">      
+                   <apex:pageBlockTable value="{!hsaSummaryResult.accHolderList}" var="r"
+                        rendered="{!((hsaSummaryResult.accHolderList.size == 0) || ISNULL(hsaSummaryResult))}">
+                       <apex:column headerValue=" No data found." width="100%"/>
+                   </apex:pageBlockTable> 
+                 </apex:pageBlockSection>
+
+            <apex:pageBlockSection columns="1" id="hsaAccounts" Title="Account Information" >
+                <apex:outputpanel id="showerrormsg"/>
+                <apex:pageBlockTable value="{!hsaSummaryResult.hsaAccounts}" var="acc" captionStyle="text-align:left;margin-bottom:3px;" id="pbTableId" styleClass="applySort" rendered="{!NOT(ISNULL(hsaSummaryResult.hsaAccounts)) && hsaSummaryResult.hsaAccounts.size > 0}">
+                    <apex:column value="{!acc.HSAAccountNoMasked}" headerValue="Account Number" />
+                    <apex:column value="${!acc.cummulativeBalance}" headerValue="Cumulative Available Balance"/>
+                    <apex:column value="${!acc.availableBalance}" headerValue="Available Balance" />             
+                    <apex:column value="${!acc.investedBalance}" headerValue="Invested Balance" />
+                    
+                </apex:pageBlockTable>
+            </apex:pageBlockSection>
+            <apex:pageBlockSection columns="1">
+                <apex:pageBlockTable value="{!hsaSummaryResult.hsaAccounts}" var="r"
+                    rendered="{!NOT(ISNULL(hsaSummaryResult.hsaAccounts)) && hsaSummaryResult.hsaAccounts.size == 0}">
+                   <apex:column headerValue="No HSA available." styleClass="headerResultStyle"/>
+                </apex:pageBlockTable> 
+            </apex:pageBlockSection>
+                <apex:pageBlockSection id="transInfo" columns="1" title="Transaction Information"  >
+                    
+                    <apex:outputPanel style="margin-left:-2pc;">
+                             <apex:outputLabel value="Status" style="font-weight:bold;margin-left:15pc;margin-right:3px;"/>
+                             <apex:outputPanel style="margin-right:3px;">
+                                <!-- <apex:outputText value="" escape="false">-->                                  
+                                    <!--<img src="/img/alohaSkin/help_orange.png" style="margin-right:5px;margin-bottom: 5px;" id="helpTextId" onmouseover="helpTextAdd();" onmouseout="helpTextRemove();"/> -->
+                                    <apex:image value="/s.gif" styleclass="helpIcon" title="{!$Label.ACETHSAStatusHelptext}"/>                                  
+                                   <!-- <apex:image value="/img/alohaSkin/help_orange.png" title="{!$Label.ACETHSAStatusHelptext}"/> -->
+                                 <!--</apex:outputText>-->
+                             </apex:outputPanel>
+                             <apex:outputPanel id="statusPanel" rendered="true"> 
+                                  <apex:selectList multiselect="false" id="statusId" label="Status" value="{!statusSelected}" size="1"> 
+                                      <apex:selectOptions value="{!statusList}" id="statusListId"/> 
+                                      <apex:actionSupport event="onchange" rerender="viewId,testt" action="{!callTransaction}" status="refreshMemberStatus1"/>                                      
+                                 </apex:selectList>   
+                             </apex:outputPanel>
+                             
+                             <apex:outputPanel style="margin-left:5pc">
+                                 <apex:outputLabel value="Show" style="font-weight:bold;margin-right:2pc"/>
+                                 <apex:outputPanel id="viewPanel" rendered="true" style="margin-left:-24px;">
+                                    
+                                      <apex:selectList multiselect="false" id="viewId" label="" value="{!viewSelected}" size="1" title="" disabled="{!isDisabled}"> 
+                                          <apex:selectOptions value="{!ViewList}" id="viewListId" />
+                                          <apex:actionSupport event="onchange" rerender="viewId" action="{!callTransaction}" status="refreshMemberStatus1"/> 
+                                      </apex:selectList>
+                                 </apex:outputPanel>
+                                 <apex:outputLabel value="Entries" style="font-weight:bold;margin-left:6px;"/>
+                            </apex:outputPanel><br/>
+                    <apex:outputPanel style="margin-left:23pc;">                                 
+                      <apex:commandButton value="Refresh" id="btnrefresh" onclick="CallWSTransactionOnPageLoad();" rerender="transResult,transAllResult" status="refreshMemberStatus1" style="margin-top:1pc;"/>                    
+                   </apex:outputPanel>
+                 </apex:outputPanel>
+                    <apex:outputPanel id="transResult" rendered="{!!isAll}">
+                        <c:ACETDataTable attrDatatableWrapper="{!DTWrapper}"/><br/><br/>                        
+                    </apex:outputPanel>
+                    <apex:outputPanel id="transAllResult" rendered="{!isAll}">
+                   
+                       <apex:pageBlockTable value="{!allTransactionResults}" var="list" >
+                           <apex:column value="{!list.transactionDate}" headerValue="Date"/>               
+                           <!--<apex:column value="{!list.transactionDateFormat}" headerValue="Date Test"/>-->               
+                           <apex:column value="{!list.status}" headerValue="Status" />
+                           <apex:column value="{!list.description}" headerValue="Description" />
+                           <apex:column value="{!list.amount}" headerValue="Amount" />
+
+                       </apex:pageBlockTable>
+                            
+                       <apex:pageBlockTable value="{!allTransactionResults}" var="r"
+                            rendered="{!(allTransactionResults.size == 0)}">
+                           <apex:column headerValue=" No results found." width="100%"/>
+                       </apex:pageBlockTable> <br/>
+                
+                           <apex:outputText >Showing {!allTransactionResults.size} entries</apex:outputText>
+                        
+                    </apex:outputPanel>
+                    
+                </apex:pageBlockSection>
+
+            </apex:pageBlock>
+         
+    </apex:form>
+        <style type="text/css">
+         #datatable thead tr{
+             background-color: #f5f5f5;
+        }
+        #datatable tbody tr.odd{
+             background-color: white;
+        }
+        #datatable tbody tr.even{
+             background-color: #f9f9f9;
+        }
+        </style>
+    
+<apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+         
+</apex:page>

@@ -1,0 +1,163 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,force:lightningQuickAction,force:hasRecordId,lightning:isUrlAddressable"
+                access="global" controller="SAE_MisdirectController">
+    
+    <!-- US2045625 - Thanish - 27th Sept 2019 -->
+    <ltng:require styles="{!$Resource.ACETLink_MasterStyle}" />
+    <ltng:require scripts="{!$Resource.ACET_SAEContactDetails}" />
+    <aura:attribute name="options" type="Object" />
+    
+    <aura:attribute name="originatorName" type="String" />
+    <aura:attribute name="originatorType" type="String" />
+    <aura:attribute name="contactName" type="String" />
+    <aura:attribute name="exploreOriginator" type="String" default="Provider"/>
+    <!-- US2740876 - Sravan -->
+    <aura:attribute name="contactFirstName" type="String" />
+    <aura:attribute name="contactLastName" type="String" />
+
+    <aura:attribute name="contactNumber" type="String" />
+    <aura:attribute name="contactExt" type="String" />
+    <aura:attribute name="misDirectComments" type="String" default=""/>
+    <aura:attribute name="contactUniqueId" type="String" />
+    <aura:attribute name="subjectName" type="String" />
+    <aura:attribute name="subjectType" type="String" />
+    <aura:attribute name="subjectDOB" type="String" />
+    <aura:attribute name="subjectID" type="String" />
+    <aura:attribute name="subjectGrpID" type="String" />
+    <aura:attribute name="interactionID" type="String" />
+    <!--US2631703 - Durga- 08th June 2020-->
+    <aura:attribute name="isVCCD" type="Boolean" default="false"/>
+    <aura:attribute name="VCCDObjRecordId" type="String"/>
+    <aura:attribute name="flowDetails" type="Object" /><!--US2903847-->
+
+    <!-- US1889740 - Sarma (Date: 5th Aug 2019) - Misdirect Case creation : Start -->
+    <aura:attribute name="caseWrapper" type="SAETTSCaseWrapper" default="[]" />
+    <aura:attribute name="mnf" type="string" /> 
+    <aura:attribute name="isMms" type="Boolean" />
+    <!-- US1889740 - Sarma (Date: 5th Aug 2019) - Misdirect Case creation : End -->
+    <aura:handler name="init" value="{!this}" action="{!c.misDirectReasons}" />
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute name="focusedTabId" type="string" />
+    <!--US2705857 - Sravan-->
+    <aura:attribute name="isQuickAction" type="Boolean" default="false"/>
+    <lightning:navigationItemAPI aura:id="navigationItemAPI"/>
+
+    <aura:attribute name="uhgRestriction" type="String" /><!--DE441126 -->
+    <aura:attribute name="onShoreRestriction" type="String" /><!--DE441126 -->
+    
+    <aura:attribute name="callHandlingOneSourceURL" type="String" default=""/>
+
+    <!--US3612768 - Sravan-->
+    <aura:attribute name="selectedProviderName" type="String" default=""/>
+    <aura:attribute name="selectedProviderPhone" type="String" default=""/>
+    <aura:attribute name="subjectSourceCode" type="String" default=""/>
+    <aura:attribute name="memberId" type="String" default=""/>
+    <aura:attribute name="providerId" type="String" default=""/>
+   	<aura:attribute name="isOther" type="Boolean" default="true" />
+    <aura:attribute name="isNoProviderToSearch" type="Boolean" default="false" />
+    <aura:attribute name="isProviderNotFound" type="Boolean" default="false" />
+    <aura:attribute name="isNoMemberToSearch" type="Boolean" default="false" />
+    <aura:attribute name="isMemberNotFound" type="Boolean" default="false" />
+
+    <!--US3816776 - Sravan-->
+    <aura:attribute name="patientInfo" type="Object" access="public" />
+    <aura:attribute name="highlightedPolicySourceCode" type="String" default="" />
+    <aura:attribute name="highlightedPolicyNumber" type="String" default=""/>
+
+
+    <!-- US1738577 - Thanish (Date: 10th July 2019) - start - Added a page header to fit the ui mockup -->
+    <div class="slds-p-bottom_small">
+        <!-- PAGE HEADER -->
+        <div class="slds-card card_padding" style="background: rgb(243, 242, 242);"> <!-- US2045625 - Thanish - 27th Sept 2019 -->
+            <div class="slds-grid">
+                <div class="slds-col slds-has-flexi-truncate">
+                    <div class="slds-media slds-no-space slds-grow">
+                        <div class="slds-media__figure">
+                            <span class="slds-icon_container slds-icon-standard-decision" title="Misdirect">
+                                <lightning:icon iconName="standard:decision" alternativeText="Misdirect" />                                
+                            </span>
+                        </div>
+                        <div class="slds-media__body">
+                            <div class="slds-page-header__name">
+                                <div class="slds-page-header__name-title">
+                                    <h1 class="page_header_label slds-m-right_small slds-align-middle slds-truncate slds-p-top_x-small">Misdirect</h1> <!-- US1996765 - Thanish - 29th Aug 2019 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- PUT ACTION BUTTONS HERE -->
+                <lightning:buttonGroup>
+                    <lightning:button variant="neutral" label="Call Handling One Source" name="CallHandlingOneSource"
+                                      onclick="{!c.openCallHandlingOneSource}" />
+
+                </lightning:buttonGroup>
+            </div>
+            <!-- PUT PAGE HEADER DETAIL ROW HERE -->
+        </div>
+        <!-- / PAGE HEADER -->
+    </div>
+    <!-- US1738577 - Thanish - end -->
+    
+    <!-- US1738577 - Thanish (Date: 10th July 2019) - Edited the layout to fit the ui mockup -->
+    <!--lightning:workspaceAPI aura:id="workspace"/-->
+    <!-- US2384492 enter key press event by vishnu kasu-->
+    <div style="width:50%;" class="topDiv slds-card card_padding" onkeyup="{!c.enterKeyPress}"> <!-- Regression Issue #7 - Thanish - 11th Oct 2019 -->
+        <div> <!-- US1996765 - Thanish - 29th Aug 2019 -->
+            <lightning:layout>
+                <lightning:layoutItem flexibility="auto" size="12"> <!-- US2045625 - Thanish - 27th Sept 2019 -->
+                    <lightning:spinner class="slds-hide" aura:id="misdirect-spinner" alternativeText="Loading.."
+                                       title="Loading.." variant="brand" size="medium" />
+                    <div> <!-- US2045625 - Thanish - 27th Sept 2019 -->
+                        <lightning:combobox name="misdirectReasonsName" label="Misdirect Reason" options="{!v.options}"
+                                            aura:id="misReasonsId" id="misReasonsId" value="" placeholder="" required="true" class="excludeInputPad card_bottom_margin" onchange="{!c.changeFocus}"/> <!-- US2045625 - Thanish - 27th Sept 2019 -->
+                        <!-- US2598275: Updates to Contact Name Entry Field -->
+                        <!--<lightning:input aura:id="contactID" type="text" name="contactName" label="Contact Name"
+                                         value="{!v.contactName}" required="true" onchange="{!c.checkMandatoryFields}" class="excludeInputPad card_bottom_margin"/>-->
+                        <div class="excludeInputPad">
+                        <lightning:layout multipleRows="true">
+                            <lightning:layoutItem size="5">
+                                <lightning:input aura:id="contactFirstNameID" type="text" name="contactFirstName" label="First Name"
+                                                value="{!v.contactFirstName}" required="true" onchange="{!c.checkMandatoryFields}" class="card_bottom_margin slds-m-right_x-small"/>
+                                </lightning:layoutItem>
+                            <lightning:layoutItem size="7">
+                                <lightning:input aura:id="contactLastNameID" type="text" name="contactLastName" label="Last Name"
+                                                value="{!v.contactLastName}" required="true" onchange="{!c.checkMandatoryFields}" class="card_bottom_margin"/>
+                            </lightning:layoutItem>
+                        </lightning:layout>
+                    </div>
+                        <!--<lightning:input aura:id="contactNumberID" name="contactNumber" type="text" label="Contact Number"
+                                         value="{!v.contactNumber}" required="true" minlength="10" maxlength="10" class="excludeInputPad card_bottom_margin"
+                                         messageWhenTooShort="Enter 10 digits" onchange="{!c.checkMandatoryFields}" /> -->
+
+                        <div class="excludeInputPad">
+                            <lightning:layout multipleRows="true">
+                                <lightning:layoutItem size="8">
+                        <lightning:input aura:id="contactNumberID" name="contactNumber" type="text" label="Contact Number"
+                                                     value="{!v.contactNumber}" required="true" minlength="10" maxlength="10" class="card_bottom_margin slds-m-right_x-small"
+                                         messageWhenTooShort="Enter 10 digits" onchange="{!c.checkMandatoryFields}" />
+                                </lightning:layoutItem>
+                                <lightning:layoutItem size="4">
+                                    <lightning:input aura:id="contactExtId" type="text" name="contactExId" label="Ext"
+                                                     value="{!v.contactExt}"  class="card_bottom_margin"/>
+                                </lightning:layoutItem>
+                            </lightning:layout>
+                        </div>
+                        
+                        <!-- <lightning:input label="Comments" type="text" aura:id="commentsId" name="commentsName"/> <br/> -->
+                        <lightning:textarea label="Comments" aura:id="commentsId" maxlength="2000" onkeyup="{!c.handleKeyup }" 
+                                            value="{!v.misDirectComments}" onchange="{!c.checkCommentsLength}"/> <!-- US2045625 - Thanish - 27th Sept 2019 -->
+                        <div class="card_bottom_margin">Characters remaining : <lightning:formattedNumber value = "{!2000-v.misDirectComments.length}" /> </div>
+                        
+                        <lightning:button variant="brand" type="button" class="brand_button" name="submitBtnName" label="Submit"
+                                          onclick="{!c.submitMisDirectReasons}" />
+                        
+                        <!-- Making button neutral + right as per the Mockup -->
+                        <lightning:button variant="neutral" type="button" name="cancelBtnName" label="Cancel"
+                                          class="slds-float_right neutral_button" onclick="{!c.cancelMisdirect}" />
+                    </div>
+                </lightning:layoutItem> 
+                
+            </lightning:layout>
+        </div>
+    </div>
+</aura:component>

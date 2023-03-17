@@ -1,0 +1,99 @@
+<aura:component
+    implements="force:appHostable,flexipage:availableForAllPageTypes,lightning:isUrlAddressable,force:hasRecordId"
+    access="global">
+
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+
+    <aura:attribute name="type" type="String" />
+
+    <aura:attribute name="showErrorMessage" type="Boolean" default="false" />
+    <aura:attribute name="error" type="object" />
+
+    <aura:registerEvent name="ACETCreateSRNFireValidations" type="c:ACET_CreateSRN_FireValidations" />
+
+    <aura:attribute name="SRNData" type="Object" />
+
+    <aura:attribute name="errors" type="Object" />
+
+    <aura:attribute name="isModalOpen" type="Boolean" default="false" />
+
+    <aura:attribute name="memberCardSnap" type="Object" access="public" />
+    <aura:attribute name="providerDetailsForRoutingScreen" type="Object" access="public" />
+
+    <aura:handler name="closePreviewModalBox" event="c:SAE_TtsModalCloseEvent" action="{!c.closeModal}" />
+    <!-- US2816983	Populate Selected Provider from Provider Lookup on Create SRN Page - Sarma - 28/09/2020 -->
+    <aura:attribute name="srnProviderDetailList" type="Object[]" />
+
+    <!-- US2950839 -->
+    <aura:attribute name="fieldsToValidate" type="List" default="txtfax,cbconfirmfax,cbsendmail" />
+
+    <aura:attribute name="uniqueId" type="String" />
+   
+    <!-- US3026437 -->
+    <aura:attribute name="memberTabId" type="String" />
+
+    <!-- US3094699 -->
+    <aura:attribute name="srnTabId" type="String" />
+    <aura:handler event="c:ACET_CreateSRN_FireValidations" action="{!c.fireValidations}" />
+
+    <lightning:layout class="slds-card slds-p-around_medium slds-m-top_x-small" multipleRows="true">
+        <aura:if isTrue="{!v.isModalOpen}">
+            <!-- US3026437 -->
+            <c:ACET_CreateSRN_PreviewAndSubmit reqInfo="{!v.SRNData.RequiredInfo}"
+                                                memberCardSnap="{!v.memberCardSnap }"
+                                                providerDetails="{!v.providerDetailsForRoutingScreen}" 
+                                                type="{!v.type }"
+                                                srnProviderDetailList="{!v.srnProviderDetailList}" 
+                                                SRNData="{!v.SRNData}" 
+                                                memberTabId="{!v.memberTabId}"
+                                               />
+        </aura:if>
+        <lightning:layoutItem size="2">
+            <h3 class="component_title slds-text-heading_small">Submit</h3>
+        </lightning:layoutItem>
+
+        <lightning:layoutItem class="slds-m-top_x-small" size="12">
+            <lightning:layout class="slds-card" multipleRows="true">
+                <lightning:layoutItem size="3">
+                    <div class="slds-form-element">
+                        <lightning:input type="text" aura:id="txtfax" name="AlternativeFax"
+                            label="Alternative Fax" value="{!v.SRNData.SubmitInfo.AlternativeFax}"
+                            onchange="{!c.handleOnChange}" required="{! v.SRNData.SubmitInfo.ConfirmFax }" 
+                            minlength="10" maxlength="10" messageWhenTooShort="Enter 10 digits" autocomplete="off" />
+                    </div>
+                </lightning:layoutItem>
+                <lightning:layoutItem  size="9">
+                    <div class="slds-grid slds-wrap slds-m-left_medium slds-m-top_large">
+                        <div class="slds-col slds-size_1-of-8">
+                            <div class="slds-form-element">
+                                <lightning:input class="slds-m-left_medium" type="checkbox" name="ConfirmFax"
+                                    aura:id="cbconfirmfax" label="Confirm FAX"
+                                    checked="{!v.SRNData.SubmitInfo.ConfirmFax}" required="{! (v.SRNData.SubmitInfo.AlternativeFax.length > 0) }" disabled="true" />
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_2-of-8">
+                            <lightning:input class="slds-m-left_medium" type="checkbox" name="SendMail"
+                                aura:id="cbsendmail" label="Send letter by Mail"
+                                checked="{!v.SRNData.SubmitInfo.SendMail}" required="{! and((!v.SRNData.SubmitInfo.ConfirmFax), (v.SRNData.SubmitInfo.AlternativeFax.length == 0)) }" />
+                        </div>
+                    </div>
+                </lightning:layoutItem>
+                <lightning:layoutItem class="slds-m-top_small" size="2">
+                    <lightning:button variant="brand" label="Preview and Submit" title="Preview and Submit"
+                        onclick="{! c.createSRN }" />
+                </lightning:layoutItem>
+                <aura:if isTrue="{!v.showErrorMessage}">
+                    <lightning:layoutItem size="6" class="validationErrorMsgPosition slds-m-top_small">
+                        <div style="margin-left: -50px; margin-top: -4px;">
+                            <c:ACET_ErrorPopup aura:id="errorPopup" errorMessage="{!v.error.message}"
+                                topDescription="{!v.error.topDescription}"
+                                bottomDescription="{!v.error.bottomDescription}"
+                                descriptionList="{!v.error.descriptionList}" moveLeft="-17" isNubbinLeft="true" />
+                        </div>
+                    </lightning:layoutItem>
+                </aura:if>
+            </lightning:layout>
+        </lightning:layoutItem>
+    </lightning:layout>
+
+</aura:component>

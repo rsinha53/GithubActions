@@ -1,0 +1,771 @@
+<aura:component controller="ACETLGT_PlanBenefitController" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId" access="global">
+   <aura:attribute type="String" name="attrCoverageLevel" />
+    <aura:attribute type="Boolean" name="attrIsPlanBenefitCallTopic"/>
+    <aura:attribute type="Boolean" name="attrIsGroupPlanCallTopic" />
+    <aura:attribute type="String" name="attrEndDate" />
+    <aura:attribute type="String" name="attrEffectiveDate" />
+    <aura:attribute type="String" name="accumsdatesearch" />
+    <aura:attribute type="String" name="accumsOlddatesearch" />
+    <aura:attribute type="String" name="attrPlanType" />
+    <aura:attribute name="attrOONReimbursementList" type="ACETGroupPlanBenefitLEXWrapper.OONReimbursement[]"/>
+    <aura:attribute type="String" name="todaysdate" />
+     <aura:attribute type="String" name="errormsg" />
+    <aura:attribute name="attrcoverageBenefits" type="Object" />
+    <aura:attribute name="individualAccumList" type="ACETGroupPlanBenefitLEXWrapper.AccumulatorP[]"/>
+    <aura:attribute name="familyAccumList" type="ACETGroupPlanBenefitLEXWrapper.AccumulatorP[]"/>
+    <aura:attribute name="SitusState" type="String"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="activeSectionsCoverage" type="List" default="['CoverageOverview']" />
+    <aura:method name="showResults" action="{!c.showResults}"/>
+    <aura:attribute name="covLevelCode" type="String" access="public"/>
+     <aura:attribute name="Spinner" type="boolean" default="true"/>
+    <aura:attribute name="isInnHoverVisible" type="Boolean" default="false" />
+     <aura:attribute name="isOnnHoverVisible" type="Boolean" default="false" />
+    <aura:attribute name="accumAutodocKey" type="string" access="public"/>
+    <aura:attribute name="accumGUIkey" type="string" access="public"/>
+	 <aura:attribute name="selectedStrtDt" type="string" access="public"/>
+    <aura:attribute name="selectedEndDt" type="string" access="public"/>
+    <aura:attribute name="selectedBundleId" type="string" access="public"/>
+	<aura:attribute name="selectedBenefitStrtDt" type="string" access="public"/>
+    <aura:attribute name="selectedBenefitEndDt" type="string" access="public"/>																			 
+   <lightning:workspaceAPI aura:id="workspace"/>
+    <div id="{!v.accumAutodocKey+v.accumGUIkey}">  
+    <lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="CoverageOverview">
+        <lightning:accordionSection name="CoverageOverview" label="Coverage Overview">
+      <aura:if isTrue="{!and(v.attrPlanType !='EPO',v.attrPlanType !='HMO')}">
+          
+            <div class="slds-col slds-size_1-of-4">
+                <div id="coverageoverview"> 
+                 <div class="autodocTableView" data-auto-doc="true" data-auto-doc-feature="{!v.accumAutodocKey}" data-auto-doc-case-items="false"  data-auto-doc-section-key="Coverage Overview">   
+                      <label class="slds-form-element__label" style="padding-left:16px;font-size:10pt;" for="form-element-01"><b>OON Reimbursement</b></label>
+                     <table class="slds-table slds-table_bordered slds-table_cell-buffer slds-no-row-hover scroll">
+                        <thead>
+                            <tr>
+                                <th class="headerTitle">OON Pricing Type</th>
+                                <th class="headerTitle">Percentile</th>
+                            </tr>
+                        </thead>
+                        <aura:iteration items="{!v.attrOONReimbursementList}" var="OON">
+                            <tbody>    
+                                <tr >
+                                   <td>{!OON.OONPricingType}</td>
+                                    <td>{!OON.Percentile}</td>
+                                </tr>
+                            </tbody>    
+                        </aura:iteration>
+                    </table>      
+                </div>
+            </div>
+          </div>
+            </aura:if>
+           <lightning:layout >
+           <lightning:layoutItem >  
+           <div class="slds-p-right_none slds-p-top_medium  slds-p-left_xx-small">
+          <label class="slds-form-element__label" style="padding-left:12px; font-size:10pt;" for="form-element-01"><b>Accumulator As Of</b></label>
+           </div>  
+          </lightning:layoutItem> 
+          <lightning:layoutItem  size="1.9" > 
+              <div class="slds-p-top_medium slds-p-left_none slds-m-bottom_small widthinc ">
+               <ui:inputDate aura:id="dateinptid"  format="MM/DD/YYYY" displayDatePicker="true" value="{!v.accumsdatesearch}" class="slds-input inputDateWidth" />    
+               <p style="color: red;">{!v.errormsg}</p>
+              </div>
+          </lightning:layoutItem>
+         <lightning:layoutItem  size="1" > 
+               <div class="slds-p-top_small  slds-p-left_small  ">
+             <p class="slds-form-element__label" style="padding-top:12px;padding-left: 20px;  font-size:10pt; " ><a href="javascript:void(0)" onclick="{!c.populatedate}"><b>{!v.todaysdate}</b></a></p></div>
+          </lightning:layoutItem>
+          <lightning:layoutItem  >
+              <div class=" slds-p-top_medium slds-p-left_x-small" >
+              <lightning:button iconName="utility:search" iconPosition="left"  variant="brand" label="Search"  onclick="{!c.validateSearch }"/></div>
+          </lightning:layoutItem>
+    </lightning:layout>
+    <div class="slds-form_horizontal " >
+         <label class="slds-form-element__label" style="padding-left:16px;font-size:10pt;" for="form-element-01"><b>Individual Accumulator</b></label>
+        <!-- <lightning:helptext  content="{!$Label.c.ACETPlanBenefitDetailHoverText}" />-->
+        <button class="slds-button slds-button_icon slds-button slds-button_icon" aria-describedby="help" aria-disabled="true" 
+            data-section="inn" onmouseover="{!c.toggleHelpTextHover}" onmouseout="{!c.toggleHelpTextHover}" title="Help">
+          <lightning:icon iconName="utility:info" variant="info" size="xx-small"/>
+          <span class="slds-assistive-text"></span>
+       </button>
+      <aura:if isTrue="{!v.isInnHoverVisible}">
+         <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left" role="tooltip" id="help" style="position:fixed;left:12%;bottom:41%;width:550px;">
+            <div class="slds-popover__body" style="text-align: left;">
+             <span style="font-weight:bold;">Embedded: </span><br />  
+              Embedded plans contain both individual and family deductible/OOP amounts. When an individual in a family meets their individual deductible or OOP, that individual’s claims are no longer subject to deductible or OOP. When the family deductible/OOP amount is met, future claims for all family members are no longer subject to deductible or OOP. 
+              <br /> <br />
+            <span style="font-weight:bold;">Aggregate:</span><br />
+             Aggregate plans have a single combined family deductible and/or OOP.  When more than one person is covered under the plan, no individual in the family has met the deductible/OOP  until the entire family amount has been satisfied. <span style="font-weight: bold;">Note:</span> If there is only one individual covered under the plan, the individual deductible/OOP will apply.
+             </div>
+          </div>
+          </aura:if>
+     </div>     
+                <div>
+                   <div class="outer-div slds-align_absolute-center">
+                       <aura:if isTrue="{!v.Spinner}">
+                       <lightning:spinner alternativeText="Loading, Please Wait..." 
+                                                   			title="Loading, Please Wait..." 
+                                                   			variant="brand" size="small"/>
+                            						</aura:if>
+                        				</div>
+                                  </div>
+            	  <div id="accumulators">
+                  <div class="autodocTableView" data-auto-doc="true" data-auto-doc-case-items="false" data-auto-doc-feature="{!v.accumAutodocKey}"  data-auto-doc-section-key="{!'Individual Accumulator ( '+v.accumsOlddatesearch+' )'}">
+                    
+                   <div class="slds-form-element">
+                     
+                   <table class="slds-table  slds-table_bordered slds-table_cell-buffer slds-no-row-hover scroll">
+                        <thead>
+                            <tr>
+                                 <th class="headerTitle" style="padding-left:36px;" >    </th>
+                                <th class="headerTitle">Ded Limit</th>
+                                <th class="headerTitle">Ded Satisfied</th>
+                                <th class="headerTitle">Ded Remaining</th>
+                                <th class="headerTitle">Coinsurance %</th>
+                                <th class="headerTitle">OOP Limit</th>
+                                <th class="headerTitle">OOP Satisfied</th>
+                                <th class="headerTitle">OOP Remaining</th>
+                            </tr>
+                        </thead>
+                        <aura:iteration items="{!v.individualAccumList}" var="individualAcc">
+                            <tbody>    
+                                <tr class="slds-hint-parent">
+                                   <td  style="padding-left:36px;font-size:10pt;" >{!individualAcc.TypeCode}</td>
+                                    <td>
+                                      <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.MaxDeductible != 'N/A') }">
+
+                                            N/A
+				                          <aura:set attribute="else"> 
+                                          <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='N/A') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.MaxDeductible != 'N/A') }">
+
+                                               N/A
+				                              <aura:set attribute="else"> 
+                                            <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.MaxDeductible != 'N/A') }">
+
+				                                      ${!individualAcc.MaxDeductible}(Aggregate)
+				                                    <aura:set attribute="else"> 
+                                                  <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='Embedded Accum') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.MaxDeductible != 'N/A') }">
+
+					                                    ${!individualAcc.MaxDeductible}(Embedded)
+                                                         <aura:set attribute="else">
+                                                  <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='Embedded Accum') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.MaxDeductible != 'N/A') }">
+
+                                                             ${!individualAcc.MaxDeductible}(Embedded)
+                                                        <aura:set attribute="else">
+                                                  <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='N/A') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.MaxDeductible != 'N/A') }">
+
+                                                               N/A
+                                                             <aura:set attribute="else">
+                                                             <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Aggregate' ),individualAcc.MaxDeductible != 'N/A') }">
+
+                                                                   N/A
+                                                                 <aura:set attribute="else">
+                                                                 <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Aggregate' ),individualAcc.MaxDeductible != 'N/A') }">
+                                                                        N/A
+                                                                     <aura:set attribute="else">
+                                                                      <aura:if isTrue="{!individualAcc.MaxDeductible == 'N/A'}">{!individualAcc.MaxDeductible}
+                                                                       <aura:set attribute="else">
+                                                                          ${!individualAcc.MaxDeductible}
+                                                                      </aura:set>
+                                                                     </aura:if>
+                                                                    </aura:set>
+                                                                  </aura:if>
+                                                              </aura:set>
+                                                            </aura:if>
+                                                         </aura:set>
+						                            </aura:if>
+						                       </aura:set>
+						                 </aura:if>
+						           </aura:set>
+						        </aura:if>
+						      </aura:set>
+						</aura:if>
+			      </aura:set>
+	          </aura:if>
+	    </aura:set>
+       </aura:if></td>
+	                              <td>
+                                 <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.YTDDeductible != 'N/A') }">
+
+				                          ${!individualAcc.YTDDeductible} 
+										 <aura:set attribute="else"> 
+                              <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.YTDDeductible != 'N/A') }">
+
+				                              ${!individualAcc.YTDDeductible} 
+											  <aura:set attribute="else"> 
+                                                                      <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='Embedded Accum') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.YTDDeductible != 'N/A') }">
+
+				                                     ${!individualAcc.YTDDeductible} 
+				                                    <aura:set attribute="else"> 
+                                                    <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='Embedded Accum') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.YTDDeductible != 'N/A') }">
+
+					                                   ${!individualAcc.YTDDeductible} 
+                                                       <aura:set attribute="else">
+                                                          <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='N/A') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.YTDDeductible!= 'N/A') }">
+                                                               N/A
+                                                               
+                                                           <aura:set attribute="else">
+                                                        <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='N/A') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.YTDDeductible!= 'N/A') }">
+
+                                                              ${!individualAcc.YTDDeductible}    
+                                                            <aura:set attribute="else">
+                                                               <aura:if isTrue="{!individualAcc.YTDDeductible == 'N/A'}">
+                                                                   {!individualAcc.YTDDeductible}
+                                                                    <aura:set attribute="else">
+                                                                          ${!individualAcc.YTDDeductible}
+                                                                     </aura:set>
+                                                              </aura:if>
+                                                         </aura:set>
+						                            </aura:if>
+						                       </aura:set>
+						                 </aura:if>
+						           </aura:set>
+						        </aura:if>
+						      </aura:set>
+						</aura:if>
+			      </aura:set>
+	          </aura:if>
+	    </aura:set>
+       </aura:if></td>
+	                           <td> <aura:if isTrue="{!and(individualAcc.RemDeductible  == 'N/A')}">N/A
+								     <aura:set attribute="else"> 
+                                    <aura:if isTrue="{!and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Embedded Accum' )}">
+
+                                           N/A
+				                           <aura:set attribute="else"> 
+                                         <aura:if isTrue="{!and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Embedded Accum' )}">
+
+										       ${!individualAcc.RemDeductible }
+	                                           <aura:set attribute="else">
+                                              <aura:if isTrue="{!and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='Embedded Accum') , individualAcc.primaryAccumDescOOP=='Embedded Accum' )}">
+
+				                                     ${!individualAcc.RemDeductible }
+													 <aura:set attribute="else"> 
+                                                    <aura:if isTrue="{!and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='Embedded Accum') , individualAcc.primaryAccumDescOOP=='Embedded Accum' )}">
+
+					                                    ${!individualAcc.RemDeductible}
+                                                         <aura:set attribute="else">
+                                                     <aura:if isTrue="{!and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Aggregate' )}">
+
+                                                              
+                                                              N/A
+                                                           <aura:set attribute="else">
+                                                        <aura:if isTrue="{!and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Aggregate' )}">
+
+                                                                 N/A
+                                                              <aura:set attribute="else">
+                                                            <aura:if isTrue="{!and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='N/A') , individualAcc.primaryAccumDescOOP=='Embedded Accum' )}">
+
+                                                                   N/A
+															     <aura:set attribute="else">
+                                                                  <aura:if isTrue="{!and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='N/A') , individualAcc.primaryAccumDescOOP=='Embedded Accum' )}">
+
+                                                                       N/A
+                                                                    <aura:set attribute="else">
+                                                                      ${!individualAcc.RemDeductible}
+                                                          </aura:set>
+                                                       </aura:if>
+												   </aura:set>
+                                                   </aura:if>
+                                                  </aura:set>
+                                                 </aura:if>
+                                                </aura:set>
+                                               </aura:if>
+                                              </aura:set>
+						                    </aura:if>					  
+									     </aura:set>
+									</aura:if> 
+						         </aura:set>
+						      </aura:if> 
+                             </aura:set>
+						    </aura:if>
+                          </aura:set>
+					 </aura:if></td>
+                          <td>{!individualAcc.coinsurance}</td>
+                                    
+					                   <td>
+                                  <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.MaxOOP  != 'N/A') }">          
+				                           ${!individualAcc.MaxOOP }(Embedded)
+										  <aura:set attribute="else"> 
+                                     <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.MaxOOP  != 'N/A') }">          
+
+				                               ${!individualAcc.MaxOOP }(Embedded)
+				                                    <aura:set attribute="else"> 
+                                                  <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='Embedded Accum') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.MaxOOP  != 'N/A') }">          
+					                                   ${!individualAcc.MaxOOP }(Embedded)
+                                                         <aura:set attribute="else">
+                                                       <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='Embedded Accum') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.MaxOOP  != 'N/A') }">          
+
+                                                           ${!individualAcc.MaxOOP }(Embedded)
+															 <aura:set attribute="else">
+                                                            <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Aggregate' ),individualAcc.MaxOOP  != 'N/A') }">          
+
+                                                                  N/A
+                                                                 <aura:set attribute="else">
+                                                             <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Aggregate' ),individualAcc.MaxOOP  != 'N/A') }">          
+
+                                                                     N/A
+                                                                      <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='N/A') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.MaxOOP  != 'N/A') }">          
+
+ 
+                                                                            ${!individualAcc.MaxOOP }(Embedded)
+                                                                          
+																		   <aura:set attribute="else">
+                                                                          <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='N/A') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.MaxOOP  != 'N/A') }">          
+
+                                                                            ${!individualAcc.MaxOOP }(Embedded)
+																		       <aura:set attribute="else">
+																			      <aura:if isTrue="{!individualAcc.MaxOOP == 'N/A'}">
+                                                                                    {!individualAcc.MaxOOP}
+																				   <aura:set attribute="else">
+																			 ${!individualAcc.MaxOOP}
+																				  </aura:set>
+																				 </aura:if>
+																			    </aura:set>
+																			</aura:if>
+																		    </aura:set>
+																		</aura:if>
+																	  </aura:set>
+																	 </aura:if>
+																    </aura:set>
+															    </aura:if>
+                                                             </aura:set>
+						                              </aura:if>
+						                        </aura:set>
+						                       </aura:if>
+						                   </aura:set>
+						                 </aura:if>
+			                        </aura:set>
+	                             </aura:if>
+	                           </td>
+                                 <td>
+                                       <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.YTDOOP  != 'N/A') }">          
+
+				                          ${!individualAcc.YTDOOP}
+										 <aura:set attribute="else"> 
+                                  <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.YTDOOP  != 'N/A') }">          
+
+				                              ${!individualAcc.YTDOOP}
+											  <aura:set attribute="else"> 
+                                                                   <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='Embedded Accum') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.YTDOOP  != 'N/A') }">          
+
+				                                     ${!individualAcc.YTDOOP}
+				                                    <aura:set attribute="else"> 
+                                                          <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='Embedded Accum') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.YTDOOP  != 'N/A') }">          
+
+					                                   ${!individualAcc.YTDOOP}
+                                                       <aura:set attribute="else">
+                                                         <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='N/A') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.YTDOOP  != 'N/A') }">          
+
+                                                            ${!individualAcc.YTDOOP}
+														   <aura:set attribute="else">
+                                                         <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='N/A') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ),individualAcc.YTDOOP  != 'N/A') }">          
+
+														     ${!individualAcc.YTDOOP}
+                                                            <aura:set attribute="else">
+                                                               <aura:if isTrue="{!individualAcc.YTDOOP == 'N/A'}">{!individualAcc.YTDOOP}
+                                                                    <aura:set attribute="else">
+                                                                          ${!individualAcc.YTDOOP}
+                                                                     </aura:set>
+                                                              </aura:if>
+                                                         </aura:set>
+						                            </aura:if>
+						                       </aura:set>
+						                 </aura:if>
+						           </aura:set>
+						        </aura:if>
+						      </aura:set>
+						</aura:if>
+			      </aura:set>
+	          </aura:if>
+	    </aura:set>
+       </aura:if></td>    
+                                    
+                                <td> <aura:if isTrue="{!and(individualAcc.RemOOP  == 'N/A')}">N/A
+								     <aura:set attribute="else"> 
+                                       <aura:if isTrue="{!and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ) }">          
+
+									        ${!individualAcc.RemOOP }
+				                           <aura:set attribute="else"> 
+                                            <aura:if isTrue="{!and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ) }">          
+
+										       ${!individualAcc.RemOOP }
+	                                           <aura:set attribute="else"> 
+                                                <aura:if isTrue="{!and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='Embedded Accum') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ) }">          
+
+				                                     ${!individualAcc.RemOOP }
+													 <aura:set attribute="else"> 
+                                                       <aura:if isTrue="{!and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='Embedded Accum') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ) }">          
+
+					                                    ${!individualAcc.RemOOP}
+                                                         <aura:set attribute="else">
+                                                               <aura:if isTrue="{!and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Aggregate' ) }">          
+
+                                                              N/A
+                                                           <aura:set attribute="else">
+                                                                      <aura:if isTrue="{!and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='Aggregate') , individualAcc.primaryAccumDescOOP=='Aggregate' ) }">          
+
+                                                                 N/A
+                                                              <aura:set attribute="else">
+                                                               <aura:if isTrue="{!and(and(v.covLevelCode=='FAM', individualAcc.primaryAccumDeduct=='N/A') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ) }">          
+
+															     ${!individualAcc.RemOOP}
+															     <aura:set attribute="else">
+                                                                  <aura:if isTrue="{!and(and(v.covLevelCode=='IND', individualAcc.primaryAccumDeduct=='N/A') , individualAcc.primaryAccumDescOOP=='Embedded Accum' ) }">          
+
+                                                                       N/A
+                                                                    <aura:set attribute="else">
+                                                                      ${!individualAcc.RemOOP}
+                                                          </aura:set>
+                                                       </aura:if>
+												   </aura:set>
+                                                   </aura:if>
+                                                  </aura:set>
+                                                 </aura:if>
+                                                </aura:set>
+                                               </aura:if>
+                                              </aura:set>
+						                    </aura:if>					  
+									     </aura:set>
+									</aura:if> 
+						         </aura:set>
+						      </aura:if> 
+                             </aura:set>
+						    </aura:if>
+                          </aura:set>
+					 </aura:if></td>	                                
+                                </tr>
+                            </tbody>    
+                        </aura:iteration>
+                    </table>      
+            </div><br/>
+            </div>
+            
+                      <div class="slds-form_horizontal">
+         <label class="slds-form-element__label" style="padding-left:16px;font-size:10pt;" for="form-element-01"><b>Family Accumulator</b></label>
+        <!-- <lightning:helptext  content="{!$Label.c.ACETPlanBenefitDetailHoverText}" />-->
+        <button class="slds-button slds-button_icon slds-button slds-button_icon" aria-describedby="help" aria-disabled="true" 
+            data-section="onn" onmouseover="{!c.toggleHelpTextHover}" onmouseout="{!c.toggleHelpTextHover}" title="Help">
+          <lightning:icon iconName="utility:info" variant="info" size="xx-small"/>
+          <span class="slds-assistive-text"></span>
+       </button>
+      <aura:if isTrue="{!v.isOnnHoverVisible}">
+         <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left" role="tooltip" id="help" style="position:fixed;left:12%;bottom:21%;width:550px;">
+            <div class="slds-popover__body" style="text-align: left;">
+             <span style="font-weight:bold;">Embedded: </span><br />  
+              Embedded plans contain both individual and family deductible/OOP amounts. When an individual in a family meets their individual deductible or OOP, that individual’s claims are no longer subject to deductible or OOP. When the family deductible/OOP amount is met, future claims for all family members are no longer subject to deductible or OOP. 
+              <br /> <br />
+            <span style="font-weight:bold;">Aggregate:</span><br />
+             Aggregate plans have a single combined family deductible. When more than one person is covered under the plan, no individual in the family has met the deductible until the entire family amount has been satisfied. <span style="font-weight: bold;">Note:</span> If there is only one individual covered under the plan, the individual deductible/OOP will apply.
+             </div>
+          </div>
+          </aura:if>
+    </div> 
+     <div class="autodocTableView" data-auto-doc="true" data-auto-doc-case-items="false" data-auto-doc-feature="{!v.accumAutodocKey}"  data-auto-doc-section-key="{!'Family Accumulator ( '+v.accumsOlddatesearch+' )'}">
+                <div class="slds-form-element">
+                 
+                 <table class="slds-table slds-table_bordered slds-table_cell-buffer slds-no-row-hover scroll">
+                        <thead>
+                            <tr>                  
+                                <th class="headerTitle" style="padding-left:36px;" >    </th>
+                                <th class="headerTitle" >Ded Limit</th>
+                                <th class="headerTitle">Ded Satisfied</th>
+                                <th class="headerTitle">Ded Remaining</th>
+                                <th class="headerTitle">Coinsurance %</th>
+                                <th class="headerTitle">OOP Limit</th>
+                                <th class="headerTitle">OOP Satisfied</th>
+                                <th class="headerTitle">OOP Remaining</th>
+                            </tr>
+                        </thead>
+                        <aura:iteration items="{!v.familyAccumList}" var="familyAccum">
+                            <tbody>    
+                                <tr class="slds-hint-parent" >
+                                  <td  style="padding-left:36px;font-size:10pt;" >{!familyAccum.TypeCode}</td>
+                                   
+								<td>
+                                     <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='Aggregate') , familyAccum.primaryAccumDescOOP=='Embedded Accum' ),familyAccum.MaxDeductible != 'N/A') }">
+
+				                          ${!familyAccum.MaxDeductible}(Aggregate)
+										  <aura:set attribute="else"> 
+                                              <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='Aggregate') , familyAccum.primaryAccumDescOOP=='Embedded Accum' ),familyAccum.MaxDeductible != 'N/A') }">
+
+                                              ${!familyAccum.MaxDeductible}(Aggregate)				                             
+											 <aura:set attribute="else"> 
+                                             <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='Embedded Accum') , familyAccum.primaryAccumDescOOP=='Embedded Accum' ),familyAccum.MaxDeductible != 'N/A') }">
+
+					                               ${!familyAccum.MaxDeductible}(Embedded)
+                                                     <aura:set attribute="else">
+                                                   <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='Embedded Accum') , familyAccum.primaryAccumDescOOP=='Embedded Accum' ),familyAccum.MaxDeductible != 'N/A') }">
+
+                                                        ${!familyAccum.MaxDeductible}(Embedded)
+                                                        <aura:set attribute="else">
+                                                   <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='Aggregate') , familyAccum.primaryAccumDescOOP=='Aggregate' ),familyAccum.MaxDeductible != 'N/A') }">
+
+                                                                 ${!familyAccum.MaxDeductible}(Aggregate)
+																 <aura:set attribute="else">
+                                                                    <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='Aggregate') , familyAccum.primaryAccumDescOOP=='Aggregate' ),familyAccum.MaxDeductible != 'N/A') }">
+                                                                     ${!familyAccum.MaxDeductible}(Aggregate)
+																	 <aura:set attribute="else">
+                                                                  <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='N/A') , familyAccum.primaryAccumDescOOP=='Embedded Accum' ),familyAccum.MaxDeductible != 'N/A') }">
+
+                                                                      ${!familyAccum.MaxDeductible}(Aggregate)
+																	  <aura:set attribute="else">
+                                                                       <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='N/A') , familyAccum.primaryAccumDescOOP=='Embedded Accum' ),familyAccum.MaxDeductible != 'N/A') }">
+
+                                                                          ${!familyAccum.MaxDeductible}(Aggregate)
+																		  <aura:set attribute="else">
+																		    <aura:if isTrue="{!familyAccum.MaxDeductible == 'N/A'}">{!familyAccum.MaxDeductible}
+                                                                                 <aura:set attribute="else">
+                                                                                 ${!familyAccum.MaxDeductible}
+                                                                                 </aura:set>
+                                                                                 </aura:if>
+																		  </aura:set>
+																		 </aura:if>
+																	  </aura:set>
+																	 </aura:if>
+                                                                </aura:set>
+                                                             </aura:if>
+						                                  </aura:set>
+						                              </aura:if>
+						                           </aura:set>
+						                        </aura:if>
+						                    </aura:set>
+						                 </aura:if>
+			                          </aura:set>
+	                                 </aura:if>
+	                           </aura:set>
+                        </aura:if></td>
+
+
+                                    <td>
+                     <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='Aggregate') ,familyAccum.primaryAccumDescOOP=='Embedded Accum'),familyAccum.YTDDeductible != 'N/A') }">
+
+				                          ${!familyAccum.YTDDeductible}
+										 <aura:set attribute="else"> 
+                                    <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='Aggregate') ,familyAccum.primaryAccumDescOOP=='Embedded Accum'),familyAccum.YTDDeductible != 'N/A') }">
+				                         N/A
+										 <aura:set attribute="else">    
+             				   <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='Embedded Accum') ,familyAccum.primaryAccumDescOOP=='Embedded Accum'),familyAccum.YTDDeductible != 'N/A') }">
+					                      ${!familyAccum.YTDDeductible}
+										 <aura:set attribute="else"> 
+                                <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='Embedded Accum') ,familyAccum.primaryAccumDescOOP=='Embedded Accum'),familyAccum.YTDDeductible != 'N/A') }">
+
+										   N/A
+				                            <aura:set attribute="else"> 
+				                                                <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='N/A') ,familyAccum.primaryAccumDescOOP=='Embedded Accum'),familyAccum.YTDDeductible != 'N/A') }">
+
+				                                     ${!familyAccum.YTDDeductible}
+				                                    <aura:set attribute="else"> 
+							 <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='N/A') ,familyAccum.primaryAccumDescOOP=='Embedded Accum'),familyAccum.YTDDeductible != 'N/A') }">
+														 N/A
+					                                 <aura:set attribute="else">
+                                                         
+                                                               <aura:if isTrue="{!familyAccum.YTDDeductible == 'N/A'}">{!familyAccum.YTDDeductible}
+                                                                    <aura:set attribute="else">
+                                                                          ${!familyAccum.YTDDeductible}
+                                                                     </aura:set>
+                                                              </aura:if>
+                                                         </aura:set>
+						                            </aura:if>
+						                       </aura:set>
+						                 </aura:if>
+						           </aura:set>
+						        </aura:if>
+						      </aura:set>
+						</aura:if>
+			      </aura:set>
+	          </aura:if>
+           </aura:set>
+	      </aura:if> </td>				
+
+                                 <td> 
+      
+                                     <aura:if isTrue="{!familyAccum.RemDeductible  == 'N/A'}">N/A
+								     <aura:set attribute="else"> 
+                                     <aura:if isTrue="{!and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='Aggregate') ,familyAccum.primaryAccumDescOOP=='Embedded Accum') }">
+
+									        ${!familyAccum.RemDeductible }
+				                           <aura:set attribute="else"> 
+                                         <aura:if isTrue="{!and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='Aggregate') ,familyAccum.primaryAccumDescOOP=='Embedded Accum') }">
+            							   N/A										       
+	                                           <aura:set attribute="else"> 
+                                            <aura:if isTrue="{!and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='Embedded Accum') ,familyAccum.primaryAccumDescOOP=='Embedded Accum') }">
+				                                     ${!familyAccum.RemDeductible }
+													 <aura:set attribute="else"> 
+                                                 <aura:if isTrue="{!and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='Embedded Accum') ,familyAccum.primaryAccumDescOOP=='Embedded Accum') }">
+                                                           N/A					                                  
+                                                         <aura:set attribute="else">
+                                                            <aura:if isTrue="{!and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='N/A') ,familyAccum.primaryAccumDescOOP=='Embedded Accum') }">
+
+                                                         ${!familyAccum.RemDeductible }
+															     <aura:set attribute="else">
+                                                                   <aura:if isTrue="{!and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='N/A') ,familyAccum.primaryAccumDescOOP=='Embedded Accum') }">
+
+                                                                      N/A
+                                                                    <aura:set attribute="else">
+                                                                      ${!familyAccum.RemDeductible}
+                                                          </aura:set>
+                                                      </aura:if>
+                                                   </aura:set>
+                                                 </aura:if>
+                                              </aura:set>
+						                    </aura:if>					  
+									     </aura:set>
+									</aura:if> 
+						         </aura:set>
+						      </aura:if> 
+                             </aura:set>
+						    </aura:if>
+                          </aura:set>
+					 </aura:if></td>  
+					        <td>{!familyAccum.coinsurance}</td>
+                                    <td>
+                                         <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='Aggregate') ,familyAccum.primaryAccumDescOOP=='Embedded Accum'),familyAccum.MaxOOP  != 'N/A') }">
+                                      ${!familyAccum.MaxOOP }(Embedded)
+				                         <aura:set attribute="else">
+                                              <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='Aggregate') ,familyAccum.primaryAccumDescOOP=='Embedded Accum'),familyAccum.MaxOOP  != 'N/A') }">
+                                       ${!familyAccum.MaxOOP }(Embedded)
+				                         <aura:set attribute="else">
+                                    <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='Embedded Accum') ,familyAccum.primaryAccumDescOOP=='Embedded Accum'),familyAccum.MaxOOP  != 'N/A') }">
+         		                           ${!familyAccum.MaxOOP }(Embedded)
+										  <aura:set attribute="else"> 
+                                         <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='Embedded Accum') ,familyAccum.primaryAccumDescOOP=='Embedded Accum'),familyAccum.MaxOOP  != 'N/A') }">
+				                                ${!familyAccum.MaxOOP }(Embedded)
+				                                    <aura:set attribute="else"> 
+                                                <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='Aggregate') ,familyAccum.primaryAccumDescOOP=='Aggregate'),familyAccum.MaxOOP  != 'N/A') }">
+               
+					                                    ${!familyAccum.MaxOOP }(Aggregate)
+                                                         <aura:set attribute="else">
+                                                <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='Aggregate') ,familyAccum.primaryAccumDescOOP=='Aggregate'),familyAccum.MaxOOP  != 'N/A') }">
+
+                                                             ${!familyAccum.MaxOOP }(Aggregate)
+															 <aura:set attribute="else">
+                                                              <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='N/A') ,familyAccum.primaryAccumDescOOP=='Embedded Accum'),familyAccum.MaxOOP  != 'N/A') }">
+                                                                 ${!familyAccum.MaxOOP }(Embedded)
+																 <aura:set attribute="else">
+                                                                   <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='N/A') ,familyAccum.primaryAccumDescOOP=='Embedded Accum'),familyAccum.MaxOOP  != 'N/A') }">
+																      ${!familyAccum.MaxOOP }(Embedded)
+                                                                      <aura:set attribute="else">
+																			      <aura:if isTrue="{!familyAccum.MaxOOP == 'N/A'}">{!familyAccum.MaxOOP}
+																				   <aura:set attribute="else">
+																					  ${!familyAccum.MaxOOP}
+																				  </aura:set>
+																				 </aura:if>
+																			    </aura:set>
+																			</aura:if>
+																		    </aura:set>
+																		</aura:if>
+																	  </aura:set>
+																	 </aura:if>
+																    </aura:set>
+															    </aura:if>
+                                                             </aura:set>
+						                              </aura:if>
+						                        </aura:set>
+						                       </aura:if>
+						                   </aura:set>
+						                 </aura:if>
+                                        </aura:set>
+						               </aura:if>
+                                       	                           </td>
+					 	           
+                                    <td>
+                                        <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='Aggregate') ,familyAccum.primaryAccumDescOOP=='Embedded Accum'),familyAccum.YTDOOP != 'N/A') }">
+				                          ${!familyAccum.YTDOOP}
+										 <aura:set attribute="else">
+                                    <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='Aggregate') ,familyAccum.primaryAccumDescOOP=='Embedded Accum'),familyAccum.YTDOOP != 'N/A') }">
+
+				                        N/A
+										 <aura:set attribute="else"> 
+                                     <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='Embedded Accum') ,familyAccum.primaryAccumDescOOP=='Embedded Accum'),familyAccum.YTDOOP != 'N/A') }">
+
+				                          ${!familyAccum.YTDOOP}
+										 <aura:set attribute="else"> 
+                                     <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='Embedded Accum') ,familyAccum.primaryAccumDescOOP=='Embedded Accum'),familyAccum.YTDOOP != 'N/A') }">
+
+										   N/A
+				                              <aura:set attribute="else"> 
+                                              <aura:if isTrue="{!and(and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='N/A') ,familyAccum.primaryAccumDescOOP=='Embedded Accum'),familyAccum.YTDOOP != 'N/A') }">
+
+				                                     ${!familyAccum.YTDOOP}
+				                                    <aura:set attribute="else">
+                                           <aura:if isTrue="{!and(and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='N/A') ,familyAccum.primaryAccumDescOOP=='Embedded Accum'),familyAccum.YTDOOP != 'N/A') }">
+
+													 N/A
+					                                 <aura:set attribute="else">
+	 
+                                                                 <aura:if isTrue="{!familyAccum.YTDOOP == 'N/A'}">
+																 {!familyAccum.YTDOOP}
+                                                                    <aura:set attribute="else">
+                                                                          ${!familyAccum.YTDOOP}
+                                                                     </aura:set>
+                                                              </aura:if>
+                                                         </aura:set>
+						                            </aura:if>
+						                       </aura:set>
+						                 </aura:if>
+						           </aura:set>
+						        </aura:if>
+                             </aura:set>
+	                     </aura:if>
+	                </aura:set>
+                   </aura:if>
+			      </aura:set>
+	          </aura:if></td> 
+                                    
+	                             <td>
+                                    
+<aura:if isTrue="{!and(familyAccum.RemOOP=='N/A')}">
+N/A
+								     <aura:set attribute="else">
+                                 <aura:if isTrue="{!and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='Aggregate') ,familyAccum.primaryAccumDescOOP=='Embedded Accum')}">
+
+									        ${!familyAccum.RemOOP}
+				                           <aura:set attribute="else">
+                                 <aura:if isTrue="{!and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='Aggregate') ,familyAccum.primaryAccumDescOOP=='Embedded Accum')}">
+
+										   N/A									     
+	                                           <aura:set attribute="else"> 
+                                   <aura:if isTrue="{!and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='Embedded Accum') ,familyAccum.primaryAccumDescOOP=='Embedded Accum')}">
+
+				                                     ${!familyAccum.RemOOP }
+													 <aura:set attribute="else">
+                                   <aura:if isTrue="{!and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='Embedded Accum') ,familyAccum.primaryAccumDescOOP=='Embedded Accum')}">
+													   N/A					                                  
+                                                        <aura:set attribute="else">
+                                           <aura:if isTrue="{!and(and(v.covLevelCode=='FAM', familyAccum.primaryAccumDeduct=='N/A') ,familyAccum.primaryAccumDescOOP=='Embedded Accum')}">
+
+															     ${!familyAccum.RemOOP}
+															     <aura:set attribute="else">
+                                                       <aura:if isTrue="{!and(and(v.covLevelCode=='IND', familyAccum.primaryAccumDeduct=='N/A') ,familyAccum.primaryAccumDescOOP=='Embedded Accum')}">
+
+                                                          N/A
+                                                                    <aura:set attribute="else">
+                                                                      ${!familyAccum.RemOOP}
+                                                          </aura:set>
+                                                 </aura:if>
+                                                </aura:set>
+                                               </aura:if>
+                                              </aura:set>
+						                    </aura:if>					  
+									     </aura:set>
+									</aura:if> 
+						         </aura:set>
+						      </aura:if> 
+                             </aura:set>
+						    </aura:if>
+                          </aura:set>
+					 </aura:if>
+					 </td>	               
+								               </tr>
+                            </tbody>    
+                        </aura:iteration>
+                    </table>      
+                </div>
+            </div>
+         <!--   <c:ACETLGT_AccumulatorDetail/>-->
+            </div>
+          </lightning:accordionSection>
+        </lightning:accordion>
+    </div>
+</aura:component>

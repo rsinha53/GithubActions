@@ -1,0 +1,183 @@
+function unCheckSelectAll(){
+	console.log('inside');
+	$(".dataRow .autodoc input[type=checkbox]").on("change",function() {
+		console.log('onchange');
+		if(!$(this).is(":checked"))
+		{
+			console.log('uncheck');
+			$(".headerRow .autodoc input[type=checkbox]").prop("checked", false); 
+		}
+	});
+}
+  
+function systemUnavailableListener(checkBoxId) {
+	console.log('Entering Block1........');
+	$(checkBoxId).on("change", function() {
+		if ($(this).is(":checked")) {
+			$(".requiredInput").removeClass('requiredInput');
+			$(".errorMsg").remove();
+		} else {
+			var isOtherSelected = checkIfOtherIsSelected($(".dataCell"));
+			if (isOtherSelected) {
+				addRequiredFieldIndicator("[id$='comments']");
+			}
+		}
+		addRequiredFieldIndicator("[id$='pbTableId']");
+        addRequiredFieldIndicator("[id$='accountTypes']");
+	});
+}
+
+function checkCallTypeOther(callTypeCheckBoxId) {
+	$(callTypeCheckBoxId).click(function() {
+    	  
+       var isCheckedHeader = $(this).closest('thead').find('tr.headerRow').find('th.autodoc').find('input:checkbox').is(':checked'); 
+       var isCheckedHeaderVal = $(this).closest("tr.headerRow").find(".autodoc-case-item-resolved").text();
+	   var ischeckedVal = $(this).closest("tr").find(".dataCell").text();
+       var isChecked = $(this).is(':checked');
+       
+       if(isCheckedHeader) {
+       		systemUnavailableChk();
+       }
+	   else if(isCheckedHeader == false && isCheckedHeaderVal == 'Resolved') {
+        	removeMandatoryOther();
+	   }
+       
+       if(ischeckedVal == 'Other' && isChecked) {
+       		systemUnavailableChk()
+       }
+       if((ischeckedVal == 'Other' && isChecked==false)) {
+       		removeMandatoryOther();	
+         }
+	});
+}
+
+function checkCallTypeResolved(callTypeResolvedId) {
+	$(callTypeResolvedId).click(function() {
+    	var ischeckedVal = $(this).closest("tr").find(".dataCell").text();
+        var ischeckedOtherVal = $(this).closest("tr").find('input:checkbox').is(':checked');
+        var isChecked = $(this).is(':checked');
+        console.log('Entering the values');
+        if(ischeckedVal == 'Other' && isChecked && ischeckedOtherVal) {
+        	var status = SystemUnavilablestatus();
+            if (!status) {
+                 addRequiredFieldIndicator("[id$='comments']");
+            }
+        }
+        if((ischeckedVal == 'Other' && isChecked==false && ischeckedOtherVal == false)) {
+        	$("[id$='requiredBlockId']").remove();
+        }
+    });
+}
+
+function addRequiredFieldIndicator(elemId) {
+	var status = SystemUnavilablestatus("[id$='sysUnavailableChkb']");
+	if (!status) {
+		$(elemId).wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+	}
+}
+
+function SystemUnavilablestatus(elemId) {
+	var isSystemUnavailable = $(elemId).prop("checked");
+	return isSystemUnavailable;
+}
+
+var checkIfOtherIsSelected = function(allChecks) {
+	console.log('Entering Block6........');
+	var otherFound1 = false;
+	$(allChecks).each(function(index){
+		var ischeckedVal = $(this).closest("tr").find(".dataCell").text();
+		var chk = $(this).closest('tr').find('input:checkbox').is(':checked'); 
+        console.log('Entering Block7........'+ischeckedVal+'................'+chk);
+        if(ischeckedVal == 'Other' && chk) {
+        	console.log('Entering Block7........'+ischeckedVal+'................'+chk);
+            otherFound1 = true;
+            
+        }
+	});
+    return otherFound1;
+};
+
+
+function displayErrorMessage(errorMsg,elementId){
+    $(elementId).parent().append('<div class = "errorMsg" id="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>');
+}
+
+function systemUnavailableChk() {
+	var status = SystemUnavilablestatus();
+    if (!status) {
+    	addRequiredFieldIndicator("[id$='comments']");
+    }
+}
+
+function removeMandatoryOther() {
+	$(".requiredInput").removeClass('requiredInput'); 
+    $(".errorMsg").remove();
+    addRequiredFieldIndicator("[id$='pbTableId']");
+    addRequiredFieldIndicator("[id$='accountTypes']");
+}
+
+//funtion which is called on save for validations
+function validate()
+{
+	console.log('Entering the values');
+	var isSystemUnavailable = $("[id$='sysUnavailableChkb']").prop("checked");
+	var accTypes = $("[id*='accountTypes']");
+	console.log("accTypes >> "+accTypes);
+	console.log($(accTypes).length);
+    var checkedAccountTypes = $("[id*='accountTypes:']:checked").map(function() {
+                                                            return this.value;
+                                                        }).get();
+	var retFlag = true;
+	
+    console.log('Entering the values'+isSystemUnavailable);
+	if(isSystemUnavailable == false || isSystemUnavailable == undefined){       
+		var errorMsg = "You must make a selection.";
+		$(".errorMsg").remove();
+		var chkArray = [];
+		$(".autodoc input[type=checkbox]").each(function() {
+			if($(this).is(':checked')) {
+				chkArray.push($(this).is(':checked'));
+			}
+		}); 
+		console.log('chkArray values'+chkArray);
+		var selected;
+		selected = chkArray.join(',') + ",";
+		if(selected.length > 1){
+			$(".errorMsg").remove();
+			retFlag = true;
+		} else {
+			displayErrorMessage(errorMsg, $("[id$='pbTableId']"));  
+			retFlag = false;
+		}
+		console.log('retFlag values'+retFlag);
+		if(retFlag){
+			$(".dataCell  ").each(function(index){
+				errorMsg = "You must enter a value.";
+				var ischeckedVal = $(this).closest("tr").find(".dataCell").text();
+				var chk = $(this).closest('tr').find('input:checkbox').is(':checked'); 
+				$("[id$='comments']").val($("[id$='comments']").val().trim());
+				if(ischeckedVal == 'Other' && chk && $("[id$='comments']").val()==''){
+				displayErrorMessage(errorMsg, $("[id$='comments']"));    
+				retFlag = false;
+				return retFlag;
+				}  
+				else{
+				$(".errorMsg").remove();
+				retFlag = true;
+				}
+			});
+		}
+        console.log('retFlag values'+retFlag);
+        console.log('checkedAccountTypes'+checkedAccountTypes);
+        
+		if(($(accTypes).length != 0 ) && (checkedAccountTypes == null || checkedAccountTypes == '') ){
+            		$("[id$='accountTypes']").parent().append('<div class = "errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>');  
+         	   	retFlag  = false;
+        	}
+        	                      
+	}
+    if(retFlag == false){
+        displayErrorMessage(errorMsg, $("[id$='errAcord']"));
+    }
+	return retFlag;
+}

@@ -1,0 +1,206 @@
+<aura:component>
+    <aura:attribute name="mediClaimDetails" type="List" />
+    <aura:attribute name="unAuthorizedMsg" type="boolean" default="false"/>
+    <aura:attribute name="phyOutofPeriodMsg" type="boolean" default="false"/> 
+    <aura:attribute name="openPUChartWindow" type="boolean" default="false"/>
+    <aura:attribute name="providerDetailList" type="List" /> 
+    <aura:attribute name="puWindowTitle" type="String" /> 
+    <aura:attribute name="isNetworkStatusVisible" type="boolean" default="false"/> 
+    <aura:attribute name="isChartDisplay" type="boolean" default="false"/>
+    <aura:attribute name="togglehoverFlag" type="boolean" default="false"/>
+    <aura:attribute name="showOONFlag" type="boolean" default="true"/>
+    <aura:attribute name="openFlagModal" type="boolean" default="false"/>
+    <aura:attribute name="showSpinner" type="boolean" default="true"/>
+    <aura:attribute name="decodedMemberId" type="String"/>
+    <aura:handler name="change" value="{!v.decodedMemberId}" action="{!c.onInit}" />
+    <!--  Lightning require for static resource chartjs -->
+    <ltng:require scripts="{!$Resource.chartjs + '/Chart.bundle.js'}"
+                  afterScriptsLoaded="{!c.onInit}" />
+    <!--  Lightning require for static resource chartjs -->
+    <aura:if isTrue="{!v.unAuthorizedMsg}">
+        <div id="chartNoAuthorizationMsg" class="errMsg errMsgWidthFull slds-p-left_medium slds-m-top_xx-small slds-p-right_medium">
+            <ui:message title="" severity="info" closable="false" class=" ">
+                {!$Label.c.ADB_NoAuthMsg}
+            </ui:message>
+        </div>
+        <aura:set attribute="else">
+            <aura:if isTrue="{!v.isChartDisplay}">
+                <div class="slds-p-bottom_x-large slds-p-top_x-large">
+                    <lightning:layoutItem size="12" >
+                        <div class="chart slds-p-right_xx-large" align="left" id="canvas-holder" >
+                            <canvas class="my-chart"
+                                    id="myChart" 
+                                    width="250" 
+                                    height="250"> 
+                            </canvas> 
+                            <div class="chart-text" id="text1"></div>
+                        </div>
+                    </lightning:layoutItem>
+                    <aura:if isTrue= "{!v.showOONFlag}" >
+                        <div align="right" class="popover-wrapper slds-p-right_small" >
+                            <div  onmouseenter="{!c.handleMouseOverFlag}" onmouseleave="{!c.handleMouseOutFlag}">
+                                <img id="colorChartFlag" src="{!$Resource.ADB_HealthSpendCardImages + '/ADB_HealthSpendCardImages/orangeflag.png'}"
+                                     class="opportunity-category-icon" style="width:25px;height:25px;" onclick="{!c.clickFlag}"/>
+                                <aura:if isTrue="{!v.togglehoverFlag}">
+                                    <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-right popover-flaghover" role="tooltip">
+                                        <div class="slds-popover__body"> 
+                                            Member has utilized OON provider(s).
+                                        </div>
+                                    </div>
+                                </aura:if>
+                            </div>
+                        </div>
+                    </aura:if>
+                </div>
+                <aura:set attribute="else">
+                    <div id="medicalTwlveMnthsNoDataMsg" class="errMsg errMsgWidthHalf slds-m-top_xx-small slds-p-right_medium">
+                        <ui:message title="" severity="info" closable="false" class=" ">
+                            {!$Label.c.ADB_PhysicianClaimsTwlveMnthsNoDataMsg}
+                        </ui:message>
+                    </div>
+                </aura:set>
+            </aura:if>       
+        </aura:set>
+    </aura:if>	
+    <aura:if isTrue="{!v.openFlagModal}">
+        <div class="slds-m-around--xx-small"> 
+            <div role="dialog" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">               
+                    <header class="slds-modal__header">
+                        <div class="slds-grid slds-gutters">
+                            <div class="slds-col slds-size_11-of-12">
+                                <span>
+                                    <h2  class="slds-text-heading_medium slds-hyphenate" align="center"><b>Advocate Action</b></h2> 
+                                </span>
+                                <br/><br/>
+                                <I>Educate the member on the impacts of using OON providers and the potential costs associated with their usage.</I>
+                                <br/><br/>
+                                <I>Offer to locate a network provider.</I>
+                                <br/><br/>
+                            </div>
+                            <div class="slds-col slds-size_1-of-12">
+                                <span>
+                                    <!-- Close Button-->
+                                    <div class="close-button" align="right">
+                                        <img src="{!$Resource.ADB_CallerProfileCardImages + '/ADB_CallerProfileCardImages/closebutton.png'}" style="height: 17px; width: 17px;"
+                                             onclick="{! c.closeAdvocateActionBoxButton}"/>
+                                    </div>
+                                    <!-- / Close Button-->
+                                </span>
+                            </div>
+                        </div>
+                    </header> 
+                </div>
+            </div>
+        </div>  
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+    <!-- Provider Utilization Chart Window -->
+    <aura:if isTrue="{!v.openPUChartWindow}">
+        <div class="slds-m-around--xx-large"> 
+            <div role="dialog" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">               
+                    <header class="slds-modal__header">
+                        <div class="slds-grid slds-gutters">
+                            <div class="slds-col slds-size_11-of-12">
+                                <p align="left" class="slds-p-bottom_small"><b>{!v.puWindowTitle} Provider Utilization</b></p>
+                                <div class="slds-table--header-fixed_container">
+                                    <div class="slds-scrollable_y" style="max-height:20rem">
+                                        <table class="slds-table slds-table_bordered slds-table--header-fixed">
+                                            <thead>
+                                                <tr>
+                                                    <aura:if isTrue="{!v.isNetworkStatusVisible}">
+                                                        <th scope="col" width="25%">
+                                                            <div class="slds-text-align_left slds-cell-fixed">Network Status</div>
+                                                        </th>
+                                                        <th scope="col" width="35%">
+                                                            <div class="slds-text-align_left slds-cell-fixed">Provider Name</div>
+                                                        </th>
+                                                        <th scope="col" width="30%">
+                                                            <div class="slds-text-align_left slds-cell-fixed">Provider Type</div>
+                                                        </th>
+                                                        <th scope="col" width="10%">
+                                                            <div class="slds-text-align_left slds-cell-fixed"># Visit(s)</div>
+                                                        </th>
+                                                        <aura:set attribute="else">
+                                                            <th scope="col" width="45%">
+                                                                <div class="slds-text-align_left slds-cell-fixed">Provider Name</div>
+                                                            </th>
+                                                            <th scope="col" width="40%">
+                                                                <div class="slds-text-align_left slds-cell-fixed">Provider Type</div>
+                                                            </th>
+                                                            <th scope="col" width="15%">
+                                                                <div class="slds-text-align_left slds-cell-fixed"># Visit(s)</div>
+                                                            </th>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <aura:iteration items="{!v.providerDetailList}" var="pc">
+                                                    <tr>
+                                                        <aura:if isTrue="{!v.isNetworkStatusVisible}">
+                                                            <td data-label="title" style="vertical-align:top;">
+                                                                <div class="slds-text-align_left wordWraped" >
+                                                                    {!pc.title}
+                                                                </div>
+                                                            </td>
+                                                            <td scope="row" data-label="providerName" style="vertical-align:top;">
+                                                                <div class="slds-text-align_left wordWraped" >
+                                                                    {!pc.proName}
+                                                                </div>
+                                                            </td>
+                                                            <td scope="row" data-label="provSpecialty" style="vertical-align:top;">
+                                                                <div class="slds-text-align_left wordWraped" >
+                                                                    {!pc.proType}
+                                                                </div>
+                                                            </td>
+                                                            <td scope="row" data-label="count" style="vertical-align:top;">
+                                                                <div class="slds-text-align_left slds-p-left_large wordWraped" >
+                                                                    {!pc.proCount} 
+                                                                </div>
+                                                            </td>
+                                                            <aura:set attribute="else">
+                                                                <td scope="row" data-label="providerName" style="vertical-align:top;">
+                                                                    <div class="slds-text-align_left wordWraped" >
+                                                                        {!pc.proName}
+                                                                    </div>
+                                                                </td>
+                                                                <td scope="row" data-label="provSpecialty" style="vertical-align:top;">
+                                                                    <div class="slds-text-align_left wordWraped" >
+                                                                        {!pc.proType}
+                                                                    </div>
+                                                                </td>
+                                                                <td scope="row" data-label="count" style="vertical-align:top;">
+                                                                    <div class="slds-text-align_left slds-p-left_large wordWraped" >
+                                                                        {!pc.proCount} 
+                                                                    </div>
+                                                                </td>
+                                                            </aura:set>
+                                                        </aura:if>
+                                                    </tr>
+                                                </aura:iteration>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_1-of-12">
+                                <span>
+                                    <!-- Close Button-->
+                                    <div class="close-button" align="right">
+                                        <img src="{!$Resource.ADB_CallerProfileCardImages + '/ADB_CallerProfileCardImages/closebutton.png'}" style="height: 17px; width: 17px;"
+                                             onclick="{! c.closePUChartWindow}"/>
+                                    </div>
+                                    <!-- / Close Button-->
+                                </span>
+                            </div>
+                        </div>
+                    </header> 
+                </div>
+            </div>
+        </div>  
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+    <!-- / Provider Utilization Chart Window -->
+</aura:component>

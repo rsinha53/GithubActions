@@ -1,0 +1,263 @@
+<apex:component controller="ACETDataTableController" rendered="{!NOT(ISNULL(attrDatatableWrapper))}">   
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"/>
+    <!--<apex:stylesheet value="{!URLFOR($Resource.jQueryDatatableResources,'jquery-ui.css')}" />-->
+    <apex:includeScript value="{!URLFOR($Resource.jQueryDatatableResources,'jquery.dataTables.min.js')}" />
+    <apex:stylesheet value="{!URLFOR($Resource.jQueryDatatableResources,'jquery.dataTables.min.css')}" />
+    <!--<apex:includeScript value="{!URLFOR($Resource.jQueryDatatableResources,'jquery.highlight.js')}" /> -->
+    <!--<apex:includeScript value="{!URLFOR($Resource.jQueryDatatableResources,'dataTables.searchHighlight.min.js')}" /> -->
+    <!---<apex:stylesheet value="{!URLFOR($Resource.jQueryDatatableResources,'dataTables.searchHighlight.css')}" /> -->           
+    <apex:attribute type="ACETDataTableWrapper" name="attrDatatableWrapper" description="data table wrapper instance" /> 
+    <apex:attribute type="String" name="attrDataTableName" description="unique data table name within page" />                         
+        
+        <apex:outputPanel rendered="{!IF(attrDatatableWrapper.datatablename == 'ACETCommunicationSearchtable', true, false)}">
+    <table id="datatable{!attrDataTableName}" class="auto-doc-list display scroll "></table>
+    </apex:outputPanel>
+    
+      <apex:outputPanel rendered="{!IF(attrDatatableWrapper.datatablename != 'ACETCommunicationSearchtable', true, false)}">
+   
+    <table id="datatable{!attrDataTableName}" class="auto-doc-list display dataTable1"></table>
+    <style>
+    table.dataTable1 thead th {padding-left:10px}  
+    </style>
+    </apex:outputPanel>
+    
+    
+    <style>
+        /** to align left the header cell and data cell when sorting is disabled, datatable keeps 8px as a place holder for sorting icon */
+          
+.scroll tr{display:flex }
+.scroll td{flex: 1;word-wrap: break}
+.scroll thead tr:after{content: '';overflow-y: scroll;visibility: hidden;height: 20px;text-align:center;}
+.scroll thead th{flex: 1;display: block;width:auto; min-width:85px;text-align:center;}
+.scroll tbody td{display: block;width:inherit;padding: 10px 18px;min-width:inherit;text-align:center;word-wrap:break-word;}
+.scroll tbody{display: block;overflow-y: auto;height: 290px}
+.scroll thead{display: block;width:100%}        
+    </style>
+    <script>    
+     var acet = acet || {};
+     var resultdatafromtable = new Object();
+     (function(){
+        var dt = {};
+        dt.dataTableInited = false;
+        
+        var dtName = 'datatable{!attrDataTableName}';
+        var dtId = '#datatable{!attrDataTableName}';                  
+        
+        if(typeof acet.datatables == "undefined"){
+            acet.datatables = {};                                 
+        }
+                 
+        acet.datatables[dtName] = dt;  
+        dt.initDatatable = function(){
+           if(dt.dataTableInited) return;
+           dt.dataTableInited = true;
+           var columns = JSON.parse('{!attrDatatableWrapper.StrColumns}');          
+           var pageSize = {!attrDatatableWrapper.PageSize};
+           var startRecord = {!attrDatatableWrapper.StartRecord}; 
+           var pgNumber = "{!JSENCODE(TEXT(attrDatatableWrapper.PageStartNumber))}";            
+           var pagingType = '{!attrDatatableWrapper.PagingType}';    
+           var isSortEnabled = ('{!attrDatatableWrapper.IsSortEnabled}' == 'true' ? true : false);        
+           var serviceName = '{!attrDatatableWrapper.ServiceName}';
+           var pageStartNumber = (serviceName=='ACETFindDocWebservice' && parseInt(pgNumber)==0)?1:parseInt(pgNumber);
+           var defaultSortBy = {!attrDatatableWrapper.defaultSortBy};
+           var defaultSortDir = '{!attrDatatableWrapper.defaultSortDir}';
+           
+           var sort = [];           
+           if(defaultSortBy != -1) {
+               var sortBy = [];
+               sortBy.push(defaultSortBy);
+               sortBy.push(defaultSortDir);
+               sort.push(sortBy);
+           }
+                                       
+           var service =  '{!attrDatatableWrapper.Service}';
+           service = service.replace('&#x27;', '\'');
+           var $table = $(dtId);
+          
+
+           $table.DataTable({ 
+               "lengthChange": false,
+               "pageLength": pageSize,
+               "pagingType": pagingType,
+               "processing": true,
+               "serverSide": true, 
+               "searching": false,                   
+               "ordering": isSortEnabled,   
+               "order": sort,
+                                  
+               "ajax": function (data, callback, settings) {
+                    console.log(data);                                                                             
+                    Visualforce.remoting.Manager.invokeAction(
+                       '{!$RemoteAction.ACETDataTableController.queryPaginatedData}',
+                       serviceName,
+                       service,
+                       parseInt(data.start/pageSize) + pageStartNumber,
+                       pageSize, 
+                       serviceName=='ACETFindDocWebservice'?((pageSize*((parseInt(data.start / pageSize) + pageStartNumber)-1))+1):startRecord,
+                       function(result, event){
+                          console.log("result:"+JSON.stringify(result));
+                          callback(getData(data, result, settings)); 
+                       }, 
+                       {escape: true}
+                   );
+                                      
+               },
+               "columns": columns,
+               "createdRow": function(row, data, dataIndex) {
+                   if(typeof processDatatable != "undefined"){
+                        processDatatable(row, data, dataIndex);
+                   }
+                   
+                   if(typeof dt.processDatatable != "undefined"){
+                        dt.processDatatable(row, data, dataIndex);
+                   }                                                                            
+                },
+                "initComplete": function(settings, json) {
+                    if(typeof initDatatableComplete != "undefined"){                        
+                        initDatatableComplete(settings, json);
+                    }
+                    
+                    if(typeof dt.initDatatableComplete != "undefined"){                     
+                        dt.initDatatableComplete(settings, json);
+                    }
+                },
+                "drawCallback": function(settings) {
+                    if(isSortEnabled){                      
+                        var tableId = "#" + settings.sTableId;
+                        $(tableId).find(".sortDesc").remove();
+                        $(tableId).find(".sortAsc").remove();
+                        
+                        $(tableId).find("th.sorting_desc").append('<img src="/img/s.gif" alt="Sorted Descending" class="sortDesc" title="Sorted Descending"/>');
+                        $(tableId).find("th.sorting_asc").append('<img src="/img/s.gif" alt="Sorted Ascending" class="sortAsc" title="Sorted Ascending"/>');                        
+                    }
+                
+                    if(typeof drawCallback != "undefined"){ 
+                        drawCallback(settings);
+                    }
+                    
+                    if(typeof dt.drawCallback != "undefined"){ 
+                        dt.drawCallback(settings);
+                    }
+                    
+                    //display autodoc checkboxes 
+                    //var autodocSectionId = $(dtId).closest("[auto-doc='true']").attr("id");    
+                    //if(autodocSectionId){              
+                        //acet.autodoc.startAutodoc(autodocSectionId); 
+                    //}
+                    console.log('settings:');
+                    console.log(settings);
+                    
+                    //exclude from autodoc
+                    $(".dataTables_info").attr("auto-doc-item", "false");
+                    $(dtId + "_paginate").attr("auto-doc-item", "false");  
+                    var tablename = '{!attrDatatableWrapper.datatablename}';
+                   if(tablename == 'ProviderLookup') {
+                        if(resultdatafromtable.Success){
+                     var pagenumberdisplay = 'Showing page ';
+                   $(".dataTables_info").text(pagenumberdisplay.concat(+resultdatafromtable.pageNumber+1,' of ',resultdatafromtable.totalPages));
+                   }else{
+                      var pagenumberdisplay = 'Showing page ';
+                   $(".dataTables_info").text(pagenumberdisplay.concat(resultdatafromtable.pageNumber,' of ',resultdatafromtable.totalPages));
+                  
+                   }
+                  }
+                    //enable horizontal scroll bar for table
+                    $(tableId).wrap('<div style="overflow: auto;"></div>');
+                    $(tableId).parent().css("width", $(tableId).closest(".pbBody").css("width"));                                                         
+                }                                       
+           });
+           
+           function getData(d, ret, s){ 
+           resultdatafromtable = ret;
+                if(isSortEnabled && typeof ret.Response != "undefined" && ret.Response.length > 0 && d.order.length > 0) {  
+                    var sortBy = d.order[0].column;
+                    var sortByDir = d.order[0].dir;
+                    var sortByFieldName = d.columns[sortBy].data;
+                    console.log("sorting by '" + sortByFieldName +"'");
+                    
+                    ret.Response.sort(function(a,b){                        
+                        var value1 = a[sortByFieldName] ? a[sortByFieldName] : '';
+                        var value2 = b[sortByFieldName] ? b[sortByFieldName] : '';
+                        
+                        var result;
+                      if( sortByFieldName =='ServiceStart' || sortByFieldName =='ServiceEnd' || sortByFieldName =='Processed'){
+                         
+                          if(value1 == "" || value1 == null) result = -1;
+                          else  if(value2 == "" || value2 == null) result =  1;
+                          else{
+                           var a = new Date(value1);
+                        
+                          var b = new Date(value2);
+                              if (a < b) 
+                              result = -1;
+                              else if (a == b)
+                                result = 0;  // equal
+                              else if (a > b)
+                               result = 1;  // greater than
+                              else
+                                result =1;
+                          }
+                          
+                      }
+                        else if (sortByFieldName == 'PaidAmount' || sortByFieldName == 'TotalPaid' || sortByFieldName == 'TotalCharged' || sortByFieldName == 'Deductible' || sortByFieldName == 'patientResponsibility'){
+                           if(value1 == "" || value1 == null) result = -1;
+                      else  if(value2 == "" || value2 == null) result =  1;
+                       else
+                            result = Number(value1) - Number(value2);                      
+                        }
+                        else{
+                         result = value1.localeCompare(value2);
+                       
+                        }
+                        if(sortByDir != 'asc'){
+                            result = result * -1;
+                        }
+                        
+                        return result;
+                    }); 
+                }
+                if(ret.Success){             
+                   return {
+                    "draw": d.draw,
+                    "start": d.start,           
+                    "recordsTotal": ret.totalCount,
+                    "recordsFiltered": ret.totalCount,
+                    "data": ret.Response         
+                   };
+               }else{
+                   //a workround to display error message in table
+                   var errorMessage ='{!attrDatatableWrapper.errorMessage}';
+                   if(errorMessage){
+                   s.oLanguage.sEmptyTable = errorMessage ;
+                   }else{
+                    s.oLanguage.sEmptyTable = ret.Message;
+                   }
+                   return {
+                    "draw": d.draw,
+                    "start": d.start,           
+                    "recordsTotal": 0,
+                    "recordsFiltered": 0,
+                    "data": [],
+                    "error": ret.Message
+                   };
+               }
+
+           }                
+        };                                   
+     
+     })();     
+                                          
+     $(document).ready(function(){ 
+     
+        //set initOnDocumentReady to false and call initDatatable in method oncomplete if oncomplete is defined on action function
+        var initOnDocumentReady = '{!attrDatatableWrapper.InitOnDocumentReady}'; 
+        var dtName = 'datatable{!attrDataTableName}';
+              
+        if(initOnDocumentReady == 'true'){
+            acet.datatables[dtName].initDatatable();
+        }               
+     }); 
+             
+  </script>
+      
+</apex:component>

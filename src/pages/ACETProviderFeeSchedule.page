@@ -1,0 +1,131 @@
+<apex:page controller="ACETProviderFeeScheduleController" sidebar="false" id="PFSid"  docType="html-5.0" >
+   
+     <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="/support/console/30.0/integration.js"/>   
+    <apex:includeScript value="/soap/ajax/30.0/connection.js"/>
+    <apex:includescript value="//code.jquery.com/jquery-1.11.1.min.js"/>
+    <apex:includeScript value="{!URLFOR($Resource.ACETUIResources, '/JS/jquery-ui.js')}"/>
+    <apex:stylesheet value="{!URLFOR($Resource.ACETResources, '/css/m/memberdetail.css')}"/>  
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+    
+    <style>
+         .changeTableWidth{
+            width:132% !important;
+            margin-left:-13px !important;
+        }
+    </style>
+    
+    
+     
+    <apex:form id="formid">
+        
+        <apex:actionFunction name="afOnPageLoad" action="{!CallWSOnPageLoad}" rerender="clearTables,pgMsg" status="refreshMemberStatus" oncomplete="callagreements();"/>
+        <apex:actionFunction name="GetAgreements" action="{!CallFindAgreements}" reRender="AgrmtSection" status="refreshMemberStatus" onComplete="initContractDataTables('datatableContracts');"/>
+        <c:ACETInteractionHighlightsPanel InteractionAtt="{!wrapper.Interaction}"
+                                          SubjectAtt="{!wrapper.Subject}"
+                                          AdditionalInfoAtt="{!wrapper.AdditionalInfo}" html-auto-doc="auto" selectedOriginator="{!wrapper.interaction.Originator_Name__c}"></c:ACETInteractionHighlightsPanel>
+        <apex:outputPanel id="hippapopupPanel">
+            <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+        </apex:outputPanel> 
+        
+        
+        
+        <apex:sectionHeader title="Provider Fee Schedule" />
+        
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveAndCloseButton="false"
+                           attrShowSaveButton="true" attrShowMisdirectButton="true"
+                           attrSourceOriginator="{!wrapper.SourceOriginator}"
+                           attrInteractionId="{!wrapper.Interaction.Id}"
+                           attrSubjectId="{!wrapper.Subject.Id}"
+                           attrCallTopic="Provider Fee Schedule"/>
+        
+        <apex:pageblock mode="maindetail" id="AgrmtSectionBlock" html-auto-doc-section-key="AgrmtSectionBlock" html-auto-doc-section-column-indexes="1,2,3,4,5,6,7,8,9"> 
+            <apex:pageblockSection id="AgrmtSection" html-auto-doc="true"  html-auto-doc-case-items="true" html-auto-doc-pagination="true"  columns="1"><h3>Contracts</h3>
+                <apex:outputPanel html-auto-doc-pagination="true" styleClass="enablePagination" html-auto-doc-section-combinedkey="AgrmtSectionBlock" html-auto-doc-section-tabid="" >
+                <c:ACETDataTable attrDatatableWrapper="{!AgrmntsDTWrapper}" attrDataTableName="Contracts"/>
+                </apex:outputpanel>
+            </apex:pageblockSection>
+        </apex:pageblock>
+            
+        <c:ACETDiagnosisAndPricingTable attrIsProviderFeeScheduleCallTopic="true"/>
+       <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+                           attrShowSaveAndCloseButton="false" 
+                           attrShowSaveButton="true"
+                           attrShowMisdirectButton="true" 
+                           attrSourceOriginator="{!wrapper.SourceOriginator}"
+                           attrInteractionId="{!wrapper.Interaction.Id}"                           
+                           attrSubjectId="{!wrapper.Subject.Id}"
+                           attrCallTopic="Provider Fee Schedule"
+                           attrLocation="bottom"/>
+       <div>
+           <apex:commandLink onclick="topFunction();" value="Back To Top"  style="color:Blue;" rerender="none" />
+        </div>             
+        
+    </apex:form>
+    <script>
+        function drawCallback(settings){
+            //localStorage.removeItem("table");
+            //localStorage.removeItem("rowCheckHold");
+            acet.autodoc.startAutodoc();
+    
+            $("[id$='AgrmtSection']").find(".auto-doc-list").find("tbody").find("td").click(function(e){
+                var tdNum = parseInt($(this).index());
+                
+                if(tdNum != 0 && tdNum != 10 && !$(this).parent().hasClass("selected")){
+                     
+                    $("tr.selected").removeClass("selected");
+                    $(this).parent().addClass("selected");
+                     var selRowPId = $("tr.selected").find('td').eq(7).text(); 
+                    if(selRowPId == ''){ 
+                        $("tr.selected").removeClass("selected");  
+                    }else{
+                        if(tableDisplayed == true){
+                            OpenDiagCodesnotReRender(selRowPId);
+                        }else{
+                            tableDisplayed = true; 
+                            OpenDiagCodes_af(selRowPId); 
+                        }
+                    }
+                }
+           });
+            var totalAllRows;
+            $("[id$='AgrmtSection']").find(".auto-doc-list").find("tbody").find("tr").each(function(){
+                if ($(this).find('td.dataTables_empty').length > 0) {
+                         console.log('teste');
+                         totalAllRows = 0;  
+                      }
+                if ($(this).find('td.dataTables_empty').length == 0)  {
+                         console.log('testlength');
+                         totalAllRows = $('#datatableContracts tbody tr:visible').length; 
+                      }
+             });
+                $('#datatableContracts_info').html('Showing&nbsp;' +totalAllRows+ '&nbsp;entries');  
+        }
+    
+	$(document).ready(function(){
+          afOnPageLoad();
+       });
+    
+        function topFunction() {
+            window.scrollTo(0,0);
+         }
+    function initContractDataTables(dataTableName) {
+        if (!acet.datatables[dataTableName].dataTableInited) {
+            acet.datatables[dataTableName].initDatatable();
+            acet.datatables[dataTableName].processDatatable = function(row, data, dataIndex) {
+            var status = data["Contract_Status"];
+            console.log('status' +status);
+            if(status == 'A') {
+                  console.log('status');
+                  console.log('row'+$(row).length);
+                  $(row).find(":nth-child(2)").html('<img src="{!URLFOR($Resource.ACETResources, '/img/m/active.jpg')}" style="max-width:50px;"></img>');
+              }
+           else if(status == 'I') {
+                 $(row).find(":nth-child(2)").html('<img src="{!URLFOR($Resource.ACETResources, '/img/m/inactive.jpg')}" style="max-width:50px;"></img>');
+               }
+           };
+       } 
+     }
+    </script>
+  
+</apex:page>

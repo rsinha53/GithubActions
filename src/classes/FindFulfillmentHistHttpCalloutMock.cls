@@ -1,0 +1,12 @@
+@isTest
+
+global class FindFulfillmentHistHttpCalloutMock implements HttpCalloutMock {
+    global HTTPResponse respond(HTTPRequest request) {
+        HttpResponse response = new HttpResponse();
+        response.setHeader('Content-Type', 'application/json');
+        response.setBody('{"findFulfillmentHistoryResult":{"findFulfillmentHistoryResponse":{"searchParameter":{"searchSourceID": "FISERV","documentID": "Raja_Fax"},"searchResultSet":[{"responseRequestHeader":{"requestID": "test_demo_22_1","sourceIDName": "","destinationIDName": "FISERV ID Card Supplier","requestDate": "2017-01-31","businessSegmentName": "","marketSegmentName": "Oxford","fulfillmentTypeBusName": "Claim Pend Letters","requestCategory": "TransactionalInlineDataOnly","dataFormat": "pdf","requestorRefNo": "req123","supplierRefNo": "sup01","requestTrailer": {"requestItemCount": 1}},"responseCurrentEventLog":{"processorName": "Fulfillment Hub","eventTypeBusName": "Fulfilled","receivedDate": "2017-05-12","dispatchedDate": "2017-05-12","statusCode": "Accepted"},"responseRequestDetail": {"responseTransactionalRequestDetail":{"responseRecipient":[{"recipientId": "Raja9","identifierQualifierCodeDescr": "Member ID Type","deliveryMethod1": "Fax","constituentTypeDescr": "Member Type","person":{"prefix": "Mr","firstName": "Firstname","middleName": "Middlename","lastName": "Lastname","suffix": "Dr"},"MailToAddress":{"Address1": "Nilgiri3Appt","Address2": "Sector34","Address3": "CityCenter","City": "Noida","State": "UP","Zip": "201301"},"ReturnToAddress":{"Address1": "RosewoodCity","Address2": "SohnaRoad","Address3": "Street34","City": "Noida","State": "Noida","Zip": "201301"},"faxNumber": "123-990-6734","emailAddress": "abc@xyz.com"},"organization": {"name1": "Test", "name2": "Test"}],"responseTemplate":{"templateID": "childRequest_1","templateName": "tempname"}}},"responseRequestHistory":[{"processorName": "Fulfillment Hub","eventTypeBusName": "Fulfilled","receivedDate": "2017-05-12","dispatchedDate": "2017-05-12","recipientId": "Raja9","deliveryMethodCd": "Fax","statusCode": "Accepted","successCount": "1","exceptionCount": "0","documentID": "Raja_Fax","documentType": "Raja","repositoryName": "Raja"},{"processorName": "Fulfillment Hub","eventTypeBusName": "Fulfilled","receivedDate": "2017-05-12","dispatchedDate": "2017-05-12","recipientId": "Raja9","deliveryMethodCd": "Fax","statusCode": "Accepted","successCount": "1","exceptionCount":"0"}]}]}}}');
+        response.setStatusCode(200);
+        return response; 
+    }
+
+}

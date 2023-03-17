@@ -1,0 +1,195 @@
+<!-- Update PCP : US2476944 -->
+<aura:component controller="ACETLGT_ProviderLookupDetailController">
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    
+    <aura:attribute name="showUpdatePCPModal" type="Boolean" default="false"/>
+    <aura:attribute name="pcpDate"  type="Date" default=""/>
+    <aura:attribute name="subSrk" type="String" access="global" />
+    <aura:attribute name="highlightPanel" type="ACETLGT_HighlightPanelInfo" />
+    <aura:attribute name="fullName" type="String" />
+    <aura:attribute name="address" type="String" />
+    <aura:attribute name="phoneNumber" type="String" />
+    <aura:attribute name="speciality" type="String" />
+    <aura:attribute name="PCPRole" type="String" />
+	<aura:attribute name="network" type="String" access="global" />
+    <aura:attribute name="Memberdetail" type="sObject" access="public"/>
+    <aura:attribute name="physicianInfo" type="list" default="[]"/>
+    <aura:attribute name="dateError"  type="String" default=""/>
+    <aura:attribute name="Spinner" type="Boolean" default="false" />
+
+    <aura:attribute name = "detailResult" type="Object" access="global"/>
+    <aura:attribute name="pcpObgnID" default="" type="string"/>  
+    
+    <!-- Update PCP : Member Attributes-->
+    <aura:attribute name="fName" type="String" />
+    <aura:attribute name="lName" type="String" />
+    <aura:attribute name="mName" type="String" />
+    <aura:attribute name="memGender" type="String" />
+    <aura:attribute name="suffixName" type="String" />
+    <aura:attribute name="ssn" type="String" />
+
+    <!-- Update PCP : Success Message -->
+    <aura:attribute name="isSuccessUpdate" type="Boolean" default="false"/>
+    <aura:attribute name="isFailedUpdate" type="Boolean" default="false"/>
+    <aura:attribute name="message" type="String" default=""/>
+    
+    <!-- Update PCP : Existing Patient : Checkbox : -->
+    <aura:attribute name="isProviderPanelClosed" type="Boolean" default="false"/>
+    <aura:attribute name="isExistingPatient" type="Boolean" default="false"/>
+    <aura:if isTrue="{! !empty(v.PCPRole)}">
+    <lightning:button label="Update PCP" onclick="{!c.updatePCPModal}" />
+    </aura:if>
+    <aura:if isTrue="{!v.showUpdatePCPModal}">
+        <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" style="position: fixed !important;" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container" >                
+                <div class="slds-is-relative">
+                <!-- Modal/Popup Box Header Starts here-->
+                <header class="slds-modal__header">
+                    <lightning:buttonIcon iconName="utility:close"
+                                          onclick="{! c.closePCPModal }"
+                                          alternativeText="Cancel"
+                                          variant="bare-inverse"
+                                          class="slds-modal__close"/>
+                    <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Update Primary Care Physician</h2>
+                </header>
+                <!--Modal/Popup Box Body Starts here-->
+                <!--	Provider Panel is closed	-->
+                <aura:if isTrue="{!v.isProviderPanelClosed}">
+                    <div style="background-color:white; padding-bottom: 5px;">   
+                        <ui:message title="" severity="info" closable="false" class="slds-size_99-of-100 message_bkg">
+                            {!$Label.c.ACETProviderPanelClosed}
+                        </ui:message>
+                    </div>
+                </aura:if>
+                <!--	Provider Panel is closed	-->
+
+                <!--Modal/Popup Box Body Starts here-->
+                <aura:if isTrue="{!v.isSuccessUpdate}">
+                    <div style="background-color:white; padding-bottom: 5px;">
+                        <ui:message title="" severity="confirm" closable="false" class="message_bkg">
+                            {!v.message}
+                        </ui:message>
+                    </div>
+                </aura:if>
+                <aura:if isTrue="{!v.isFailedUpdate}">
+                    <div style="background-color:white; padding-bottom: 5px;">
+                        <ui:message title="" severity="error" closable="false" class="message_bkg">
+                            {!v.message}
+                        </ui:message>
+                    </div>
+               </aura:if>
+
+                
+                <!-- 1st Table : Selected New Primary Care Physician Information : Start -->
+                <div class="slds-modal__content slds-p-around_medium"  id="modal-content-id-1">
+                    <label ><b class="slds-p-bottom_large">Selected New Primary Care Physician Information</b></label>
+                    <table class="slds-table slds-table_bordered coverage-tbl slds-no-row-hover" style="width:100%; table-layout: fixed;">
+                        <thead>
+                            <tr>
+                                <th class="slds-cell-wrap" width="100%">Name</th>
+                                <th class="slds-cell-wrap" width="100%">Network</th>
+                                <th class="slds-cell-wrap" width="100%">Address</th>
+                                <th class="slds-cell-wrap" width="100%">Phone Number</th>
+                                <th class="slds-cell-wrap" width="100%">Speciality</th>
+                                <th class="slds-cell-wrap" width="100%">PCP Assignment Type</th>
+                                <aura:if isTrue="{!v.isProviderPanelClosed}"> 
+                                    <th class="slds-cell-wrap" width="100%">Existing Patient</th>
+                                </aura:if>
+                                <th width="100%">Effective Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>       
+                            <tr class="" >	
+                                <td class="slds-cell-wrap" width="100%"><ui:outputText value="{!v.fullName}"/></td>
+                                <td class="slds-cell-wrap" width="100%"><ui:outputText value="{!v.network}"/></td>
+                                <td class="slds-cell-wrap" width="100%"><ui:outputText value="{!v.address}"/></td>
+                                <td class="slds-cell-wrap" width="100%"><ui:outputText value="{!v.phoneNumber}"/></td>
+                                <td class="slds-cell-wrap" width="100%"><ui:outputText value="{!v.speciality}"/></td>
+                                <td class="slds-cell-wrap" width="100%"><ui:outputText value="{!v.PCPRole}"/></td>
+                                <aura:if isTrue="{!v.isProviderPanelClosed}"> 
+                                    <td class="slds-cell-wrap" width="100%"> <lightning:input type="checkbox" aura:id="existPatient"  variant="label-hidden" onchange="{!c.onExistingPatientChange}" /></td>
+                                </aura:if>
+                                <td class="slds-cell-wrap" width="100%">                                    
+                                    <ui:inputDate aura:id="expdate" class="field" value="{!v.pcpDate}" format="MM/dd/yyyy" displayDatePicker="true" /> 
+                                    <label class="slds-text-color_error">{!v.dateError}</label>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- 1st Table : Selected New Primary Care Physician Information : End -->
+                
+                
+                <!--	Spinner	-->
+                <aura:if isTrue="{!v.Spinner}">
+                    <lightning:spinner alternativeText="Loading, Please Wait..." title="Loading, Please Wait..." variant="brand" size="medium"/>
+                </aura:if>
+                    
+                <!--	/Spinner	-->
+                
+                
+                <!-- 2nd Table : Select New Primary Care Physician Information : Start -->
+                <ui:scrollerWrapper class="outerScroller" >
+                    <div class="slds-modal__content slds-p-around_medium"  id="modal-content-id-1">
+                        <label><b class="slds-p-bottom_medium">Current Primary Care Physician Information</b></label>
+                        <table class="slds-table slds-table_bordered coverage-tbl slds-no-row-hover" style="width:100%; table-layout: fixed;">
+                            <thead>
+                                <tr>
+                                    <th class="slds-cell-wrap" width="100%">Active</th>
+                                    <th class="slds-cell-wrap" width="100%">Last Name</th>
+                                    <th class="slds-cell-wrap" width="100%">First Name</th>
+                                    <th class="slds-cell-wrap" width="100%">PCP Assignment</th>
+                                    <th class="slds-cell-wrap" width="100%">Effective Date</th>
+                                    <th class="slds-cell-wrap" width="100%">End Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <aura:iteration items="{!v.physicianInfo}" var="dt" aura:id="item"> 
+                                    <tr class="" >	
+                                        <td><aura:if isTrue="{!dt.image == 'active'}">
+                                            <div id="active_image" class="slds-icon_container_circle slds-icon-action-approval slds-icon_container">
+                                                <img src="{!$Resource.SLDS + '/assets/icons/action/approval_60.png'}" style="max-width:14px;" />
+                                            </div>   
+                                            <aura:set attribute="else"> 
+                                                <aura:if isTrue="{!dt.image == 'inactive'}">
+                                                    <div id="non_active_image" class="slds-icon_container_circle slds-icon-action-close slds-icon_container">
+                                                        <img src="{!$Resource.SLDS + '/assets/icons/action/close_60.png'}" style="max-width:14px;"/>
+                                                    </div>   
+                                                </aura:if>
+                                            </aura:set>
+                                            </aura:if></td>
+                                        <td class="slds-cell-wrap" width="100%"><ui:outputText value="{!dt.LastName}"/></td>
+                                        <td class="slds-cell-wrap" width="100%"><ui:outputText value="{!dt.FirstName}"/></td>
+                                        <td class="slds-cell-wrap" width="100%"><ui:outputText value="{!dt.pcpAssignmentType}"/></td>
+                                        <td class="slds-cell-wrap" width="100%"><ui:outputdate value="{!dt.effectiveDate}" format="MM/DD/YYYY"/></td>
+                                        <td class="slds-cell-wrap" width="100%"><ui:outputdate value="{!dt.endDate}" format="MM/DD/YYYY"/></td>
+                                    </tr>
+                                </aura:iteration>
+                            </tbody>
+                        </table>
+                    </div>
+                </ui:scrollerWrapper>
+                <!-- 2nd Table : Select New Primary Care Physician Information : End -->
+                
+                
+                
+                
+                <!--Modal/Popup Box Footer Starts here-->
+                <footer class="slds-modal__footer">
+                    <lightning:button variant="brand"
+                                      label="Submit"
+                                      title="Submit"
+                                      disabled="{! v.isSuccessUpdate || (v.isProviderPanelClosed != v.isExistingPatient) }"
+                                      onclick="{!c.onSubmit}"/>
+                    <lightning:button variant="brand"
+                                      label="Cancel"
+                                      title="Cancel"
+                                      onclick="{! c.closePCPModal }"/>
+                    
+                </footer>
+            </div>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" style="position: fixed !important;"></div>
+    </aura:if>
+</aura:component>

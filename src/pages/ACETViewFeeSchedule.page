@@ -1,0 +1,742 @@
+<apex:page controller="ACETViewFeeScheduleController" sidebar="false"
+    title="View Fee Schedule" id="pACETVFS"><!-- action="{!CallGetProviderContractsWS}" -->
+     <script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+    <!--Commenting until integration time -US661689
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    <apex:includeScript value="{!$Resource.JqueryTableSorter}"></apex:includeScript>
+    <apex:stylesheet value="{!URLFOR($Resource.ACETResources, '/css/m/memberdetail.css')}" />
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+    <apex:includeScript value="/soap/ajax/30.0/connection.js" />
+    <style>
+.pbSubsection {
+    padding: 0px 0 15PX;
+    BORDER-BOTTOM: 3PX SOLID #1797c0;
+}
+
+body .bDetailBlock.bPageBlock .pbBody .pbSubheader, body.FindSimilarOppsSearchUi .bPageBlock .pbBody .pbSubheader
+    {
+    padding: 0px 0 15PX;
+    BORDER-BOTTOM: 3PX SOLID #1797c0;
+    margin-top: -48px;
+}
+
+.errorMsg {
+    color: #c00;
+    margin-left: 2px;
+}
+
+.Required {
+    border: 2px solid #c00;
+}
+
+.myclass {
+    background-color: #c00; //
+    position: absolute;
+    left: 245px;
+    width: 3px;
+    top: 120px;
+    bottom: 95px;
+}
+
+.inputProcClass {
+    width: 102px;
+}
+
+.alignLabels {
+    text-align: left;
+}
+
+.apexp .bPageBlock.apexDefaultPageBlock .pbBody .pbSubheader {
+    border-top: 0;
+    color: #000;
+}
+
+.homeTab .tertiaryPalette, .individualPalette .homeBlock .tertiaryPalette,
+    .layoutEdit .individualPalette .homeBlock .tertiaryPalette {
+    background-color: #fff;
+    border-color: #fff;
+}
+
+.errorConsole .x-grid3-row-over, body .pbBody table.list tr.dataRow.highlight td,
+    body .pbBody table.list tr.dataRow.highlight th {
+    background-color: yellow;
+}
+
+.apexp .bPageBlock.apexDefaultPageBlock .pbBody .pbSubheader .showListButton
+    {
+    background-position: 1px -1px;
+}
+
+.apexp .bPageBlock.apexDefaultPageBlock .pbBody .pbSubheader .hideListButton
+    {
+    background-position: 1px -11px;
+}
+
+.apexp .bPageBlock .detailList .list .last td, .apexp .bPageBlock .detailList .list .last th,
+    .apexp .detailList .list .totalRow td, .apexp .detailList .list .totalRow th
+    {
+    border-bottom-width: 1px; . errorMsg { color : #c00;
+    margin-left: 2px;
+}
+
+.Required {
+    border: 2px solid #c00;
+}
+
+}
+a {
+    font-size: 12px;
+}
+</style>
+    <apex:form id="frmACETVFS">
+        <c:ACETInteractionHighlightsPanel InteractionAtt="{!Interaction}"
+            SubjectAtt="{!Subject}" AdditionalInfoAtt="{!AdditionalInfo}"
+            html-auto-doc="auto"></c:ACETInteractionHighlightsPanel>
+        <apex:sectionHeader subtitle="View Fee Schedule" />
+        <apex:actionFunction name="afRefreshAgreements"
+            action="{!RefreshAgreements}" rerender="pbContracts"
+            oncomplete="initCoverageTable();acet.autodoc.startAutodoc('coveragesPageBlock');" />
+
+        <apex:pageMessages id="msgId" />
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+            attrShowSaveAndCloseButton="false" attrShowSaveButton="true"
+            attrShowMisdirectButton="true" 
+            attrSourceOriginator="{!wrapper.SourceOriginator}"
+            attrInteractionId="{!wrapper.Interaction.Id}"
+            attrSubjectId="{!wrapper.Subject.Id}"
+            attrCallTopic="View Authorization" />
+
+
+        <apex:outputPanel id="pbContracts">
+
+
+            <apex:pageblock mode="maindetail" id="coveragesPageBlock">
+
+
+                <apex:pageblockSection id="coverages" columns="1" title="Contracts"
+                    html-auto-doc="true">
+                    <apex:selectRadio id="radContactType" value="{!ContractType}"
+                        onclick="OnChangeContactType();" disabled="{!DisableContractType}"
+                        html-auto-doc-item="false">
+                        <apex:SelectOptions value="{!ContractTypes}"
+                            html-auto-doc-item="false" />
+                    </apex:selectRadio>
+
+
+                    <apex:pageBlockTable id="coverage-table" value="{!lstACETProvider}"
+                        var="cl"                    
+                        captionStyle="text-align:left;margin-bottom:3px;">
+
+                        <apex:column >
+                            <div auto-doc-item="false">
+                                <apex:inputHidden id="preferredCoverageGUID"
+                                    value="{!ProferredCoverageGUID}" />
+                                <apex:inputHidden id="clGUID" value="{!cl.GUID}"
+                                    html-auto-doc-item="false" />
+                                <img
+                                    src="{!URLFOR($Resource.ACETResources, '/img/m/' + IF(cl.isActive==true, 'active.jpg', 'inactive.jpg'))}"
+                                    onclick="openFeeScheduleSection();" />
+                            </div>
+                        </apex:column>
+                        <apex:column headerValue="Product"
+                            onclick="openFeeScheduleSection();">{!cl.Product}</apex:column>
+                        <apex:column headerValue="Network ID"
+                            onclick="openFeeScheduleSection();">{!cl.Network_ID}</apex:column>
+                        <apex:column headerValue="Network Name"
+                            onclick="openFeeScheduleSection();">{!cl.Network_Name}</apex:column>
+                        <apex:column headerValue="Network Status"
+                            onclick="openFeeScheduleSection();">{!cl.Network_Status}</apex:column>
+                        <apex:column headerValue="Effective"
+                            onclick="openFeeScheduleSection();">{!cl.Effective}</apex:column>
+                        <apex:column headerValue="Cancel"
+                            onclick="openFeeScheduleSection();">{!cl.Cancel}</apex:column>
+                        <apex:column headerValue="IPA" onclick="openFeeScheduleSection();">{!cl.IPA}</apex:column>
+                        <apex:column headerValue="Capitation"
+                            onclick="openFeeScheduleSection();">{!cl.Capitation}</apex:column>
+                        <apex:column headerValue="Accepting New Patients"
+                            onclick="openFeeScheduleSection();">  {!cl.Accepting_New_Patients}</apex:column>
+                    </apex:pageBlockTable>
+                    <apex:outputpanel rendered="{!(NOT(ISNULL(lstACETProvider)) && lstACETProvider.size == 0)}">
+                        <p style="color: black; text-align: center;">No contracts
+                            found</p>
+                    </apex:outputpanel>
+                </apex:pageblockSection>
+                </apex:pageBlock>
+                </apex:outputpanel>
+                <div style="display: none" id="feescheduleId">
+                    <apex:actionFunction action="{!search}" rerender="pbResult"
+                        name="checkSearchVad" />
+                    <apex:actionFunction action="{!searchNegative}" rerender="pbResult"
+                        name="checkSearchVadNegative"/>
+                    <apex:pageBlock title="Fee Schedule Code Lookup"
+                        id="pbSearchCriteria" mode="maindetail">
+                        <div id="pbMsg"></div>
+                        <table class="detailList" border="0" cellpadding="5px"
+                            cellspacing="0" width="100%">
+                            <tbody>
+                                <tr>
+                                    <th style="padding-right: 10px; font-weight: bold; !important"
+                                        class="alignLabels"><label>Date of Service From</label></th>
+                                    <td style="padding-right: 12px;">
+                                        <div class="requiredInput">
+                                            <div class="requiredBlock"></div>
+                                            <apex:inputField id="StartDate"
+                                                value="{!StartDate.tst_Date_Field__c}" required="false"
+                                                style="width: 65px" />
+                                        </div>
+                                    </td>
+                                    <th style="padding-right: 10px; font-weight: bold; !important"
+                                        class="alignLabels"><label>Date of Service To</label></th>
+                                    <td style="padding-right: 12px;" class="alignLabels">
+                                        <div class="requiredInput">
+                                            <div class="requiredBlock"></div>
+                                            <apex:inputField id="EndDate"
+                                                value="{!EndDate.tst_Date_Field__c}" />
+                                            <div class="errorMsg"
+                                                style="display: none; margin-left: -4px;">
+                                                <b>Error:</b> Invalid End Date
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <th style="padding-right: 10px; font-weight: bold; !important"
+                                        class="alignLabels"><label>Location</label></th>
+                                    <td style="padding-right: 12px;" class="alignLabels">
+                                        <div class="requiredInput">
+                                            <div class="requiredBlock"></div>
+                                            <apex:selectList size="1" id="Location"
+                                                value="{!CheckNumber}" style="width:150px">
+                                                <apex:selectOption itemLabel="Select" itemValue="Select"></apex:selectOption>
+                                                <apex:selectOption itemLabel="AS Ambulatory Surgical Center"
+                                                    itemValue="AS Ambulatory Surgical Center"></apex:selectOption>
+                                                <apex:selectOption itemLabel="AT Alcohol Treatment Center"
+                                                    itemValue="AT Alcohol Treatment Center"></apex:selectOption>
+                                                <apex:selectOption itemLabel="BC Birthing Center"
+                                                    itemValue="BC Birthing Center"></apex:selectOption>
+                                                <apex:selectOption itemLabel="CF Convalascent Facility"
+                                                    itemValue="CF Convalascent Facility"></apex:selectOption>
+                                                <apex:selectOption itemLabel="CL Clinic (Facility)"
+                                                    itemValue="CL Clinic (Facility)"></apex:selectOption>
+                                                <apex:selectOption itemLabel="FS Free Standing Treatment Center"
+                                                    itemValue="FS Free Standing Treatment Center"></apex:selectOption>
+                                                <apex:selectOption itemLabel="HM Home" itemValue="HM Home"></apex:selectOption>
+                                                <apex:selectOption itemLabel="HS Hospice"
+                                                    itemValue="HS Hospice"></apex:selectOption>
+                                                <apex:selectOption itemLabel="IH Impatient Hospital"
+                                                    itemValue="IH Impatient Hospital"></apex:selectOption>
+                                                <apex:selectOption itemLabel="IL Independent Lab or X-ray Facility"
+                                                    itemValue="IL Independent Lab or X-ray Facility"></apex:selectOption>
+                                                <apex:selectOption itemLabel="OF Office"
+                                                    itemValue="OF Office"></apex:selectOption>
+                                                <apex:selectOption itemLabel="OH Outpatient Hospital"
+                                                    itemValue="OH Outpatient Hospital"></apex:selectOption>
+                                                <apex:selectOption itemLabel="OL Other Location"
+                                                    itemValue="OL Other Location"></apex:selectOption>
+                                                <apex:selectOption itemLabel="RX Pharmacy or Medical Supply"
+                                                    itemValue="RX Pharmacy or Medical Supply"></apex:selectOption>
+                                                <apex:selectOption itemLabel="SA Substance Abuse Center"
+                                                    itemValue="SA Substance Abuse Center"></apex:selectOption>
+                                                <apex:selectOption itemLabel="UC Urgent Care Center"
+                                                    itemValue="UC Urgent Care Center"></apex:selectOption>
+                                            </apex:selectList>
+                                        </div>
+                                    </td>
+                                    <th style="padding-right: 10px; font-weight: bold; !important"
+                                        class="alignLabels"><label>Unit Type</label></th>
+                                    <td style="padding-right: 12px;">
+                                        <div class="requiredInput">
+                                            <div class="requiredBlock"></div>
+                                            <apex:selectList size="1" id="UnitType"
+                                                value="{!SeriesDesignator}">
+                                                <apex:selectOption itemLabel="Days" itemValue="Days"></apex:selectOption>
+                                                <apex:selectOption itemLabel="Minutes" itemValue="Minutes"></apex:selectOption>
+                                            </apex:selectList>
+                                        </div>
+                                    </td>
+                                    <th style="padding-right: 10px; font-weight: bold; !important"
+                                        class="alignLabels"><label># of Units</label></th>
+                                    <td width="10%">
+                                        <div class="requiredInput">
+                                            <div class="requiredBlock"></div>
+                                            <apex:inputText id="NoOfUnits"
+                                                value="{!StartDate.tst_unit_type__c}"
+                                                styleClass="inputProcClass" required="true" maxlength="5" />
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr width="100%" style="padding-top: 10px;">
+                                    <th style="padding-right: 10px; font-weight: bold; !important"
+                                        class="alignLabels"><label>Procedure </label></th>
+
+                                    <td class="alignLabels"><apex:inputText id="PC1"
+                                            value="{!pcode}" styleClass="inputProcClass" maxlength="5" />
+                                        <div class="errorMsg" style="display: none;">
+                                            <b>Error:</b>
+                                        </div></td>
+                                    <td class="alignLabels"><apex:inputText id="PC2"
+                                            value="{!pcode1}" styleClass="inputProcClass" maxlength="5" />
+                                        <div class="errorMsg" style="display: none;">
+                                            <b>Error:</b>
+                                        </div></td>
+                                    <td class="alignLabels"><apex:inputText id="PC3"
+                                            value="{!pcode2}" styleClass="inputProcClass" maxlength="5" />
+                                        <div class="errorMsg" style="display: none;">
+                                            <b>Error:</b>
+                                        </div></td>
+                                    <td class="alignLabels"><apex:inputText id="PC4"
+                                            value="{!pcode3}" styleClass="inputProcClass" maxlength="5" />
+                                        <div class="errorMsg" style="display: none;">
+                                            <b>Error:</b>
+                                        </div></td>
+                                    <td class="alignLabels"><apex:inputText id="PC5"
+                                            value="{!pcode4}" styleClass="inputProcClass" maxlength="5" />
+                                        <div class="errorMsg" style="display: none;">
+                                            <b>Error:</b>
+                                        </div></td>
+                                    <td class="alignLabels"><apex:inputText id="PC6"
+                                            value="{!pcode5}" styleClass="inputProcClass" maxlength="5" />
+                                        <div class="errorMsg" style="display: none;">
+                                            <b>Error:</b>
+                                        </div></td>
+                                    <td class="alignLabels"><apex:inputText id="PC7"
+                                            value="{!pcode6}" styleClass="inputProcClass" maxlength="5" />
+                                        <div class="errorMsg" style="display: none;">
+                                            <b>Error:</b>
+                                        </div></td>
+                                    <td class="alignLabels"><apex:inputText id="PC8"
+                                            value="{!pcode7}" styleClass="inputProcClass" maxlength="5" />
+                                        <div class="errorMsg" style="display: none;">
+                                            <b>Error:</b>
+                                        </div></td>
+                                    <td class="alignLabels"><apex:inputText id="PC9"
+                                            value="{!pcode8}" styleClass="inputProcClass" maxlength="5" />
+                                        <div class="errorMsg" style="display: none;">
+                                            <b>Error:</b>
+                                        </div></td>
+                                    <td class="alignLabels"><apex:inputText id="PC10"
+                                            value="{!pcode9}" styleClass="inputProcClass" maxlength="5" />
+                                        <div class="errorMsg" style="display: none;">
+                                            <b>Error:</b>
+                                        </div></td>
+                                </tr>
+
+                                <tr style="padding-top: 10px;">
+                                    <th style="padding-right: 10px; font-weight: bold; !important"
+                                        class="alignLabels"><label>Revenue</label></th>
+                                    <td class="alignLabels"><apex:inputText id="Revenue"
+                                            value="{!revenue}" styleClass="inputProcClass" maxlength="4" />
+                                    </td>
+                                    <th style="padding-right: 10px; font-weight: bold; !important"
+                                        class="alignLabels"><label>Charges</label></th>
+                                    <td class="alignLabels"><apex:inputText id="Charges"
+                                            value="{!charges}" styleClass="inputProcClass" maxlength="9" />
+                                    </td>
+                                    <th style="padding-right: 10px; font-weight: bold; !important"
+                                        class="alignLabels"><label>Modifiers</label></th>
+                                    <td class="alignLabels"><apex:inputText styleClass="inputProcClass" id="MOD1" value="{!modifiers}"
+                                            maxlength="2" /></td>
+                                    <td class="alignLabels"><apex:inputText styleClass="inputProcClass" id="MOD2" maxlength="2" /></td>
+                                    <td class="alignLabels"><apex:inputText styleClass="inputProcClass" id="MOD3" maxlength="2" /></td>
+                                    <td class="alignLabels"><apex:inputText styleClass="inputProcClass" id="MOD4" maxlength="2" /></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <apex:pageBlockButtons location="bottom">
+                            <input id="btnSearch" type="button" value="Search" class="btn"
+                                OnClick="return validate_fs();">
+                            </input>
+                            <input type="button" id="btnClearAll" value="Clear" class="btn"
+                                OnClick="return clearForm();" />
+                        </apex:pageBlockButtons>
+                    </apex:pageBlock>
+                </div>
+                <apex:outputPanel id="pbResult">
+                    <apex:pageBlock rendered="{!(NOT(ISNULL(FeeScheduleCodeLookupResults)) && FeeScheduleCodeLookupResults.size > 0)}"
+                        mode="maindetail">
+                        <apex:pageblocksection html-auto-doc="true"
+                            title="Fee Schedule Results" columns="1" id="pbsidfeeschedule">
+                            <apex:pageBlockTable value="{!FeeScheduleCodeLookupResults}"
+                                var="FSCLResult">
+                                <apex:column headerValue="Date Of Service Range">{!FSCLResult.DOSEffectiveDate}-{!FSCLResult.DOSCancelDate}</apex:column>
+                                <apex:column headerValue="Product">{!FSCLResult.Product}</apex:column>
+                                <apex:column headerValue="Network">{!FSCLResult.Network}</apex:column>
+                                <apex:column headerValue="IPA">{!FSCLResult.IPA}</apex:column>
+                                <apex:column headerValue="Location">{!FSCLResult.Location}</apex:column>
+                              <apex:column headerValue="Code">
+                                    <apex:outputText value="{!FSCLResult.Code}"
+                                        rendered="{!NOT(ISNULL(FSCLResult.Code))}">
+                                    </apex:outputText>
+                                    <apex:outputText value="{!FSCLResult.Revenue}"
+                                        rendered="{!ISNULL(FSCLResult.Code)}">
+                                    </apex:outputText>
+                                </apex:column>
+
+                                <apex:column headerValue="Description">{!FSCLResult.Description}</apex:column>
+                                <apex:column headerValue="Modifier">{!FSCLResult.Modifier}</apex:column>
+                                <apex:column headerValue="Unit Type">{!FSCLResult.UnitType}</apex:column>
+                                <apex:column headerValue="# of Units">{!FSCLResult.NoOfUnits}</apex:column>
+                                <apex:column headerValue="Amount">${!FSCLResult.Amount}</apex:column>
+                            </apex:pageBlockTable>
+                            <script>acet.autodoc.startAutodoc();</script>
+                        </apex:pageblocksection>
+                    </apex:pageBlock>
+                    <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+                        attrShowSaveAndCloseButton="false" attrShowSaveButton="true"
+                        attrShowMisdirectButton="true" 
+                        attrSourceOriginator="{!wrapper.SourceOriginator}"
+                        attrInteractionId="{!wrapper.Interaction.Id}"
+                        attrSubjectId="{!wrapper.Subject.Id}"
+                        attrCallTopic="View Authorizations" 
+                        attrLocation="bottom" />
+                    
+                </apex:outputPanel>
+
+                <script type="text/javascript">                 
+                var SearchCriteria = $("[id$='pbSearchCriteria']");
+                var StartDate = $("[id$='StartDate']");
+                var EndDate = $("[id$='EndDate']");
+                var Location = $("[id$='Location']");
+                var UnitType = $("[id$='UnitType']");
+                var NoOfUnits = $("[id$='NoOfUnits']");   
+                var PC1 = $("[id$='PC1']");             
+                var PC2 = $("[id$='PC2']");     
+                var PC3 = $("[id$='PC3']");     
+                var PC4 = $("[id$='PC4']");     
+                var PC5 = $("[id$='PC5']");     
+                var PC6 = $("[id$='PC6']");     
+                var PC7 = $("[id$='PC7']");     
+                var PC8 = $("[id$='PC8']");     
+                var PC9 = $("[id$='PC9']");                                                                     
+                var PC10 = $("[id$='PC10']");             
+                var Revenue = $("[id$='Revenue']");  
+                var Charges = $("[id$='Charges']");   
+                var MOD1 = $("[id$='MOD1']");   
+                var MOD2 = $("[id$='MOD2']");   
+                var MOD3 = $("[id$='MOD3']");
+                var MOD4 = $("[id$='MOD4']");        
+                var pbMsg = $("[id$='pbMsg']");   
+                
+                function openFeeScheduleSection() {
+                    document.getElementById("feescheduleId").style.display = 'block';
+                }
+                
+                function openFeeScheduleSearchSection() {
+                    document.getElementById("feescheduleIdSearch").style.display = 'block';
+                }     
+                
+                function OnChangeContactType() { 
+                    afRefreshAgreements();
+                } 
+                
+                function onContractSectionControl(){
+                    $("[id$='ProviderDemographicsTable']").tablesorter({                         
+                    });
+                    
+                    $("[id$='SpecialtiesTable']").tablesorter({
+                        
+                    });
+                    
+                    $("[id$='UnitedHealthPDTable']").tablesorter({
+                        
+                    });  
+                    
+                    $("[id$='AffiliationsTable']").tablesorter({
+                        
+                    }); 
+                    
+                    $("[id$='coverage-table']").tablesorter({
+                        sortList: [[3,1]]
+                    });        
+                    
+                    $("[id$='CaseHistory']").tablesorter({
+                        sortList: [[3,1]]  
+                    });
+                }
+                
+                function clearForm(){
+                    
+                    SearchCriteria.find(".pbError").remove();
+                    StartDate.removeClass("error").parent().find(".errorMsg").remove();
+                    EndDate.removeClass("error").parent().find(".errorMsg").remove();
+                    Location.removeClass("error").parent().find(".errorMsg").remove();
+                    UnitType.removeClass("error").parent().find(".errorMsg").remove();
+                    NoOfUnits.removeClass("error").parent().find(".errorMsg").remove();
+                    Revenue.removeClass("error").parent().find(".errorMsg").remove();            
+                    PC1.removeClass("error").parent().find(".errorMsg").remove();
+                    PC2.removeClass("error").parent().find(".errorMsg").remove();
+                    PC3.removeClass("error").parent().find(".errorMsg").remove();
+                    PC4.removeClass("error").parent().find(".errorMsg").remove();
+                    PC5.removeClass("error").parent().find(".errorMsg").remove();
+                    PC6.removeClass("error").parent().find(".errorMsg").remove();
+                    PC7.removeClass("error").parent().find(".errorMsg").remove();
+                    PC8.removeClass("error").parent().find(".errorMsg").remove();
+                    PC9.removeClass("error").parent().find(".errorMsg").remove();
+                    PC10.removeClass("error").parent().find(".errorMsg").remove();            
+                    pbMsg.removeClass("error").parent().find(".errorMsg").remove(); 
+                    
+                    UnitType.val("Days");
+                    NoOfUnits.val("1");
+                    Revenue.val("");           
+                    PC1.val("");
+                    PC2.val("");
+                    PC3.val("");
+                    PC4.val("");
+                    PC5.val("");
+                    PC6.val("");
+                    PC7.val("");
+                    PC8.val("");
+                    PC9.val("");
+                    PC10.val("");    
+                    Charges.val("");
+                    MOD1.val("");
+                    MOD2.val("");
+                    MOD3.val("");   
+                    MOD4.val("");             
+                    
+                    return false;            
+                }         
+                
+                function validate_fs() {                    
+                    SearchCriteria.find(".pbError").remove();
+                    StartDate.removeClass("error").parent().find(".errorMsg").remove();
+                    EndDate.removeClass("error").parent().find(".errorMsg").remove();
+                    Location.removeClass("error").parent().find(".errorMsg").remove();
+                    UnitType.removeClass("error").parent().find(".errorMsg").remove();
+                    NoOfUnits.removeClass("error").parent().find(".errorMsg").remove();
+                    Revenue.removeClass("error").parent().find(".errorMsg").remove();            
+                    PC1.removeClass("error").parent().find(".errorMsg").remove();
+                    PC2.removeClass("error").parent().find(".errorMsg").remove();
+                    PC3.removeClass("error").parent().find(".errorMsg").remove();
+                    PC4.removeClass("error").parent().find(".errorMsg").remove();
+                    PC5.removeClass("error").parent().find(".errorMsg").remove();
+                    PC6.removeClass("error").parent().find(".errorMsg").remove();
+                    PC7.removeClass("error").parent().find(".errorMsg").remove();
+                    PC8.removeClass("error").parent().find(".errorMsg").remove();
+                    PC9.removeClass("error").parent().find(".errorMsg").remove();
+                    PC10.removeClass("error").parent().find(".errorMsg").remove();            
+                    
+                    var ValidationResult = true;                    
+                    
+                    if (!StartDate.val()) {
+                        StartDate.addClass("error").parent().append('<div class="errorMsg" style="font-size: 9px;"><strong>Error:</strong>&nbsp;You must enter a value</div>');             
+                        ValidationResult = false;
+                    }
+                    if (StartDate.val().search("[a-z,A-Z]") >=0) {
+                        StartDate.addClass("error").parent().append('<div class="errorMsg" style="font-size: 9px;"><strong>Error:</strong>&nbsp;Invalid Start Date</div>');             
+                        ValidationResult = false;                
+                    }            
+                    if(isDateFormat(StartDate.val()) && isDateFormat(EndDate.val()) && (new Date(StartDate.val()) > new Date(EndDate.val()))) {
+                        EndDate.addClass("error").parent().append('<div class="errorMsg" style="font-size: 9px;"><strong>Error:</strong>&nbsp;End Date must be later than Start Date</div>');             
+                        ValidationResult = false;          
+                    } 
+                    if (!EndDate.val()) {
+                        EndDate.addClass("error").parent().append('<div class="errorMsg" style="font-size: 9px;"><strong>Error:</strong>&nbsp;You must enter a value</div>');             
+                        ValidationResult = false;
+                    }
+                    if (EndDate.val().search("[a-z,A-Z]") >=0) {
+                        EndDate.addClass("error").parent().append('<div class="errorMsg" style="font-size: 9px;"><strong>Error:</strong>&nbsp;Invalid End Date</div>');             
+                        ValidationResult = false;                
+                    }                         
+                    if (Location.val() =='Select') {
+                        Location.addClass("error").parent().append('<div class="errorMsg" style="font-size: 9px;"><strong>Error:</strong>&nbsp;You must enter a value</div>');             
+                        ValidationResult = false;
+                    }
+                    if (UnitType.val() =='Select') {
+                        UnitType.addClass("error").parent().append('<div class="errorMsg" style="font-size: 9px;"><strong>Error:</strong>&nbsp;You must enter a value</div>');             
+                        ValidationResult = false;
+                    }
+                    if (!NoOfUnits.val()) {
+                        NoOfUnits.addClass("error").parent().append('<div class="errorMsg" style="font-size: 9px;"><strong>Error:</strong>&nbsp;You must enter a value</div>');               
+                        ValidationResult = false;               
+                        
+                    } 
+                    if (Revenue.val().length > 0 && Revenue.val().length < 3){
+                        Revenue.addClass("error").parent().append('<div class="errorMsg" style="font-size: 9px;"><strong>Error:</strong>&nbsp;Revenue cannot have less than three digits</div>');               
+                        ValidationResult = false;
+                    }              
+                    
+                    if(!Revenue.val() &&
+                       (!PC1.val() && !PC2.val() && !PC3.val() && !PC4.val() && !PC5.val() && !PC6.val() && !PC7.val() && !PC8.val() 
+                        && !PC9.val() && !PC10.val())) {
+                        SearchCriteria.prepend('<div class="pbError">Invalid Data.<br/>Enter value for either Procedure or Revenue<br/> </div>');
+                        ValidationResult = false;
+                    }
+                    
+                    if(PC1.val().length > 0 && PC1.val().length < 5){
+                        PC1.addClass("error").parent().append('<div class="errorMsg" style="font-size: 9px;"><strong>Error:</strong>&nbsp;Enter five characters</div>');               
+                        ValidationResult = false;
+                    }  
+                    if(PC2.val().length > 0 && PC2.val().length < 5){
+                        PC2.addClass("error").parent().append('<div class="errorMsg" style="font-size: 9px;"><strong>Error:</strong>&nbsp;Enter five characters</div>');               
+                        ValidationResult = false;
+                    } 
+                    if(PC3.val().length > 0 && PC3.val().length < 5){
+                        PC3.addClass("error").parent().append('<div class="errorMsg" style="font-size: 9px;"><strong>Error:</strong>&nbsp;Enter five characters</div>');               
+                        ValidationResult = false;
+                    } 
+                    if(PC4.val().length > 0 && PC4.val().length < 5){
+                        PC4.addClass("error").parent().append('<div class="errorMsg" style="font-size: 9px;"><strong>Error:</strong>&nbsp;Enter five characters</div>');               
+                        ValidationResult = false;
+                    } 
+                    if(PC5.val().length > 0 && PC5.val().length < 5){
+                        PC5.addClass("error").parent().append('<div class="errorMsg" style="font-size: 9px;"><strong>Error:</strong>&nbsp;Enter five characters</div>');               
+                        ValidationResult = false;
+                    } 
+                    if(PC6.val().length > 0 && PC6.val().length < 5){
+                        PC6.addClass("error").parent().append('<div class="errorMsg" style="font-size: 9px;"><strong>Error:</strong>&nbsp;Enter five characters</div>');               
+                        ValidationResult = false;
+                    } 
+                    if(PC7.val().length > 0 && PC7.val().length < 5){
+                        PC7.addClass("error").parent().append('<div class="errorMsg" style="font-size: 9px;"><strong>Error:</strong>&nbsp;Enter five characters</div>');               
+                        ValidationResult = false;
+                    } 
+                    if(PC8.val().length > 0 && PC8.val().length < 5){
+                        PC8.addClass("error").parent().append('<div class="errorMsg" style="font-size: 9px;"><strong>Error:</strong>&nbsp;Enter five characters</div>');               
+                        ValidationResult = false;
+                    } 
+                    if(PC9.val().length > 0 && PC9.val().length < 5){
+                        PC9.addClass("error").parent().append('<div class="errorMsg" style="font-size: 9px;"><strong>Error:</strong>&nbsp;Enter five characters</div>');               
+                        ValidationResult = false;
+                    } 
+                    if(PC10.val().length > 0 && PC10.val().length < 5){
+                        PC10.addClass("error").parent().append('<div class="errorMsg" style="font-size: 9px;"><strong>Error:</strong>&nbsp;Enter five characters</div>');               
+                        ValidationResult = false;
+                    } 
+                    
+                    if(ValidationResult) {                 
+                        acet.autodoc.saveAutodoc();   
+                        checkSearchVad();
+                        
+                    }
+                    else {
+                        checkSearchVadNegative();
+                        return false;
+                    }               
+                } 
+                
+                function isDateFormat(txtDate) {
+                    var currVal = txtDate;
+                    if(currVal == '')
+                        return false;
+                    
+                    //Declare Regex  
+                    var rxDatePattern = /^(\d{1,2})(\/|-)(\d{1,2})(\/|-)(\d{4})$/; 
+                    var dtArray = currVal.match(rxDatePattern); // is format OK?
+                    
+                    if (dtArray == null)
+                        return false;
+                    
+                    //Checks for mm/dd/yyyy format.
+                    dtMonth = dtArray[1];
+                    dtDay= dtArray[3];
+                    dtYear = dtArray[5];
+                    
+                    if (dtMonth < 1 || dtMonth > 12)
+                        return false;
+                    else if (dtDay < 1 || dtDay> 31)
+                        return false;
+                        else if ((dtMonth==4 || dtMonth==6 || dtMonth==9 || dtMonth==11) && dtDay ==31)
+                            return false;
+                            else if (dtMonth == 2)
+                            {
+                                var isleap = (dtYear % 4 == 0 && (dtYear % 100 != 0 || dtYear % 400 == 0));
+                                if (dtDay> 29 || (dtDay ==29 && !isleap))
+                                    return false;
+                            }
+                    return true;
+                }         
+                
+                function initCoverageTable(){
+               $("[id$='coverage-table']").tablesorter({
+                        sortList: [[5,1]]
+                    });         
+                    
+                    $("input[type='radio'][name='showCoverage']").on("change", function(){                           
+                        toggleShowCoverages();      
+                    });
+                    
+                    $("[id$='coverage-table']").find("tr").click(function(){                                                                
+                        //highlight selected row
+                        $(this).parent().children().removeClass('active');
+                        $(this).addClass('active');
+                        
+                        //post back and refresh hightpanel and member family
+                        var guid = $(this).find("[id$='clGUID']").val();                
+                        $("[id$='preferredCoverageGUID']").val(guid);
+                    }); 
+                    
+                    //initially sort table by coverage, end date and effective date
+                    
+                    
+                    //highlight the first row of medical coverages as preferred coverage line
+                    var firstRowFound = false;
+                    $("[id$='coverage-table']").find("tbody tr").each(function(){
+                        var $tr = $(this);
+                        $tr.find("td").each(function(){                 
+                            if(firstRowFound == false){
+                                $tr.addClass('active');
+                                firstRowFound = true;
+                            }   
+                        });                                             
+                    });
+                    
+                    //highlight first row by default
+                    if(!firstRowFound){
+                        $("[id$='coverage-table']").find("tbody tr:first").addClass('active'); 
+                    }         
+                    
+                }
+                
+                function init() {
+                    
+                    NoOfUnits.keypress(AllowDigitsOnly);
+                    
+                    $("[id$='Charges']").keypress(function (event) {
+                        $(this).val($(this).val().replace(/[^0-9\.]/g,''));
+                        if ((event.which != 46 || $(this).val().indexOf('.') != -1) && (event.which < 48 || event.which > 57)) {
+                            event.preventDefault();
+                        }
+                    });                           
+                    
+                }
+                function blockSpecialChar(e) {
+                    var regex = new RegExp("^[a-zA-Z0-9]+$");
+                    var str = String.fromCharCode(!e.charCode ? e.which : e.charCode);
+                    if (regex.test(str) || (/^(8|9|13|27)$/.test("" + e.keyCode))) {                    
+                        return true;
+                    }                 
+                    e.preventDefault();
+                    return false;
+                }
+                $("[id$='Revenue'], [id$='MOD1'], [id$='MOD2'], [id$='MOD3'], [id$='MOD4'], [id$='PC1'], [id$='PC2'], [id$='PC3'], [id$='PC4'], [id$='PC5'], [id$='PC6'], [id$='PC7'], [id$='PC8'], [id$='PC9'], [id$='PC10']").keypress(blockSpecialChar);                
+                
+                function AllowDigitsOnly(InputElement) {
+                    //Allow delete, tab, enter and escape keys through
+                    if (/^(8|9|13|27)$/.test("" + InputElement.keyCode)) 
+                    {
+                        return true;
+                    }
+                    
+                    var regex = new RegExp("^[0-9]+$");
+                    var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+                    if (regex.test(str)) 
+                    {
+                        return true;
+                    }
+                    
+                    InputElement.preventDefault();
+                    return false;
+                }                
+                $(document).ready(function() {  
+                    init();
+                    initCoverageTable();        
+                    acet.autodoc.startAutodoc();
+                    acet.autodoc.createCommentsbox();                    
+                                          
+                }); 
+             </script>
+    </apex:form>
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+   -->
+</apex:page>

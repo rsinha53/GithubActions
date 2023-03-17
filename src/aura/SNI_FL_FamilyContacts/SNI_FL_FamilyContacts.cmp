@@ -1,0 +1,235 @@
+<!--US2798609_US2798673: This lightning bundle making custom lightining datatable and showing the fields of Family Contact
+custom object on Family Overview Page-->
+<!-- Author Name : Aarti Garg, Vishal Yelisetti -->
+
+<aura:component implements="force:hasRecordId,force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" controller="SNI_FL_FamilyContactsController">
+    <aura:attribute name="recordId" type="string" />
+    <aura:attribute name="lstFC" type="Family_Contact__c[]" />
+    <aura:attribute name="shortLstFC" type="Family_Contact__c[]" />
+    <aura:attribute name="fullLstFC" type="Family_Contact__c[]" />
+    <aura:attribute name="showAllFC" type="Boolean" default="false"/>
+    <aura:attribute name="contactColumns" type="List"/>
+    <aura:attribute name="checkReadOnly" type="Boolean" default="true"/>
+    <aura:attribute name="showEditModal" type="Boolean" default="false"/>
+    <aura:attribute name="showRemoveModal" type="Boolean" default="false"/>
+    <aura:attribute name="selectedContact" type="Object"/>
+    <aura:attribute name="SelectedFamilyName" type="string" />
+    <aura:attribute name="File_count" type="String" default="0"/>
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute name="viewAllBool" type="Boolean" default="true"/>
+    <aura:attribute name="compType" type="String" default="contacts"/>
+    <aura:attribute name="showNewCaregiverModal" type="Boolean" default="false"/>
+    <aura:attribute name="preferredMethods" type="String[]"/>
+    <aura:handler name="change" value="{!v.showEditModal}" action="{!c.getDropDowns}"/>
+    <aura:attribute name="newCont" type="Family_Contact__c" 
+                    default="{ 'sobjectType': 'Family_Contact__c','Name': '','Email__c': '',
+                             'Phone__c': '','Preferred_Method__c': '','Preferred_Name__c': '',
+                             'Primary_caregiver__c': false,'Relationship__c': 'Non-Policy Caregiver','Address__c':'',
+                             'Communications__c':'','Family_Account__c':'','RecordTypeId':'','Status__c':'Active'}"/>
+    <aura:attribute name="pmethods" type="list" default="['Email','Care Advisor Connect','Mobile','Phone']"/>
+    <aura:attribute name="cgsaved" type="string" />
+    <aura:handler name="init" value="{!this}" action="{!c.doinit}"/>
+    <aura:if isTrue="{!v.compType == 'contacts'}">
+    <lightning:card iconName="custom:custom15" >
+        <aura:set attribute="title" >
+            <div class="slds-text-heading_small slds-form-element__label slds-text-title_bold"><b>Care Advisor Connect Contacts ({!v.File_count})</b>
+            </div>
+            
+        </aura:set>
+        <aura:set attribute="actions">
+            <aura:if isTrue="{!v.checkReadOnly}">
+                <lightning:button label="New" onclick="{!c.clickNew}"/>
+            </aura:if>
+        </aura:set>
+        <div class="slds-p-bottom_small top-border">
+            <lightning:datatable class = "tabStyle"
+                                 data="{!v.lstFC}"
+                                 columns="{!v.contactColumns}"
+                                 keyField="id"
+                                 hideCheckboxColumn="true"
+                                 onrowaction="{! c.handleContactRowAction }"/> </div>
+        
+        	<aura:if isTrue="{!greaterthan(v.fullLstFC.length, 5)}">
+        		<div class="centerText">
+	        		<aura:if isTrue="{!v.showAllFC}">
+			        	<a onclick="{!c.hideFamilyContacts}" >Hide</a>
+			        	<aura:set attribute="else">
+			        		<a onclick="{!c.showFamilyContacts}" >View All</a>
+			        	</aura:set>
+		        	</aura:if>
+	        	</div>
+        	</aura:if>
+        
+        
+    </lightning:card>
+    </aura:if>
+    <aura:if isTrue="{!v.compType == 'careGiver'}">
+        <lightning:card iconName="custom:custom15" >
+            <aura:set attribute="title" >
+                <div class="slds-text-heading_small slds-form-element__label slds-text-title_bold"><b>Non-Policy Caregiver Contacts ({!v.File_count})</b>
+                </div> 
+            </aura:set>
+            <aura:set attribute="actions">
+                <aura:if isTrue="{!v.checkReadOnly}">
+                    <lightning:button label="New" onclick="{!c.clickNewCaregiver}"/>
+                </aura:if>
+            </aura:set>
+            <div class="slds-p-bottom_small top-border">
+                <lightning:datatable class = "tabStyle"
+                                     data="{!v.lstFC}"
+                                     columns="{!v.contactColumns}"
+                                     keyField="id"
+                                     hideCheckboxColumn="true"
+                                     onrowaction="{! c.handleContactRowAction }"/> </div>
+            <aura:if isTrue="{!greaterthan(v.fullLstFC.length, 5)}">
+                <div class="centerText">
+                    <aura:if isTrue="{!v.showAllFC}">
+                        <a onclick="{!c.hideFamilyContacts}" >Hide</a>
+                        <aura:set attribute="else">
+                            <a onclick="{!c.showFamilyContacts}" >View All</a>
+                        </aura:set>
+                    </aura:if>
+                </div>
+            </aura:if>
+        </lightning:card>
+    </aura:if>
+    
+    <aura:if isTrue="{!v.showEditModal}">
+        <div class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <div class="slds-modal__header">
+                    <h2 class="title slds-text-heading--medium">Edit {!v.SelectedFamilyName}</h2>
+                </div>
+                <div class="slds-modal__content slds-p-around--medium">
+				    <!-- if additional fields are being added, please add a lightning Edit Form fields -->
+                    <lightning:layout multipleRows="true" >
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:input required="true" label="Name" value="{!v.selectedContact.Name}" maxlength="80"/>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:input aura:id="phone" label="Phone" value="{!v.selectedContact.Phone__c}" maxlength="40"/>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:input type="email" label="Email" value="{!v.selectedContact.Email__c}"/>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:input  label="Relationship" value="{!v.selectedContact.Relationship__c}" maxlength="255"/>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:input  label="Address" value="{!v.selectedContact.Address__c}" maxlength="255"/>
+                        </lightning:layoutitem>
+                        <aura:if isTrue="{!v.compType == 'careGiver'}">
+                            <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            	<lightning:input type="checkbox" label="Primary Caregiver" checked="{!v.selectedContact.Primary_caregiver__c}"/>
+                        	</lightning:layoutitem>
+                            <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                                <lightning:input label="Preferred Name" value="{!v.selectedContact.Preferred_Name__c}" maxlength="100"/>
+                            </lightning:layoutitem>
+                            <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                                <lightning:select label="Preferred Method" name = "prefMethod" value="{!v.selectedContact.Preferred_Method__c}">
+                                    <aura:iteration items="{!v.preferredMethods}" var="pf">
+                                        <aura:if isTrue="{!v.selectedContact.Preferred_Method__c == pf.value}">
+                                        	<option value="{!pf.value}" text="{!pf.label}" selected="true"/>
+                                        
+                                            <aura:set attribute="else">
+                                                <option value="{!pf.value}" text="{!pf.label}"/>
+                                            </aura:set>
+                                        </aura:if>
+                                    </aura:iteration>
+                                </lightning:select>
+                            </lightning:layoutitem>
+                            <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+                                <lightning:textarea name="Communication Notes" label="Communication Notes" value="{!v.selectedContact.Communications__c}"/>
+                            </lightning:layoutitem>     
+                        </aura:if>
+                    </lightning:layout>
+                    
+                </div>
+                <div class="slds-modal__footer">
+                    <lightning:button variant="neutral" label="Cancel" onclick="{!c.closeEditModal}"/>
+                    <lightning:button  label="Save" variant="brand" onclick="{!c.editContactInfo}"/>
+                </div>
+            </div>
+        </div>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+    
+    <aura:if isTrue="{!v.showRemoveModal}">
+        <div class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <div class="slds-modal__header">
+                     <aura:if isTrue="{!v.compType == 'careGiver'}">
+                         <h2 class="title slds-text-heading--medium">Remove Non-Policy Caregiver</h2>
+                     <aura:set attribute="else">
+                    	<h2 class="title slds-text-heading--medium">Remove Family Contact</h2>
+                     </aura:set>
+                    </aura:if>
+                </div>
+                <div class="slds-modal__content slds-p-around--medium centerText">
+                    Are you sure you want to remove this Family Contact?
+                </div>
+                <div class="slds-modal__footer">
+                    <lightning:button variant="neutral" label="Cancel" onclick="{!c.closeRemoveModal}"/>
+                    <lightning:button  label="Remove" variant="brand" onclick="{!c.clickRemoveContact}"/>
+                </div>
+            </div>
+        </div>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+    <aura:if isTrue="{!v.showNewCaregiverModal}">
+        <div class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <div class="slds-modal__header">
+                    <h2 class="title slds-text-heading--medium">New Non-Policy Caregiver Contact</h2>
+                </div>
+                <div class="slds-modal__content slds-p-around--medium">
+                    <lightning:card title="Information"></lightning:card> <br/> 
+                    <!-- if additional fields are being added, please add a lightning Edit Form fields -->
+                    <lightning:layout multipleRows="true" >
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:input required="true" aura:id="name" label="Name" value="{!v.newCont.Name}" maxlength="80"/>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:input aura:id="phone" label="Phone" value="{!v.newCont.Phone__c}" maxlength="40"/>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:input type="email" label="Email" value="{!v.newCont.Email__c}"/>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:input  label="Relationship" value="{!v.newCont.Relationship__c}" maxlength="255"/>
+                        </lightning:layoutitem>
+                         <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:input  label="Address" value="{!v.newCont.Address__c}" maxlength="255"/>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <br/>
+                            <lightning:input checked="{!v.newCont.Primary_caregiver__c}" type="checkbox" label="Primary Caregiver" />
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:input  label="Preferred Name" value="{!v.newCont.Preferred_Name__c}" maxlength="100"/>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:select name="mySelect" label="Preferred Method" value ="{!v.newCont.Preferred_Method__c}">
+                                <option value="">--None--</option>
+                                <aura:iteration items="{!v.pmethods}" var="method">
+                                    <option value="{!method}" text="{!method}"></option>
+                                </aura:iteration>
+                            </lightning:select>
+                        </lightning:layoutitem>
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+                            <lightning:textarea  label="Communication Notes" value="{!v.newCont.Communications__c}" maxlength="32768"/>
+                        </lightning:layoutitem>
+                    </lightning:layout>
+                </div>
+                <div class="slds-modal__footer">
+                    <div class="slds-align_absolute-center">
+                        <lightning:button variant="neutral" label="Cancel" onclick="{!c.closeCareModel}"/>
+                        <lightning:button  label="Save &amp; New" variant="neutral" onclick="{!c.saveNewCareModal}"/>
+                        <lightning:button  label="Save" variant="brand" onclick="{!c.saveCareModal}"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+  </aura:component>

@@ -1,0 +1,368 @@
+<aura:component  access="global" controller="SNI_FL_MemberDetailsController" >
+    
+    <aura:attribute name ="memberRecord" type="SNI_FL_MemberDetailsController.MemberDetailWrapper"/> 
+    <aura:attribute name ="memberDocuments" type="SNI_FL_MemberDetailsController.Member_Affiliation__History[]"/> 
+    <aura:attribute name ="memberProgramHistory" type="SNI_FL_MemberDetailsController.Previous_Program_History[]"/>
+    <aura:attribute name ="recordId" type="Id"/> 
+    <aura:attribute name="activeSection" type="String" default=""/>
+    <aura:attribute name="isMobileDevice" type="Boolean" default="false"/>
+    <aura:attribute name="showUpload" type="Boolean" default="false" />
+    
+    <aura:attribute name="isDocCnfrmModalOpen" type="Boolean" default="false"/>
+    <aura:attribute name="selectedDocId" type="String"/>
+    <aura:attribute name="selectedDocName" type="String"/>
+    <aura:attribute name="isRemoveCnfrmModalOpen" type="Boolean" default ="false"/>
+    
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:registerEvent name="SNI_FL_MemberModelCloseEvt" type="c:SNI_FL_MemberModelCloseEvt"/>
+    <div class="slds-modal slds-fade-in-open">
+        <!-- Modal/Popup Box Header Starts here-->
+        <aura:if isTrue="{!if(v.isMobileDevice == true,true,false)}">
+            <!-- below is for mobile -->
+            <div class="slds-modal__container slds-custom-size">
+                <header class="slds-modal__header offwhitemobile">
+                    <lightning:buttonIcon iconName="utility:close"
+                                          onclick="{! c.closeModel}"
+                                          alternativeText="Close"
+                                          variant="bare-inverse"
+                                          size="large"
+                                          class="slds-modal__close slds-change-color"/>  
+                    <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate font-family">
+                        Member Details:<br/>{!v.memberRecord.memberName}
+                    </h2> 
+                </header>
+                <!--Modal/Popup Box Body Starts here-->
+                <div class="slds-modal__content slds-p-around_medium offwhitemobile fullscreenMobile" id="modal-content-id-1">
+                    <div class="slds-grid slds-wrap slds-grid--align-space memProvMobile">
+                        <div class =" slds-flex slds-wrap" style="width:91%">
+                            <div class="slds-col slds-size_1-of-1 slds-flex">
+                                <div class="slds-box box" >
+                                    <div class="box-title" style="background:#002677 font-size:14px " >
+                                        <div class="slds-text-color_inverse slds-m-top-medium grid-heading-font">&nbsp; Member Info</div></div><br/>
+                                    <p class="labelText1">Name</p>
+                                    <p class="Text1">{!v.memberRecord.memberName}</p><br/>
+                                    <p class="labelText1">Date of Birth</p>
+                                    <p class="Text1">{!v.memberRecord.dateOfBirth}</p><br/>
+                                    <div class="labelText1">Status</div>
+                                    
+                                    <aura:if isTrue="{!v.memberRecord.isActive}">
+                                        <div class="Text1"><img class="iconImage" src="{! $Resource.SNI_FL_MemberActiveIcon }" /> {!v.memberRecord.memberStatus}</div><br/> 
+                                    </aura:if>
+                                    <aura:if isTrue="{!!v.memberRecord.isActive}">
+                                        <div class="Text1"><img class="iconImage" src="{! $Resource.SNI_FL_MemberInactiveIcon }"></img> {!v.memberRecord.memberStatus}</div><br/> 
+                                    </aura:if>
+                                    <aura:if isTrue="{!v.memberRecord.isActive}">
+                                        <p class="labelText1">Enrollment Date</p>
+                                        <p class="Text1">{!v.memberRecord.enrollmentDate}</p>
+                                    </aura:if>
+                                    <aura:if isTrue="{!!v.memberRecord.isActive}">
+                                        <p class="labelText1">Inactive Date</p>
+                                        <p class="Text1">{!v.memberRecord.inactiveDate}</p>
+                                    </aura:if>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class =" slds-flex slds-wrap infoCard" style="width:91%">
+                            <div class="slds-col slds-size_1-of-1 slds-flex ">
+                                <div class="slds-box box box-b-mobile" >
+                                    <div class="box-title" style="background:#002677  font-size:14px " >
+                                        <div class="slds-text-color_inverse slds-m-top-medium grid-heading-font">&nbsp; Provider Info</div></div><br/>
+                                    <div class="labelText1">Provider Group</div>
+                                    <div class="Text1">{!v.memberRecord.providerGroup}</div><br/>
+                                    <div class="labelText1">Program/Population</div>
+                                    <div class="Text1">{!v.memberRecord.programName}/{!v.memberRecord.population}</div><br/>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <lightning:layout verticalAlign="center" multipleRows= "true">
+                        <lightning:layoutItem size="12"  >
+                            <div class="documentsSec">
+                                <lightning:accordion aura:id="accordion" activeSectionName="{!v.activeSection}"  allowMultipleSectionsOpen="true" >
+                                    <div class="slds-grid">
+                                        <div class="slds-size--1-of-1 slds-small-size--1-of-1 slds-medium-size--1-of-1">
+                                            <lightning:accordionSection name="A"  class="accordionHeadingMobile slds-text-color_inverse occodian-labels " label="Member Documents">
+                                                <aura:set attribute="body" > 
+                                                    <table class="innerTable table table-bordered table-striped mb-0" >
+                                                        <aura:if isTrue="{!greaterthan(v.memberDocuments.length,0)}">
+                                                            <div class="table-wrapper-scroll-y my-custom-scrollbarMobile">
+                                                                <aura:iteration  items="{!v.memberDocuments}" var="m" indexVar="index"> 
+                                                                    <tr>
+                                                                        <div class="docPanel offwhitemobile"  id="{! 'document' + index}">
+                                                                            <div class="slds-grid slds-wrap tableBorderMobile" >
+                                                                                <div class="slds-col slds-size--1-of-1"><div style="color:#002677; font-weight: bold;font-size: 14px;letter-spacing: 0;line-height: 18px;" id="{! 'docTitle' + index}">{!m.Title}</div>
+                                                                                    <span style="color:#080707; font-size: 12px;letter-spacing: 0;line-height: 18px;">Uploaded on </span>
+                                                                                    <span style="color:#080707; font-size:14px;">{!m.LastModifiedDate}</span>
+                                                                                    <br/>
+                                                                                    <span style="color:#080707; font-size: 12px;letter-spacing: 0;line-height: 18px;">Last modified by </span>
+                                                                                    <span style="color:#080707; font-size:14px;">{!m.LastModifiedBy.Name}</span>
+                                                                                </div>
+                                                                                <div class="slds-col slds-size--1-of-1"><div class="slds-grid  slds-wrap documentsLink" >   
+                                                                                    <span class="slds-col slds-size--1-of-3"><a onclick="{!c.clickDownload}" data-index="{!index}"><span style="font-size: 14px;color: #196ECF;letter-spacing: 0;line-height: 17px;">Download</span></a></span>
+                                                                                    <span class="slds-col sideBorders"><a onclick="{!c.editDoc}" data-index="{!index}"><span style="font-size: 14px;color: #196ECF;letter-spacing: 0;line-height: 17px;">Edit</span></a></span>
+                                                                                    <span class="slds-col slds-size--1-of-3"><a onclick="{!c.clickRemove}" data-index="{!index}"><span style="font-size: 14px;color: #196ECF;letter-spacing: 0;line-height: 17px;">Remove</span></a></span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </tr>
+                                                                </aura:iteration> 
+                                                            </div>
+                                                            <aura:set attribute="else">
+                                                                <div class="slds-truncate tableBorderMobile noResults">No Results Found.</div>
+                                                            </aura:set>
+                                                        </aura:if>
+                                                    </table>
+                                                </aura:set>
+                                            </lightning:accordionSection>
+                                                <aura:if isTrue="{!not(empty(v.memberProgramHistory))}">
+                                                <lightning:accordionSection name="B"  class="accordionHeadingMobile slds-text-color_inverse occodian-labels margin-ad-top" label="Previous Program History">
+                                                        <aura:set attribute="body">
+                                                            <table  class="innerTable font-weight: normal;">
+                                                                <th><div class="slds-grid tableBorderHeader ">
+                                                                    <div class="slds-col slds-size--7-of-12"><span style="color:black">Previous Enrollment</span><br/><span style="color:black">Date</span></div>
+                                                                    <div class="slds-grid slds-col slds-size--5-of-12"><span style="color:black">Inactive Date</span></div></div>  
+                                                                </th>
+                                                                <aura:iteration  items="{!v.memberProgramHistory}" var="m"> 
+                                                                    <tr><div class="slds-grid tableBorderMobile">
+                                                                    <div class="slds-col slds-size--7-of-12"><span style="color:black">{!m.enrollmentDate}</span></div>
+                                                                    <div class="slds-grid slds-col slds-size--5-of-12"><span style="color:black">{!m.inActiveDate}</span></div></div>  
+                                                                    </tr>
+                                                                </aura:iteration>                                             
+                                                            </table>
+                                                        </aura:set>
+                                                    </lightning:accordionSection>
+                                            </aura:if>  
+                                        </div>   
+                                    </div>
+                                </lightning:accordion>
+                            </div>
+                        </lightning:layoutItem>
+                        <lightning:layoutItem size="12"  >
+                            <div class="slds-grid slds-wrap">
+                                <div class="slds-col slds-size--1-of-1 uploadPanel">
+                                     <lightning:fileUpload label="" 
+                                                      multiple="{!v.multiple}"   
+                                                      accept="{!v.accept}" 
+                                                      recordId="{!v.recordId}" onuploadfinished="{!c.handleUploadFinished}" id="fileupldid"/>
+                                </div>
+                                <div class="slds-col slds-size--1-of-1">
+                                    <lightning:button  label="Close" variant="brand" class="close_ButtonMobile" title="Close"  onclick="{!c.closeModel}"/>
+                                </div>
+                            </div>
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                </div>                    
+            </div>
+            <!-- below is for desktop -->
+            <aura:set attribute="else">
+                <div class="slds-modal__container slds-custom-size">
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeModel}"
+                                              alternativeText="Close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close slds-change-color"/>  
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate font-family">
+                            Member Details:&nbsp;{!v.memberRecord.memberName}
+                        </h2> 
+                    </header>
+                    <!--Modal/Popup Box Body Starts here-->
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <div class="slds-grid slds-wrap slds-grid--align-space memProvCard">
+                            <div class =" slds-flex " style="width:90%">
+                                <div class="slds-col slds-size_1-of-2 slds-flex boxPaddingA">
+                                    <div class="slds-box box box-a" >
+                                        <div class="box-title" style="background:#002677 font-size:14px " >
+                                            <div class="slds-text-color_inverse slds-m-top-medium grid-heading-font">&nbsp; Member Info</div></div><br/>
+                                        <p class="labelText1">Name</p>
+                                        <p class="Text1">{!v.memberRecord.memberName}</p><br/>
+                                        <p class="labelText1">Date of Birth</p>
+                                        <p class="Text1">{!v.memberRecord.dateOfBirth}</p><br/>
+                                        <div class="labelText1">Status</div>
+                                        
+                                        <aura:if isTrue="{!v.memberRecord.isActive}">
+                                            <div class="Text1"><img class="iconImage" src="{! $Resource.SNI_FL_MemberActiveIcon }" /> {!v.memberRecord.memberStatus}</div><br/> 
+                                        </aura:if>
+                                        <aura:if isTrue="{!!v.memberRecord.isActive}">
+                                            <div class="Text1"><img class="iconImage" src="{! $Resource.SNI_FL_MemberInactiveIcon }"></img> {!v.memberRecord.memberStatus}</div><br/> 
+                                        </aura:if>
+                                        <aura:if isTrue="{!v.memberRecord.isActive}">
+                                            <p class="labelText1">Enrollment Date</p>
+                                            <p class="Text1">{!v.memberRecord.enrollmentDate}</p>
+                                        </aura:if>
+                                        <aura:if isTrue="{!!v.memberRecord.isActive}">
+                                            <p class="labelText1">Inactive Date</p>
+                                            <p class="Text1">{!v.memberRecord.inactiveDate}</p>
+                                        </aura:if>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2 slds-flex boxPaddingB">
+                                    <div class="slds-box box box-b">
+                                        <div class="box-title" style="background:#002677  font-size:14px " >
+                                            <div class="slds-text-color_inverse slds-m-top-medium grid-heading-font">&nbsp; Provider Info</div></div><br/>
+                                        <div class="labelText1">Provider Group</div>
+                                        <div class="Text1">{!v.memberRecord.providerGroup}</div><br/>
+                                        <div class="labelText1">Program/Population</div>
+                                        <div class="Text1">{!v.memberRecord.programName}/{!v.memberRecord.population}</div><br/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <lightning:layout verticalAlign="center" multipleRows= "true">
+                            <lightning:layoutItem size="12" padding="horizontal-large" >
+                                <lightning:accordion aura:id="accordion" activeSectionName="{!v.activeSection}"  allowMultipleSectionsOpen="true" >
+                                    <div class="slds-grid">
+                                        <div class="slds-size--1-of-1 slds-small-size--1-of-1 slds-medium-size--1-of-1">
+                                            <lightning:accordionSection name="A"  class="x-accordion-heading slds-text-color_inverse occodian-labels " label="Member Documents">
+                                                <aura:set attribute="body" > 
+                                                    
+                                                    <aura:if isTrue="{!greaterthan(v.memberDocuments.length,0)}">
+                                                        <div class="table-wrapper-scroll-y my-custom-scrollbar scroll-background">
+                                                            <div class="slds-grid">
+                                                                <ul class="slds-col slds-size--1-of-1 back-g-color">
+                                                                    <aura:iteration  items="{!v.memberDocuments}" var="m" indexVar="index"> 
+                                                                        <li class="slds-size--1-of-2 slds-show--inline-block">
+                                                                            <lightning:card variant="narrow" class="slds-m-around--small slds-card_boundary">
+                                                                                <aura:set attribute = "title">
+                                                                                    <div class="slds-truncate card-header-style"  id="{! 'docTitle' + index}">{!m.Title}</div>
+                                                                                </aura:set>
+                                                                                
+                                                                                <div><span style="color:#080707; font-size: 12px;letter-spacing: 0;line-height: 18px;">Uploaded on </span>
+                                                                                    <span style="color:#080707; font-size:12px;">{!m.LastModifiedDate}</span></div>
+                                                                                <div><span style="color:#080707; font-size: 12px;letter-spacing: 0;line-height: 18px;">Last modified by  </span>
+                                                                                    <span style="color:#080707; font-size:12px;">{!m.LastModifiedBy.Name}</span></div>
+                                                                                <br/>
+                                                                                <div class = "apply-flex">
+                                                                                <div  >    
+                                                                                <a style="font-size: 14px;color: #196ECF;letter-spacing: 0;line-height: 17px;" href="javascript:void(0);" data-Index="{!index}" onclick="{!c.clickDownload}">Download</a>
+                                                                                <span style="font-size: 14px;color: #DADBDC;letter-spacing: 0;line-height: 17px;">&nbsp;|&nbsp;</span>
+                                                                                </div>  
+                                                                                     <div > 
+                                                                                <a style="font-size: 14px;color: #196ECF;letter-spacing: 0;line-height: 17px;" href="javascript:void(0);" data-Index="{!index}" onclick="{!c.editDoc}">Edit</a> 
+                                                                                <span style="font-size: 14px;color: #DADBDC;letter-spacing: 0;line-height: 17px;">&nbsp;|&nbsp;</span>
+                                                                                         </div>
+                                                                                 <div >    
+                                                                                <a style="font-size: 14px;color: #196ECF;letter-spacing: 0;line-height: 17px;" href="javascript:void(0);" data-Index="{!index}"  onclick="{!c.clickRemove}">Remove</a>
+                                                                                </div>
+                                                                                </div>
+                                                                                
+                                                                            </lightning:card>
+                                                                        </li>
+                                                                        
+                                                                        
+                                                                    </aura:iteration> 
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                        <aura:set attribute="else">
+                                                            <div class="slds-truncate tableBorder noResults change-color">No Results Found.</div>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </aura:set>                    
+                                                
+                                            </lightning:accordionSection>
+                                                <aura:if isTrue="{!not(empty(v.memberProgramHistory))}">
+                                                <lightning:accordionSection name="B" aura:id="pgmhist" class="x-accordion-heading slds-text-color_inverse occodian-labels programCard margin-ad-top" label="Previous Program History">
+                                                        <aura:set attribute="body">
+                                                            <table  class="innerTable font-weight: normal;">
+                                                                <th><div class="slds-grid tableBorderHeader ">
+                                                                <div class="slds-col slds-size--7-of-12"><span style="color:black">Previous Enrollment Date</span></div>
+                                                                    <div class="slds-grid slds-col slds-size--5-of-12"><span style="color:black">Inactive Date</span></div></div>  
+                                                                </th>
+                                                                <aura:iteration  items="{!v.memberProgramHistory}" var="m"> 
+                                                                    <tr><div class="slds-grid tableBorderProgram">
+                                                                    <div class="slds-col slds-size--7-of-12"><span style="color:black">{!m.enrollmentDate}</span></div>
+                                                                    <div class="slds-grid slds-col slds-size--5-of-12"><span style="color:black">{!m.inActiveDate}</span></div></div>  
+                                                                    </tr>
+                                                                </aura:iteration>                                             
+                                                            </table>
+                                                        </aura:set>
+                                                    </lightning:accordionSection>
+                                                </aura:if>    
+                                        </div>   
+                                    </div>
+                                </lightning:accordion>
+                            </lightning:layoutItem>
+                        </lightning:layout>
+                    </div>
+                    <!--Modal/Popup Box Footer Starts here-->
+                    <footer class="slds-modal__footer">
+                        <lightning:layout horizontalAlign = "end" verticalAlign = "end">
+                            <lightning:fileUpload label="" 
+                                                      multiple="{!v.multiple}"   
+                                                      accept="{!v.accept}" 
+                                                      recordId="{!v.recordId}" onuploadfinished="{!c.handleUploadFinished}" id="fileupldid"/>   
+                            <lightning:button  label="Close" variant="brand" class="close_Button" title="Close"  onclick="{!c.closeModel}"/>
+                        </lightning:layout>
+                    </footer> 
+                </div>
+            </aura:set>
+        </aura:if>
+        <div class="slds-backdrop"></div>
+        <!-- Edit / Delete Document Pop-ups -->
+        <aura:if isTrue="{!v.isRemoveCnfrmModalOpen}"> 
+            <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_small" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1">
+                <div class="slds-modal__container">
+                    <div class="slds-modal__content inner-popup">
+                        <header class="slds-modal__header">
+                            <h2 id="modal-heading-01" class="slds-modal__title slds-hyphenate SNI_FL_ModalTitle">Remove Document</h2>
+                        </header>
+                        <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                            <ul class="slds-list_dotted">
+                                <p class = "slds-text-align_center">Are you sure you want to remove this document?</p>
+                                <p class = "slds-text-align_center"><b>{!v.selectedDocName}</b></p>
+                            </ul>
+                        </div>
+                        <div class="slds-float--right footerBgColor">
+                            <lightning:button variant="neutral" label="No"
+                                              aura:id ="CancelButton"
+                                              title="No"
+                                              onclick="{!c.closeWarning}"/>
+                        </div>
+                        <div  class="slds-float--right delBgColor">
+                            <lightning:button variant="neutral"
+                                              aura:id ="removeButton"
+                                              label="Yes"
+                                              title="Yes"
+                                              onclick="{!c.deleteFile}"/>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop--open"></div>
+        </aura:if>
+        <aura:if isTrue="{!v.isDocCnfrmModalOpen}">
+            <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_small" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1">
+                <div class="slds-modal__container">
+                    <div class="slds-modal__content inner-popup">
+                        <header class="slds-modal__header">
+                            <h2 id="modal-heading-01" class="slds-modal__title slds-hyphenate SNI_FL_ModalTitle">Edit Document</h2>
+                        </header>
+                        <div class="slds-custom-modalBody" width="100%">
+                            <div class="slds-grid slds-theme_default"> 
+                                <div class="slds-m-vertical_medium" style="width:100%">
+                                    <ui:outputText value="Name" class="modalLabels"/>
+                                    <lightning:input id="docname" aura:id="docName" value="{!v.selectedDocName}" variant="label-hidden" maxlength="255"/>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="slds-float--right footerBgColor">
+                                <lightning:button  class="slds-savebutton-box" variant="Inverse" label="Save" onclick="{!c.saveDoc}"/> 
+                            </div>
+                            <div  class="slds-float--right delBgColor">
+                                <lightning:button  class="slds-backbutton-box" variant="Inverse" label="Back" onclick="{!c.closeDoc}"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop--open"></div>
+        </aura:if>
+        <!-- End Edit / Delete Document Pop-ups -->
+    </div>
+    <div class="slds-backdrop slds-backdrop--open"></div>
+</aura:component>

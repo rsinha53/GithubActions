@@ -1,0 +1,98 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes"
+                controller="SAEProviderSearch" access="global">
+    <ltng:require styles="{!$Resource.multilineToastCSS}" />
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:attribute name="providerDetails" type="Object" />
+    <aura:attribute name="isAdvancedSearch" type="Boolean" default="false" />
+    <aura:attribute name="isProviderSearchDisabled" type="Boolean" default="false" />
+    <aura:attribute name="isMemSearchDisabledFromPrv" type="Boolean" default="false" />
+    <aura:attribute name="responseProviderNotFound" type="Boolean" default="false" />
+    <!--<aura:attribute name="providerNotFound" type="Boolean" default="false" />-->
+    <aura:attribute name="providerFieldsToValidate" type="List"
+                    default="taxIdOrNPIAI,contactNameAI,filterType,providerFirstNameAI,providerLastNameAI,providerZipAI,providerPhoneNumberAI" />
+    <aura:attribute name="interactionCard" type="Object" />
+    <aura:attribute name="subjectCard" type="Object" />
+    <aura:attribute name="responseData" type="Object[]" />
+    <aura:attribute name="interactionType" type="string" />
+    <aura:attribute name="filterTypeOptions" type="List" />
+    <aura:attribute name="stateOptions" type="List" />
+    
+    <!--<div class="slds-p-top_xx-small slds-p-left_xx-large slds-p-right_xx-large slds-p-bottom_xx-large">-->
+        <div class="slds-text-heading_medium sectionHeadings">Provider
+            <lightning:button variant="neutral" label="Clear" class="clearButton"
+                              disabled="{!v.isProviderSearchDisabled}" onclick="{!c.clearFieldValidationsAndValues}" />
+        </div>
+        
+        <lightning:input aura:id="taxIdOrNPIAI" type="search" name="taxIdOrNPI" label="Tax ID/NPI"
+                         value="{!v.providerDetails.taxIdOrNPI}"
+                         required="{!!v.isAdvancedSearch || v.providerDetails.providerNotFound ? true : false}"
+                         disabled="{!v.isProviderSearchDisabled}" minlength="10" maxlength="10" onchange="{!c.checkMandatoryFields}"
+                         messageWhenTooShort="Enter ten digits" pattern="^[0-9_ ]*$"
+                         messageWhenPatternMismatch="Enter only numeric characters." />
+        <lightning:input aura:id="contactNameAI" type="text" name="contactName" label="Contact Name"
+                         value="{!v.providerDetails.contactName}"
+                         required="{!!v.isAdvancedSearch || v.providerDetails.providerNotFound ? true : false}"
+                         disabled="{!v.isProviderSearchDisabled}" onchange="{!c.checkMandatoryFields}" />
+        
+        <div class="slds-grid slds-gutters slds-p-top_large slds-p-buttom_large">
+            <div class="slds-col slds-size_1-of-2">
+                <a href="#" onclick="{!c.showOrHideAdvancedSearch}" class="showOrHideAdvancedSearch"
+                   name="providerAdvanceSearchName" disabled="{!v.isProviderSearchDisabled}">Show Advanced Search</a>
+            </div>
+            
+            <div class="slds-col slds-size_1-of-2">
+                <div class="slds-grid slds-grid_vertical">
+                    <div class="slds-col">
+                        <lightning:input type="checkbox" name="noProviderToSearch" label="No provider to search"
+                                         checked="{!v.isProviderSearchDisabled}" />
+                    </div>
+                    <div class="slds-col slds-p-top_xx-small">
+                        <aura:if isTrue="{!v.responseProviderNotFound}">
+                            <lightning:input aura:id="providerNotFoundAI" type="checkbox" name="providerNotFound"
+                                             label="Provider not found" onchange="{!c.handleProviderNotFound}"
+                                             checked="{!v.providerDetails.providerNotFound}" />
+                            
+                        </aura:if>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <aura:if isTrue="{!v.isAdvancedSearch}">
+            <!--<lightning:combobox aura:id="filterTypeAI" name="filterType" label="Filter Type"
+                                required="{!v.providerDetails.providerNotFound}" value="{!v.providerDetails.filterType}" options="{!v.filterTypeOptions}"
+                                disabled="{!v.isProviderSearchDisabled}" onchange="{!c.checkMandatoryFields}" />-->
+            <lightning:combobox aura:id="filterType" name="filterType" label="Filter Type" 
+                                required="{!v.providerDetails.providerNotFound}" value="{!v.providerDetails.filterType}" options="{!v.filterTypeOptions}"
+                                disabled="{!v.isProviderSearchDisabled}" onchange="{!c.checkMandatoryFields}"/>
+            <lightning:input aura:id="providerFirstNameAI" name="providerFirstName" type="text" label="First Name"
+                             value="{!v.providerDetails.firstName}"
+                             required="{!v.providerDetails.providerNotFound &amp;&amp; v.providerDetails.filterType == 'Physician' ? true : false}"
+                             disabled="{!v.isProviderSearchDisabled}" onchange="{!c.checkMandatoryFields}" />
+            <lightning:input aura:id="providerLastNameAI" name="providerLastName" type="text"
+                             label="Last Name or Facility Name/Group Name" value="{!v.providerDetails.lastName}"
+                             required="{!v.providerDetails.providerNotFound}" disabled="{!v.isProviderSearchDisabled}"
+                             onchange="{!c.checkMandatoryFields}" />
+            <lightning:combobox aura:id="StateAI" name="state" label="State" required="false"
+                                value="{!v.providerDetails.state}" options="{!v.stateOptions}"
+                                disabled="{!v.isProviderSearchDisabled || v.providerDetails.providerNotFound}" />
+            <lightning:input aura:id="providerZipAI" name="providerZip" type="text" label="Zip"
+                             value="{!v.providerDetails.zip}" required=""
+                             disabled="{!v.isProviderSearchDisabled || v.providerDetails.providerNotFound}" minlength="5" maxlength="5"
+                             messageWhenTooShort="To search by Zip Code, Enter 5 digits" onchange="{!c.onChangeZip}" />
+            <lightning:input aura:id="providerPhoneNumberAI" name="providerPhoneNumber" type="text" label="Phone Number"
+                             value="{!v.providerDetails.phone}" required="{!v.providerDetails.providerNotFound}"
+                             disabled="{!v.isProviderSearchDisabled}" minlength="10" maxlength="10"
+                             messageWhenTooShort="Enter 10 digits only" onchange="{!c.checkMandatoryFields}" />
+        </aura:if>
+        
+        <aura:if isTrue="{!!v.providerDetails.providerNotFound}">
+            <div class="slds-p-top_medium">
+                <lightning:button variant="brand" label="Search" class="searchButton"
+                                  disabled="{!v.isProviderSearchDisabled}" onclick="{!c.searchProvider}" />
+            </div>
+        </aura:if>
+    <!--</div>-->
+    
+</aura:component>

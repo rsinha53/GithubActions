@@ -1,0 +1,427 @@
+<apex:page controller="ACETLaunchConsumerDashboardController"
+           sidebar="false" id="pg">
+   <script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous">
+    </script>  
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    <apex:stylesheet value="{!$Resource.CSSTimePicker}"/> 
+    <apex:includeScript value="{!$Resource.JqueryTimePicker}"/>
+    <style>   
+       .wickedpicker__controls__control-up:before{content:'&#9650;'}
+       .wickedpicker__controls__control-down:after{content:'&#9660;'}
+    </style>
+  
+    <apex:pageMessages />
+    <apex:form id="formDashboard">
+        <apex:actionFunction name="updateWrapper" action="{!updateWrapper}"
+                             reRender="temp,appointment,formDashboard,datePanel,pg" />
+                            
+        <apex:actionFunction name="checkValidationsJS" action="{!checkValidations}"
+                             reRender="temp,appointment,formDashboard" />
+        <!--added by vishakha 12/02 for US413581 -->
+        <c:ACETInteractionHighlightsPanel InteractionAtt="{!wrapper.interaction}"
+            SubjectAtt="{!wrapper.Subject}"
+            AdditionalInfoAtt="{!wrapper.AdditionalInfo}" html-auto-doc="auto" selectedOriginator="{!wrapper.interaction.Originator_Name__c}"></c:ACETInteractionHighlightsPanel>
+            <apex:outputPanel id="hippapopupPanel">
+                       <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+            </apex:outputPanel>
+        <apex:sectionHeader title="View Consumer Dashboard" />
+        
+             <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+                               attrShowSaveAndCloseButton="false" attrShowSaveButton="true"
+                               attrShowMisdirectButton="true" 
+                               attrSourceOriginator="{!wrapper.SourceOriginator}"
+                               attrInteractionId="{!wrapper.Interaction.Id}"
+                               attrSubjectId="{!wrapper.Subject.Id}"
+                               attrCallTopic="View Consumer Dashboard"/> 
+           <!-- Added the below status for US821856 -->                    
+         <apex:actionStatus id="refreshMemberStatus">
+                <apex:facet name="start">
+                    <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                        &nbsp;
+                    </div>
+                    <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 1001; margin: 15% 50%">
+                        <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                            <img src="/img/loading.gif" style="float: left; margin: 8px;" />
+                            <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                        </div>
+                    </div>
+                </apex:facet>
+            </apex:actionStatus>
+        <apex:pageBlock id="consumerDashboard">
+             <apex:pageblockSection columns="1" id="launchCirrusPanel">
+                <apex:pageBlockSectionItem >
+                    
+                    <input type="button" id="launchCirrusBtn" style="margin-left: 30%;"
+                        value="Launch Consumer Dashboard"
+                        onClick="openConsumerDashboard('{!baseURL}');" />
+                    
+                </apex:pageBlockSectionItem>
+            </apex:pageblockSection>
+            
+            <apex:messages ></apex:messages>
+            
+            <!-- Below Component added by Krishna for US564105-->
+            <!--<c:ACETDynamicCallTypesDisplay attrCaseDataWrapper="{!wrapper}" 
+                    attrCallTopic="{!wrapper.caseobj.Topic__c}"
+                    attrShowPickListcallTypes="true"
+                    attrShowCheckBoxCallTypes="false"
+                    attrshowAccountType="false" attrShowPickListLabel="Opportunity"/>-->
+            <apex:pageblockSection columns="1" html-auto-doc="auto">
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Opportunity"></apex:outputLabel>
+                    <apex:outputPanel styleClass="requiredInput" layout="block">
+                        <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                        <apex:selectList id="topic" size="1" value="{!Topic}">
+                           
+                            <apex:actionSupport event="onchange" action="{!updateWrapper}" reRender="consumerDashboard"/>
+                            <apex:selectOptions value="{!Topics}"></apex:selectOptions>
+                        </apex:selectList>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>  
+                
+                <apex:pageBlockSectionItem id="appointment" rendered="{!thererenderer}">
+                  
+                    <apex:outputLabel value="Appointment Scheduled"></apex:outputLabel>
+                    <apex:outputPanel style="width:6pc"  styleClass="requiredInput" layout="block">
+                        <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                        <apex:selectRadio value="{!selectedValue}" required="true" id="scheduled" onclick="myFunction(this.value)">
+                            <!--<apex:inputHidden value="{!selectedValue}" id="theHiddenInput" />-->
+
+                            <apex:selectOption itemLabel="Yes" itemValue="Y"  ></apex:selectOption><apex:selectOption itemLabel="No" itemValue="N"></apex:selectOption>
+                            <apex:actionSupport event="onchange" reRender="datePanel" action="{!checkSelectedValue}" oncomplete="timPickerfunc();" status="refreshMemberStatus" />
+                            
+                        </apex:selectRadio>
+                        </apex:outputPanel>
+                  
+                </apex:pageBlockSectionItem>
+                
+                <apex:outputPanel id="datePanel">
+                    
+                    <apex:outputPanel layout="none" rendered="{!IF(AND(selectedValue == 'Y', AND(Topic == 'Accepted')) , true, false)}"  id="innerPanel" style="margin-left: 20%;">
+                        <!--<apex:inputHidden value="{!selectedValue}" id="selectHidden" />    -->
+                        <apex:pageBlockSection columns="2">
+                            
+                            <apex:pageBlockSectionItem dataStyle="position: relative;left:4.5px;" >
+                                <apex:outputLabel value="Date" style="position: absolute;left:84%;"></apex:outputLabel>  
+                                <apex:outputPanel styleClass="requiredInput" layout="block">
+                                    <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                                    <apex:inputText value="{!dateOfAppointment}" style="width:20%" size="10" id="demo" onclick="DatePicker.pickDate(false, this , false);" />    
+                                    <apex:outputPanel id="datePanel" rendered="true">
+                                        [
+                                        <apex:outputLink onclick="fillDate();return false;">
+                                            <apex:outputText value="{0,date,MM/dd/yyyy}" styleClass="formattedTodayDate">
+                                                    <apex:param value="{!TODAY()}" />
+                                            </apex:outputText>
+                                        </apex:outputLink>
+                                        ]
+                                    </apex:outputPanel> 
+                                </apex:outputPanel>
+                                
+                                <!--<div class="errorMsg"><strong></strong>&nbsp;{!dateError}</div>-->
+                                
+                            </apex:pageBlockSectionItem>
+                            
+                            <apex:pageBlockSectionItem >
+                                <apex:outputLabel value="Time" style="position: absolute;left:-80%;"></apex:outputLabel>
+                                <apex:outputPanel styleClass="requiredInput" layout="block">
+                                    <apex:outputPanel styleClass="requiredBlock" layout="block" style="position: absolute;left:-93%;" />
+                                    <apex:inputText value="{!timeOfAppointment}" style="position: relative;left:-92%;" id="demoTime" styleClass="timepicker"/>
+                                </apex:outputPanel> 
+                            </apex:pageBlockSectionItem>
+                                                        
+                            <apex:pageBlockSectionItem dataStyle="position: relative;left:4.5px;" >
+                                <apex:outputLabel value="Nurse/ Coach Name" style="position: absolute;left:50%;width:49%;"></apex:outputLabel>
+                                <apex:outputPanel styleClass="requiredInput" layout="block">
+                                    <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                                    <apex:inputText value="{!nurseCoachName}" size="70" id="demoNurse"/>
+                                </apex:outputPanel>
+                            </apex:pageBlockSectionItem>
+                        </apex:pageBlockSection>
+                        
+                    </apex:outputPanel>
+                </apex:outputPanel>
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Comments"></apex:outputLabel>
+                    <apex:inputTextArea id="comments" cols="100" rows="5"
+                                        value="{!wrapper.Comments}" />
+                </apex:pageBlockSectionItem>
+
+                
+            </apex:pageblockSection>
+            
+            <apex:pageBlockButtons location="bottom">
+                <apex:commandButton value="Clear" action="{!clear}" onclick="this.form.reset();" style="position: relative;right: -9%;" reRender="consumerDashboard,topic,appointment,datePanel" status="refreshMemberStatus"/>
+            </apex:pageBlockButtons>
+            
+        </apex:pageBlock>
+        
+           <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+                           attrShowSaveAndCloseButton="false" attrShowSaveButton="true"
+                           attrShowMisdirectButton="true" 
+                           attrSourceOriginator="{!wrapper.SourceOriginator}"
+                           attrInteractionId="{!wrapper.Interaction.Id}"
+                           attrSubjectId="{!wrapper.Subject.Id}"
+                           attrCallTopic="View Consumer Dashboard" 
+                           attrLocation="bottom"/> 
+        
+    </apex:form>
+    
+    
+    <script>
+    $(document).ready(function() {
+            localStorage.removeItem("table");
+            localStorage.removeItem("rowCheckHold");
+                  
+        $("[id$='topic']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+        
+          
+            timPickerfunc();          
+    });     
+    
+    var appscheduledGlobal = 'N';
+    
+    function myFunction(value) { 
+        
+        var appscheduled = value;
+        appscheduledGlobal = value;
+        console.log('appscheduled--' + appscheduled );
+    }
+    //Added the below function for US821856
+    function timPickerfunc(){ 
+            var options = { now: "6:30", //hh:mm 24 hour format only defaults to current time
+            twentyFour: false, //Display 24 hour format defaults to false
+            upArrow: 'wickedpicker__controls__control-up', //The up arrow class selector to use for custom CSS
+            downArrow: 'wickedpicker__controls__control-down', //The down arrow class selector to use for custom CSS
+            close: 'wickedpicker__close', //The close class selector to use for custom CSS
+            hoverState: 'hover-state', //The hover state class to use for custom CSS
+            title: 'Timepicker', //The Wickedpickers title
+            showSeconds: false, //Whether or not to show seconds
+            timeSeparator: ':', //Adding the separator between hours and minutes dont change
+            secondsInterval: 1, //Change interval for seconds defaults to 1
+            minutesInterval: 15, //Change interval for minutes defaults to 5
+            beforeShow: null, //A function to be called before the Wickedpicker is shown
+            show: null, //A function to be called when the Wickedpicker is shown
+            clearable: false, //Make the pickers input clearable has clickable 
+            };
+        $('.timepicker').wickedpicker(options);
+    }
+    
+    
+    function validate(){
+        var $topic = $("[id$='topic']");
+        var $comments =  $("[id$='comments']");
+        
+        
+        // var $appscheduled = $("[id$=pg:formDashboard:consumerDashboard:j_id352:appointment:scheduled]");
+        
+        var retFlag = true;
+        $topic.removeClass("error").parent().find(".errorMsg").remove();
+        $comments.removeClass("error").parent().find(".errorMsg").remove();
+        console.log('---TOpic Val1--'+$topic.val());
+        // console.log('---appscheduled--'+$appscheduled.val());
+        console.log('appscheduledGlobal-----',appscheduledGlobal);
+       
+        
+        if(!$topic.val()){
+            console.log('---TOpic Val2--'+$topic.val());
+            var errorMsg = "You must enter a value."; 
+            $topic.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            retFlag = false;                  
+        }
+        
+        if(appscheduledGlobal == 'Y'){    
+            
+            var $dt = $("[id$=demo]");
+            var $tm = $("[id$=demoTime]");
+            var $nurse = $("[id$=demoNurse]");
+            $nurse.val($nurse.val().trim());
+            
+            $dt.removeClass("error").parent().find(".errorMsg").remove();
+            var date_regex = /^([1-9]|0[1-9]|1[012])[- /.]([1-9]|0[1-9]|[12][0-9]|3[01])[- /.][0-9]{4}$/;
+            //make variables for comparing dates
+            var selectedDate = new Date($dt.val().split("/")[2], ($dt.val().split("/")[0] -1), $dt.val().split("/")[1]);
+            var today = new Date();
+            var dd = today.getDate();
+            var mm = today.getMonth()+1; 
+            var yyyy = today.getFullYear();
+            if(dd<10) {
+                dd = '0'+dd
+            } 
+            if(mm<10) {
+                mm = '0'+mm
+            } 
+            today = mm + '/' + dd + '/' + yyyy;
+            var dd2 = selectedDate.getDate();
+            var mm2 = selectedDate.getMonth()+1; 
+            var yyyy2 = selectedDate.getFullYear();
+            if(dd2<10) {
+                dd2 = '0'+dd2
+            } 
+            if(mm2<10) {
+                mm2 = '0'+mm2
+            } 
+            selectedDate = mm2 + '/' + dd2 + '/' + yyyy2;
+
+            if(date_regex.test($dt.val()) && $topic.val()=='Accepted' && selectedDate < today) {
+                console.log('Date must be current or future date');
+                var errorMsg = "Date must be current or future date."; 
+                $dt.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                retFlag = false;
+             }
+            if(!(date_regex.test($dt.val())) && $topic.val()=='Accepted')
+            {   console.log('dateCheck');
+                var errorMsg = "Invalid Date"; 
+                $dt.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                retFlag = false;    
+            }
+            
+            $tm.removeClass("error").parent().find(".errorMsg").remove();
+            //var time_regex = /^([0-9]|0[0-9]|1?[0-9]|2[0-3]):[0-5]?[0-9]$/ ; 
+            //Added the below code for US821856
+            if($tm.val()){
+                var currentdate = new Date();
+                var currentHours = currentdate.getHours();
+                var currentMinutes = currentdate.getMinutes();
+//                var dt = (currentdate.getMonth()+1) + "/" + currentdate.getDate() + "/" + currentdate.getFullYear() + " " + $tm.val();
+//                var valDt = new Date(dt);
+//                var res = (valDt > currentdate);
+//              if(currentMinutes < 10){
+//                  currentMinutes = "0" + currentMinutes;
+//              }
+                var currentTime;
+                var timeOfDay = "time";
+                var compareTime = "Pass";
+                if(currentHours < 12 && currentHours >0) {
+                    timeOfDay = "AM";
+                } else if(currentHours == 12){
+                    timeOfDay = "PM";
+                } else if(currentHours == 0){
+                    timeOfDay = "AM";
+                    currentHours = currentHours + 12;
+                } else {
+                    timeOfDay = "PM";
+                    currentHours = currentHours - 12;
+                }
+                if(currentMinutes < 10) {
+                    currentMinutes = "0" + currentMinutes;
+                } 
+                var selHour = $tm.val().split(":")[0];
+                var temp = $tm.val().split(":")[1];
+                var selMin = temp.split(" ")[0];
+                var selTimeOfDay = temp.split(" ")[1];
+                if(selectedDate < today) {
+                    compareTime = "Fail";
+                } else if(selectedDate == today){
+                    if(selTimeOfDay == "AM" && timeOfDay == "PM"){
+                        compareTime = "Fail";
+                    } else if((selTimeOfDay == "AM" && timeOfDay == "AM") || (selTimeOfDay == "PM" && timeOfDay == "PM")){
+                        //alert(selHour + selMin + " " + currentHours + currentMinutes);
+                        if(selHour < currentHours) {
+                            compareTime = "Fail";
+                        } else if(selHour == currentHours){
+                            if(selMin < currentMinutes) {
+                                compareTime = "Fail";
+                            }
+                        } else {
+                            compareTime = "Pass"
+                        }
+                    } else {
+                        compareTime = "Pass";
+                    }
+                }
+                if( $topic.val()=='Accepted' && compareTime == "Fail")   
+                //if(($tm.val()) && $topic.val()=='Accepted'&&!(res)&& $dt.val())
+                {   
+                    var errorMsg = "Please enter a current or future time."; 
+                    $tm.addClass("error").parent().append('<div class="errorMsg" style="position: relative;left:-92%;"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                    retFlag = false;    
+                }
+            }
+            if(!($tm.val()) && $topic.val()=='Accepted'&& $dt.val())
+            {   
+                var errorMsg = "Please enter time!"; 
+                $tm.addClass("error").parent().append('<div class="errorMsg" style="position: relative;left:-92%;"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                retFlag = false;    
+            }
+
+            $nurse.removeClass("error").parent().find(".errorMsg").remove();
+            if(!$nurse.val() && $topic.val()=='Accepted')
+            {
+                var errorMsg = "Cannot be blank."; 
+                $nurse.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                retFlag = false;    
+            }
+            
+        } 
+        
+        
+       if(retFlag == true){
+            console.log('retFlag1-----' + retFlag);
+            console.log('called-----');
+            acet.autodoc.saveAutodoc();    
+        }    
+        console.log('retFlag2-----' + retFlag);
+       return retFlag;                 
+    }
+    
+    function resetForm(){
+        var $topic = $("[id$='topic']");
+        var $comments =  $("[id$='comments']");
+        
+        $topic.removeClass("error").parent().find(".errorMsg").remove();
+        $comments.removeClass("error").parent().find(".errorMsg").remove();
+        
+        //$topic.val("");
+        $comments.val("");
+        return false;
+    }
+    function openConsumerDashboard(baseLink){
+        console.log('baseLink'+baseLink);
+        window.open(baseLink,'_blank', 'location=yes,menubar=yes,titlebar=yes,toolbar=yes,width=1200, height=800 ,left=0 ,top=0 ,scrollbars=1 ,resizable=1');
+    } 
+    
+    function fillDate(){
+        
+        var $dt = $("input[id$=demo]");
+        var valDate = $("Span.formattedTodayDate").text();
+        $dt.val(valDate);
+        return false;
+    }
+    </script>
+    <style type="text/css">
+        .imgclass:hover {
+        background-image: url('/img/help/helpOrbs.gif');
+        background-repeat: no-repeat;
+        width: 16px;
+        height: 15px;
+        background-position: right;
+        }
+        
+        .imgclass {
+        background-image: url('/img/help/helpOrbs.gif');
+        background-repeat: no-repeat;
+        width: 16px;
+        height: 15px;
+        }
+        
+        .left-div {
+        float: left;
+        width: 100px;
+        margin-bottom: 18px;
+        margin-left: 17.9%;
+        
+        }
+        .right-div {
+        float: left;
+        margin-top: 3px;
+        margin-left: 80px;
+        }
+        
+        .pbButton{
+            padding-left:7%;
+        }
+    </style>
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+</apex:page>

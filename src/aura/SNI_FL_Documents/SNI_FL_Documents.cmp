@@ -1,0 +1,121 @@
+<aura:component implements="flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes" access="global" controller="SNI_FL_DocumentsController">
+    <aura:attribute name="familyId" type="string" />
+    <aura:attribute name="isMobileDevice" type="Boolean" default="false"/>
+    <aura:attribute name="isFamilySec" type="Boolean"/>
+    <aura:attribute name="isRemoveCnfrmModalOpen" type="Boolean" default ="false"/>
+    <aura:attribute name ="selectedDocId" type ="string" />
+    <aura:attribute name ="selectedDocName" type ="string" />
+   <aura:handler name="change" value="{!v.familyId}" action="{!c.doinit}"/> 
+    <aura:attribute name ="currentUser" type = "String"/>
+    <aura:attribute name="isDocCnfrmModalOpen" type="Boolean" default ="false"/>
+    <aura:attribute name="familydocwrap" type="SNI_FL_DocumentsController.familyDocumentWrapper" />
+    <aura:handler name="init" value="{!this}" action="{!c.userInit}"/>
+    <div>
+        <aura:if isTrue="{!v.isFamilySec}">   
+        <aura:iteration items="{!v.familydocwrap.familyDocuments}" var="fldoc" indexVar="index">
+                <aura:if isTrue = "{!fldoc.contdoc.OwnerId == v.currentUser}" >
+                    <c:SNI_FL_CommonCard cardTitle="{!fldoc.contdoc.Title}" cardObject="{!fldoc.contdoc}" subFields="LastModifiedDate" buttonEnabler="Download-Remove" index="{!index}" fnEdit="{!c.Editdoc}" fnRemove="{!c.clickRemove}" fnDownload="{!c.Downloadfile}"/>
+                    <aura:set attribute="else">
+                        <c:SNI_FL_CommonCard cardTitle="{!fldoc.contdoc.Title}" cardObject="{!fldoc.contdoc}" subFields="LastModifiedDate" buttonEnabler="Download-noRemove" index="{!index}" fnEdit="{!c.Editdoc}" fnRemove="{!c.clickRemove}" fnDownload="{!c.Downloadfile}"/>
+                    </aura:set>        
+                </aura:if>
+            </aura:iteration>
+            <aura:set attribute="else">
+                
+                <aura:iteration items="{!v.familydocwrap.membDocwrapper}" var="membdoc" indexVar = "index1"> 
+                    <div class="slds-user-group-container">   
+                        <div class="slds-user-img">
+                            <img src="{!$Resource.SNI_FL_AvatarBlankIcon}" class="slds-img-height"/><span class="slds-user-span">{!membdoc.membName}</span>
+                        </div>                         
+                        <div>
+                            <aura:iteration items="{!membdoc.membDocuments}" var="membdocs" indexVar="index"> 
+                                <aura:if isTrue = "{!membdocs.contdoc.OwnerId == v.currentUser}" >
+                                    <c:SNI_FL_CommonCard cardTitle="{!membdocs.contdoc.Title}" cardObject="{!membdocs.contdoc}" subFields="LastModifiedDate" buttonEnabler="Download-Remove" index="{!index1+'-'+index}" fnEdit="{!c.Editdoc}" fnRemove="{!c.clickRemove}" fnDownload="{!c.Downloadfile}"/>
+                                    <aura:set attribute="else">
+                                        <c:SNI_FL_CommonCard cardTitle="{!membdocs.contdoc.Title}" cardObject="{!membdocs.contdoc}" subFields="LastModifiedDate" buttonEnabler="Download-noRemove" index="{!index1+'-'+index}" fnEdit="{!c.Editdoc}" fnRemove="{!c.clickRemove}" fnDownload="{!c.Downloadfile}"/>
+                                    </aura:set>        
+                                </aura:if>
+                                
+                            </aura:iteration>
+                        </div>  
+                    </div>  
+                </aura:iteration>
+               
+       		</aura:set>
+        </aura:if>
+    <aura:if isTrue="{!v.isRemoveCnfrmModalOpen}"> 
+    <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_small" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <h2 id="modal-heading-01" class="slds-modal__title slds-hyphenate SNI_FL_ModalTitle">Remove Document</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                    <ul class="slds-list_dotted">
+                        <p class = "slds-text-align_center">Are you sure you want to remove this document?</p>
+                         <p class = "slds-text-align_center"><b>{!v.selectedDocName}</b></p>
+                    </ul>
+                </div>
+                <footer  class="slds-modal__footer footerBgColor" >
+                   <!--<div class="slds-form-element__help slds-p-left_xx-small none" aura:id ="commentValidationMessage">Complete this field</div> -->
+                   <div class="slds-float--right">
+                    <lightning:layout>  
+                     <lightning:layoutItem>  
+                    <lightning:button variant="neutral" label="Cancel"
+                                      	aura:id ="CancelButton"
+                                          title="Cancel"
+                                          onclick="{!c.closeWarning}"/>
+                        </lightning:layoutItem>
+                       <lightning:layoutItem  class="delBgColor"> 
+                        <lightning:button variant="neutral"
+                                          aura:id ="removeButton"
+                                          label="Remove"
+                                          title="Remove"
+                                          onclick="{!c.deleteFile}"/>
+                        </lightning:layoutItem>
+                     </lightning:layout>
+                    </div>
+                </footer>
+            </div>
+        </section>
+    </aura:if>
+    <aura:if isTrue="{!v.isDocCnfrmModalOpen}">
+	        <div class="slds-modal slds-fade-in-open">
+	            <div class="slds-modal__container">
+                    <div class="slds-modal__content ">
+                        <h2 class="title modalTitle">Edit Document</h2>
+                          <aura:if isTrue="{!$Browser.formFactor == 'DESKTOP'}">
+                        		<div class="slds-custom-modalBody" width="100%">
+                                   <div class="slds-grid slds-theme_default"> 
+                                    <div class="slds-m-vertical_medium" style="width:100%">
+                                    <ui:outputText value="Name" class="modalLabels"/>
+		                            <lightning:input id="docname" aura:id="docName" value="{!v.selectedDocName}" variant="label-hidden" maxlength="255"/>
+                                   </div>     
+                                    </div>
+	                            </div>
+	                           <div>
+	                            <lightning:button class="slds-savebutton-box" variant="Inverse" label="Save" onclick="{!c.saveDoc}"/>
+	                            <lightning:button class="slds-backbutton-box" variant="Inverse" label="Back" onclick="{!c.closeDoc}"/>
+	                        </div>
+                            <aura:set attribute="else">
+		                	<div class="slds-custom-modalBody" width="100%">
+                                   <div class="slds-grid slds-theme_default"> 
+                                    <div class="slds-m-vertical_medium" style="width:100%">
+                                  <ui:outputText value="Name" class="modalLabels"/>
+		                          <lightning:input id="docname" aura:id="docName" value="{!v.selectedDocName}" variant="label-hidden" maxlength="255"/>
+                                </div>
+                                </div>
+                              </div>
+                            <div>
+	                            <lightning:button  class="slds-savebutton-box" variant="Inverse" label="Save" onclick="{!c.saveDoc}"/>
+	                            <lightning:button  class="slds-backbutton-box" variant="Inverse" label="Back" onclick="{!c.closeDoc}"/>
+	                        </div>
+                                </aura:set>
+                        </aura:if>
+                        
+                    </div>
+	            </div>
+	        </div>
+          	<div class="backdrop"></div>
+        </aura:if>   
+    </div>    
+</aura:component>

@@ -1,0 +1,520 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId" controller="SAEUtils" access="global" >
+    
+    <!-- US3067258- Swapnil -->
+    <aura:attribute name="tableDetails" type="Object"/>
+    <!-- 5	US2828663	Pre Authorization Details in Autodoc - Sarma - 16/12/2020 -->
+    <aura:attribute name="autodocUniqueId" type="String" default="auto"/>
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default="auto"/>
+
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}"/>
+
+    <!-- US3120643: Swapnil -->
+    <aura:attribute name="radioButtonOptions" type="List" default="[{'label': 'Yes', 'value': 'Yes'},
+                                                             {'label': 'No', 'value': 'No'}]"/>
+     <aura:attribute name="csMedNecOptions" type="List" default="[{'label': 'Radiology/Cardiology', 'value': 'Radiology/Cardiology'},
+                                                             {'label': 'Oncology/Chemotherapy', 'value': 'Oncology/Chemotherapy'}]"/>
+    <aura:attribute name="priorAuthRadioButton" type="String" />
+    <aura:attribute name="delegatedPlanRadioButton" type="String" />
+    <aura:attribute name="handledByUHCRadioButton" type="String" />
+    <aura:attribute name="uhcPrimaryRadioButton" type="String" />
+    <aura:attribute name="memberNotifRadioButton" type="String" />
+    <aura:attribute name="testingRadioButton" type="String" />
+    <aura:attribute name="medNecIndValue" type="String" />
+    <aura:attribute name="SST" type="String" />
+
+    <aura:attribute name="PACheckData" type="Object" />
+    <aura:attribute name="priorAuthResult" type="ACET_BenefitCheckController.PriorAuthInquiryWrap" default="" access="public"/>
+    <aura:attribute name="descriptionList" type="List" default="['Not Applicable']" access="public"/>
+    <aura:attribute name="memberInfo" type="Object" />
+    <aura:attribute name="sourceCode" type="String" default="" />
+
+    <aura:attribute name="paCheckTabId" type="String" />
+    <aura:attribute name="uhcComeAsBlocked" type="String" />
+
+    <!--US3219740 - Sravan-->
+    <aura:attribute name="providerNotificationTool" type="String"/>
+	<aura:attribute name="selectedKLDataMap" type="Map" default="" access="public"/>
+    <aura:attribute name="healthServiceProductCode" type="String" />
+    <aura:attribute name="vendorBenefitOptionTypeCode" type="String" />
+    <aura:attribute name="isParticipating" type="Boolean"/>
+    <aura:attribute name="spInstructionString" type="Object" default=""/>
+    <aura:attribute name="openSpInsPopUP" type="Boolean" default="false"/>
+    <aura:attribute name="inpMap" type="Map" default="{}"/>
+    <aura:attribute name="currenttabId" type="String" default="" />
+    <aura:attribute name="CSSpecificFields" type="Set" default="['Code Details','Coverage','Remark Code']" />
+    <aura:attribute name="interactionOverviewTabId" type="String" />
+
+    <!--US3356000 - Sravan-->
+     <aura:attribute name="autoCheck" type="Boolean" default="false"/>
+     <aura:attribute name="allowAutoCheck" type="Boolean" default="false"/>
+
+	<!-- DE422112 -->
+    <aura:attribute name="caseWrapper" type="SAETTSCaseWrapper" default="[]" />
+    <aura:handler event="c:ACET_AutoDocRefreshEvent" action="{!c.handleAutodocRefresh}" />
+    <aura:handler name="selectedRowLink" event="c:ACET_AutoDocSelectedRow" action="{!c.handleSelectedRowLink}" />
+     <aura:attribute name="benefitResult" type="Object" />
+
+    <aura:attribute name="procedureCodeMap" type="Map" />
+    <aura:attribute name="procedureCodeDetailsList" type="List" />
+    <aura:attribute name="procedureCodeDetailsMap" type="Map" />
+    <aura:attribute name="procedureCodeDetailsListNew" type="List" />
+    <aura:attribute name="isCodeDetailsAccessed" type="Boolean" default="false"/>
+
+    <!-- <aura:handler name="change" value="{!v.tableDetails}" action="{!c.scrollAuthDetailsToView}" /> -->
+
+    <!-- US3290723 -->
+    <!-- <aura:handler name="change" value="{! v.priorAuthResult }" action="{!c.dataChange}" /> -->
+
+    <div aura:id="card" class="slds-card card_padding">
+         <lightning:spinner class="slds-hide" aura:id="pacheckAuthorizationReslt" alternativeText="Loading.." title="Loading.."
+            variant="brand" size="medium" />
+
+        <div style="overflow: auto;">
+
+            <lightning:layout class="slds-m-bottom_x-small" multipleRows="true">
+                <lightning:layoutItem size="10">
+                    <h2 class="component_title">
+                        Authorization/Benefits Check Results
+                    </h2>
+                </lightning:layoutItem>
+                <lightning:layoutItem class="{! ((v.sourceCode == 'CS') ? ' slds-show ' :  ' slds-hide ') }"  size="1"><!--US3813744-->
+                    <div style="padding-left:2rem;">
+                        <span style="cursor:pointer;border-bottom: 1px dashed;" data-popupId="memberPopup" class="slds-form-element__label" onmouseover="{!c.togglePopup}" onmouseout="{!c.togglePopup}">
+                            <div  style=""></div> <!--class="triangle-down" -->
+                            Med Nec
+                        </span>
+                        <div class="slds-popover slds-nubbin_bottom-left slds-slide-from-bottom-to-top slds-hide customToolTip" role="tooltip" id="help" aura:id="idToolTip">
+                            <div class="slds-popover__body">
+                                <ul class="ulList">
+                                    <aura:iteration items="{!v.descriptionList}" var="listItem">
+                                        <li>{!listItem}</li>
+                                    </aura:iteration>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </lightning:layoutItem>
+                <!---US3219740 - Sravan-->
+                <!--<lightning:layoutItem size="1">
+                    <lightning:button class="slds-float_right" variant="neutral" label="Provider NGT" onclick="{!c.handleProvideNGT}"/>
+                </lightning:layoutItem> Commented as part of US3487597 - Sravan-->
+            </lightning:layout>
+
+            <c:ACET_AutoDocDataTable fixLayout="table-layout:fixed;" autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}" enablePagination="false" tableDetails="{!v.tableDetails}" autoCheck="{!v.autoCheck}" allowAutoCheck="{!v.allowAutoCheck}"
+                                     overrideLinkDisabled="false"/>
+            <div aura:id="authDataTable">
+            <!-- Don't delete this Div as  it is refering in scroll intoview function -->
+        	</div>
+        </div>
+
+        <!-- US3120643: Swapnil -->
+        <aura:If isTrue="{!v.sourceCode =='AP'}">
+        <lightning:layout multipleRows="true">
+            <lightning:layoutitem padding="" size="12">
+                <div class="slds-form-element slds-m-top_medium">
+                    <abbr lightning-input_input="" title="required" class="slds-required">*</abbr>
+                    Did the UHC Prior Auth Required field come back as Blocked?
+                    <lightning:radioGroup class="customRadioCls slds-m-left_medium"
+                                        name="{! 'uhcComeAsBlocked' + v.paCheckTabId }"
+                                        label="Did the UHC Prior Auth Required field come back as Blocked?"
+                                        options="{! v.radioButtonOptions }"
+                                        value="{! v.uhcComeAsBlocked }"
+                                        aura:id="uhcComeAsBlocked"
+                                        type="radio"
+                                        required="true"
+                                        variant="label-hidden"
+                                        onchange="{! c.handleRadioChange }" />
+                </div>
+            </lightning:layoutitem>
+
+            <lightning:layoutitem class="{! ((v.uhcComeAsBlocked == 'No') ? ' slds-show ' :  ' slds-hide ') }" size="12">
+                <div class="slds-form-element slds-m-top_xx-small">
+                    <abbr lightning-input_input="" title="required" class="slds-required">*</abbr>
+                    <!-- Did the Prior Auth Required field come back as Yes or Maybe? -->
+                    Did the UHC Prior Auth Required field come back as Yes or Maybe?
+                    <lightning:radioGroup class="customRadioCls slds-m-left_medium"
+                                        name="{! 'priorAuthRadioButton' + v.paCheckTabId }"
+                                        label="Did the Prior Auth Required field come back as Yes or Maybe?"
+                                        options="{! v.radioButtonOptions }" 
+                                        value="{! v.priorAuthRadioButton }" 
+                                        aura:id="priorAuthRadioButton"
+                                        type="radio" 
+                                        required="true"
+                                        variant="label-hidden"
+                                        onchange="{! c.handleRadioChange }" />
+                </div>
+            </lightning:layoutitem>
+            <div class="{! 'slds-form-element slds-m-top_xx-small slds-m-left_small' + ((v.uhcComeAsBlocked == 'Yes') ? ' slds-show ' :  ' slds-hide ') }">
+                Review the Decision Summary field  and transfer the call appropriately (i.e. Evicore, OptumHealth, Beacon)
+            </div>
+
+            <lightning:layoutitem class="{! ((v.priorAuthRadioButton == 'Yes') ? ' slds-show ' :  ' slds-hide ') }" size="12">
+                <div class="slds-form-element slds-m-top_xx-small">
+                    <abbr lightning-input_input="" title="required" class="slds-required">*</abbr>
+                        Is this a Delegated Plan?
+                    <lightning:radioGroup class="customRadioCls slds-m-left_medium"
+                                        name="{! 'delegatedPlanRadioButton' + v.paCheckTabId }"
+                                        label="Is this a Delegated Plan?"
+                                        options="{! v.radioButtonOptions }" 
+                                        value="{! v.delegatedPlanRadioButton }"
+                                        aura:id="delegatedPlanRadioButton"
+                                        type="radio"
+                                        required="true"
+                                        variant="label-hidden"
+                                        onchange="{! c.handleRadioChange }"/>
+                </div>
+            </lightning:layoutitem>
+            <div class="{! 'slds-form-element slds-m-top_xx-small slds-m-left_small' + ((v.priorAuthRadioButton == 'No') ? ' slds-show ' :  ' slds-hide ') }">
+                Authorization is not required.
+            </div>
+            
+            <lightning:layoutitem class="{! ((v.delegatedPlanRadioButton == 'Yes') ? ' slds-show ' :  ' slds-hide ') }" size="12">
+                <div class="slds-form-element slds-m-top_xx-small">
+                    <abbr lightning-input_input="" title="required" class="slds-required">*</abbr>
+                        Is Authorizations handled by UHC?
+                    <lightning:radioGroup class="slds-m-right_medium customRadioCls slds-m-left_medium"
+                                        name="{! 'handledByUHCRadioButton' + v.paCheckTabId }"
+                                        label="Is Authorizations handled by UHC?"
+                                        options="{! v.radioButtonOptions }" 
+                                        value="{! v.handledByUHCRadioButton }"
+                                        aura:id="handledByUHCRadioButton"
+                                        type="radio"
+                                        required="true"
+                                        variant="label-hidden" 
+                                        onchange="{! c.handleRadioChange }"/>
+                </div>
+            </lightning:layoutitem>
+            <lightning:layoutitem class="{! (((v.delegatedPlanRadioButton == 'No') || (v.handledByUHCRadioButton == 'Yes')) ? ' slds-show ' :  ' slds-hide ') }" size="12">
+                <div class="slds-form-element slds-m-top_xx-small">
+                    <abbr lightning-input_input="" title="required" class="slds-required">*</abbr>
+                        Is UHC Primary?
+                    <lightning:radioGroup class="slds-m-right_medium customRadioCls slds-m-left_medium"
+                                        name="{! 'uhcPrimaryRadioButton' + v.paCheckTabId }"
+                                        label="Is UHC Primary?"
+                                        options="{! v.radioButtonOptions }" 
+                                        value="{! v.uhcPrimaryRadioButton }"
+                                        aura:id="uhcPrimaryRadioButton"
+                                        type="radio"
+                                        required="true"
+                                        variant="label-hidden" 
+                                        onchange="{! c.handleRadioChange }"/>
+                </div>
+            </lightning:layoutitem>
+            <div class="{! 'slds-form-element slds-m-top_xx-small slds-m-left_small' + ((v.handledByUHCRadioButton == 'No') ? ' slds-show ' :  ' slds-hide ') }">
+                Authorization is handled by Delegation, follow your standard processes for transferring the call.
+            </div>
+            
+            <lightning:layoutitem class="{! ((v.uhcPrimaryRadioButton == 'Yes') ? ' slds-show ' :  ' slds-hide ') }" size="12">
+                <div class="slds-form-element slds-m-top_xx-small">
+                    <abbr lightning-input_input="" title="required" class="slds-required">*</abbr>
+                    Is this a member notification requirement?
+                    <lightning:radioGroup class="slds-m-right_medium customRadioCls slds-m-left_medium"
+                                        name="{! 'memberNotifRadioButton' + v.paCheckTabId }"
+                                        label="Is this a member notification requirement?"
+                                        options="{! v.radioButtonOptions }" 
+                                        value="{! v.memberNotifRadioButton }"
+                                        aura:id="memberNotifRadioButton"
+                                        type="radio"
+                                        required="true"
+                                        variant="label-hidden"
+                                        onchange="{! c.handleRadioChange }"/>
+                </div>
+            </lightning:layoutitem>
+            <div class="{! 'slds-form-element slds-m-top_xx-small slds-m-left_small' + ((v.uhcPrimaryRadioButton == 'No') ? ' slds-show ' :  ' slds-hide ') }">
+                Authorization is not required due to this policy being secondary to UHC. If  the provider insist on having an authorization created, please follow your process for Auth creation.
+            </div>
+            
+            <div class="{! 'slds-form-element slds-m-top_xx-small slds-m-left_small' + ((v.memberNotifRadioButton == 'Yes') ? ' slds-show ' :  ' slds-hide ') }">
+                Advise the provider of the member notification requirements.
+            </div>
+            <!--US3244407 -->
+            <div class="{! 'slds-form-element slds-m-top_xx-small slds-m-left_small' + ((v.memberNotifRadioButton == 'No') ? ' slds-show ' :  ' slds-hide ') }">
+                Authorization is required, please follow your process for Auth creation.
+            </div>
+
+            <!--<lightning:layoutitem class="{! ((v.memberNotifRadioButton == 'No') ? ' slds-show ' :  ' slds-hide ') }" size="12">
+                <div class="slds-form-element slds-m-top_xx-small">
+                    <abbr lightning-input_input="" title="required" class="slds-required">*</abbr>
+                    Is this for Radiology/Cardiology/Chemo/Genetic Testing?
+                    <lightning:radioGroup class="slds-m-right_medium customRadioCls slds-m-left_medium"
+                                        name="testingRadioButton" 
+                                        label="Is this for Radiology/Cardiology/Chemo/Genetic Testing?"
+                                        options="{! v.radioButtonOptions }" 
+                                        value="{! v.testingRadioButton }"
+                                        aura:id="testingRadioButton"
+                                        type="radio"
+                                        required="true"
+                                        variant="label-hidden" 
+                                        onchange="{! c.handleRadioChange }"/>
+                </div>
+            </lightning:layoutitem>
+            
+            <div class="{! 'slds-form-element slds-m-top_xx-small slds-m-left_small' + ((v.testingRadioButton == 'Yes') ? ' slds-show ' :  ' slds-hide ') }">
+                Follow your standard process of transferring the call to the appropriate area.
+            </div>
+            <div class="{! 'slds-form-element slds-m-top_xx-small slds-m-left_small' + ((v.testingRadioButton == 'No') ? ' slds-show ' :  ' slds-hide ') }">
+                Authorization is required, please follow your process for Auth creation.
+            </div> -->
+            
+        </lightning:layout>
+        </aura:If>
+
+        <aura:If isTrue="{!((v.sourceCode =='CS') || (v.sourceCode == 'CO'))}">
+            <c:ACET_PACheck_Questionnaire autodocUniqueId="{!v.autodocUniqueId}"
+                                          autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"
+                                          sourceCode="{!v.sourceCode}"
+                                          paCheckTabId="{!v.paCheckTabId}"
+                                          category="PA Check"
+                                          defaultQuestion="Q1"/>
+        	<br/>
+            <div style="width:100%;overflow: hidden;">
+            <aura:iteration items="{!v.procedureCodeDetailsListNew}" var="cd" indexVar="key">
+                <h2 class="component_title" title="{!cd.title}">
+                    {!cd.code} &nbsp; {!cd.CodeDescription}
+                </h2>
+                    <br/>
+                    <table style="table-layout: fixed;" class="slds-table slds-table--bordered slds-table--cell-buffer">
+                    <thead>
+                        <tr >
+                                <th class="slds-is-sortable " scope="col" style="width: 200px;">
+                                <span class="slds-truncate" title="Code Indicator Type" style="margin-left: -0.5rem;">Code Indicator Type</span>
+
+                            </th>
+                                <th class="slds-is-sortable " scope="col" style="width: 200px;">
+                                <span class="slds-truncate" title="Value" style="margin-left: -0.5rem;">Value</span>
+
+                            </th>
+                            <th class="slds-is-sortable" scope="col" >
+                                <span class="slds-truncate" title="Description" style="margin-left: -0.5rem;">Description</span>
+
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <aura:iteration items="{!cd.details}" var="i" indexVar="index">
+                            <tr>
+                                    <td scope="row">
+                                        <div style="white-space: pre-wrap;" title="{!i.CodeIndicatorType}">{!i.CodeIndicatorType}</div>
+                                    </td>
+                                    <td scope="row">
+                                        <div style="white-space: pre-wrap;" title="{!i.Value}">{!i.Value}</div>
+                                    </td>
+                                    <td title="{!i.Description}" style="white-space: pre-wrap;">
+
+                                        <aura:unescapedHtml value="{!i.Description}" />
+                                    </td>
+                            </tr>
+                        </aura:iteration>
+                    </tbody>
+                </table>
+                    <br/>
+            </aura:iteration>
+            </div>
+            <br/>
+            <div aura:id="codeDetailsCards">
+            <!-- Don't delete this Div as  it is refering in scroll intoview function -->
+        	</div>
+
+           <!-- <lightning:layout multipleRows="true">
+                <lightning:layoutitem size="12" padding="">
+                    <div class="slds-form-element slds-m-top_medium">
+                        <abbr lightning-input_input="" title="required" class="slds-required">*</abbr>
+                        Is UHC Primary?
+                        <lightning:radioGroup class="customRadioCls slds-m-left_medium"
+                                              name="{! 'uhcPrimaryRadioButton' + v.paCheckTabId }"
+                                              label="Is UHC Primary?"
+                                              options="{! v.radioButtonOptions }"
+                                              value="{! v.uhcPrimaryRadioButton }"
+                                              aura:id="uhcPrimaryRadioButton"
+                                              type="radio"
+                                              required="true"
+                                              variant="label-hidden"
+                                              onchange="{! c.handleRadioChange }"/>
+                    </div>
+                </lightning:layoutitem>
+            </lightning:layout>
+
+            <lightning:layoutitem class="{! ((v.uhcPrimaryRadioButton == 'Yes') ? ' slds-show ' :  ' slds-hide ') }" size="12">
+                     <div class="slds-form-element slds-m-top_xx-small">
+                        <abbr lightning-input_input="" title="required" class="slds-required">*</abbr>
+                        Did the UHC Prior Auth Required field come back as Blocked/Maybe Blocked - Conditionally?
+                        <lightning:radioGroup class="customRadioCls slds-m-left_medium"
+                                              name="{! 'uhcComeAsBlocked' + v.paCheckTabId }"
+                                              label="Did the UHC Prior Auth Required field come back as Blocked/Maybe Blocked - Conditionally?"
+                                              options="{! v.radioButtonOptions }"
+                                              value="{! v.uhcComeAsBlocked }"
+                                              aura:id="uhcComeAsBlocked"
+                                              type="radio"
+                                              required="true"
+                                              variant="label-hidden"
+                                              onchange="{! c.handleRadioChange }" />
+                    </div>
+                </lightning:layoutitem>
+                <div class="{! 'slds-form-element slds-m-top_xx-small slds-m-left_small' + ((v.uhcPrimaryRadioButton == 'No') ? ' slds-show ' :  ' slds-hide ') }">
+                    Authorization is not required due to this policy being secondary to UHC.  If the provider insists on having an authorization created, please follow your process for Auth creation.
+                </div>
+
+
+            	<lightning:layoutitem class="{! (and(v.uhcComeAsBlocked == 'Yes',v.sourceCode == 'CS') ? ' slds-show ' :  ' slds-hide ') }" size="12">
+                    <div class="slds-form-element slds-m-top_xx-small">
+                        <abbr lightning-input_input="" title="required" class="slds-required">*</abbr>
+
+                       Based on the service type of the code, is the corresponding Med Nec Indicator Yes or No?
+                        <lightning:radioGroup class="customRadioCls slds-m-left_medium"
+                                              name="{! 'medNecIndValue' + v.paCheckTabId }"
+                                              label="Based on the service type of the code, is the corresponding Med Nec Indicator Yes or No?"
+                                              options="{! v.radioButtonOptions }"
+                                              value="{! v.medNecIndValue }"
+                                              aura:id="medNecIndValue"
+                                              type="radio"
+                                              required="true"
+                                              variant="label-hidden"
+                                              onchange="{! c.handleRadioChange }" />
+                    </div>
+                </lightning:layoutitem>
+
+            <lightning:layoutitem class="{! ( or(v.medNecIndValue == 'Yes', and(v.uhcComeAsBlocked == 'Yes',v.sourceCode == 'CO')) ? ' slds-show ' :  ' slds-hide ') }" size="12">
+                    <div class="slds-form-element slds-m-top_xx-small">
+                        <abbr lightning-input_input="" title="required" class="slds-required">*</abbr>
+
+                       Select Service Type
+                        <lightning:radioGroup class="customRadioCls slds-m-left_medium"
+                                              name="{! 'SST' + v.paCheckTabId }"
+                                              label="Select Service Type"
+                                              options="{! v.csMedNecOptions }"
+                                              value="{! v.SST }"
+                                              aura:id="SST"
+                                              type="radio"
+                                              required="true"
+                                              variant="label-hidden"
+                                              onchange="{! c.handleRadioChange }" />
+                    </div>
+                </lightning:layoutitem>
+
+                <div class="{! 'slds-form-element slds-m-top_xx-small slds-m-left_small' + ((v.SST == 'Radiology/Cardiology') ? ' slds-show ' :  ' slds-hide ') }">
+                    Advise provider that authorization is required.  Advise to submit online at uhcprovider.com or contact Evicore at 866-889-8054.
+                </div>
+
+            <div class="{! 'slds-form-element slds-m-top_xx-small slds-m-left_small' + ((v.SST == 'Oncology/Chemotherapy') ? ' slds-show ' :  ' slds-hide ') }">
+                   Advise provider that authorization is required.  Advise to submit online at uhcprovider.com or contact Optum at 888-397-8129.
+                </div>
+
+            <div class="{! 'slds-form-element slds-m-top_xx-small slds-m-left_small' + ((v.SST == 'Genetic Testing') ? ' slds-show ' :  ' slds-hide ') }">
+                    Advise provider that authorization is required.  Advise to submit online at uhcprovider.com or contact Beacon at 800-377-8809.
+                </div>
+
+            <lightning:layoutitem class="{! (( (v.uhcComeAsBlocked == 'No') ||  (v.medNecIndValue == 'No') ) ? ' slds-show ' :  ' slds-hide ') }" size="12">
+                    <div class="slds-form-element slds-m-top_xx-small">
+                        <abbr lightning-input_input="" title="required" class="slds-required">*</abbr>
+                         Did the Prior Auth Required field come back as Yes or Maybe?
+                       Did the UHC Prior Auth Required field come back as Yes or Prior Auth Maybe Required?
+                        <lightning:radioGroup class="customRadioCls slds-m-left_medium"
+                                              name="{! 'priorAuthRadioButton' + v.paCheckTabId }"
+                                              label="Did the UHC Prior Auth Required field come back as Yes or Prior Auth Maybe Required?"
+                                              options="{! v.radioButtonOptions }"
+                                              value="{! v.priorAuthRadioButton }"
+                                              aura:id="priorAuthRadioButton"
+                                              type="radio"
+                                              required="true"
+                                              variant="label-hidden"
+                                              onchange="{! c.handleRadioChange }" />
+                    </div>
+                </lightning:layoutitem>
+
+            <div class="{! 'slds-form-element slds-m-top_xx-small slds-m-left_small' + ((v.priorAuthRadioButton == 'No') ? ' slds-show ' :  ' slds-hide ') }">
+                    Authorization is not required.
+                </div>
+            <lightning:layoutitem class="{! ((v.priorAuthRadioButton == 'Yes') ? ' slds-show ' :  ' slds-hide ') }" size="12">
+                    <div class="slds-form-element slds-m-top_xx-small">
+                        <abbr lightning-input_input="" title="required" class="slds-required">*</abbr>
+                        Is this a Delegated Plan?
+                        <lightning:radioGroup class="customRadioCls slds-m-left_medium"
+                                              name="{! 'delegatedPlanRadioButton' + v.paCheckTabId }"
+                                              label="Is this a Delegated Plan?"
+                                              options="{! v.radioButtonOptions }"
+                                              value="{! v.delegatedPlanRadioButton }"
+                                              aura:id="delegatedPlanRadioButton"
+                                              type="radio"
+                                              required="true"
+                                              variant="label-hidden"
+                                              onchange="{! c.handleRadioChange }"/>
+                    </div>
+                </lightning:layoutitem>
+
+             <lightning:layoutitem class="{! ((v.delegatedPlanRadioButton == 'Yes') ? ' slds-show ' :  ' slds-hide ') }" size="12">
+                    <div class="slds-form-element slds-m-top_xx-small">
+                        <abbr lightning-input_input="" title="required" class="slds-required">*</abbr>
+                        Is Authorizations handled by UHC?
+                        <lightning:radioGroup class="slds-m-right_medium customRadioCls slds-m-left_medium"
+                                              name="{! 'handledByUHCRadioButton' + v.paCheckTabId }"
+                                              label="Is Authorizations handled by UHC?"
+                                              options="{! v.radioButtonOptions }"
+                                              value="{! v.handledByUHCRadioButton }"
+                                              aura:id="handledByUHCRadioButton"
+                                              type="radio"
+                                              required="true"
+                                              variant="label-hidden"
+                                              onchange="{! c.handleRadioChange }"/>
+                    </div>
+                </lightning:layoutitem>
+                <lightning:layoutitem class="{! (( and(or(v.delegatedPlanRadioButton == 'No',v.handledByUHCRadioButton == 'Yes'),v.sourceCode == 'CS')) ? ' slds-show ' :  ' slds-hide ') }" size="12">
+                    <div class="slds-form-element slds-m-top_xx-small">
+                        <abbr lightning-input_input="" title="required" class="slds-required">*</abbr>
+                        Is this a member notification requirement?
+                        <lightning:radioGroup class="slds-m-right_medium customRadioCls slds-m-left_medium"
+                                              name="{! 'memberNotifRadioButton' + v.paCheckTabId }"
+                                              label="Is this a member notification requirement?"
+                                              options="{! v.radioButtonOptions }"
+                                              value="{! v.memberNotifRadioButton }"
+                                              aura:id="memberNotifRadioButton"
+                                              type="radio"
+                                              required="true"
+                                              variant="label-hidden"
+                                              onchange="{! c.handleRadioChange }"/>
+                    </div>
+                </lightning:layoutitem>
+            <div class="{! 'slds-form-element slds-m-top_xx-small slds-m-left_small' + (and(or(v.delegatedPlanRadioButton == 'No',v.handledByUHCRadioButton == 'Yes'),v.sourceCode == 'CO') ? ' slds-show ' :  ' slds-hide ') }">
+                    Authorization is required, please follow your process for Auth creation.
+                </div>
+
+            <div class="{! 'slds-form-element slds-m-top_xx-small slds-m-left_small' + ((v.handledByUHCRadioButton == 'No') ? ' slds-show ' :  ' slds-hide ') }">
+                    Authorization is handled by Delegation, follow your standard processes for transferring the call.
+                </div>
+            <div class="{! 'slds-form-element slds-m-top_xx-small slds-m-left_small' + ((v.memberNotifRadioButton == 'Yes') ? ' slds-show ' :  ' slds-hide ') }">
+                    Advise the provider of the member notification requirements.
+                </div>
+
+                <div class="{! 'slds-form-element slds-m-top_xx-small slds-m-left_small' + ((v.memberNotifRadioButton == 'No') ? ' slds-show ' :  ' slds-hide ') }">
+                   Authorization is required, please follow your process for Auth creation.
+                </div>
+
+-->
+
+        </aura:If>
+        <aura:if isTrue= "{!v.openSpInsPopUP}">
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+
+                    <header class="slds-modal__header card_padding"> <!-- US1934396 - Thanish - 17th Feb 2020 -->
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate"></h2>
+                    </header>
+
+                    <div class="slds-modal__content card_right_padding card_left_padding card_bottom_padding slds-p-around_medium slds-is-relative"
+                         id="modal-content-id-1">
+                        <aura:unescapedHtml value= "{!v.spInstructionString}"/>
+                    </div>
+
+                    <footer class="slds-modal__footer card_padding">
+                        <lightning:button variant="neutral"
+                                          label="Close"
+                                          title="Close"
+                                          onclick="{! c.closeModal }"/>
+                    </footer>
+
+                </div>
+            </section>
+
+        </aura:if>
+
+    </div>
+</aura:component>

@@ -1,0 +1,144 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes" access="global">
+
+	<aura:attribute type="Object" name="authDetailsObj" />
+
+	<!-- US2308090: Enhancements, Authorizations: KAVINDA -->
+	<ltng:require styles="{! $Resource.datatable + '/DataTables-1.10.16/media/css/jquery.dataTables.min.css'}" scripts="{!join(',',
+            $Resource.datatable + '/DataTables-1.10.16/media/js/jquery.dataTables.min.js')
+            }" />
+	<aura:attribute name="IsInitializedTable" type="Boolean" default="false" />
+	<aura:attribute name="dataTblId" type="String" />
+
+	<!-- US2061071 - Auto Doc Attributes -->
+	<aura:attribute name="AutodocPageFeature" type="String" />
+	<aura:attribute name="initialClick" type="boolean" default="true" />
+	<aura:attribute name="componentId" type="String" />
+	<aura:attribute name="AutodocKey" type="string" access="public" />
+
+	<aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+
+	<!-- <aura:handler name="change" value="{!v.authDetailsObj}" action="{!c.processData}" /> -->
+
+	<!-- US2271237 - View Authorizations - Update Policies in Auto Doc : Kavinda -->
+	<aura:attribute name="IsAutoDocEnable" type="Boolean" default="true" />
+
+	<!-- US2654830	Performance Improvement - View Authorizations - Notes Section  -->
+	<aura:attribute name="toggleName" type="String" default="slds-hide" />
+
+	<!-- US2619431 -->
+    <aura:attribute type="String" name="SRN" />
+    <aura:attribute name="isMainComponent" type="Boolean" default="true" />
+
+	<!-- US2654830	Performance Improvement - View Authorizations - Notes Section  -->
+	<lightning:layout verticalAlign="center">
+		<lightning:layoutItem size="12">
+			<div class="slds-card">
+				<div class="slds-page-header" id="{!v.idValue}">
+					<section class="slds-clearfix topLine">
+						<div class="slds-float--left" id="chevInactive">
+                                <div  class="slds-icon_container chevInactive" style="padding:0;" onclick="{!c.chevToggle}">
+									<aura:if isTrue="{!v.toggleName == 'slds-hide'}">
+										<img src="{!$Resource.SLDS+'/assets/icons/utility/chevronright_60.png'}" class="slds-icon slds-icon_x-small"/>
+
+										<aura:set attribute="else">
+											<img src="{!$Resource.SLDS+'/assets/icons/utility/chevrondown_60.png'}" class="slds-icon slds-icon_x-small"/>
+                                        </aura:set>
+									</aura:if>
+
+                                </div>
+						</div>
+						<div class="slds-m-left--large">
+							{! (v.isMainComponent ? 'Notes' : 'Authorization Detail Notes') }
+						</div>
+					</section>
+				</div>
+			</div>
+		</lightning:layoutItem>
+	</lightning:layout>
+
+
+	<div class="{!v.toggleName}">
+	<!-- US2271237 -->
+	<div class="autodocTableView noResolveCheckBox slds-card slds-box detailSection" data-auto-doc="{!v.IsAutoDocEnable}"
+			data-auto-doc-feature="{!v.AutodocPageFeature}" data-auto-doc-section-key="{! (v.isMainComponent ? ('Notes: ' + v.SRN) : ('Authorization Detail Notes: ' + v.SRN) ) }">
+			<!-- <div>
+				US2396656
+				<lightning:layoutItem size="12">
+				<span class="component_title">Notes</span>
+				</lightning:layoutItem>
+			</div> -->
+		<!-- US2382581 -->
+		<div class="{!' slds-m-top_small ' + v.AutodocPageFeature}">
+			<div width="100%"
+				style="{! 'overflow: auto; min-height: 120px; ' + (if(greaterthanorequal(v.authDetailsObj.notes.length, 7), ' max-height: 290px; ', '') ) }">
+				<!-- US2307436: -->
+				<!-- US2271237 -->
+				<table style="width: 100%; min-width: 100%; max-width: 100%;" id="{! v.dataTblId }"
+					class="slds-table slds-no-row-hover slds-table_bordered slds-table_cell-buffer" cellspacing="0"
+					width="100%">
+					<thead>
+						<tr class="slds-line-height_reset">
+							<!-- US2307436: START -->
+							<th scope="col">
+								<span title="CREATE DATE">CREATE DATE</span>&nbsp;
+							</th>
+							<th scope="col">
+								<span title="CREATE BY">CREATE BY</span>&nbsp;
+							</th>
+							<th scope="col">
+								<span title="DEPARTMENT">DEPARTMENT</span>&nbsp;
+							</th>
+							<th scope="col">
+								<span title="SUBJECT TYPE">SUBJECT TYPE</span>&nbsp;
+							</th>
+							<th scope="col">
+								<span title="NOTE DETAILS">NOTE DETAILS</span>&nbsp;
+							</th>
+							<!-- US2307436: END -->
+						</tr>
+					</thead>
+					<tbody>
+						<aura:If isTrue="{!v.authDetailsObj.notes.length > 0 }">
+							<aura:iteration items="{!v.authDetailsObj.notes}" var="notes">
+								<tr class="slds-hint-parent">
+									<!-- US2307436: START -->
+									<td title="{!notes.createDateTimeFormated}">
+										<c:ACET_DisplayDataShrink styleCSS="slds-text-align_left"
+											dataValue="{!notes.createDateTimeFormated}" charactorLimit="20" />
+									</td>
+									<td title="{!notes.createdByUserId}">
+										<c:ACET_DisplayDataShrink styleCSS="slds-text-align_left"
+											dataValue="{!notes.createdByUserId}" charactorLimit="20" />
+									</td>
+									<!-- US2807198 Enhancement - View Authorizations:  New Fields Added for Authorization Details Integration -->
+									<td title="{!notes.department}">
+										<c:ACET_DisplayDataShrink styleCSS="slds-text-align_left" dataValue="{!notes.department}"
+											charactorLimit="20" />
+									</td>
+									<!--GAP-->
+									<td title="{!notes.categoryCode.description}">
+										<c:ACET_DisplayDataShrink styleCSS="slds-text-align_left"
+											dataValue="{!notes.categoryCode.description}" charactorLimit="20" />
+									</td>
+									<td title="{!notes.text}">
+										{!notes.text}
+										<!--<c:ACET_DisplayDataShrink styleCSS="slds-text-align_left" dataValue="{!notes.text}" charactorLimit="20" doShrink="false"/>-->
+									</td>
+									<!-- US2307436: END -->
+								</tr>
+							</aura:iteration>
+							<aura:set attribute="else">
+								<tr>
+									<td colspan="5">
+										<center>No records found.</center>
+									</td>
+								</tr>
+							</aura:set>
+						</aura:If>
+					</tbody>
+				</table>
+				</div>
+			</div>
+		</div>
+	</div>
+</aura:component>

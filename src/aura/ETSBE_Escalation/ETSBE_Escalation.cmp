@@ -1,0 +1,103 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,forceCommunity:availableForAllPageTypes,force:lightningQuickActionWithoutHeader,force:hasRecordId" access="global" controller="ETSBE_EscalatController">
+ 
+    <aura:attribute name="record" type="Object"/>
+    <aura:attribute name="simpleRecord" type="Case"/>
+    <aura:attribute name="recordError" type="String"/>
+    <aura:attribute name="disbutton" type="Boolean" default="true" />
+    <aura:attribute name="recordTypeId" type="String" />
+    <aura:attribute name="disfields" type="Boolean" default="false" />
+    <aura:attribute name="showError" type="Boolean" default="false" />
+    <aura:attribute name="showinfo" type="Boolean" default="false" />
+	<aura:attribute name="chcksave" type="Boolean" default="true" />
+    <aura:attribute name="disClearbutt" type="Boolean" default="false" />
+    <!-- Research User -->
+    <aura:attribute name="userInfo" type="user" access="public"/>  
+    <aura:attribute name="isResearchUser" type="Boolean" access="public" default="false"/>
+    <!-- Email Template Textual Questions -->
+    <aura:attribute name="ownsIssue" type="String" default="" access="public"/>
+    <aura:attribute name="issueRouted" type="String" default="" access="public"/>
+    <aura:attribute name="specRepWorking" type="String" default="" access="public"/>
+    <aura:attribute name="reqNum" type="String" default="" access="public"/>
+    <aura:attribute name="memInfo" type="String" default="" access="public"/>
+    <aura:attribute name="escalationDesc" type="String" default="" access="public"/> 
+    
+
+    <aura:html tag="style">
+        .cuf-content {
+            padding: 0 0rem !important;
+        }
+        .slds-p-around--medium {
+            padding: 0rem !important;
+        }       
+        .slds-modal__content{
+            overflow-y:auto !important;
+            height:unset !important;
+            max-height:unset !important;
+        }
+    </aura:html>
+	<div class="slds-modal__header">
+       <h2 class="slds-text-heading--medium">Escalate</h2>
+    </div>
+        <aura:if isTrue="{!v.showError}">
+        <!-- Show the message to ui -->
+        <div class="slds-notify slds-notify_toast slds-theme_alt-inverse">
+            <span class="slds-assistive-text">Info</span>
+                    <lightning:icon iconName="utility:info" />
+            <div class="slds-notify__content slds-p-left_x-small">
+            <p class="slds-align_absolute-center">{!$Label.c.ETSBE_Case_Status_Closed}</p>             
+            </div>
+        </div>
+    </aura:if>
+    <aura:if isTrue="{!v.showinfo}">
+        <!-- Show the message to ui -->
+        <div class="slds-notify slds-notify_toast slds-theme_alt-inverse">
+            <span class="slds-assistive-text">Info</span>
+                    <lightning:icon iconName="utility:info" />
+            <div class="slds-notify__content slds-p-left_x-small">
+            <p class="slds-align_absolute-center">{!$Label.c.ETSBE_Interaction_Escalated}</p>             
+            </div>
+        </div>
+    </aura:if>
+
+    <div class="slds-p-bottom_large slds-p-left_large" style="width:500px">
+        <lightning:spinner class="slds-hide" aura:id="dropdown-spinner" alternativeText="Loading.." title="Loading.."
+            variant="brand" size="large" style="z-index:99"/>
+        <lightning:notificationsLibrary aura:id="notificationsLibrary"/>
+        <lightning:recordEditForm aura:id="recordViewForm"
+                                  recordId="{!v.recordId}"
+                                  onsuccess="{!c.handleOnSuccess}"
+                                  recordTypeId="{!v.recordTypeId}"
+                                  onerror="{!c.handleError}"
+                                  onload="{!c.onLoad}"
+                                  objectApiName="Case">
+            <lightning:messages />
+            <lightning:inputField fieldName="IsEscalated" aura:id="isesc" disabled="true"/>
+            <lightning:inputField fieldName="Escalated_To__c" required="true" aura:id="escto"  onchange="{!c.disabutton}" disabled="{!v.disfields}"/>
+            
+            <!--Added for selecting multiple users:US2715331-->
+            <label class="slds-form-element__label" for="textarea-input-01">Additional Recipients:</label> 
+            <c:ETSBE_MultiSelectLookup  aura:id="selRecords" objectName="User" fieldName="Name" iconName="standard:user" disabled="{!v.disfields}"/>
+            
+            <lightning:inputField fieldName="PC_Escalation_Reason__c" required="true" aura:id="escreas"  onchange="{!c.disabutton}" disabled="{!v.disfields}"/>
+            <lightning:inputField fieldName="Status" aura:id="escurntsts" class="sldshideinputfield"/>
+        </lightning:recordEditForm>
+        <lightning:input name="ownsIssue" label="Who currently owns issue?" value="{!v.ownsIssue}" disabled="true"/>  
+        <lightning:input name="issueRouted" label="Where was the issue routed?" value="{!v.issueRouted}" disabled="true"/>        
+        <lightning:input name="specRepWorking" label="Is there a specific rep working this issue?" value="{!v.specRepWorking}" disabled="{!v.disfields}"/>  
+        <lightning:input name="reqNum" label="Request Number:" value="{!v.reqNum}" disabled="true"/>  
+        <lightning:input name="memInfo" label="Member Information:" value="{!v.memInfo}" disabled="true"/> 
+        <div class="slds-form-element"> 
+            <label class="slds-form-element__label" for="textarea-input-01">Escalation Description:</label> 
+            <div class="slds-form-element__control">
+                <lightning:inputrichtext  value="{!v.escalationDesc}" disabled="{!v.disfields}"/>
+            </div>
+        </div>
+    </div>             
+
+  <div class="slds-modal__footer">
+      <lightning:button label="Save" variant="brand"  onclick="{!c.handleOnSubmit}" disabled="{!v.disbutton}"/>
+      <lightning:button variant="neutral" label="Cancel" onclick="{!c.CloseQuickaction}"/>
+      <lightning:button label="Clear" variant="neutral" onclick="{!c.clear}" disabled="{!v.disClearbutt}"/>
+    </div>
+    
+</aura:component>

@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workflow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <alerts>
+        <fullName>CPM_Task_Manager_Email</fullName>
+        <description>CPM Task Manager Email</description>
+        <protected>false</protected>
+        <recipients>
+            <field>Agent_s_Manager_Email__c</field>
+            <type>email</type>
+        </recipients>
+        <senderAddress>careadvisorconnect@optum.com</senderAddress>
+        <senderType>OrgWideEmailAddress</senderType>
+        <template>unfiled$public/CPM_Task_Notice</template>
+    </alerts>
+    <alerts>
+        <fullName>CPM_Task_Notification</fullName>
+        <description>CPM Task Notification</description>
+        <protected>false</protected>
+        <recipients>
+            <field>Agent_s_Manager_Email__c</field>
+            <type>email</type>
+        </recipients>
+        <senderAddress>careadvisorconnect@optum.com</senderAddress>
+        <senderType>OrgWideEmailAddress</senderType>
+        <template>unfiled$public/CPM_Task_Notice</template>
+    </alerts>
+    <fieldUpdates>
+        <fullName>CPM_Agent_s_Manager_Email</fullName>
+        <description>CPM Agent&apos;s Manager Email</description>
+        <field>Agent_s_Manager_Email__c</field>
+        <formula>Owner:User.Manager.Email</formula>
+        <name>CPM Agent&apos;s Manager Email</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Formula</operation>
+        <protected>false</protected>
+        <reevaluateOnChange>false</reevaluateOnChange>
+    </fieldUpdates>
+    <fieldUpdates>
+        <fullName>CPM_Update_Manager_s_name</fullName>
+        <description>Update Manager&apos;s Name</description>
+        <field>Agent_s_Manager__c</field>
+        <formula>Owner:User.Manager.FirstName +&apos; &apos;+Owner:User.Manager.LastName</formula>
+        <name>CPM Update Manager&apos;s name</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Formula</operation>
+        <protected>false</protected>
+        <reevaluateOnChange>false</reevaluateOnChange>
+    </fieldUpdates>
+    <fieldUpdates>
+        <fullName>Check_Retain_Ownership</fullName>
+        <field>RetainOwnership__c</field>
+        <literalValue>1</literalValue>
+        <name>Check Retain Ownership</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Literal</operation>
+        <protected>false</protected>
+        <reevaluateOnChange>false</reevaluateOnChange>
+    </fieldUpdates>
+    <fieldUpdates>
+        <fullName>SAE_Task_Complete</fullName>
+        <field>RecordTypeId</field>
+        <lookupValue>SAE_Provider_Completed</lookupValue>
+        <lookupValueType>RecordType</lookupValueType>
+        <name>SAE Task Complete</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>LookupValue</operation>
+        <protected>false</protected>
+        <reevaluateOnChange>false</reevaluateOnChange>
+    </fieldUpdates>
+    <fieldUpdates>
+        <fullName>Update_Record_Type_to_Completed</fullName>
+        <description>When a task is completed the record type is updated to make the task read only.</description>
+        <field>RecordTypeId</field>
+        <lookupValue>SENS_Task_Completed</lookupValue>
+        <lookupValueType>RecordType</lookupValueType>
+        <name>Update Record Type to Completed</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>LookupValue</operation>
+        <protected>false</protected>
+        <reevaluateOnChange>false</reevaluateOnChange>
+    </fieldUpdates>
+    <rules>
+        <fullName>CPM Task Manager Update</fullName>
+        <actions>
+            <name>CPM_Agent_s_Manager_Email</name>
+            <type>FieldUpdate</type>
+        </actions>
+        <actions>
+            <name>CPM_Update_Manager_s_name</name>
+            <type>FieldUpdate</type>
+        </actions>
+        <active>true</active>
+        <description>Updates manager&apos;s email address when task is saved</description>
+        <formula>AND( NOT( ISBLANK( OwnerId ) ), OR ( ISNEW() , ISCHANGED( OwnerId ),  ISCHANGED(Request_Type__c) ) ,OR(ISPICKVAL(Request_Type__c, &apos;CPM to RA Outreach&apos;),ISPICKVAL(Request_Type__c, &apos;RA to CPM Outreach&apos;)))</formula>
+        <triggerType>onAllChanges</triggerType>
+    </rules>
+    <rules>
+        <fullName>CPM Task Notice</fullName>
+        <actions>
+            <name>CPM_Task_Manager_Email</name>
+            <type>Alert</type>
+        </actions>
+        <active>true</active>
+        <description>CPM Task Notice</description>
+        <formula>AND(OR( ISNEW() ,ISCHANGED(OwnerId)),NOT(ISBLANK(Agent_s_Manager_Email__c)),OR(ISPICKVAL(Request_Type__c, &apos;CPM to RA Outreach&apos;),ISPICKVAL(Request_Type__c, &apos;RA to CPM Outreach&apos;)))</formula>
+        <triggerType>onAllChanges</triggerType>
+    </rules>
+    <rules>
+        <fullName>Retain Owner Checked For CPM</fullName>
+        <actions>
+            <name>Check_Retain_Ownership</name>
+            <type>FieldUpdate</type>
+        </actions>
+        <active>true</active>
+        <criteriaItems>
+            <field>Task.RecordTypeId</field>
+            <operation>equals</operation>
+            <value>CPM Task</value>
+        </criteriaItems>
+        <description>This rule defaults the Retain Ownership checkbox to Checked for CPM  Record Type only.</description>
+        <triggerType>onCreateOnly</triggerType>
+    </rules>
+    <rules>
+        <fullName>SAE Task Completion</fullName>
+        <actions>
+            <name>SAE_Task_Complete</name>
+            <type>FieldUpdate</type>
+        </actions>
+        <active>true</active>
+        <criteriaItems>
+            <field>Task.RecordTypeId</field>
+            <operation>equals</operation>
+            <value>SAE Provider</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Task.Status</field>
+            <operation>equals</operation>
+            <value>Completed</value>
+        </criteriaItems>
+        <description>Moves to read only layout</description>
+        <triggerType>onCreateOrTriggeringUpdate</triggerType>
+    </rules>
+    <rules>
+        <fullName>SENS Task Completion</fullName>
+        <actions>
+            <name>Update_Record_Type_to_Completed</name>
+            <type>FieldUpdate</type>
+        </actions>
+        <active>true</active>
+        <criteriaItems>
+            <field>Task.RecordTypeId</field>
+            <operation>equals</operation>
+            <value>SENS Task</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Task.Status</field>
+            <operation>equals</operation>
+            <value>Completed</value>
+        </criteriaItems>
+        <description>Moves to read only layout</description>
+        <triggerType>onCreateOrTriggeringUpdate</triggerType>
+    </rules>
+</Workflow>

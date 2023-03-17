@@ -1,0 +1,151 @@
+<aura:component access="global" controller="SNI_FLDirectMessageUtil">
+    <aura:attribute name="titleName" type="String" default="Messages"/>
+    <aura:attribute name="isChatView" type="Boolean"/>
+    <aura:attribute name="IsOpenNewMsg" type="boolean" default="false" />
+    <aura:attribute name="isUnread" type="boolean"/>
+    <aura:attribute name="AccountName" type="String"/>
+    <aura:attribute name="FamilyAccountName" type="String"/>
+    <aura:attribute name="isBackupAgentView" type="Boolean"/>
+    <aura:attribute name="isSpecificFamilyView" type="Boolean" default="true"/>
+    <aura:attribute name="Get_Result" type="Integer" />
+    <aura:attribute name="sortDropdownOptions" type="List" default="[{'label': 'All', 'value': 'All'},{'label': 'Unread', 'value': 'Unread'}]"/>
+    <aura:attribute name="sortByDropdown" type="String" default="All" />
+    <aura:attribute name="selectedLabel" type="String"/>  
+    <aura:attribute name="selectedId" type="String"/>
+    <aura:attribute name="searchedMemberName" type="String" default=""/>
+    <aura:attribute name="searchedMemberId" type="String" default=""/>
+    <aura:attribute name="recordStart" type="Integer" default="0"></aura:attribute>
+    <aura:attribute name="recordEnd" type="Integer" default="0"></aura:attribute> 
+    <aura:attribute name="totalRecords" type="Integer" default="0"></aura:attribute>
+    <aura:attribute name="pageNumber" type="Integer" default="1"></aura:attribute>
+    <aura:attribute name="totalPages" type="Integer" default="1"></aura:attribute>
+    <aura:attribute name="pageSize" type="Integer" default="10"></aura:attribute>
+    <aura:attribute name="lstDirectMessages" type="List"></aura:attribute>
+    <aura:attribute name="selectedDirectMessage" type="SNI_FLDirectMessageWrapper"></aura:attribute>
+    <aura:attribute name="fileName" type="String" default="No File Selected.." />
+    <aura:attribute name="replyValue" type="String" />
+    <aura:attribute name="replyValueMobile" type="String"></aura:attribute>
+    <aura:handler name="init" value="{!this}" action="{!c.init}"/>
+    <aura:attribute name="histMessageEnabled" type="Boolean" default="false"/>
+    <aura:attribute name="histMessagePrevious" type="Boolean"/>
+    <aura:attribute name="histMemberAffId" type="string" default=" "/>
+    <aura:attribute name="typeAheadFlow" type="Boolean" default="false"/>
+    <lightning:navigation aura:id="navService"/>
+    <aura:attribute type="String" name="providerAffliationID" default=""/><!--DE409699 added providerAffliationID attribute-->
+    <aura:handler name="change" value="{!v.providerAffliationID}" action="{!c.itemsChange}"/><!--DE409699 added providerAffliationID attribute-->
+    <aura:handler name="change" value="{!v.selectedId}" action="{!c.decideHist}"/>
+    <aura:attribute name="AffliationName" type="String" default=""></aura:attribute><!--DE409699 added providerAffliationID attribute-->
+    
+
+    <aura:registerEvent name="clearSelectedMessageEvent" type="c:SNI_FL_ClearSelectedMessageEvent"></aura:registerEvent>
+
+    <div class="desktop-view " style="background-color:#FFFCFC;"> 
+        
+        <div class="mobileView">
+            <b style="font-family:Arial, Helvetica, sans-serif;font-size:24px;margin-left:2px;margin-right:5px;color:#000000;text-align: left;">Messages</b>
+
+            <br></br><br></br><br></br>
+            <div class="slds-grid  slds-wrap header slds-list_horizontal">
+                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-8 slds-large-size_1-of-3">
+                    <lightning:icon iconName="standard:messaging_conversation"  alternativeText="user" title="user"  class="image icon1"/>
+                    <ui:inputSelect class="slds-select y DropDownBody combo-style comboBoxStyle grid-element-field" aura:id="select" change="{!c.selectFilterOption}">
+                        <option value="All" >All </option>
+                        <option value="Unread">Unread</option>
+                    </ui:inputSelect> 
+                </div>
+                
+                <div class="slds-list_horizontal slds-col slds-size_1-of-1 slds-medium-size_5-of-8 slds-large-size_2-of-3">
+		
+                    <c:SNI_FL_Typeahead selectedId="{!v.selectedId}" selectedLabel="{!v.selectedLabel}" searchedMemberName="{!v.searchedMemberName}"/> 
+
+                    <div class="slds-col_bump-left">
+                        <aura:if isTrue="{!v.typeAheadFlow}">
+                            <aura:if isTrue="{!v.histMessageEnabled}">
+                                <lightning:button class="oldMsgBtn" aura:id="typeHistory" label="View Older Messages" onclick="{!c.openMemAffhistpage}"/>&nbsp;&nbsp;
+                            </aura:if>
+                            <aura:set attribute="else">
+                                <aura:if isTrue="{!v.histMessageEnabled}">
+                                    <lightning:button class="oldMsgBtn" aura:id="history" label="View Older Messages" onclick="{!c.openhistpage}"/>&nbsp;&nbsp;
+                                </aura:if>
+                            </aura:set>
+                        </aura:if>
+                        <lightning:button class="slds-float_right newMsgBtn" aura:id="newMsgButton" label="New Message" title="New Message" onclick="{!c.createNewMessage}" />
+                    </div>
+                </div>
+                <div class="slds-m-bottom_small">
+                    <span>
+                        <aura:if isTrue="{!v.IsOpenNewMsg}">
+                            <c:SNI_FL_ProviderNewMessagePopup IsOpenNewMsg="{!v.IsOpenNewMsg}" NewMessageBody="{!v.NewMessageBody}" SubjectValue="{!v.SubjectValue}" AccountName="{!v.AccountName}" isBackupAgentView="{!v.isBackupAgentView}" providerAffliationID="{!v.providerAffliationID}"/>
+                        </aura:if>
+                    </span>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="desktopView header">
+            <lightning:icon class="{! if((v.isChatView),'slds-float_right','slds-hide') }" aura:id="backButton" iconName="utility:close" alternativeText="Go Back" size="large" onclick="{!c.goBackToMsgList}"/>&nbsp;
+            
+            <div class="{!v.isChatView ? 'slds-hide' : 'slds-show'}" style="margin-top:-27px">
+                <b style="font-family:Arial, Helvetica, sans-serif;font-size:24px;margin-left:2px;margin-right:5px;color:#000000;text-align: left;">Messages</b>
+
+                <p style="font-family:Arial, Helvetica, sans-serif;font-size:20px;font-weight:530;">
+                    <lightning:formattedText value="{!v.AffliationName}" />
+                    <br></br>
+                </p>
+               
+                <div class="slds-grid slds-wrap">
+                    <div class="slds-col slds-col1 slds-size--1-of-1 slds-medium-size_10-of-10 "></div>
+                </div> 
+                <aura:if isTrue="{!v.typeAheadFlow}">
+                    <aura:if isTrue="{!v.histMessageEnabled}">
+                        <lightning:button class="oldMsgBtnMobile" aura:id="typeHistory" label="View Older Messages" onclick="{!c.openMemAffhistpage}"/>
+                    </aura:if>
+                    <aura:set attribute="else">
+                        <aura:if isTrue="{!v.histMessageEnabled}">
+                            <lightning:button class="oldMsgBtnMobile" aura:id="history" label="View Older Messages" onclick="{!c.openhistpage}"/>
+                        </aura:if>
+                    </aura:set>
+                </aura:if>
+                <lightning:button class="MsgBtn" aura:id="MsgButton" label="New Message" title="New Messages" onclick="{!c.createNewMessage}"/>
+
+                        
+                 <div class="slds-grid slds-wrap">
+                    <div class="slds-col slds-col1 slds-size--1-of-1 slds-medium-size_10-of-10 ">
+                        
+                        <!--<lightning:button class="desktopView MsgBtn1" aura:id="MsgButton"  label="New Message" title="New Messages" onclick="{!c.createNewMessage}"/>
+                        <br></br>
+                        <lightning:button class="desktopView MsgBtn" aura:id="MsgButton"  label="New Message" title="New Messages" onclick="{!c.createNewMessage}"/>
+                        <br></br> -->
+                        
+                    </div>
+                </div> 
+               
+                <div class="slds-grid slds-wrap">
+                    <div class="slds-col slds-col1 slds-size--1-of-1 slds-medium-size_10-of-10 ">
+                        <lightning:combobox class="combo-style1 comboBoxStylenew" value="{!v.sortByDropdown}" options="{!v.sortDropdownOptions}" onchange="{!c.handleFilterChange}"/>
+                        <br></br>
+                    </div>
+                </div>
+
+                <div class="slds-grid slds-wrap">
+                    <div class="slds-col slds-col1 slds-size--1-of-1 slds-medium-size_10-of-10 "></div>
+                </div> 
+
+                <div class="slds-grid slds-wrap">
+                    <div class="slds-col slds-col1 slds-size--1-of-1 slds-medium-size_10-of-10 " style="width:102% !important;margin-left: -3px !important;">
+                        <c:SNI_FL_Typeahead selectedId="{!v.selectedId}" selectedLabel="{!v.selectedLabel}" searchedMemberName="{!v.searchedMemberName}" /> 
+                    </div>
+                </div>
+               
+                <div class="slds-m-bottom_small">
+                    <aura:if isTrue="{!v.IsOpenNewMsg}">
+                        <c:SNI_FL_ProviderNewMessagePopup IsOpenNewMsg="{!v.IsOpenNewMsg}" NewMessageBody="{!v.NewMessageBody}" SubjectValue="{!v.SubjectValue}" AccountName="{!v.AccountName}" isBackupAgentView="{!v.isBackupAgentView}" providerAffliationID="{!v.providerAffliationID}"/>
+                    </aura:if>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+</aura:component>

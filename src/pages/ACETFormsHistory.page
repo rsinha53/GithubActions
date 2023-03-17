@@ -1,0 +1,1029 @@
+<apex:page controller="ACETFormsHistoryController" sidebar="False" action="{!init}" id="pageid" tabStyle="ClaimSearch__tab" showHeader="true">
+<script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous">
+    </script>
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    <apex:stylesheet value="{!URLFOR($Resource.ACETResources, '/css/m/memberdetail.css')}" />
+    <apex:includeScript value="{!URLFOR($Resource.jQueryDatatableResources,'jquery.dataTables.min.js')}" />
+    <apex:stylesheet value="{!URLFOR($Resource.jQueryDatatableResources,'jquery.dataTables.min.css')}" />  
+    <style> 
+
+        .messageTable {
+        border: none !important;
+        }
+    </style>
+    
+    <script>
+    var selOrder = '';
+    var orderSubmitted = false;
+    
+    function Data(){
+        var hasSuccessMessage=true; 
+        
+        if(hasSuccessMessage){
+            $("[id$='btnSubmitOrder']").addClass("btnDisabled").removeClass("btn").attr("disabled","disabled");
+        }else{
+            
+            $("[id$='btnSubmitOrder']").addClass("btn").removeClass("btnDisabled").removeAttr("disabled",false); 
+        }
+    }
+    function setFocusOnLoad(){}
+    function noenter(e){
+        if(window.event){
+            key = window.event.keyCode;     //IE
+        }
+        else{
+            key = e.which;     //firefox
+        }
+        if(key == 13) {
+            ValidateOrderHistory();
+            return false;
+        } else{
+            return true;
+        }
+    }
+    
+    function clearValues(selOrderVal)
+    {
+        
+        if(selOrderVal == 'New Order'){
+            if($("[id$='startdate']"))  {
+                selOrder = $("[id$='startdate']").val();
+                $("[id$='startdate']").val('');
+            }
+        }
+        orderChangeName();
+    }
+    
+    function ValidateOrderHistory()
+    {
+        var dateitem = true;
+        var doctypeitem = true;
+        $("[id$='startdate']").parent().find(".errorMsg").remove();
+        $("[id$='startdate']").parent().parent().find(".errorMsg").remove();
+        $("[id$='startdate']").parent().find(".requiredBlock").remove();
+        $("[id$='startdate']").removeClass('error');
+        $("[id$='doctype']").parent().find(".errorMsg").remove();
+        $("[id$='doctype']").parent().parent().find(".errorMsg").remove();
+        $("[id$='doctype']").parent().find(".requiredBlock").remove();
+        $("[id$='doctype']").removeClass('error'); 
+        var $startdate = document.getElementById("{!$Component.Pageid.formid.Block1.section1.section1b.startDateSection.startdate}");
+        var $doctype = $("[id$='doctype']");
+        var parts = $startdate.value.split("/");
+        var day = parseInt(parts[1], 10); 
+        var month = parseInt(parts[0], 10);
+        var year = parseInt(parts[2], 10);
+        if($startdate != null && $startdate.value != undefined && $startdate.value.search("[a-z,A-Z<>!@#$%^&?=_(){}:;*']")>=0 || (year < 1000 || year > 3000 || month == 0 || month > 12 || day == 0) )
+        { 
+            var errorMsg = "Invalid Date"; 
+            $("[id$='startdate']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+            $("[id$='startdate']").addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            dateitem = false;
+        }
+        else if((month ==4 || month == 6 || month==9 || month == 11) && day > 30)
+        {
+            var errorMsg = "Invalid Date"; 
+            $("[id$='startdate']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+            $("[id$='startdate']").addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            dateitem = false;
+        }   
+            else if((month ==1 || month == 3 || month==5 || month == 7 || month == 8 || month==10 || month ==12) && day > 31)
+            {
+                var errorMsg = "Invalid Date"; 
+                $("[id$='startdate']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+                $("[id$='startdate']").addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                dateitem = false;
+            }
+        
+                else if($startdate != null && new Date($startdate.value) > new Date())
+                {
+                    var errorMsg = "Start date cannot be<br/> greater than today's date."; 
+                    $("[id$='startdate']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+                    $("[id$='startdate']").addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                    dateitem = false;
+                }
+        
+        
+        if($doctype.val() == 'None')
+        {
+            var errorMsg = "Document Type is required."; 
+            $("[id$='doctype']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+            $doctype.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            doctypeitem = false;
+        }
+        if(dateitem && doctypeitem)
+        {
+            searchresults();
+        }
+    }
+    function isValidDate(dateStr) {
+        var datePat = /^(\d{1,2})(\/|-)(\d{1,2})\2(\d{2}|\d{4})$/;
+        var matchArray = dateStr.match(datePat);
+        if (matchArray == null) {
+            return false;
+        }
+        month = matchArray[1]; // parse date into variables
+        day = matchArray[3];
+        year = matchArray[4];
+        if (month < 1 || month > 12) { // check month range
+            return false;
+        }
+        if (day < 1 || day > 31) {
+            return false;
+        }
+        if ((month==4 || month==6 || month==9 || month==11) && day==31) {
+            return false
+        }
+        if (month == 2) { // check for february 29th
+            var isleap = (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+            if (day>29 || (day==29 && !isleap)) {
+                return false;
+            }
+        }
+        return true;  // date is valid
+    }
+    
+    
+    function ShowHideOrderhistory(variable)
+    {
+        var bool = variable.value;
+        if(bool == 'Order History')
+        {
+            document.getElementById('section1b').style.display = 'block';
+        }
+        else{
+            document.getElementById('section1b').style.display = 'none';
+        }
+    }
+    
+    function checkButtonStatus(){
+        if(validateSuccessMessage()){
+            $("[id$='btnSubmitOrder']").addClass("btnDisabled").removeClass("btn").attr("disabled","disabled");
+        }
+        if(validateFailureMessage()){
+            orderSubmitted=false;
+            $("[id$='btnSubmitOrder']").addClass("btn").removeClass("btnDisabled").removeAttr("disabled"); 
+        }
+    }
+    
+    function validateProfile() {
+        var hasReasearchUser = false;
+        var profileName = '{!JSENCODE(profileName)}';
+        console.log('Profile Name'+profileName);
+        if(profileName == 'Research User') {
+            hasReasearchUser = true;
+        }
+        return hasReasearchUser;
+    } 
+    function validateFailureMessage(){
+        var hasFailureMessage = false;
+        var message = '';
+        console.log("checking for failure message");
+        $("[class$='messageText']").each(function(){
+            console.log($(this).text());
+            if($(this).text().indexOf('Order failed')!=-1||$(this).text().indexOf('Unexpected error occurred')!=-1){
+                hasFailureMessage=true;
+            }
+        }); 
+        return hasFailureMessage;
+    } 
+    
+    function validateSuccessMessage(){
+        var hasSuccessMessage = false;
+        var message = '';
+        console.log("orderSubmitted ='" + orderSubmitted + "'");
+        if(orderSubmitted){
+            console.log("got here");
+            hasSuccessMessage=true;
+        }
+        $("[class$='messageText']").each(function(){
+            console.log($(this).text());
+            if($(this).text().indexOf('Success')!=-1){
+                hasSuccessMessage=true;
+            }
+        }); 
+        return hasSuccessMessage;
+    }
+    
+    function validateAddressForm(){
+        
+        $("[id$='organization']").parent().find(".errorMsg").remove();
+        $("[id$='firstName']").parent().find(".errorMsg").remove();
+        $("[id$='lastName']").parent().find(".errorMsg").remove();
+        $("[id$='Address1']").parent().find(".errorMsg").remove();
+        $("[id$='Address2']").parent().find(".errorMsg").remove();
+        $("[id$='City']").parent().find(".errorMsg").remove();
+        $("[id$='State']").parent().find(".errorMsg").remove();
+        $("[id$='organization']").parent().find(".errorMsg").remove();
+        $("[id$='ZipCode']").parent().find(".errorMsg").remove();
+        $("[id$='errorNameBlank']").hide();
+        
+        
+        var errorMsg = "You must enter a value.";
+        
+        var returnFlag = true;
+        if($("[id$='organization']").val() == '' && ($("[id$='firstname']").val() == '' || $("[id$='lastname']").val() == '' )){
+            $("[id*='errorNameBlank']").show();
+            
+            returnFlag = false;
+        }
+        if($("[id$='Address1']").val() == ''){
+            $("[id$='Address1']").parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            returnFlag = false;
+        }
+        if($("[id$='City']").val() == ''){
+            $("[id$='City']").parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            returnFlag = false;
+        }
+        if($("[id$='State']").val() == ''){
+            $("[id$='State']").parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            returnFlag = false;
+        }
+        if($("[id$='ZipCode']").val() == ''){
+            $("[id$='ZipCode']").parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            returnFlag = false;
+        }
+        
+        return returnFlag;
+        
+    }
+    function submitform(){
+        
+        if(!validateSuccessMessage()){
+            if(validateAddressForm()){
+                orderSubmitted = true;
+                btnSubmit();
+                
+            }
+        }
+        
+    } 
+    
+    function initOrderHistoryTable(){
+        console.log('inside initCaseHistoryTable');
+        $('[id$="orderhistorytable"]').DataTable({
+            "lengthChange": false,
+            "pageLength": 25,
+            "pagingType": "simple_numbers",
+            "searching": false,                   
+            "ordering": true,  
+            "order": [[1, 'desc']]
+            
+        });
+    }
+    
+    </script> 
+    <style> 
+        h1.hidden {
+        display: none;
+        }
+    </style> 
+    
+    
+    <apex:form id="formid">
+        <!-- <apex:pagemessages /> -->
+        <apex:actionstatus id="counterStatus">
+            <apex:facet name="start">
+                <div class="waitingSearchDiv" id="el_loading" style="background-color: #fbfbfb; height:100%;opacity:0.65;width:100%;">
+                    <div class="waitingHolder" style="top: 100px; width: 91px;">
+                        <img class="waitingImage" src="/img/loading.gif" title="Please Wait..." />
+                        <span class="waitingDescription">Loading...</span>
+                    </div>
+                </div>
+            </apex:facet>
+        </apex:actionstatus>
+        
+        <c:ACETInteractionHighlightsPanel InteractionAtt="{!wrapper.interaction}" SubjectAtt="{!wrapper.Subject}" AdditionalInfoAtt="{!wrapper.AdditionalInfo}" html-auto-doc="auto" selectedOriginator="{!wrapper.interaction.Originator_Name__c}"/>  
+        <apex:outputPanel id="hippapopupPanel">
+            <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+        </apex:outputPanel>  
+        
+        
+        <apex:actionFunction name="CalculateEnddate" action="{!CalculateEnddate}" reRender="endDatePanel,enddate" />
+        <apex:actionFunction name="ClearSearchCriteria" action="{!clearsearch}" reRender="Block1,outpanleSearchResult" oncomplete="acet.autodoc.startAutodoc()"/>
+        <apex:actionFunction name="searchresults" action="{!Search}" status="OrderHistoryStatus" reRender="outpanleSearchResult,autodoc, pgMessage"  oncomplete="acet.autodoc.startAutodoc();initOrderHistoryTable();acet.autodoc.startAutodoc();"/>
+        <apex:actionFunction name="btnSubmit" action="{!btnSubmit}" reRender="pgMessage" status="SubStatus" oncomplete="window.scrollTo(0,0);Data2();checkButtonStatus();"/>
+       
+            <apex:sectionHeader title="Materials Request" />
+            <apex:pageMessages id="pgMessage"/>
+            <div>
+                <div>
+                    
+                </div>
+                <div>
+                    
+                    
+                    <c:ACETCaseActions attrRefreshNavigationTab="true"
+                                       attrCaseDataWrapper="{!wrapper}"
+                                       attrShowSaveButton="true" attrShowMisdirectButton="true"
+                                       attrSourceOriginator="{!wrapper.SourceOriginator}"
+                                       attrInteractionId="{!wrapper.Interaction.Id}"
+                                       attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="Materials Request"
+                                       rendered="true" attrInteractionObj="{!wrapper.interaction}" />
+                    
+                </div>
+            </div>
+        <apex:outputPanel rendered="{!isLevelFunded}">
+        <apex:pageMessage severity="INFO" escape="false"  strength="2" title="Information">
+            <apex:outputText escape="false"  value="{!$Label.ACET_Materials_Request_LF_Msg}" />
+
+           </apex:pageMessage> 
+          </apex:outputPanel>    
+         
+            <apex:pageBlock id="Block1">
+                <apex:outputPanel id="changeSearchBy1">
+                    <apex:pageBlockSection columns="2" id="section1">
+                        <apex:outputPanel style="width: 90% !important;">
+                            <apex:pageBlockSection columns="2" id="section1a">
+                                <br/>
+                                <apex:pageBlockSectionItem dataStyle="width:80%;">
+                                    
+                                    <apex:selectRadio layout="pageDirection" label="New Order" onchange="clearValues(this.value);" title="New Order" value="{!order}">
+                                        <apex:selectOption itemLabel="New Order" itemValue="New Order" ></apex:selectOption>
+                                        <apex:selectOption itemLabel="Order History" itemValue="Order History"></apex:selectOption>
+                                        <apex:actionFunction name="orderChangeName" action="{!changeOrderDate}" reRender="outpanlefieldSection,startDateSection,changeSearchBy1,outpanleSearchResult,button,Block1,BUnit,pgMessage" oncomplete="acet.autodoc.startAutodoc(); disableSubmitOrderButton()" />
+                                    </apex:selectRadio>
+                                    
+                                </apex:pageBlockSectionItem>
+                                
+                            </apex:pageBlockSection>
+                        </apex:outputPanel>
+                        <apex:outputPanel style="width:290% !important;" id="outpanlefieldSection">
+                            <apex:pageBlockSection columns="2" id="section1b" rendered="{!IF(order == 'Order History', true, false)}">
+                                
+                                <apex:pageBlockSectionItem dataStyle="width:40%;" rendered="true" id="startDateSection">
+                                    
+                                    <apex:outputLabel value="Start Date" style="font-weight: bold;font-size: 91%;color: #4a4a56;"/>
+                                    <apex:outputPanel id="startDatePanel" rendered="true">
+                                        <apex:inputField onkeypress="return noenter(event)" onchange="CalculateEnddate();" id="startdate" value="{!startdate.tst_Date_Field__c}" style="width:111px;margin-left:1px;padding-bottom: 4px;" rendered="true">
+                                            
+                                        </apex:inputField>
+                                        
+                                    </apex:outputPanel>
+                                    
+                                    
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem dataStyle="width:40%;" rendered="true"
+                                                           id="endDateSection">
+                                    
+                                    <apex:outputLabel style="font-weight: bold;font-size: 91%;color: #4a4a56;" value="End Date"/>
+                                    <apex:outputPanel id="endDatePanel" rendered="true">
+                                        <apex:OutputText id="enddate"
+                                                         value="{!enddate}"
+                                                         style="font-size:12px;margin-left:4px;padding-bottom: 4px;" rendered="true"/>
+                                        <div class="errorMsg"
+                                             style="display: none; margin-left: -12px;">
+                                            <b>Error:</b> Invalid End Date
+                                        </div>
+                                    </apex:outputPanel>
+                                    
+                                    
+                                </apex:pageBlockSectionItem>
+                                
+                            </apex:pageBlockSection>
+                            
+                        </apex:outputPanel>
+                    </apex:pageBlockSection>
+                    
+                    
+                </apex:outputPanel>
+                
+                <apex:pageBlockButtons style="padding-left:10px !important;" location="bottom">
+                    <apex:outputPanel id="button" rendered="{!IF(order == 'Order History', true, false)}">
+                        <input type="button" class="btn" id="searchBtn" value="Search"
+                               onclick="ValidateOrderHistory();"/>
+                        <input type="button" id="btnClear" class="btn" value="Clear"
+                               onclick="ClearSearchCriteria();"/>
+                    </apex:outputPanel>
+                </apex:pageBlockButtons>                
+            </apex:pageBlock>
+            
+            <apex:outputPanel id="outpanleSearchResult">
+                <apex:pageBlock id="pbSearchResult" title="Order History Results " rendered="{!IF(formshistory != null  &&  order == 'Order History', true , false)}" html-auto-doc-section-key="pbSearchResults" html-auto-doc-section-column-indexes="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16">                
+                    <apex:actionStatus id="OrderHistoryStatus">
+                        <apex:facet name="start">
+                            <p style="text-align: center;">
+                                <img src="/img/loading.gif" />&nbsp;Loading...
+                            </p>
+                        </apex:facet>
+                    </apex:actionStatus>
+                    <apex:Outputpanel layout="block" id="test">
+                        <apex:pageBlocksection columns="1" html-auto-doc="true" html-auto-doc-pagination="true" rendered="{!IF(order == 'Order History', true, false)}">
+                            <apex:outputPanel html-auto-doc-pagination="true" styleClass="enablePagination" html-auto-doc-section-combinedkey="pbSearchResults" >
+                            <apex:pageBlockTable id="orderhistorytable" value="{!formshistory}" var="r"
+                                                 rendered="true">
+                                
+                                <apex:column headerValue="Request Date/Time">
+                                    <apex:outputText value="{!r.requestdate}"></apex:outputText>
+                                </apex:column>
+                                <apex:column headerValue="Document Name">
+                                    <apex:outputText value="{!r.documentname}"></apex:outputText>
+                                </apex:column>
+                                
+                                <apex:column headerValue="Status" >
+                                    <apex:outputText value="{!r.status}"></apex:outputText>
+                                </apex:column>
+                                
+                                <apex:column headerValue="Mailed Date/Time" >
+                                    <apex:outputText value="{!if(r.maileddate != null,r.maileddate,'')}"></apex:outputText>
+                                </apex:column>
+                                <apex:column headerValue="Recipient" >
+                                    <apex:outputText value="{!r.recipient}"></apex:outputText>
+                                </apex:column>
+                                
+                                <apex:column headerValue="Address" >
+                                    <apex:outputText value="{!r.Address}"></apex:outputText>
+                                </apex:column>
+                                
+                                <apex:column headerValue="Source" >
+                                    <apex:outputText value="{!r.source}"></apex:outputText>
+                                </apex:column>
+                                
+                            </apex:pageBlockTable>
+                            </apex:outputPanel>
+                        </apex:pageBlocksection>
+                        <apex:pageBlocksection columns="1" rendered="{!formshistory.size == 0}" html-auto-doc="true">
+                            <apex:outputLabel value="No results found"></apex:outputLabel>
+                        </apex:pageBlocksection>
+                    </apex:Outputpanel>
+                    
+                </apex:pageBlock>
+            </apex:outputPanel>
+            <br/>
+            
+            <apex:outputPanel id="BUnit">
+                <apex:pageblock id="pbNewOrderResult" rendered="{!IF(order == 'New Order', true, false)}" title="Deliver To">
+                    <apex:pageblock id="BtnsUnit">
+                        <apex:pageBlockButtons location="top" id="buttonBlock" style="align-center" >                           
+                            <apex:commandButton id="btnSubmitOrder" onClick="return submitform();" value="Submit Order" status="SubStatus" oncomplete=" " reRender="pgMessage"/>
+                            <apex:actionStatus id="SubStatus" >
+                                <apex:facet name="start" >
+                                    <img src="/img/loading.gif" />                    
+                                </apex:facet>
+                            </apex:actionStatus>
+                        </apex:pageBlockButtons>
+                    </apex:pageblock>
+                    <apex:Outputpanel layout="block">
+                        <apex:outputPanel id="popup"> 
+                            <apex:outputPanel >
+                                <div style="display:none" class="errorMsg" id ="errorNameBlank"><strong>Error:</strong> You must enter a recipient First Name and Last Name or Organization.</div>
+                            </apex:outputPanel>
+                            <apex:outputPanel rendered="{!chooseAddress}" id="AddressView">
+                                <apex:pageBlockSection columns="1" html-auto-doc="true">
+                                    <apex:outputPanel >
+                                        <apex:selectRadio id="addRadio"  value="{!selectAddress}">
+                                            <apex:selectOption itemValue="AddressOnFile" itemLabel="Address on File" />
+                                            <apex:selectOption itemValue="AlternateAddress" itemLabel="Alternate Address" />
+                                            <apex:actionSupport event="onchange" reRender="AddressView,buttonBlock" />
+                                        </apex:selectRadio>
+                                    </apex:outputPanel>
+                                </apex:pageBlockSection>
+                                <apex:pageBlockSection columns="1" >
+                                    <apex:outputPanel >
+                                        <apex:outputPanel rendered="{!IF(selectAddress == 'AddressOnFile' , true, false)}">
+                                            <apex:pageBlockSection columns="2">
+                                                <apex:pageBlockSection columns="2">
+                                                    
+                                                    <apex:pageBlockSectionItem dataStyle="width:70%;">
+                                                        <apex:outputLabel style="font-weight: bold;font-size: 91%;color: #4a4a56;text-align:right;" value="First Name"></apex:outputLabel>
+                                                        <apex:outputPanel id="org2Panel" rendered="true">
+                                                            <apex:inputText id="firstname" value="{!AddOnFilePersonWrap.personFirstName}" style="width:200px"/>&nbsp;&nbsp;
+                                                        </apex:outputPanel>
+                                                    </apex:pageBlockSectionItem> 
+                                                    
+                                                    <apex:pageBlockSectionItem dataStyle="width:70%;">
+                                                        <apex:outputLabel style="font-weight: bold;font-size: 91%;color: #4a4a56;text-align:right;" value="Middle Name"></apex:outputLabel>
+                                                        <apex:outputPanel id="org2Panel" rendered="true">
+                                                            <apex:inputText value="{!AddOnFilePersonWrap.personMiddleName}" style="width:200px"/>&nbsp;&nbsp;
+                                                        </apex:outputPanel>
+                                                    </apex:pageBlockSectionItem> 
+                                                    
+                                                </apex:pageBlockSection>
+                                                
+                                                <apex:pageBlockSection columns="2">
+                                                    
+                                                    <apex:pageBlockSectionItem dataStyle="width:70%;">
+                                                        <apex:outputLabel style="font-weight: bold;font-size: 91%;color: #4a4a56;text-align:right;" value="Last Name"></apex:outputLabel>
+                                                        <apex:outputPanel id="org2Panel" rendered="true">
+                                                            <apex:inputText id="lastname" value="{!AddOnFilePersonWrap.personLastName}"  style="width:200px"/> &nbsp;&nbsp;
+                                                        </apex:outputPanel>
+                                                    </apex:pageBlockSectionItem>
+                                                    
+                                                    <apex:pageBlockSectionItem dataStyle="width:70%;">
+                                                        <apex:outputLabel style="font-weight: bold;font-size: 91%;color: #4a4a56;text-align:right;" value="Suffix"></apex:outputLabel>
+                                                        <apex:outputPanel id="SuffixPanel" rendered="true">
+                                                            <apex:inputText value="{!AddOnFilePersonWrap.personSuffix}"  style="width:100px" /> &nbsp;&nbsp;
+                                                        </apex:outputPanel>
+                                                    </apex:pageBlockSectionItem>  
+                                                    
+                                                </apex:pageBlockSection>
+                                            </apex:pageBlockSection>
+                                            <apex:pageBlockSection columns="1">
+                                                
+                                                <apex:pageBlockSectionItem dataStyle="width:80%;">
+                                                    <apex:outputLabel value="Organization Name 1"></apex:outputLabel>
+                                                    <apex:outputPanel id="org1Panel" rendered="true">
+                                                        <apex:inputText id="organization" value="{!AddOnFilePersonWrap.personOrganization1}" style="width:300px"/>
+                                                    </apex:outputPanel>
+                                                </apex:pageBlockSectionItem>
+                                                
+                                                <apex:pageBlockSectionItem dataStyle="width:80%;">
+                                                    <apex:outputLabel value="Organization Name 2"></apex:outputLabel>
+                                                    <apex:outputPanel id="org2Panel" rendered="true">
+                                                        <apex:inputText value="{!AddOnFilePersonWrap.personOrganization2}" style="width:300px"/>
+                                                    </apex:outputPanel>
+                                                </apex:pageBlockSectionItem>
+                                                
+                                                
+                                                <apex:pageBlockSectionItem >
+                                                    <apex:outputLabel value="Address 1"/>
+                                                    <apex:inputText value="{!AddOnFilePersonWrap.personAddone}"  disabled="True" style="width:300px"/>
+                                                </apex:pageBlockSectionItem>
+                                                
+                                                <apex:pageBlockSectionItem >
+                                                    <apex:outputLabel value="Address 2"/>
+                                                    <apex:inputText value="{!AddOnFilePersonWrap.personAddtwo}"  disabled="True" style="width:300px"/>
+                                                </apex:pageBlockSectionItem>
+                                                
+                                                <apex:pageBlockSectionItem >
+                                                    <apex:outputLabel value="City"/>
+                                                    <apex:inputText value="{!AddOnFilePersonWrap.personCity}"  disabled="True" style="width:300px"/>
+                                                </apex:pageBlockSectionItem>
+                                                
+                                                <apex:pageBlockSectionItem >
+                                                    <apex:outputLabel value="State"/>
+                                                    <apex:inputText value="{!AddOnFilePersonWrap.personState}"  disabled="True" style="width:300px"/>
+                                                </apex:pageBlockSectionItem>
+                                                
+                                                <apex:pageBlockSectionItem >
+                                                    <apex:outputLabel value="Zip"/>
+                                                    <apex:inputText value="{!AddOnFilePersonWrap.personZipCode}"  disabled="True" style="width:300px"/>
+                                                </apex:pageBlockSectionItem>
+                                                
+                                            </apex:pageBlockSection>    
+                                            
+                                        </apex:outputPanel>
+                                        <!-- Alternate Address Start -->
+                                        <apex:outputPanel rendered="{!IF(selectAddress == 'AlternateAddress' , true, false)}">
+                                            <apex:pageBlockSection columns="2">
+                                                <apex:pageBlockSection columns="2">
+                                                    
+                                                    <apex:pageBlockSectionItem dataStyle="width:70%;">
+                                                        <apex:outputLabel value="First Name"/>
+                                                        <apex:outputPanel id="org2Panel" rendered="true">
+                                                            <apex:inputText value="{!personFirstNameAA}" maxLength="30" styleClass="slds-input" style="width:200px" id="firstName"/>&nbsp;&nbsp;
+                                                        </apex:outputPanel>
+                                                    </apex:pageBlockSectionItem>
+                                                    
+                                                    <apex:pageBlockSectionItem dataStyle="width:70%;">
+                                                        <apex:outputLabel value="Middle Name"/>
+                                                        <apex:outputPanel id="org2Panel" rendered="true">
+                                                            <apex:inputText value="{!personMiddleNameAA}" style="width:200px" maxlength="30"/>&nbsp;&nbsp;
+                                                        </apex:outputPanel>
+                                                    </apex:pageBlockSectionItem>  
+                                                    
+                                                </apex:pageBlockSection>
+                                                
+                                                <apex:pageBlockSection columns="2">
+                                                    
+                                                    <apex:pageBlockSectionItem dataStyle="width:70%;">
+                                                        <apex:outputLabel value="Last Name"/>
+                                                        <apex:outputPanel id="org2Panel" rendered="true">
+                                                            <apex:inputText value="{!personLastNameAA}" style="width:200px" maxlength="30" id="lastname"/> &nbsp;&nbsp;
+                                                        </apex:outputPanel>
+                                                    </apex:pageBlockSectionItem>
+                                                    
+                                                    <apex:pageBlockSectionItem dataStyle="width:70%;">
+                                                        <apex:outputLabel value="Suffix"></apex:outputLabel>
+                                                        <apex:outputPanel id="SuffixPanel" rendered="true">
+                                                            <apex:inputText value="{!personSuffixAA}" style="width:100px" maxlength="2"/> &nbsp;&nbsp;
+                                                        </apex:outputPanel>
+                                                    </apex:pageBlockSectionItem>
+                                                    
+                                                </apex:pageBlockSection>
+                                            </apex:pageBlockSection>
+                                            <apex:pageBlockSection columns="1">
+                                                
+                                                <apex:pageBlockSectionItem dataStyle="width:80%;">
+                                                    <apex:outputLabel value="Organization Name 1"/>
+                                                    <apex:inputText value="{!personOrganizationAA1}" style="width:300px" maxLength="35" id="organization"/>
+                                                    
+                                                </apex:pageBlockSectionItem>
+                                                
+                                                <apex:pageBlockSectionItem dataStyle="width:80%;">
+                                                    <apex:outputLabel value="Organization Name 2"/>
+                                                    <apex:outputPanel id="org2Panel" rendered="true">
+                                                        <apex:inputText value="{!personOrganizationAA2}" style="width:300px" maxlength="35"/>
+                                                    </apex:outputPanel>
+                                                </apex:pageBlockSectionItem>
+                                                
+                                                <apex:pageBlockSectionItem >
+                                                    <apex:outputLabel value="Address 1"/>
+                                                    <apex:outputPanel >
+                                                        <div class="requiredInput">
+                                                            <div class="requiredBlock"></div>
+                                                            <apex:inputText value="{!personAddoneAA}"  id="Address1" style="width:300px" maxlength="35"/>
+                                                        </div>
+                                                    </apex:outputPanel>
+                                                </apex:pageBlockSectionItem>
+                                                
+                                                <apex:pageBlockSectionItem >
+                                                    <apex:outputLabel value="Address 2"/>
+                                                    <apex:inputText value="{!personAddtwoAA}" id="Address2" style="width:300px" maxlength="35"/>
+                                                </apex:pageBlockSectionItem>
+                                                
+                                                <apex:pageBlockSectionItem >
+                                                    <apex:outputLabel value="City"/>
+                                                    <apex:outputPanel >
+                                                        <div class="requiredInput">
+                                                            <div class="requiredBlock"></div>
+                                                            <apex:inputText value="{!personCityAA}"  id="City" style="width:300px" maxlength="30"/>
+                                                        </div>
+                                                    </apex:outputPanel>
+                                                </apex:pageBlockSectionItem>
+                                                
+                                                <apex:pageBlockSectionItem >
+                                                    <apex:outputLabel value="State"/>
+                                                    <apex:outputPanel >
+                                                        <div class="requiredInput">
+                                                            <div class="requiredBlock"></div>
+                                                            <apex:inputText value="{!personStateAA}" id="State" style="width:300px" maxlength="2"/>
+                                                        </div>
+                                                    </apex:outputPanel>
+                                                </apex:pageBlockSectionItem>
+                                                
+                                                <apex:pageBlockSectionItem >
+                                                    <apex:outputLabel value="Zip"/>
+                                                    <apex:outputPanel >
+                                                        <div class="requiredInput">
+                                                            <div class="requiredBlock"></div>
+                                                            <apex:inputText value="{!personZipCodeAA}" id="ZipCode" style="width:300px" maxlength="9"/>
+                                                        </div>
+                                                    </apex:outputPanel>
+                                                </apex:pageBlockSectionItem>
+                                            </apex:pageBlockSection>    
+                                            
+                                            
+                                            
+                                        </apex:outputPanel>
+                                        <!-- Alternate Address END -->
+                                    </apex:outputPanel>
+                                    
+                                </apex:pageBlockSection>
+                            </apex:outputPanel>
+                            
+                            
+                            
+                            
+                        </apex:outputPanel>
+                        
+                        
+                        
+                        <apex:Outputpanel layout="block" id="pagePanelid">
+                            <apex:pageblock rendered="{!IF(order == 'New Order', true, false)}" id="pgblck1">
+                                <!-- <apex:pageBlockSection columns="1" rendered="{!IF(order == 'New Order', true, false)}">                            
+<apex:outputPanel style="width: 90% !important;" layout="block">-->
+                                <apex:pageBlockSection columns="1" id="section3a">                        
+                                    <apex:pageBlockSectionItem > 
+                                        <apex:outputLabel value="Business Unit"/>
+                                        <apex:outputPanel id="BunitPanel" rendered="true">
+                                            <apex:selectList multiselect="false" id="BusinessUnitid" label="Business Unit" value="{!BusinessUnit}" size="1" title="Slist1">
+                                                <apex:selectOptions value="{!BusinessUnitValues}" id="selBUId"/>
+                                                <apex:actionSupport event="onchange" rerender="pagePanelid,pgblck1,BUnit" action="{!MaterialForms}" status="counterStatus" oncomplete="acet.autodoc.startAutodoc();disableSubmitOrderButton();"/>
+                                            </apex:selectList>
+                                        </apex:outputPanel>
+                                    </apex:pageBlockSectionItem>
+                                </apex:pageBlockSection>
+                                <script>
+                                function switchQuantityFieldsToNumeric(){
+                                    $("[id$='inputid']").keypress(function (e) {
+                                        
+                                        var regex = new RegExp("^[0-9]+$");
+                                        var str = String.fromCharCode(!e.charCode ? e.which : e.charCode);                                   
+                                        if (regex.test(str) || (/^(8|9|13|27)$/.test("" + e.keyCode))) {    
+                                            return true;
+                                        }
+                                        
+                                        e.preventDefault();
+                                        return false;
+                                    });
+                                    
+                                    //on quantity field input changes, enable/disable submit order button
+                                    $("[id$='inputid']").keyup(function (e){
+                                        var hasQuantityInput = false;
+                                        $("[id$='inputid']").each(function(){
+                                            if($(this).val()=='0'||$(this).val()=='00'||$(this).val()!=parseInt($(this).val(),10)){
+                                                $(this).val('');
+                                            }
+                                            if($(this).val()){
+                                                hasQuantityInput = true;    
+                                            }
+                                        });
+                                        if(hasQuantityInput&&!validateSuccessMessage()&&!validateProfile()){
+                                            $("[id$='btnSubmitOrder']").addClass("btn").removeClass("btnDisabled").removeAttr("disabled"); 
+                                        }else{
+                                            $("[id$='btnSubmitOrder']").addClass("btnDisabled").removeClass("btn").attr("disabled","disabled");
+                                        }                                    
+                                    });                       
+                                }      
+                                function validatePaste(){
+                                    var hasQuantityInput = false;
+                                    
+                                    $("[id$='inputid']").each(function(){
+                                        if($(this).val()=='0'||$(this).val()=='00'||$(this).val()!=parseInt($(this).val(),10)){
+                                            $(this).val('');
+                                        }
+                                        if($(this).val()){
+                                            hasQuantityInput = true;    
+                                        }
+                                    });
+                                    if(hasQuantityInput){
+                                        $("[id$='btnSubmitOrder']").addClass("btn").removeClass("btnDisabled").removeAttr("disabled"); 
+                                    }else{
+                                        $("[id$='btnSubmitOrder']").addClass("btnDisabled").removeClass("btn").attr("disabled","disabled");
+                                    }                                    
+                                }  
+                                function Data2(){
+                                    var y='{!isSuccess}';                         
+                                    if(y){                          
+                                        $("[id$='btnSubmitOrder']").addClass("btn").removeClass("btnDisabled").removeAttr("disabled"); 
+                                    }else{
+                                        $("[id$='btnSubmitOrder']").addClass("btnDisabled").removeClass("btn").attr("disabled","disabled");
+                                    }                          
+                                }                                             
+                                function checkValidToSubmit(){                             
+                                    console.log('here');
+                                    checkValidQuantityJS();
+                                }
+                                </script>
+                                <apex:actionFunction name="checkValidQuantityJS" action="{!checkValidQuantity}" immediate="True" rerender="BtnsUnit,buttonBlock"></apex:actionFunction>
+                                <apex:repeat var="mf" value="{!vListMaterialsForms}">
+                                    <apex:pageBlock id="pb1">
+                                        <apex:pageBlocksection title="{!mf.CategoryName}" id="pbcat" columns="1" html-auto-doc="true" html-auto-doc-case-items="true" >
+                                            <apex:pageBlockTable value="{!mf.LstMaterialForms}" var="mfrepeat" >
+                                                <apex:column style="width:0px;">                                    
+                                                    <apex:outputtext value="{!mfrepeat.Document_Title__c}" style="display:none;"/>                                   
+                                                </apex:column>                                         
+                                                <apex:column headerValue="Quantity" style="width:100px">
+                                                    <apex:inputText id="inputid" title="Quantity" styleClass="valclear" value="{!mfrepeat.Quantity__c}" onfocus="switchQuantityFieldsToNumeric();" maxlength="2" rendered="{!IF(profileName !='Research User', true, false)}" />
+                                                </apex:column> 
+                                                <apex:column >
+                                                    <apex:outputPanel rendered="{!mfrepeat.Document_URL__c != null}">
+                                                        <a href="{!mfrepeat.Document_URL__c}" target="_blank" >{!mfrepeat.Document_Title__c}</a>
+                                                    </apex:outputPanel>
+                                                    <apex:outputText value="{!mfrepeat.Document_Title__c}" rendered="{!mfrepeat.Document_URL__c == null}"/>
+                                                </apex:column>
+                                            </apex:pageBlockTable>
+                                        </apex:pageBlocksection>
+                                        <script> 
+                                        twistSection(document.getElementById('{!$Component.pb1.pbcat}').getElementsByTagName('img')[0]) 
+                                        </script>
+                                        <apex:outputPanel style="display: inline-block;width: 100%;text-align: center;">
+                                            <input type="button" id="btnClear" class="btn btnClear" value="Clear" style="margin: 0 auto;"/>
+                                        </apex:outputPanel>
+                                        
+                                    </apex:pageBlock>
+                                    
+                                </apex:repeat>
+                                
+                                
+                                
+                            </apex:pageBlock>
+                        </apex:Outputpanel>
+                    </apex:outputPanel>
+                </apex:pageblock>
+            </apex:outputPanel> 
+        
+        <c:ACETCaseActions attrRefreshNavigationTab="true"
+                           attrCaseDataWrapper="{!wrapper}"
+                           attrShowSaveButton="true" attrShowMisdirectButton="true"
+                           attrSourceOriginator="{!wrapper.SourceOriginator}"
+                           attrInteractionId="{!wrapper.Interaction.Id}"
+                           attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="Materials Request"
+                           attrLocation="bottom"
+                           rendered="true" attrInteractionObj="{!wrapper.interaction}"/>
+    </apex:form>
+    <apex:outputPanel id="loadpanel">
+        <div id="opaque" style="display: none" />
+        <div id="spinner" style="display: none">
+            <p align="center"
+               style='font-family: "Arial", Helvetica, sans-serif; font-size: 20px;'>
+                <apex:image value="/img/loading.gif" />
+                &nbsp;Please wait
+            </p>
+        </div>
+    </apex:outputPanel>
+    <style>
+        
+        #spinner {<!--
+display: none; -->
+        width: 200px;
+        height: 50px;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        text-align: center;
+        padding: 10px;
+        font: normal 16px Tahoma, Geneva, sans-serif;
+        margin-left: -100px;
+        margin-top: -100px;
+        z-index: 2;
+        overflow: auto;
+        border: 1px solid #CCC;
+        background-color: white;
+        z-index: 100;
+        padding: 5px;
+        line-height: 20px;
+        }
+        
+        #opaque {
+        position: fixed;
+        top: 0px;
+        left: 0px;
+        width: 100%;
+        height: 100%;
+        z-index: 1; <!--v
+display: none; -->
+        background-color: gray;
+        filter: alpha(opacity = 30);
+        opacity: 0.3;
+        -moz-opacity: 0.3;
+        -khtml-opacity: 0.3
+        }
+        
+        * html #opaque {
+        position: absolute;
+        }
+    </style>
+    <style type="text/css">
+        
+        
+        .body .bPageBlock, body #bodyCell .bResource .secondaryPalette, body .bPageBlock.secondaryPalette, body .individualPalette .bPageBlock.secondaryPalette, body .bodyDiv .genericTable, body .genericPageBlockTable, body .bodyDiv .bSubBlock, body .bComponentBlock .bPageBlock, body .bMyDashboard .bPageBlock, body.rlHoverFrame .bPageBlock, body.subjectSelectionPopup div.choicesBox, body.lookupTab .bPageBlock.secondaryPalette, body.popupTab .bPageBlock.secondaryPalette, body.UserTagStatsPage .bPageBlock.secondaryPalette
+        {
+        background-color: white;
+        border-bottom: 1px solid white;
+        border-left: 1px solid white;
+        border-right: 1px solid white;
+        
+        
+        }
+        .apexp .apexDefaultPageBlock.bPageBlock .pbBody .pbSubheader
+        .pbSubheader .brandTertiaryBgr .first .tertiaryPalette
+        {
+        color: black;
+        
+        }
+        
+        .apexp .apexDefaultPageBlock.bPageBlock .pbBody .pbSubheader .showListButton
+        {
+        background-position: 0px 0px;
+        }
+        
+        .apexp .apexDefaultPageBlock.bPageBlock .pbBody .pbSubheader .hideListButton
+        {
+        background-position: 1px -11px;    
+        }
+        
+        h3
+        {
+        color: black;
+        
+        }
+        
+        .apexp .apexDefaultPageBlock.bPageBlock .pbBody .pbSubheader 
+        {
+        font-size: 11px;
+        background-color: white !important;
+        }
+        .apexp .apexDefaultPageBlock.bPageBlock .pbBody .pbSubheader h3
+        {
+        font-size: 1.2em;
+        }
+        
+        .bPageBlock .detailList .data2Col
+        {
+        
+        padding-left: 0px;
+        }
+        .bPageBlock .detailList.th.labelCol.vfLabelColTextWrap.first
+        {
+        padding-top: 13px;
+        }
+        .apexp .apexDefaultPageBlock.bPageBlock .pbBody .pbSubheader
+        {
+        margin-left: -15px;
+        }
+        body .bPageBlock.bDetailBlock, body .individualPalette .bPageBlock.bDetailBlock
+        {
+        margin-bottom:0px;
+        }
+        body .bPageBlock
+        {
+        margin-bottom:0px;
+        }
+        .bPageBlock .dataCol
+        {
+        padding-right: 36px;
+        padding-left: 5px;
+        text-align: left;
+        }
+        #radio
+        {
+        text-align: right;
+        }
+        .bPageBlock .detailList .dataCol
+        {
+        width: 31%;
+        }
+        bPageBlock.brandSecondaryBrd.apexDefaultPageBlock.secondaryPalette
+        {
+        padding-right:8px;
+        }
+        .body .bpageblock .pbBody .dataCol{
+        width:12%;
+        }
+        .body .bPageBlock .pbBody .labelCol,body .print .topics-label{
+        width:15%;
+        }
+        body .bPageBlock .pbBody .dataCol {
+        border-right-color: transparent;
+        width: initial !important;
+        }
+        .pbBody, .pbBody a, .pbBody td, .lbBody a, .lbBodyDescription, .list .headerRow .noRowsHeader {
+        
+        
+        }
+        
+        
+    </style>
+    <apex:outputPanel rendered="true">
+        
+    </apex:outputPanel>
+    <apex:outputLabel id="autodoc">
+        <Script>
+            $(document).ready(function(){                                        
+            
+            $(document).on("click",".btnClear",function() {
+            if($("input[value='New Order']").prop("checked")){
+            console.log("start");            
+            var paentSection = $(this).parent().parent("div.pbBody");
+            console.log("1");
+            
+            var targetInput = $(paentSection).find("input.valclear");
+            var targetCheckbox = $(paentSection).find("input:checkbox");
+            console.log($(targetInput));
+            console.log($(targetInput).val());
+            $(targetInput).val("");
+            $(targetCheckbox).removeAttr('checked');
+            
+            console.log("end");
+            var hasQuantityInput = false;
+            $("[id$='inputid']").each(function(){
+            if($(this).val()){
+            hasQuantityInput = true;    
+            }
+            });
+            if(hasQuantityInput){
+            $("[id$='btnSubmitOrder']").addClass("btn").removeClass("btnDisabled").removeAttr("disabled"); 
+            }else{
+            $("[id$='btnSubmitOrder']").addClass("btnDisabled").removeClass("btn").attr("disabled","disabled");
+            }
+            }
+            });
+            
+            
+            });
+            
+        </Script>
+    </apex:outputLabel>
+    <script>
+    $(document).ready(function(){
+      localStorage.removeItem("table");
+      localStorage.removeItem("rowCheckHold");
+        console.log('init autodoc and commentbox');
+        acet.autodoc.startAutodoc();
+        acet.autodoc.createCommentsbox();
+        acet.autodoc.subTabIds = [];
+        
+        disableSubmitOrderButton();
+        setRequiredFields();
+    }); 
+    
+    function disableSubmitOrderButton(){
+        console.log("disabling submit button");
+        var issubmitenablebutton=true;
+        var issubmitenablebutton=false;
+        $("[id$='btnSubmitOrder']").addClass("btnDisabled").removeClass("btn").attr("disabled","disabled");
+    }
+    
+    function setRequiredFields(){
+        var originatorType = '{!JSENCODE(Interaction.Originator_Type__c)}';
+        console.log("originator type: '" + originatorType + "'");
+        
+    }
+    
+    </script>
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+</apex:page>

@@ -1,0 +1,312 @@
+<aura:component controller="ACETLGT_PaymentSearchController" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,lightning:isUrlAddressable" access="global">
+    <!-- Attributes Start-->
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:attribute name="Loadingspinner" type="Boolean" default="false" />
+    <aura:attribute name="ChangeSearch" default="false" type="Boolean" />
+    <aura:attribute name="page_Number" type="Integer" />
+    <aura:attribute name="isfieldrequired" default="true" type="string" />
+    <aura:attribute name="TaxID" type="string" />
+    <aura:attribute name="Claim_Number" type="Integer" />
+    <aura:attribute name="bookOfBusinessTypeCode" type="String" />
+    <aura:attribute name="Authorization_Number" type="string" />
+    <aura:attribute name="Referral_Number" type="string" />
+    <aura:attribute name="Date_Of_Service" default="All" type="string" />
+    <aura:attribute name="Provider_Type" default="All" type="string" />
+    <aura:attribute name="Network_Status" default="All" type="string" />
+    <aura:attribute name="Start_Date" type="Date" />
+    <aura:attribute name="End_Date" type="Date" />
+    <aura:attribute name="AdditionalInfo_DOB" type="Date" />
+    <aura:attribute name="isValidSearch" default="true" type="Boolean" />
+    <aura:attribute name="showResults" default="false" type="Boolean" />
+    <aura:attribute name="showDetails" default="false" type="Boolean" />
+    <aura:attribute name="tableComplete" default="false" type="Boolean" />
+    <aura:attribute name="responce" type="list" />
+    <aura:attribute name="eid" type="String" />
+    <aura:attribute name="memberid" type="String" />
+    <aura:attribute name="service_error" default="true" type="Boolean" />
+    <aura:attribute name="lgt_dt_DT_Object" type="string" access="public" />
+    <aura:attribute name="lgt_dt_DT_Object_PaidClaims" type="string" access="public" />
+    <aura:attribute name="usInfo" type="user" access="public" />
+    <aura:attribute name="highlightPanel" type="ACETLGT_HighlightPanelInfo" access="global" />
+    <aura:attribute name="paymentNumberSearch" type="String" default="" />
+    <aura:attribute name="seriesDesignatorSearch" type="String" />
+    <aura:attribute name="memberIDSearch" type="String" />
+    <aura:attribute name="PayeeInfo" type="List" default="" />
+    <aura:attribute name="paymentDetails" type="Map" default="{}" />
+    <aura:attribute name="PayeeInfoActiveSections" type="List" default="['PayeeInfo']" />
+    <aura:attribute name="PaymentDetailsActiveSections" type="List" default="['PaymentDetails']" />
+    <aura:attribute name="PaidClaimsActiveSections" type="List" default="['PaidClaims']" />
+    <aura:attribute name="PaymentsResp" type="String" />
+    <aura:attribute name="PaymentsSize" type="Integer" />
+    <aura:attribute name="displayCheckButton" type="Boolean" default="false" />
+    <aura:attribute name="isPaymentResultsTable" type="Boolean" default="false" />
+    <aura:attribute name="selectedRow" type="Integer" />
+    <aura:attribute name="rowZeroID" type="String" />
+    <aura:attribute name="cseTopic" type="String" access="global" default="View Payments" />
+    <aura:attribute name="AutodocKey" type="string" access="public" default="viewPayments" />
+    <aura:attribute name="srk" type="String" access="global" />
+    <aura:attribute name="int" type="Interaction__c" access="global" />
+    <aura:attribute name="intId" type="String" access="global" />
+    <aura:attribute name="csrfurl" type="String" access="global" />
+    <aura:attribute name="comments" type="String" access="global" />
+    <aura:attribute name="grpNum" type="String" access="public" />
+    <aura:attribute name="fname" type="String" access="public" />
+    <aura:attribute name="lname" type="String" access="public" />
+    <aura:attribute name="va_dob" type="String" access="public" />
+    <aura:attribute name="originatorval" type="String" access="public" />
+    <aura:attribute name="GUIkey" type="string" access="public" />
+
+    <aura:handler name="ACETLGT_DataTable_initComplete_Event" event="c:ACETLGT_DataTable_initComplete_Event" action="{!c.handle_dt_initComplete_Event}" />
+    <aura:handler name="ACETLGT_DataTable_createdRow_Event" event="c:ACETLGT_DataTable_createdRow_Event" action="{!c.handle_dt_createdRow_Event}" />
+    <aura:handler name="ACETLGT_DataTable_Callback_Event" event="c:ACETLGT_DataTable_Callback_Event" action="{!c.handle_dt_callback_Event}" />
+    <aura:handler name="ACETLGT_DataTable_SetPageNumber_Event" event="c:ACETLGT_DataTable_SetPageNumber_Event" action="{!c.handle_dt_pageNum_Event}" />
+
+    <!--     <c:ACETLGT_AutoDoc></c:ACETLGT_AutoDoc> -->
+    <!-- Attributes End-->
+    <lightning:workspaceAPI aura:id="workspace" />
+    <div id="{!v.AutodocKey + v.GUIkey}" class="{!v.AutodocKey}">
+        <div data-auto-doc-multiple-pages="true">
+            <c:ACETLGT_AutoDoc></c:ACETLGT_AutoDoc>
+            <lightning:card variant="Narrow" title="Payment Search" iconName="standard:search">
+                <aura:set attribute="actions">
+                    <div class="slds-grid slds-form-element slds-m-right_large">
+                        <lightning:buttonGroup>
+                            <!--                     <c:ACETLGT_TTSModal aura:id = "cComp" cseTopic="{!v.cseTopic}" AutodocKey="{!v.AutodocKey}" int="{!v.int}" intId="{!v.intId}" srk="{!v.srk}" showCirrus="true" memberId="{!v.memberId}"/> -->
+                            <c:ACETLGT_TTSModal aura:id="cComp" pagefeature="{!v.AutodocKey}" pageNum="{!v.page_Number}" cseTopic="{!v.cseTopic}" int="{!v.int}" intId="{!v.intId}" srk="{!v.srk}" showCirrus="true" showMemAlerts="true" showSave="true" showMisdirect="true" comments="{!v.comments}"
+                                memberId="{!v.memberid}" bookOfBusinessTypeCode="{!v.bookOfBusinessTypeCode}" groupId="{!v.grpNum}" userInfo="{!v.usInfo}" AutodocKey="{!v.AutodocKey}" highlightPanel="{!v.highlightPanel}" />
+                        </lightning:buttonGroup>
+                    </div>
+                </aura:set>
+                <c:ACETLGT_HighlightPanel highlightPanelValues="{!v.highlightPanel}" pageFeature="{!v.AutodocKey}" AutodocKey="{!v.AutodocKey + v.GUIkey}" />
+            </lightning:card>
+
+
+            <div class="slds-box slds-theme_default slds-m-top_small slds-m-bottom_small">
+
+                <div class="slds-grid slds-gutters">
+                    <div class="slds-col slds-size_1-of-3">
+                        <span>
+						<lightning:input aura:id="paymentNumber" type="search"  onblur="{!c.onkeyup_PaymentNumber}"  name="Payment Number" value="{!v.paymentNumberSearch}"  label="Payment Number" required="true"/>
+					</span>
+                    </div>
+                    <div class="slds-col slds-size_1-of-3">
+                        <span>
+						<lightning:input aura:id="seriesDesignator" type="search" name="Series Designator" value="{!v.seriesDesignatorSearch}" label="Series Designator"/>
+					</span>
+                    </div>
+                    <div class="slds-col slds-size_1-of-3">
+                        <span>
+						<lightning:input aura:id="memberID" type="search" name="Member ID" value="{!v.memberIDSearch}" label="Member ID"/>
+					</span>
+                    </div>
+
+                </div>
+
+                <div class="slds-grid slds-gutters slds-m-top_xx-small slds-align_absolute-center ">
+
+                    <div class=" ">
+                        <lightning:button iconName="utility:search" iconPosition="left" variant="brand" label="Search" onclick="{!c.onclick_Search}" class="slds-m-top_small slds-col slds-m-right--small button_border" />
+                        <lightning:button iconName="utility:clear" iconPosition="left" variant="brand" label="Clear" onclick="{! c.onclick_Clear }" class="slds-m-top_small slds-m-right--small slds-col button_border" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- <aura:if isTrue="{! v.Loadingspinner }">
+      <lightning:spinner alternativeText="Loading, Please Wait..." title="Loading, Please Wait..." variant="brand" size="small"/>
+        </aura:if>-->
+            <aura:if isTrue="{!v.showResults}">
+                <lightning:card variant="Narrow" title="Payment Search Results" iconName="standard:related_list" class="Card_Cls">
+                    <!--<div class="slds-theme_default">-->
+                    <c:ACETLGT_DataTable aura:id="PaymentSearchTable_auraid" lgt_dt_table_name="PaymentSearchTable" lgt_dt_DT_Object="{!v.lgt_dt_DT_Object}" lgt_dt_isPagenationReq="false" lgt_dt_auto_doc_clm_index="1" AutodocKey="{!v.AutodocKey + v.GUIkey}" pageFeature="{!v.AutodocKey}" uniqueKeys="1,2" lgt_dt_section_header="Payment Search Results"/>
+                    <!-- 	    	<c:ACETLGT_DataTable aura:id="PaymentSearchTable_auraid" lgt_dt_table_name="PaymentSearchTable" lgt_dt_DT_Object="{!v.lgt_dt_DT_Object}"  lgt_dt_auto_doc_clm_index="1" lgt_dt_isPagenationReq = "false"/> -->
+                    <!--</div>-->
+                    <!-- 	    <table class="slds-table slds-table_bordered slds-table_cell-buffer slds-no-row-hover scroll"> -->
+                    <!--                     <thead> -->
+                    <!--                         <tr> -->
+                    <!--                             <th>Payment Number</th> -->
+                    <!--                             <th>Series Designator</th> -->
+                    <!--                             <th>Payment Total</th> -->
+                    <!--                             <th>Payment Date</th> -->
+                    <!--                             <th>Payee Name</th> -->
+                    <!--                             <th>Payee Address</th> -->
+                    <!--                             <th>City</th> -->
+                    <!--                             <th>State</th> -->
+                    <!--                             <th>Zip</th> -->
+                    <!--                         </tr> -->
+                    <!--                     </thead> -->
+                    <!--                     <tbody > -->
+                    <!--                         <aura:iteration items="{!v.PaymentResults}" var="PI" aura:id="item"> -->
+
+                    <!--                             <tr> -->
+                    <!--                                 <td class="slds-cell-wrap"><ui:outputText value="{!PI.PaymentNumber}"/></td> -->
+                    <!--                                 <td class="slds-cell-wrap"><ui:outputText value="{!PI.SeriesDesignator}"/></td> -->
+                    <!--                                 <td class="slds-cell-wrap"><ui:outputText value="{!PI.PaymentTotal}"/></td> -->
+                    <!--                                 <td class="slds-cell-wrap"><ui:outputText value="{!PI.PaymentDate}"/></td> -->
+                    <!--                                 <td class="slds-cell-wrap"><ui:outputText value="{!PI.PayeeName}"/></td> -->
+                    <!--                                 <td class="slds-cell-wrap"><ui:outputText value="{!PI.PayeeAddress}"/></td> -->
+                    <!--                                 <td class="slds-cell-wrap"><ui:outputText value="{!PI.City}"/></td> -->
+                    <!--                                 <td class="slds-cell-wrap"><ui:outputText value="{!PI.State}"/></td> -->
+                    <!--                                 <td class="slds-cell-wrap"><ui:outputText value="{!PI.Zip}"/></td> -->
+                    <!--                             </tr> -->
+                    <!--                         </aura:iteration> -->
+                    <!--                     </tbody>  -->
+                    <!--                 </table> -->
+                </lightning:card>
+                <aura:if isTrue="{!v.showDetails}">
+
+                    <div class="slds-box slds-p-around_none slds-theme_default slds-m-top_small">
+
+                        <lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="{!v.PaymentDetailsActiveSections}">
+                            <lightning:accordionSection name="PaymentDetails" label="Payment Details">
+                                <aura:if isTrue="{!v.displayCheckButton}">
+                                    <div class="slds-grid slds-gutters slds-m-top_xx-small slds-align_absolute-center ">
+                                        <div class=" " onclick="{!c.openCheckImg}">
+                                            <lightning:button iconName="utility:search" iconPosition="left" variant="brand" label="Check Image" class="slds-m-top_small slds-col slds-m-right--small button_border" />
+                                        </div>
+                                    </div>
+                                </aura:if>
+                                <!--                 <div class="autodocTableView" data-auto-doc="true"  data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-section-key="Payee Information" >    -->
+                                <div data-auto-doc="true" data-auto-doc-case-items="true" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-section-key="Payment Details">
+                                    <!--                 <div class="autodocNotTableView" data-auto-doc="true" data-auto-doc-pagination="true" data-auto-doc-case-items="true" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-section-key="Payment Details" >    -->
+                                    <div class="autodocNotTableView" data-auto-doc-feature="{!v.AutodocKey}">
+                                        <div class="slds-grid slds-form-element">
+                                            <div class="card_element_bottom_margin slds-col_bump-right slds-size_1-of-5 autodocField">
+                                                <div class="header-column">
+                                                    <p class="field-title autodocFieldName slds-form-element__label" title="Payment Total">Payment Total</p>
+                                                    <p class="valueCls autodocValue">
+                                                        <div class="slds-form-element__static">{!v.paymentDetails.PaymentTotal}</div>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div class="card_element_bottom_margin slds-col_bump-right slds-size_1-of-5 autodocField">
+                                                <div class="header-column">
+                                                    <p class="field-title autodocFieldName slds-form-element__label" title="Payment Number">Payment Number</p>
+                                                    <p class="valueCls autodocValue">
+                                                        <div class="slds-form-element__static">{!v.paymentDetails.CheckEFTNumber}</div>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div class="card_element_bottom_margin slds-col_bump-right slds-size_1-of-5 autodocField">
+                                                <div class="header-column">
+                                                    <p class="field-title autodocFieldName slds-form-element__label" title="Series Designator">Series Designator</p>
+                                                    <p class="valueCls autodocValue">
+                                                        <div class="slds-form-element__static">{!v.paymentDetails.SeriesDesignator}</div>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div class="card_element_bottom_margin slds-col_bump-right slds-size_1-of-5 autodocField">
+                                                <div class="header-column">
+                                                    <p class="field-title autodocFieldName slds-form-element__label" title="Payment Type">Payment Type</p>
+                                                    <p class="valueCls autodocValue">
+                                                        <div class="slds-form-element__static">{!v.paymentDetails.PaymentType}</div>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div class="card_element_bottom_margin slds-col_bump-right slds-size_1-of-5 autodocField">
+                                                <div class="header-column">
+                                                    <p class="field-title autodocFieldName slds-form-element__label" title="Check Status">Check Status</p>
+                                                    <p class="valueCls autodocValue">
+                                                        <div class="slds-form-element__static">{!v.paymentDetails.CheckStatus}</div>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-form-element">
+                                            <div class="card_element_bottom_margin slds-col_bump-right slds-size_1-of-5 autodocField">
+                                                <div class="header-column">
+                                                    <p class="field-title autodocFieldName slds-form-element__label" title="Issue Date">Issue Date</p>
+                                                    <p class="valueCls autodocValue">
+                                                        <div class="slds-form-element__static">{!v.paymentDetails.checkDate}</div>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div class="card_element_bottom_margin slds-col_bump-right slds-size_1-of-5 autodocField">
+                                                <div class="header-column">
+                                                    <p class="field-title autodocFieldName slds-form-element__label" title="Cashed Date">Cashed Date</p>
+                                                    <p class="valueCls autodocValue">
+                                                        <div class="slds-form-element__static">{!v.paymentDetails.Cashed}</div>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div class="card_element_bottom_margin slds-col_bump-right slds-size_1-of-5 autodocField">
+                                                <div class="header-column">
+                                                    <p class="field-title autodocFieldName slds-form-element__label" title="Void/Stop Date">Void/Stop Date</p>
+                                                    <p class="valueCls autodocValue">
+                                                        <div class="slds-form-element__static">{!v.paymentDetails.VoidStopDate}</div>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div class="card_element_bottom_margin slds-col_bump-right slds-size_1-of-5 autodocField">
+                                                <div class="header-column">
+                                                    <p class="field-title autodocFieldName slds-form-element__label" title="Returned Date">Returned Date</p>
+                                                    <p class="valueCls autodocValue">
+                                                        <div class="slds-form-element__static">{!v.paymentDetails.Returned}</div>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div class="card_element_bottom_margin slds-col_bump-right slds-size_1-of-5 autodocField">
+                                                <div class="header-column">
+                                                    <p class="field-title autodocFieldName slds-form-element__label" title="Remailed Date">Remailed Date</p>
+                                                    <p class="valueCls autodocValue">
+                                                        <div class="slds-form-element__static">{!v.paymentDetails.Reemailed}</div>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </lightning:accordionSection>
+                        </lightning:accordion>
+                    </div>
+                    <div class="slds-box slds-p-around_none slds-theme_default slds-m-top_small">
+
+                        <lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="{!v.PayeeInfoActiveSections}">
+                            <lightning:accordionSection name="PayeeInfo" label="Payee Information">
+                                <div class="autodocTableView" data-auto-doc="true" data-auto-doc-case-items="false" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-section-key="Payee Information">
+                                    <!--                 <div class="autodocTableView" data-auto-doc="true" data-auto-doc-pagination="true" data-auto-doc-case-items="false" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-section-key="Payee Information" >    -->
+
+                                    <table class="slds-table accordionTables slds-table_bordered slds-table_cell-buffer slds-no-row-hover scroll">
+                                        <thead>
+                                            <tr>
+                                                <th>Payee Type</th>
+                                                <th>Payee Name</th>
+                                                <th>Payee Address Line 1</th>
+                                                <th>Payee Address Line 2</th>
+                                                <th>City</th>
+                                                <th>State</th>
+                                                <th>Zip</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <aura:iteration items="{!v.PayeeInfo}" var="PI" aura:id="item">
+
+                                                <tr>
+                                                    <td class="slds-cell-wrap">{!PI.PayeeType}</td>
+                                                    <td class="slds-cell-wrap">{!PI.PayeeName}</td>
+                                                    <td class="slds-cell-wrap">{!PI.PayeeAddressLine1}</td>
+                                                    <td class="slds-cell-wrap">{!PI.PayeeAddressLine2}</td>
+                                                    <td class="slds-cell-wrap">{!PI.City}</td>
+                                                    <td class="slds-cell-wrap">{!PI.State}</td>
+                                                    <td class="slds-cell-wrap">{!PI.Zip}</td>
+                                                </tr>
+                                            </aura:iteration>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </lightning:accordionSection>
+                        </lightning:accordion>
+                    </div>
+                    <div class="slds-box slds-p-around_none slds-theme_default slds-m-top_small">
+
+                        <lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="{!v.PaidClaimsActiveSections}">
+                            <lightning:accordionSection name="PaidClaims" label="Paid Claims">
+                                <c:ACETLGT_DataTable aura:id="PaidClaimsTable_auraid" lgt_dt_table_name="PaidClaimsTable" lgt_dt_DT_Object="{!v.lgt_dt_DT_Object_PaidClaims}" lgt_dt_auto_doc_clm_index="1" AutodocKey="{!v.AutodocKey + v.GUIkey}" pageFeature="{!v.AutodocKey}" uniqueKeys="1,2" lgt_dt_section_header="Paid Claims"/>
+                            </lightning:accordionSection>
+                        </lightning:accordion>
+                    </div>
+                </aura:if>
+
+            </aura:if>
+        </div>
+    </div>
+</aura:component>

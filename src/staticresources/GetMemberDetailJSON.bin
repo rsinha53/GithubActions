@@ -1,0 +1,263 @@
+{  
+   "getIndividualResult":{  
+      "getIndividualResponseMsgType":{  
+         "individual":{  
+            "individualId":[  
+               {  
+                  "id":"7293281"
+               }
+            ],
+            "name":{  
+               "firstName":"Connie",
+               "middleName":"A",
+               "middleInitialName":"A",
+               "lastName":"Grim",
+               "suffixCode":{  
+                  "code":"Jr"
+               }
+            },
+            "birthDate":{  
+               "date":"1963-02-01"
+            },
+            "genderCode":{  
+               "code":"F",
+               "desc":"Female"
+            },
+            "maritalStatus":[  
+               {  
+                  "effectiveDateRange":{  
+
+                  },
+                  "code":"Married"
+               }
+            ],
+            "ethnicity":[  
+               {  
+                  "code":"La",
+                  "desc":"Latin"
+               }
+            ],
+            "race":[  
+               {  
+                  "code":"7",
+                  "desc":"not Applicable"
+               }
+            ],
+            "deceasedDate":{  
+
+            },
+            "tabaccoUseIndicator":"yes",
+            "vipIndicator":"VIP",
+            "researchAuthorizationIndicator":"Yes",
+            "socialSecurityNumberId":{  
+               "id":"607019353"
+            },
+            "otherIdentifiers":[  
+               {  
+                  "effectiveDateRange":{  
+
+                  },
+                  "code":"Xref",
+                  "id":"7293281"
+               }
+            ],
+            "language":[  
+               {  
+                  "spokenIndicator":"Yes",
+                  "writtenIndicator":"Yes",
+                  "primary":{  
+                     "code":"yes"
+                  },
+                  "code":"English",
+                  "desc":"English"
+               }
+            ],
+            "relationship":[  
+               {  
+                  "otherIdentifiers":[  
+                     {  
+                        "effectiveDateRange":{  
+
+                        }
+                     }
+                  ],
+                  "relatedIndividualTelephone":[  
+                     {  
+                        "individualRelationshipTypeCode":{  
+
+                        },
+                        "relatedIndividualId":{  
+
+                        },
+                        "id":[  
+                           {  
+                              "typeCode":{  
+
+                              }
+                           }
+                        ],
+                        "sourceSysCode":{  
+
+                        },
+                        "individualId":{  
+
+                        },
+                        "communicationTypeCode":{  
+
+                        },
+                        "contactStatusTypeCode":{  
+
+                        },
+                        "countryCode":{  
+
+                        }
+                     }
+                  ],
+                  "relatedIndividualAddress":[  
+                     {  
+                        "postalAddress":{  
+                           "code":{  
+
+                           },
+                           "line1":"5953",
+                           "line2":"OAKBROOK RD",
+                           "city":"DAVENPORT",
+                           "state":{  
+                              "code":"IA"
+                           },
+                           "postalCode":[  
+                              {  
+                                 "part1":"50010",
+                                 "part2":"0000",
+                                 "timeZone":{  
+
+                                 },
+                                 "code":{  
+
+                                 }
+                              }
+                           ],
+                           "isoCountryCode":{  
+                              "code":"ISO"
+                           }
+                        }
+                     }
+                  ],
+                  "relatedIndividualElectronicContact":[  
+                     {  
+                        "communicationTypeCode":{  
+
+                        },
+                        "electronicAddressId":{  
+                           "id":"XYZ@optum.com"
+                        },
+                        "primary":{  
+
+                        }
+                     }
+                  ],
+                  "relationshipCode":{  
+                     "code":"Subscriber"
+                  },
+                  "relatedIndividualId":{  
+                     "id":"7293281"
+                  },
+                  "relatedIndividualName":{  
+                     "firstName":"THOMAS",
+                     "middleName":"WILHELMI",
+                     "middleInitialName":"L",
+                     "suffixCode":{  
+                        "code":"Sr"
+                     }
+                  },
+                  "relatedIndividualSocialSecurityNumberId":{  
+                     "id":"228745000"
+                  }
+               }
+            ],
+            "address":[  
+               {  
+                  "postalAddress":{  
+                     "code":{  
+                        "code":"Permanent"
+                     },
+                     "line1":"16283 IVORY COURT",
+                     "line2":"Apartment B",
+                     "city":"Chino Hills",
+                     "state":{  
+                        "code":"MN"
+                     },
+                     "postalCode":[  
+                        {  
+                           "part1":"12345",
+                           "timeZone":{  
+
+                           },
+                           "code":{  
+
+                           }
+                        }
+                     ],
+                     "isoCountryCode":{  
+                        "code":"ISO"
+                     }
+                  }
+               }
+            ],
+            "telephone":[  
+               {  
+                  "primary":{  
+                     "code":"Home"
+                  },
+                  "telephoneNumber":"917-214-1118"
+               }
+            ],
+            "electronicContact":[  
+               {  
+                  "communicationTypeCode":{  
+                     "code":"email"
+                  },
+                  "electronicAddressId":{  
+                     "id":"connie_g@gmail.com"
+                  },
+                  "primary":{  
+                     "code":"yes"
+                  }
+               }
+            ],
+            "employment":[  
+               {  
+                  "status":[  
+                     {  
+                        "typeCode":{  
+                           "code":"AC"
+                        },
+                        "employmentDateRange":{  
+                           "startDate":"1980-01-01"
+                        }
+                     }
+                  ],
+                  "employeeId":{  
+                     "id":"7293281"
+                  },
+                  "salaryFrequencyTypeCode":{  
+                     "code":"1"
+                  },
+                  "retirementDate":{  
+                     "date":"9999-01-01"
+                  },
+                  "salaryAmount":{  
+                     "value":"3000"
+                  },
+                  "workHourCountValue":"20"
+               }
+            ],
+            "EOBSuppressionIndicator":"yes",
+            "healthStatementSuppressionIndicator":"yes",
+            "SBCSuppressionIndicator":"yes",
+            "administrativeLetterSuppressionIndicator":"yes",
+            "proofOfHealthCoverageSuppressionIndicator":"yes"
+         }
+      }
+   }
+}

@@ -1,0 +1,188 @@
+<!--
+ Name           : MOTION_MemberSearch
+ Created By     : Virtusa(Manoranjan Mohanty)
+ Created Date   : Oct 1st, 2020
+ Description    : US2916698: Member Search
+-->
+<aura:component controller="MOTION_MemberSearchController"  implements="force:appHostable,flexipage:availableForAllPageTypes,lightning:isUrlAddressable" access="global" >
+	
+    <aura:attribute name="erromessage" type="Boolean" default="false"/>    
+    <aura:attribute name="firstName"  type="string" default=""/>
+    <aura:attribute name="lastName" type="string" default=""/>
+    <aura:attribute name="memstate" access="public" type="string" default=""/>
+    <aura:attribute name="zip" type="string" default=""/>   
+    <aura:attribute name="Spinner" type="boolean" default="false"/>
+    <aura:attribute name="MemberSearchResult" type = "Object"/>
+    <aura:attribute name="MemberDetails" type = "Object"/>
+    <aura:attribute name="showErrorMessage" type="string" />
+    <aura:attribute name="isVisible" type="Boolean" default="true" />
+    <aura:attribute name="dateOfBirth" type="date" />
+    <aura:attribute name="options" type="List" />
+    <aura:attribute name="defaultValue" type="String" default="" /> 
+    <aura:attribute name="statusDefault" type="String" default="" /> 
+    <aura:attribute name="statusOptions" type="List" />
+    <aura:attribute name="email" type="String" default="" />
+    <aura:attribute name="memberId" type="String" default="" />
+    <aura:attribute name="groupName" type="String" default=""/>
+    <aura:attribute name="transactionId" type="String" default=""/>
+    <aura:attribute name="searchStatus" type="Boolean" default="false" />
+    <aura:attribute name="headerOptions" type="List[]" />
+    <aura:attribute name="tablebody" type="List[]" />
+    <aura:attribute name="tablePaginations" type="Object" />
+    <aura:attribute name="showSearchResults" type="Boolean" default="false" />
+    <aura:attribute name="interactType" type="String" default=""/>
+   <!-- Pagination attributes -->
+    <aura:attribute name="searchType" type="String" default="B"/>
+    <aura:attribute name="pageNumber" type="Integer" default="1"/>
+    <aura:attribute name="maxPageNumber" type="Integer" default="1"/>
+    <!--Pagination attributes end-->
+    <!-- HANDLERS -->
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:handler event="c:Motion_ChangePageEvt" name="changePageEvent" action="{!c.getResults}"/>
+    <!-- HANDLERS -->
+    <!--Open AddIndividual details -->
+    <lightning:workspaceAPI aura:id="workspace"/>
+    <!--AddIndividual End -->
+      
+    <!-- Email to Case-->
+    <aura:attribute name="iscaseMember" type="Boolean" default="false"/>
+    <aura:attribute name="selectedStep" type="string" default="step1" />
+    <aura:attribute name="showpopup" type="Boolean" default="false"/>
+    <aura:attribute name="errorMessage" type="String" default=""/>
+    <aura:attribute name="pageReference" type="Map" default="{}"/>
+    <aura:attribute name="iscaserecord" type="boolean" default = "false"/>
+    <aura:attribute name="FamilyMembersList" type="list" default="[]" />
+	<aura:attribute name="interaction" type="SObject"/>
+    
+    <aura:attribute name="showAdvancedSearch" type="boolean" default="false"/>
+	<aura:attribute name="searchTypeLabel" type="string" default="Show Advanced Search"/>
+    <aura:attribute name="OpenMemberSearch" type="boolean" default="true"/>
+    <aura:attribute name="originatorId" type="String" access="global" default=""/>
+    <aura:attribute name="isTPModalOpen" type="boolean" access="public" default="false" />
+	<aura:attribute name="tpRelation" type="String" access="public"/>
+    <aura:attribute name="isOrigSelected" type="Boolean" default="false" access="public"/>
+    <aura:attribute name="originator" type="String" access="public"/> 
+    <aura:attribute name="subjectID" type="String"/>
+    <aura:attribute name="orgid" type="String" access="public"/>
+    
+    <aura:attribute name="topicOptions" type="List" access="public"/>
+    <aura:attribute name="cseTopic" type="String" access="public" default="Member Overview"/>
+    <aura:handler name="tpevent" event="c:ACETLGT_TPModalEvent" action="{!c.handleTPEvent}"/>
+    <aura:handler event="c:Motion_CaseMemberEvent" name="ChangeFirstNameEvent" action="{!c.handleCaseMemberEvent}"/>
+	<aura:handler event="c:Motion_OriginatorEvent" name="ChangeOrignatorNameEvent" action="{!c.handleOriginatorEvent}"/>
+	<aura:registerEvent name="showResult" type="c:Motion_CaseMemberEvent"/>
+	<aura:registerEvent name="clearResult" type="c:MOTION_clearMemberSearch"/>
+	<aura:registerEvent name="addIndiv" type="c:Motion_CaseMemberEvent"/>
+    
+    <aura:handler name="getOriginatorEvent" event="c:ACETLGT_OriginatorChanged" action="{!c.onOriginatorChange}"/>
+	<aura:handler name="showOriginatorError" event="c:ACETLGT_ShowOriginatorErrorEvt"  action="{!c.handleShowOriginatorErrstop}" />
+	<aura:handler event="c:MOTION_tableResultEvent" action="{!c.getResults}"/>
+	
+    <!-- End Email to Case-->
+    <aura:if isTrue="{!!v.showpopup}">
+    <div class="cls-FieldSet slds-p-bottom_medium slds-p-top_medium" style="margin-top:-12px;">
+        <fieldset class="slds-box slds-theme--default slds-container--small motion-align_absolute-center">
+    <div>
+       
+    </div>
+		  <aura:if isTrue="{!v.OpenMemberSearch}">
+            <aura:if isTrue="{!!v.showpopup}">
+            <div class="cls-FAM">  
+                <span class="slds-page-header__title slds-hyphenate header-text find-mbr-span"><strong>Find a Member</strong></span>               
+            </div>
+             <lightning:button label="Clear" onclick="{!c.clear}" class="header-text buttonBorderRadius slds-m-top--large slds-m-left--small slds-col btnclear"
+                                          variant="brand-outline"/>             
+            <br/> 
+            
+            <form class="slds-form--stacked">                
+                <div class="card_element_bottom_margin">     
+                    <div  class="slds-form-element">                       
+                        <lightning:combobox  name="options" label="Interaction Type" value="{!v.defaultValue}" options="{!v.options}" required="true" aura:id="interactType"/>                        
+                        <lightning:input class="field-padding-top-13px" aura:id="firstName" label="First Name" name="firstname" html-autocomplete="off" value="{!v.firstName}"/>
+                        <lightning:input class="field-padding-top-13px" aura:id="lastName" label="Last Name" name="lastName" html-autocomplete="off" value="{!v.lastName}"/>
+                        
+                        <lightning:input class="field-padding-top-13px" messageWhenBadInput="Incorrect Date Format" type="date" dateStyle="short" aura:id="dateOfBirth" label="Date of Birth" name="dateOfBirth"   html-autocomplete="off"  value="{! v.dateOfBirth}" placeholder="mm/dd/yyyy" />
+                    </div>
+                </div>                
+                <br/>                
+               <a style="margin-left: 2px;font-size: 12px;" href="#" class="slds-p-top_large advancedsearch-text cls-AS" id="toggleSearch" onclick="{!c.toggleSearch}">{!v.searchTypeLabel}</a>                           
+            </form>
+			<!--<div id="advsearch" style="display:none;" ></div>-->
+            <aura:if isTrue="{!v.showAdvancedSearch}">
+                <lightning:input class="field-padding-top-13px" aura:id="email"  label="Email Address"  type="email" value="{!v.email}" name="email" html-autocomplete="off"/>
+                <lightning:input class="field-padding-top-13px" aura:id="memberId" label="Member ID" value="{!v.memberId}" name="memberId" html-autocomplete="off" />
+                <lightning:input class="field-padding-top-13px" aura:id="groupName" label="Group Name" value="{!v.groupName}" name="groupName"  html-autocomplete="off" />                
+                <lightning:combobox class="field-padding-top-13px" aura:id="status" name="status" label="Status" value="{!v.statusDefault}" options="{!v.statusOptions}" />                
+                <lightning:input class="field-padding-top-13px" aura:id="transactionId" label="Transaction ID" value="{!v.transactionId}" name="transactionId" html-autocomplete="off" /> 
+            </aura:if>
+            <lightning:layout  >
+                <lightning:layoutitem class="slds-grid slds-align_absolute-center">
+                    <div id="searchbuttons" class="slds-button-group" >                        
+                        <aura:if isTrue="{!v.searchStatus}"> 
+        					 <lightning:button label="Search"  onclick="{!c.showAdvanceSearchResults}" class="header-text buttonBorderRadius  slds-m-top--large slds-col slds-m-right--small" 
+                                          variant="brand" aura:id="searchbtn" type="submit"/>                            
+                            <aura:set attribute="else">
+      							 <lightning:button label="Search"  onclick="{!c.showBasicSearchResults}" class="header-text buttonBorderRadius  slds-m-top--large slds-col slds-m-right--small" 
+                                          variant="brand" aura:id="searchbtn" type="submit"/>   
+    						</aura:set>   
+    					</aura:if>                     
+                        <lightning:button label="Add Individual" onclick="{!c.navAddIndividual}" class="header-text buttonBorderRadius slds-m-top--large slds-m-left--small slds-col"
+                                          variant="brand"/>                       
+                    </div>                    
+                </lightning:layoutitem>
+            </lightning:layout>
+            </aura:if>
+			</aura:if>				   
+        </fieldset>
+    </div> 
+        </aura:if>
+    <!--disply error message-->
+        <aura:if isTrue="{!v.showpopup}">
+             <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <!-- Modal/Popup Box Header Starts here-->
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeModel }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>
+                        <!--h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Modal/PopUp Box</h2-->
+                    </header>
+                    <!--Modal/Popup Box Body Starts here-->
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <p><b>{!v.errorMessage}
+                            </b>
+                        </p>
+                    </div>
+                    <!--Modal/Popup Box Footer Starts here-->
+                    <footer class="slds-modal__footer">
+                        <lightning:button variant="neutral"
+                                          label="Ok"
+                                          onclick="{! c.closeModel }"/>
+                        
+                    </footer>
+                </div>
+            </section>
+            
+            </aura:if>  
+        
+        <!--End  of dialog box-->
+    <!-- aura:if isTrue="{!v.spinner}" -->   
+        <lightning:spinner aura:id="Spinner"  variant="brand" size="large" class="slds-hide"/>
+    <!-- /aura:if -->   
+    <div class="slds-p-top_large" ></div>      
+    <aura:if isTrue="{!v.showSearchResults}">                                    
+      <c:TableWithHeaders  aura:id="searchResultId"
+                        header="{!v.headerOptions}"  
+                        tableBody="{!v.tablebody}"                        
+                        paginationDetail="{!v.tablePaginations}"
+                        pageNumber="{!v.tablePaginations.startNumber}"
+                        maxPageNumber="{!v.tablePaginations.noOfPages}"
+                        searchType="{!v.searchType}"
+                        interactType="{!v.interactType}"
+                        enablePagination="true" 
+                        iscaserecord="{!v.iscaserecord}"
+                        />
+    </aura:if>    
+</aura:component>

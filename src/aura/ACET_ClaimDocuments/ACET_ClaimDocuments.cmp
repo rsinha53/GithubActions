@@ -1,0 +1,472 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,lightning:isUrlAddressable"
+                access="global"
+                controller="ACET_CountinousCallout">
+    <aura:attribute name="tableDetails" type="Object"/>
+    <aura:attribute name="relatedDocumentList" type="List" access="public"/>
+    <aura:attribute name="claimNo" type="String" default="" />
+    <aura:attribute name="autodocUniqueId" type="String" default=""/>
+    <aura:attribute name="docIdLst" type="List" />
+    <aura:attribute name="memberTabId" type="string" access="public" />
+    <!--Attachments-->
+    <aura:attribute name="relatedDocData" type="Object" />
+    <aura:attribute name="AttachmentsList" type="List" access="public" default=""/>
+    <aura:attribute name="attachmentEmptyCheck" type="Boolean" default="false"/>
+    <!--ClaimsImages-->
+    <aura:attribute name="claimImagesEmptyCheck" type="Boolean" default="false"/>
+    <aura:attribute name="claimImagesList" type="List" access="public" default=""/>
+    <!--ProviderRemittanceAdvice-->
+    <aura:attribute name="ProviderRemittanceAdviceList" type="List" access="public" default=""/>
+    <aura:attribute name="praEmptyCheck" type="Boolean" default="false"/>
+    <!--Claim Letters-->
+    <aura:attribute name="ClaimLettersList" type="List" access="public" default=""/>
+    <aura:attribute name="ClaimLettersCheck" type="Boolean" default="false"/>
+    
+    <!--Member EOB-->
+    <aura:attribute name="memberEOBList" type="List" access="public" default=""/>
+    <aura:attribute name="memberEOBCheck" type="Boolean" default="false"/>
+    
+    <!--Swapna begin-->
+    <aura:attribute name="policyNumber" type="String" />
+    <aura:attribute name="firstSrvDate"  type="Date" default="" />
+    <aura:attribute name="PolicyDetails" type="Object" />
+    <aura:attribute name="taxId"  type="String" default="" />
+    <aura:attribute name="claimDocValues" type="Object" />
+    <!--Swapna End-->
+	<aura:attribute name="cardDetails" type="Object"/>
+     <aura:attribute name="showWarning" type="Boolean" default="false"/>
+    <aura:attribute name="globalURL" type="String" default=""/>
+    <!-- HIPAA Guidelines Button -->
+    <aura:attribute name="hipaaEndpointUrl" type="String" default=""/>
+    <aura:attribute name="isHipaa" type="Boolean" default="false"/>
+    <aura:attribute name="activeSections" type="List" default="['MemberEOB']" />
+    <aura:attribute name="contactUniqueId" type="string" access="public" />
+
+    <aura:attribute name="isClaimNotOnFile" type="Boolean" default="false" />
+    <aura:attribute name="indexNameList" type="string"  />
+
+    <lightning:workspaceAPI aura:id="workspace" />
+    <!-- HANDLERS -->
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}"/>
+	<!--Event Register-->
+    <aura:registerEvent name="AutoDocEvt" type="c:ACET_ClaimDocumentsAutoDocEvt"/>					 
+    <!-- PAGE HEADER -->
+    <div class="slds-card card_padding" style="background: rgb(243, 242, 242);">
+        <div class="slds-grid">
+            <div class="slds-col slds-has-flexi-truncate">
+                <div class="slds-media slds-no-space slds-grow">
+                    <div class="slds-media__figure">
+                        <span class="slds-icon_container " title="Claim Documents">
+                            <lightning:icon class="blackOnRed" iconName="standard:file" alternativeText="Claim Documents" />
+                        </span>
+                    </div>
+                    <div class="slds-media__body">
+                        <div class="slds-page-header__name">
+                            <div class="slds-page-header__name-title slds-p-top_x-small">
+                                <h1 class="page_header_label slds-m-right_small slds-align-middle slds-truncate">Claim Documents</h1>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- ACTION BUTTONS -->
+            <lightning:buttonGroup>
+                <button class="slds-button slds-button_neutral" style="width: 150px;" onclick="{!c.handleHippaGuideLines}">HIPAA Guidelines</button>
+                <lightning:button variant="neutral" label="Misdirect" name="misDirectBtnName"
+                                  class="slds-button  misdirect_button" onclick="{!c.openMisdirectComp}" />
+                <c:SAE_Alerts aura:id="alertsAI_ClaimDetails"
+                              memberId="{!v.memberIdAuthDtl}"
+                              groupId=""
+                              providerNotFound="{!v.providerNotFound}"
+                              noMemberToSearch="{!v.noMemberToSearch}"
+                              memberNotFound="{!v.mnf}"
+                              isProviderSearchDisabled="{!v.isProviderSearchDisabled}"
+                              taxId="{!v.alertTaxId}"
+                              providerId ="{!v.alertProviderId}"
+                              isMemberSnapshot="true"
+                              houseHoldMemberId="{!v.houseHoldMemberId}"
+                              interactionRecId="{!v.interactionRec.Id}"
+                              policyGroupId="{!v.groupIdAuthDtl}"
+                              policyMemberId="{!v.memberIdAuthDtl}"
+                              />
+            </lightning:buttonGroup>
+        </div>
+        <!-- PUT PAGE HEADER DETAIL ROW HERE -->
+    </div>
+    <div style="margin-top: 1%">
+        
+        <lightning:accordion aura:id="accordion"
+                             onsectiontoggle="{! c.handleSectionToggle }"
+                             activeSectionName="{! v.activeSections }"
+                             class="titleBold">
+            <aura:if isTrue="{!!v.isClaimNotOnFile}">
+            <!--Attachments Start-->
+            <div class="slds-card" style="text-decoration: none;"> <lightning:accordionSection name="Attachments" label="Attachments">
+                <lightning:spinner class="slds-show" aura:id="attchmentspinner"
+                                   alternativeText="Loading.." title="Loading.."
+                                   variant="brand" size="medium"/>
+                <div class="slds-section slds-is-close" aura:id="highLightSection2">
+                    
+                    
+                    <div class="slds-card slds-m-top_small slds-m-bottom_small">
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                            <thead>
+                                <tr class="slds-line-height_reset">
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="">RECEIVED DATE</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="">FLN #/DOC ID</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="">TYPE</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="">PAGE COUNT</div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <aura:If isTrue="{!v.attachmentEmptyCheck}" >
+                                    <aura:iteration items="{!v.AttachmentsList}" var="att" indexVar="index" >
+                                        <tr class="slds-hint-parent">
+                                            
+                                            <td data-label="Account Name">
+                                                <div class="slds-truncate" title="">{!att.ReceivedDate}</div>
+                                            </td>
+                                            <td data-label="Close Date">
+                                                <a href="javascript:void(0);"  onclick="{!c.navigateTodoc360GlobalURL}" id="11111111link" data-docId="{!index}" data-document="attachment">
+                                                    
+                                                    <div class="slds-truncate" title="">{!att.DocID}</div></a>
+                                            </td>
+                                            <td data-label="Prospecting">
+                                                <div class="textColumnWrap" title="{!att.Type}">{!att.Type}</div>
+                                            </td>
+                                            <td data-label="Prospecting">
+                                                <div class="slds-truncate" title="">{!att.PageCount}</div>
+                                            </td>
+                                        </tr>
+                                    </aura:iteration>
+                                    <aura:set attribute="else">
+                                        <tr><td colspan="6" ><center>No Documents Found</center></td></tr>
+                                    </aura:set>
+                                </aura:If>
+                                
+                            </tbody>
+                        </table>
+                        
+                    </div>
+                </div>
+                
+                
+                </lightning:accordionSection></div>
+            <!--Attachments End-->
+            <!--Claim Images Start-->
+            <div class="slds-card"> <lightning:accordionSection name="ClaimImages" label="Claim Images">
+                <lightning:spinner class="slds-show" aura:id="claimImages"
+                                   alternativeText="Loading.." title="Loading.."
+                                   variant="brand" size="medium"/>
+                <div class="slds-section slds-is-close" aura:id="highLightSection2">
+                    
+                    
+                    <div class="slds-card slds-m-top_small slds-m-bottom_small">
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                            <thead>
+                                <tr class="slds-line-height_reset">
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="">RECEIVED DATE</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="">FLN #/DOC ID</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="">TYPE</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="">PAGE COUNT</div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <aura:If isTrue="{!v.claimImagesEmptyCheck}" >
+                                    <aura:iteration items="{!v.claimImagesList}" var="clm" indexVar="index" >
+                                        <tr class="slds-hint-parent">
+                                            
+                                            <td data-label="Account Name">
+                                                <div class="slds-truncate" title="">{!clm.ReceivedDate}</div>
+                                            </td>
+                                            <td data-label="Close Date">
+                                                <a href="javascript:void(0);"  onclick="{!c.navigateTodoc360GlobalURL}" id="11111111link" data-docId="{!index}" data-document="image"> <!--data-docId="A091944441"-->
+                                                    <div class="slds-truncate" title="">{!clm.DocID}</div></a>
+                                            </td>
+                                            <td data-label="Prospecting">
+                                                <div class="slds-truncate" title="">{!clm.Type}</div>
+                                            </td>
+                                            <td data-label="Prospecting">
+                                                <div class="slds-truncate" title="">{!clm.PageCount}</div>
+                                            </td>
+                                        </tr>
+                                    </aura:iteration>
+                                    <aura:set attribute="else">
+                                        <tr><td colspan="6" ><center>No Documents Found</center></td></tr>
+                                    </aura:set>
+                                </aura:If>
+                            </tbody>
+                        </table>
+                        
+                    </div>
+                </div>
+                
+                </lightning:accordionSection></div>
+            <!--Claim Images End-->
+            <!--Claim Letters Start-->
+            <div class="slds-card"><lightning:accordionSection name="ClaimLetters" label="Claim Letters">
+                <lightning:spinner class="slds-show" aura:id="clspinner"
+                                   alternativeText="Loading.." title="Loading.."
+                                   variant="brand" size="medium"/>
+                <div class="slds-section slds-is-close" aura:id="highLightSection2">
+                    
+                    
+                    <div class="slds-card slds-m-top_small slds-m-bottom_small">
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                            <thead>
+                                <tr class="slds-line-height_reset">
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="">LETTER DATE</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="">FLN #/ DOC ID</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="">CLAIM #</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="">LETTER ID</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="">TYPE</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="">EXTERNAL ID</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="">PAGE COUNT</div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <aura:If isTrue="{!v.ClaimLettersCheck}" >
+                                    <aura:iteration items="{!v.ClaimLettersList}" var="pro" indexVar="index" >
+                                        <tr class="slds-hint-parent">
+                                            
+                                            <td data-label="Account Name">
+                                                <div class="slds-truncate" title="">{!pro.ReceivedDate}</div>
+                                            </td>
+                                            <td data-label="Close Date">
+                                                <a href="javascript:void(0);" onclick="{!c.navigateTodoc360GlobalURL}" id="11111111link" data-docId="{!index}" data-document="letter">
+                                                    <div class="slds-truncate" title="">{!pro.DocID}</div></a>
+                                            </td>
+                                            <td data-label="Prospecting">
+                                                <div class="slds-truncate" title="">{!pro.ClaimNumber}</div>
+                                            </td>
+                                            <td data-label="Prospecting">
+                                                <div class="slds-truncate" title="">{!pro.letterID}</div>
+                                            </td>
+                                            <td data-label="Prospecting">
+                                                <div class="slds-truncate" title="">{!pro.Type}</div>
+                                            </td>
+                                            <td data-label="Prospecting">
+                                                <div class="slds-truncate" title="">{!pro.externalID}</div>
+                                            </td>
+                                            <td data-label="Prospecting">
+                                                <div class="slds-truncate" title="">{!pro.PageCount}</div>
+                                            </td>
+                                        </tr>
+                                    </aura:iteration>
+                                    <aura:set attribute="else">
+                                        <tr><td colspan="6" ><center>No Documents Found</center></td></tr>
+                                    </aura:set>
+                                </aura:If>
+                            </tbody>
+                        </table>
+                        
+                    </div>
+                </div>
+                
+                </lightning:accordionSection></div>
+            <!--Claim Letters End-->
+            <!--Member EOB START-->
+            <div class="slds-card">
+                <lightning:accordionSection name="MemberEOB" label="Member EOB">
+                    <aura:set attribute="body">
+                        <lightning:spinner class="slds-show" aura:id="memspinner"
+                                           alternativeText="Loading.." title="Loading.."
+                                           variant="brand" size="medium"/>
+                        <div class="slds-section slds-is-close" aura:id="highLightSection">
+                            
+                            <div class="slds-card slds-m-top_small slds-m-bottom_small">
+                                <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                                    <thead>
+                                        <tr class="slds-line-height_reset">
+                                            <th class="" scope="col">
+                                                <div class="slds-truncate" title="">EOB DATE</div>
+                                            </th>
+                                            <th class="" scope="col">
+                                                <div class="slds-truncate" title="">FLN #/DOC ID</div>
+                                            </th>
+                                            <th class="" scope="col">
+                                                <div class="slds-truncate" title="">PAGE COUNT</div>
+                                            </th>
+                                            
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <aura:If isTrue="{!v.memberEOBCheck}">
+                                            <aura:iteration items="{!v.memberEOBList}" var="mem" indexVar="index" >
+                                                <tr class="slds-hint-parent">
+                                                    
+                                                    <td data-label="Account Name">
+                                                        <div class="slds-truncate" title="">{!mem.ReceivedDate}</div>
+                                                    </td>
+                                                    <td data-label="Close Date">
+                                                        <a href="javascript:void(0);"  onclick="{!c.navigateTodoc360GlobalURL}" id="11111111link" data-docId="{!index}" data-document="membereob">
+                                                            <div class="slds-truncate" title="">{!mem.DocID}</div></a>
+                                                    </td>
+                                                    <td data-label="Prospecting">
+                                                        <div class="slds-truncate" title="">{!mem.PageCount}</div>
+                                                    </td>
+                                                </tr>
+                                            </aura:iteration>
+                                            <aura:set attribute="else">
+                                                <tr><td colspan="6" ><center>No Documents Found</center></td></tr>
+                                            </aura:set>
+                                        </aura:If>
+                                    </tbody>
+                                </table>
+                                
+                            </div>
+                            
+                        </div>
+                    </aura:set>
+                </lightning:accordionSection>
+            </div>
+            <!--Member EOB END-->
+            <!--Provider Remittance START-->
+            <div class="slds-card"><lightning:accordionSection name="ProviderRemittance" label="Provider Remittance Advice">
+                <lightning:spinner class="slds-show" aura:id="praspinner"
+                                   alternativeText="Loading.." title="Loading.."
+                                   variant="brand" size="medium"/>
+                <div class="slds-section slds-is-close" aura:id="highLightSection2">
+                    
+                    
+                    <div class="slds-card slds-m-top_small slds-m-bottom_small">
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                            <thead>
+                                <tr class="slds-line-height_reset">
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="">EOB DATE</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="">FLN #/DOC ID</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="">CHECK #</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="">PAGE COUNT</div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <aura:If isTrue="{!v.praEmptyCheck}" >
+                                    <aura:iteration items="{!v.ProviderRemittanceAdviceList}" var="pro" indexVar="index" >
+                                        <tr class="slds-hint-parent">
+                                            
+                                            <td data-label="Account Name">
+                                                <div class="slds-truncate" title="">{!pro.ReceivedDate}</div>
+                                            </td>
+                                            <td data-label="Close Date">
+                                                <a href="javascript:void(0);"  onclick="{!c.navigateTodoc360GlobalURL}" id="11111111link" data-docId="{!index}" data-document="providerremittance">
+                                                    <div class="slds-truncate" title="">{!pro.DocID}</div></a>
+                                            </td>
+                                            <td data-label="Prospecting">
+                                                <div class="slds-truncate" title="">{!pro.CheckNumber}</div>
+                                            </td>
+                                            <td data-label="Prospecting">
+                                                <div class="slds-truncate" title="">{!pro.PageCount}</div>
+                                            </td>
+                                        </tr>
+                                    </aura:iteration>
+                                    <aura:set attribute="else">
+                                        <tr><td colspan="6" ><center>No Documents Found</center></td></tr>
+                                    </aura:set>
+                                </aura:If>
+                            </tbody>
+                        </table>
+                        
+                    </div>
+                </div>
+                
+                </lightning:accordionSection></div>
+            <!--Provider Remittance END-->
+            <aura:set attribute="else">
+                                <div class="slds-card"> <lightning:accordionSection name="ClaimImages" label="Claim Images">
+                                    <lightning:spinner class="slds-show" aura:id="claimImages"
+                                                       alternativeText="Loading.." title="Loading.."
+                                                       variant="brand" size="medium"/>
+                                    <div class="slds-section slds-is-close" aura:id="highLightSection2">
+
+
+                                        <div class="slds-card slds-m-top_small slds-m-bottom_small">
+                                            <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                                                <thead>
+                                                    <tr class="slds-line-height_reset">
+                                                        <th class="" scope="col">
+                                                            <div class="slds-truncate" title="">RECEIVED DATE</div>
+                                                        </th>
+                                                        <th class="" scope="col">
+                                                            <div class="slds-truncate" title="">FLN #/DOC ID</div>
+                                                        </th>
+                                                        <th class="" scope="col">
+                                                            <div class="slds-truncate" title="">TYPE</div>
+                                                        </th>
+                                                        <th class="" scope="col">
+                                                            <div class="slds-truncate" title="">PAGE COUNT</div>
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <aura:If isTrue="{!v.claimImagesEmptyCheck}" >
+                                                        <aura:iteration items="{!v.claimImagesList}" var="clm" indexVar="index" >
+                                                            <tr class="slds-hint-parent">
+
+                                                                <td data-label="Account Name">
+                                                                    <div class="slds-truncate" title="">{!clm.ReceivedDate}</div>
+                                                                </td>
+                                                                <td data-label="Close Date">
+                                                                    <a href="javascript:void(0);"  onclick="{!c.navigateTodoc360GlobalURL}" id="11111111link" data-docId="{!index}" data-document="image"> <!--data-docId="A091944441"-->
+                                                                        <div class="slds-truncate" title="">{!clm.DocID}</div></a>
+                                                                </td>
+                                                                <td data-label="Prospecting">
+                                                                    <div class="slds-truncate" title="">{!clm.Type}</div>
+                                                                </td>
+                                                                <td data-label="Prospecting">
+                                                                    <div class="slds-truncate" title="">{!clm.PageCount}</div>
+                                                                </td>
+                                                            </tr>
+                                                        </aura:iteration>
+                                                        <aura:set attribute="else">
+                                                            <tr><td colspan="6" ><center>No Documents Found</center></td></tr>
+                                                        </aura:set>
+                                                    </aura:If>
+                                                </tbody>
+                                            </table>
+
+                                        </div>
+                                    </div>
+
+                                    </lightning:accordionSection></div>
+                            </aura:set>
+                        </aura:if>
+        </lightning:accordion>
+    </div>
+</aura:component>

@@ -1,0 +1,288 @@
+<apex:component controller="ACETViewRelatedCasesController" rendered="{!($Profile.Name)!='ECM Back Office Agent'}">
+   <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" /> 
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+            <apex:includeScript value="{!$Resource.JqueryTableSorter}"></apex:includeScript>
+  <apex:stylesheet value="{!URLFOR($Resource.ACETResources, '/css/m/memberdetail.css')}" /> 
+    <apex:includeScript value="{!URLFOR($Resource.ACETUIResources, '/JS/bootstrap.min.js')}"/> 
+    <apex:attribute type="ACETHighlightsPanelAdditionalInfo"
+                    name="AdditionalInfoAtt"
+                    description="Additional Info Fields"
+                    assignTo="{!AdditionalInfo}" required="false" />
+    
+    <apex:attribute type="Interaction__c" name="InteractionAtt"
+                    description="Interaction record created for provider or member flow, Required only for Provider"
+                    assignTo="{!Interaction}" required="false" />
+    
+    <apex:attribute type="String"
+                    name="CalltopicAtt"
+                    description="Current Call Topic"
+                    assignTo="{!Calltopic}" required="false" />
+    <apex:attribute type="String"
+                    name="PagenameAtt"
+                    description="Current Pagename"
+                    assignTo="{!Pagename}" required="false" />
+    <apex:attribute type="ACETCallTopicsDataWrapper"
+                    name="attrCaseDataWrapper" description="case data wrapper"
+                    assignTo="{!callTopicDataWrapper}" required="false" />
+    
+    <apex:attribute type="String"
+                    name="ExternalIDAtt"
+                    description="Selected ExternalID"
+                    assignTo="{!ExternalID}" required="false" />
+    <apex:attribute type="boolean"
+                    name="DisplayButton"
+                    description="whether or not to display button"
+                    assignTo="{!DisplayBtn}" required="false" default="true"/>     
+    
+    <apex:includeScript value="{!URLFOR($Resource.ACETUIResources, '/JS/bootstrap.min.js')}"/> 
+    <Script>
+        function OpenalertModalWindow(){
+                  acet.autodoc.saveDialog.dialog("open"); 
+            
+        } 
+        function closealertModalWindow(){
+        $("[id$='alertModalWindow']").css("display","none");
+        $("[id$='casedetailpopupPanel']").css("display","none");
+        
+        }  
+        
+        function OpenCaseHistorySubTab(RecordId, RecordName) {   
+        console.log(RecordId);
+        console.log(RecordName);
+        sforce.console.getEnclosingPrimaryTabId(function(result) {
+        sforce.console.openSubtab(result.id, '/' + RecordId, true, RecordName, null, OpenCaseHistorySubTabSuccess, RecordName);    
+        
+        return false;
+        });
+        }
+        
+        var OpenCaseHistorySubTabSuccess = function OpenCaseHistorySubTabSuccess(result){
+        //
+        }
+        
+        function OpenInteractionSubTab(RecordId, RecordName) {   
+        sforce.console.getEnclosingPrimaryTabId(function(result) {
+        sforce.console.openSubtab(result.id, '/' + RecordId, true, RecordName, null, OpenInteractionSubTabSuccess, RecordName);    
+        
+        return false;
+        });
+        }
+        
+        var OpenInteractionSubTabSuccess = function OpenInteractionSubTabSuccess(result){
+        //
+        }
+        
+    </Script>
+    <style>
+        .highlights-panel-container {
+        width: 100%;
+        background: #FFF;
+        overflow: hidden;
+        border-bottom: 2px solid #dbdbdb;
+        position: relative;
+        min-height: 21px;
+        }
+        
+        .highlights-panel-collapsible {
+        min-height: 100px;
+        }
+        
+        .highlights-panel-container .panel-arrow-down {
+        position: absolute;
+        top: 0;
+        left: 45%;
+        }
+        
+        .highlights-panel-container .panel-arrow-up {
+        position: absolute;
+        bottom: 0;
+        left: 45%;
+        }
+        
+        .hide-arrow {
+        display: none;
+        }
+        
+        .show-arrow {
+        display: block;
+        }
+        
+        .outputLabelPanel {
+        font-weight: bold;
+        margin-right: 20px;
+        }
+        
+        .colStyle {
+        width: 27%;
+        }
+        
+        .custPopup {
+        background-color: white;
+        border-width: 0.01px;
+        border-style: solid;
+        z-index: 9999;
+        left: 30%;
+        padding: 13px;
+        position: absolute;
+        margin-left: -292px;
+        top: 48px;
+        }
+        
+        .popupBackground {
+        background-color: black;
+        opacity: 0.20;
+        filter: alpha(opacity = 20);
+        position: absolute;
+        width: 100%;
+        height: 1000%;
+        top: 0;
+        left: 0;
+        z-index: 9998;
+        }
+        
+        .custPopup_Group {
+        background-color: white;
+        border-width: 2px;
+        border-style: solid;
+        z-index: 9999;
+        left: 30%;
+        padding: 10px;
+        position: fixed;
+        margin-left: -150px;
+        top: 20%;
+        }
+        .onshore-indicator{
+        border-bottom: 1px dotted black;
+        }
+        
+        .tooltip-modal{
+        background-color: #f5f5f5;
+        z-index: 9999;
+        padding: 10px;
+        position: absolute;
+        display: none;
+        /* opacity: .5; */
+        width: 15%;
+        /* border-radius: 5px; */
+        box-shadow: 1px 1px 1px #bbbbbb;
+        border-style: ridge; 
+        border-width: 1px;  
+        }
+    </style>
+     <div align="left" draggable="false" style="padding-left: 44%;padding-bottom:1%; {!if($Profile.Name =="ECM Back Office Agent",'display: none;','')}" >
+   <!--On click Related Cases button displayed on the Case detail page .-->
+    <apex:commandButton id="OpenPopup" value="Related Cases" rendered="{!DisplayBtn}" onclick="OpenalertModalWindow()" action="{!ViewRelatedCases}" reRender="alertModalWindow,casedetailpopupPanel,caseAddInfoModalbpage"> 
+    </apex:commandButton> 
+    </div>
+    <apex:pageBlock id="caseAddInfoModalbpage" >
+        <div class="slds-scope">
+        <apex:outputPanel id="casedetailpopupPanel">
+               <c:ACETCaseDetail />
+
+        </apex:outputPanel> 
+    </div>
+     <Script>
+       //Using J query Table Sorter for Sorting on Related Cases Data table 
+            $("[id$='sort']").tablesorter({
+            sortList: [[0,1]]
+            });
+        </Script>
+           <div style="background-color:#f8f8f8;height:400px" >
+                <apex:outputPanel styleClass="custPopup1 {!if(AllRelatedCasesNew.size>13,'show_overflow','')}" layout="block"
+                                  rendered="{!isShowPopup}" style="width:98%;background-color:#f8f8f8;z-index:9999;padding: 13px;top: 48px;">
+              <div class="pg_case">
+                                           <apex:pageBlock id="Relatedcasesblock"  >
+
+                    <div style="min-height: 20pc;">
+                      
+                            <div columns="1" style="border">
+                                                        <!-- Related Cases Page block Table   -->                         
+                                    <apex:pageBlockTable style="overflow-y: scroll !important;" id="sort" value="{!if(AllRelatedCasesNew==null,'No Records Found',AllRelatedCasesNew)}" var="mAl" rendered="{!AllRelatedCasesNew.size != 0}">
+                                       <apex:column headerValue="Case Number" style="vertical-align:Top; ">                                     
+                                    <apex:outputLink value="#" onclick="return OpenCaseHistorySubTab('{!mAl.Id}', '{!mAl.CaseNumber}');"
+                                                     onmouseover="return caseLinkMouseHoverOverNew('{!mAl.Id}');" >{!mAl.CaseNumber}</apex:outputLink>
+                              <div style="margin-top: -8%; margin-left: 32%;">
+                               <img src="{!$Resource.BenefitCodeAlert}" onclick="caseLinkMouseHoverOver('{!mAl.Id}');"  style="width:14px;padding-left: 13px;"/>
+                                 </div>
+                                                               </apex:column> 
+                                 <apex:column headerValue="Subject Name" value="{!mAl.Subject_Name__c}" style="vertical-align:Top;" />
+                                        <apex:column headerValue="Created Date & Time" value="{!mAl.CreatedDate }" style="vertical-align:Top;" />
+                                        <apex:column headerValue="Topic" value="{!mAl.Topic__c}" style="vertical-align:Top;"/>
+                                        <apex:column headerValue="Status" value="{!mAl.Status}" style="vertical-align:Top;" />
+                                         <apex:column headerValue="Originator Type" value="{!mAl.Originator_Type__c}" style="vertical-align:Top;" />
+                                       <apex:column headerValue="Parent Case" style="vertical-align:Top;"> 
+                                    
+                                    <apex:outputLink value="#" onclick="return OpenCaseHistorySubTab('{!mAl.Parent.Id}', '{!mAl.Parent.CaseNumber}');"
+                                                     onmouseover="return caseLinkMouseHoverOverNew('{!mAl.Parent.Id}');" >{!mAl.Parent.CaseNumber}</apex:outputLink>
+                                                           <div style="  margin-top: -11%;    margin-left: 43%;">
+                                                              <img src="{!$Resource.BenefitCodeAlert}" onclick="caseLinkMouseHoverOver('{!mAl.Parent.Id}');"  style="width:14px;padding-left: 13px;{!if(mAl.Parent.CaseNumber!='','','display:none')}"/>
+                                                   </div>
+                               </apex:column>
+                                    </apex:pageBlockTable>
+                            </div> 
+                      <!--Displaying No related cases Output Text when we don?t found matching related case found . -->
+                        <apex:outputPanel rendered="{!AllRelatedCasesNew.size == 0}">
+                            <div columns="2">
+                                <apex:outputText value="No Related Cases found." ></apex:outputText>
+                            </div>
+                        </apex:outputPanel>
+                   
+                    </div>
+                    </apex:pageBlock>
+                    </div>
+                </apex:outputPanel>
+        </div>
+    
+        </apex:pageBlock>
+        
+    
+    
+    <script>
+    $(document).ready(function(){                                                             
+                if(!acet.autodoc.saveDialog){                                                                                   
+                    acet.autodoc.saveDialog = $("[id$='caseAddInfoModalbpage']").dialog({
+                        autoOpen: false,
+                        height: 500,
+                        width: 1200,
+                        modal: true,
+                        closeOnEscape: true,
+                        title: "Related Cases",
+                        buttons: {
+                            
+                        },
+                        dialogClass: 'case-save-modal'
+                    }); 
+                    
+                }                                                                                                                                                                                                     
+            });
+    </script>
+    <style>
+    body .bPageBlock {
+    padding: 0;
+    margin-bottom: 0px !important;
+    
+    }
+    .show_overflow{
+    overflow-y:scroll;
+    max-height:360px !important;
+    }
+    .secondaryPalette, .individualPalette .homeBlock .secondaryPalette {
+    border-top-right-radius: 4px !important; 
+    border-top-left-radius: 4px !important; 
+     
+
+} 
+.custPopup1, .pg_case .apexp .secondaryPalette{
+ {!if(Pagename =="ACETAuthorizationDetail",'border-top-color: #56458c; !important;border : 3px solid  #56458c; !important;','')}
+ {!if(Pagename =="ACETProviderLookUpDetails",'border-top-color: #1797c0;; !important;border : 3px solid  #1797c0;; !important;','')}
+    border-top-right-radius: 4px !important; 
+    border-top-left-radius: 4px !important; 
+    background-color:#f8f8f8;
+    border-bottom: 1px solid #eaeaea !important;
+    border-left: 1px solid #eaeaea !important;
+    border-right: 1px solid #eaeaea !important;
+
+}
+    </style>    
+     
+</apex:component>

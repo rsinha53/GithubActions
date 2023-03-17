@@ -1,0 +1,100 @@
+<aura:component controller="ComboboxFieldCtrl" access="global" implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes">
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:method name="resetField" action="{!c.refreshField}" />
+    <aura:method name="checkValidation" action="{!c.checkValidation}" />
+    <aura:method name="validation" action="{!c.validation}" />
+    <aura:method name="stopValidation" action="{!c.stopValidation}" />
+    <aura:method name="onChange" action="{!c.onchange}" />
+    <aura:method name="stopError" action="{!c.stopError}" />
+    <aura:attribute name="showError" type="boolean" default="false" />
+    <aura:attribute name="fieldName" type="String" default="Field Name" />
+    <aura:attribute name="required" type="Boolean" default="false" />
+    <aura:attribute name="objectName" type="String" default="Account" />
+    <aura:attribute name="searchFieldName" type="String" default="Field Name" />
+    <aura:attribute name="searchKeyword" type="String" default="Select" />
+    <aura:attribute name="whereCondition" type="String" />
+     <aura:attribute name="height" type="String" default="150px" />
+    <aura:attribute name="orderBy" type="String" />
+    <aura:attribute name="comboboxRecords" type="Object" />
+    <aura:attribute name="filteredComboboxRecords" type="List" default="Select"/>
+    <aura:attribute name="selectedRecord" type="Object" />
+    <aura:attribute name="toggleInputs" type="Boolean" default="true" />
+    <aura:attribute name="errorMessage" type="Object" />
+    <aura:attribute name="notSelectedFromList" type="Boolean" default="false" />
+    <aura:attribute name="timer" type="Integer"/>
+    <aura:attribute name="fieldsdisabled" type="Boolean" default="false"/>
+    <aura:attribute name="makeRequired" type="Boolean" default="false"/>
+    <!--US2670819 - Provider Lookup - Fixes - Sravan-->
+    <aura:attribute name="implementScrollFunc" type="Boolean" default="false"/>
+    <!--US2883416 - Change Functionality on Routing Screen - Sravan -->
+    <aura:attribute name="isValueSelected" type="Boolean" default="false"/>
+    <aura:attribute name="reload" type="Boolean" default="false"/>
+    <aura:handler name="change" value="{!v.reload}" action="{!c.reload}"/>
+    <!--US3181616 - Sravan -->
+    <aura:attribute name="isLabel" type="Boolean" default="true"/>
+    <!-- Attributes end -->
+    <!--chandra start-->
+    <aura:attribute name="subTypeVal" type="String" default="subtype"/>
+    <aura:registerEvent name="ACET_CreateAuthGridValChange" type="c:ACET_CreateAuthGridValChange" />
+    <!--chandra End-->
+    <!--Aura Method-->
+    <aura:method name="updateSearchKeyWord" action="{!c.updateSelecetedValue}" access="public">
+        <aura:attribute name="strVal" type="String" default=""/>
+    </aura:method>
+
+    <aura:method name="callgetComboboxRecords" action="{!c.callGetComboBoxRecords}" access="public"/>
+
+    <!--US2670819 - Provider Lookup - Fixes - Sravan-->
+    <aura:if isTrue="{!!v.implementScrollFunc}">
+        <div>
+            <div class="slds-form-element">
+                <aura:if isTrue="{!v.required}">
+                    <label   class="{!v.isLabel ? 'slds-form-element__label' : ''}"><abbr class="slds-required" title="required">* </abbr>{!v.fieldName}</label>
+                    <aura:set attribute="else">
+                        <label class="{!v.isLabel ? 'slds-form-element__label' : ''}">{!v.fieldName}</label>
+                    </aura:set>
+                </aura:if>
+                <div class="slds-form-element__control">
+                    <div aura:id="inputFieldDivAI" class="slds-input-has-icon slds-input-has-icon--right">
+                        <aura:if isTrue="{!v.notSelectedFromList}">
+                            <lightning:icon class="slds-input__icon slds-show" iconName="utility:down" size="x-small" alternativeText="search" style="margin-top: -16px;"/>
+                        </aura:if>
+                        <aura:if isTrue="{!!v.notSelectedFromList}">
+                            <lightning:icon class="slds-input__icon slds-show" iconName="utility:down" size="x-small" alternativeText="search" />
+                        </aura:if>
+                        <lightning:input autocomplete="off" aura:Id="comboboxFieldAI" type="text" label="{!v.fieldName}" name="search" disabled="{!v.fieldsdisabled}" required="{!v.makeRequired}" value="{!v.searchKeyword}" variant="label-hidden" onfocus="{!c.onfocus}" onblur="{!c.onblur}" onchange="{!c.onchange}" />
+                    </div>
+                </div>
+            </div>
+            <!-- Dropdown list  -->
+            <aura:if aura:Id="dropDownListAI" isTrue="false">
+                <div style="position: relative;">
+                    <div class="testCls slds-dropdown slds-dropdown_fluid slds-dropdown_length-5" style="{!'width: 100%;position: absolute;z-index: 3; height:'+v.height+' !important;'}"><!--max-height: 200px;overflow-y: auto;-->
+                        <ul class="slds-listbox slds-listbox_vertical">
+                            <aura:iteration items="{!v.filteredComboboxRecords}" var="i" indexVar="iIndex">
+                                <li role="presentation" class="highlight" style="padding: 3px" data-Index="{!iIndex}" onclick="{!c.populateSelectedValue}">
+                                    <div>
+                                        <table>
+                                            <tr>
+                                                <td style="margin: 10px;width: 22px;">
+                                                    <aura:if isTrue="{!i.selected}">
+                                                        <lightning:icon iconName="utility:check" size="xx-small" />
+                                                    </aura:if>
+                                                </td>
+                                                <td aura:id="comboboxValueAI" style="color: black;">{!i.value}</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </li>
+                            </aura:iteration>
+                        </ul>
+                    </div>
+                </div>
+            </aura:if>
+        </div>
+        <!--US2670819 - Provider Lookup - Fixes - Sravan-->
+        <aura:set attribute="else">
+            <lightning:combobox name="{!v.fieldName}" label="{!v.fieldName}" value="{!v.searchKeyword}" disabled="{!v.fieldsdisabled}" options="{!v.filteredComboboxRecords}"  />
+        </aura:set>
+    </aura:if>
+</aura:component>

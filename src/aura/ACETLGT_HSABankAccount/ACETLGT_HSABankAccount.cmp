@@ -1,0 +1,198 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction,lightning:isUrlAddressable"
+        access="global" controller="ACETLGT_HSABankAcccountController"
+        >
+ 
+<!-- init method loads the data attribute values -->
+<aura:handler name="init" action="{!c.doInit}" value="{!this}" />
+<!-- TTS data attribute values -->
+<aura:attribute name="callTypes" type="Object" access="global" />
+<aura:attribute name="cseTopic" type="String" access="global" default="{!$Label.c.ACETCallTopicHSAAccount}"/>
+<aura:attribute name="srk" type="String" access="global" />
+<aura:attribute name="int" type="Interaction__c" access="global" />
+    <aura:attribute name="bookOfBusinessTypeCode" type="String" />
+<aura:attribute name="intId" type="String" access="global" />
+<aura:attribute name="memId" type="String" access="public"/>
+<aura:attribute name="grpNum" type="String" access="public"/>
+<aura:attribute name="CPTIN" type="String" access="public"/>
+<aura:attribute name="AutodocKey" type="string" access="public" default="HSA"/>
+<aura:attribute name="usInfo" type="user" access="public"/>    
+
+<!-- Account Number-->
+<aura:attribute name="accNo" type="String" access="global" />
+
+
+<!-- Highlight Panel -->
+<aura:attribute name="highlightPanel" type="ACETLGT_HighlightPanelInfo" access="global"/>
+<aura:attribute name="hgltPanelDataString" type="String" access="global"/>
+
+<!-- Accordion-->
+<aura:attribute name="Bank_Authentication" type="List" default="['Bank_Authentication']" />
+<aura:attribute name="Account_Info" type="List" default="['Account_Info']" />
+
+<!-- Data Table: Bank Authorization / Account Information-->
+<aura:attribute name="summaryResult" type="Object"/>
+
+
+<!--aura handler with waiting and donewaiting events-->
+    <!--<aura:handler event="aura:waiting" action="{!c.showSpinner}"/>
+    <aura:handler event="aura:doneWaiting" action="{!c.hideSpinner}"/>-->
+     
+    <!--component attributs -->
+    <aura:attribute name="spinner" type="boolean" default="true"/>
+     
+    
+<div id="{!v.AutodocKey}">
+    
+<!--loading spinner start-->
+<aura:if isTrue="{!v.spinner}">
+    <div aura:id="spinnerId" class="slds-spinner_container" style="height:45rem">
+        <div class="slds-spinner--brand  slds-spinner slds-spinner--medium  slds-is-relative" role="alert">
+            <span class="slds-assistive-text">Loading...</span>
+            <div class="slds-spinner__dot-a"></div>
+            <div class="slds-spinner__dot-b"></div>
+        </div>
+    </div>
+</aura:if>
+<!-- Loading spinner end-->  
+
+<lightning:card
+            variant="Narrow"
+            title="HSA Account(s)"
+            iconName="standard:home"
+            class="icr-card" 
+            >
+
+<aura:set attribute="actions">
+    <div class="slds-grid slds-form-element slds-m-right_large" >
+        <lightning:buttonGroup>
+                <c:ACETLGT_TTSModal aura:id = "cComp"
+                cseTopic="{!$Label.c.ACETCallTopicHSAAccount}" 
+                int="{!v.int}" 
+                intId="{!v.intId}" 
+                srk="{!v.srk}" 
+                showCirrus="true"                                        
+                memberId="{!v.memId}"
+                groupId="{!v.grpNum}" 
+                bookOfBusinessTypeCode="{!v.bookOfBusinessTypeCode}"
+                highlightPanel="{!v.highlightPanel}"
+                pagefeature="{!v.AutodocKey}"
+                userInfo="{!v.usInfo}"
+                AutodocKey="{!v.AutodocKey}"
+                />
+            
+        </lightning:buttonGroup>
+
+    </div>
+</aura:set>
+<p class="slds-p-horizontal_small"></p>
+
+<c:ACETLGT_HighlightPanel highlightPanelValues="{!v.highlightPanel}" pageFeature="{!v.AutodocKey}" AutodocKey="{!v.AutodocKey}"></c:ACETLGT_HighlightPanel>
+</lightning:card>
+
+
+    
+
+
+<!-- Bank Authentication-->
+<div class="slds-card">    
+        <lightning:accordion allowMultipleSectionsOpen="true" aura:id="HSABankAuthAccordian" onsectiontoggle="{! c.handleBankAuthSectionToggle }" activeSectionName= "Bank_Authentication" class="titleBold">    
+            <lightning:accordionSection name="Bank_Authentication" label="Bank Authentication">
+                <div class="slds-m-around_medium" width="100%">
+                        <aura:if isTrue="{!v.summaryResult.accHolderList.length > 0}">
+                           <div class="scroll_xAxis slds-grid slds-gutters">
+                                <table class="slds-table slds-table_bordered slds-no-row-hover slds-p-horizontal_small" >
+                         
+                                        <thead>
+                                             <tr class="">
+                                                 
+                                                 <th class="slds-col slds-size_1-of-7">Account Holder's Name</th>
+                                                 <th class="slds-col slds-size_1-of-7">SSN/CPTIN</th>
+                                                 <th class="slds-col slds-size_2-of-7">Address</th>
+                                                 <th class="slds-col slds-size_1-of-7">Phone</th> 
+                                                 <th class="slds-col slds-size_1-of-7">Phone Type</th> 
+                                                 <th class="slds-col slds-size_1-of-7">Date of Birth</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody>
+                                             
+                                             <aura:iteration items="{!v.summaryResult.accHolderList}" var="bankAuth">
+                                                 <tr class="slds-hint-parent">
+                                                     
+                                                     <td class="slds-col slds-size_1-of-7">{!bankAuth.accountHoldersName}</td>
+                                                     
+                                                     
+                                                     <!--td class="slds-col slds-size_1-of-6">{!bankAuth.ssn}</td-->
+                                                     <td class="slds-col slds-size_1-of-7"> <c:ACETLGT_MaskSSNComponent SSNValue="{!bankAuth.ssn}" memberId="{!v.memId}" Type="HSA Bank Account" Showcopy="True" ShowLabel="False"/></td>
+
+                                                     <td class="slds-col slds-size_2-of-7 fitInTextColumn">{!bankAuth.address}</td>
+                                                     <td class="slds-col slds-size_1-of-7">{!bankAuth.phone}</td>
+                                                     <td class="slds-col slds-size_1-of-7">{!bankAuth.phoneType}</td>
+                                                     <td class="slds-col slds-size_1-of-7">{!bankAuth.dob}</td>
+                                                     
+                                                 </tr>
+                                             </aura:iteration>  
+                                         </tbody>
+                                     </table>
+                        </div>
+                        <aura:set attribute="else"><p class="slds-align_absolute-center">No Results Found</p>
+                        </aura:set>
+                    </aura:if>
+                </div>
+            </lightning:accordionSection>
+        </lightning:accordion>
+    </div>
+
+
+<!-- Account Information-->
+<lightning:workspaceAPI aura:id="workspace"/>
+
+<div class="slds-card">    
+    <lightning:accordion allowMultipleSectionsOpen="true" aura:id="HSAAccountInfoAccordian" onsectiontoggle="{! c.handleAccountInfoSectionToggle }" activeSectionName= "Account_Info" class="titleBold">    
+        <lightning:accordionSection name="Account_Info" label="Account Information">
+            <div class="slds-m-around_medium" width="100%">
+                    <aura:if isTrue="{!v.summaryResult.hsaAccounts.length > 0}">
+                       <div class="scroll_xAxis slds-grid slds-gutters">
+                            <table class="slds-table slds-table_bordered slds-no-row-hover slds-p-horizontal_small" >
+                     
+                                    <thead>
+                                         <tr>
+                                             
+                                             <th class="slds-col slds-size_1-of-7">Account Number</th>
+                                             <th class="slds-col slds-size_1-of-7">Account Code</th>
+                                             <th class="slds-col slds-size_2-of-7">Account Name</th>
+                                             <th class="slds-col slds-size_1-of-7">Group Number</th> 
+                                             <th class="slds-col slds-size_1-of-7">Group Name</th> 
+                                             <th class="slds-col slds-size_1-of-7">Administered By</th>
+
+                                         </tr>
+                                     </thead>
+                                     <tbody>
+                                         
+                                         <aura:iteration items="{!v.summaryResult.hsaAccounts}" var="accInfo">
+                                            <tr class="slds-hint-parent">
+                                                     
+                                                <td class="slds-col slds-size_1-of-7"> 
+                                                   <a href="javascript:void(0);" onclick="{!c.openAccInfoDetail}" data-accNo="{!accInfo.HSAAccountNo}" data-caseId="{!accInfo.HSAAccountNoMasked}" data-hsaId="{!accInfo.hsaId}">{!accInfo.HSAAccountNoMasked}</a></td>
+                                                   
+                                                   
+                                                   
+                                                <td class="slds-col slds-size_1-of-7">{!accInfo.AccCode}</td>
+                                                <td class="slds-col slds-size_2-of-7 fitInTextColumn">{!accInfo.AccName} </td>
+                                                <td class="slds-col slds-size_1-of-7">{!accInfo.groupId} </td>
+                                                <td class="slds-col slds-size_1-of-7 fitInTextColumn">{!accInfo.groupName} </td>
+                                                <td class="slds-col slds-size_1-of-7">{!accInfo.administeredBy}</td>
+
+                                            </tr>
+                                         </aura:iteration>  
+                                     </tbody>
+                                 </table>
+                    </div>
+                    <aura:set attribute="else"><p class="slds-align_absolute-center">No Results Found</p>
+                    </aura:set>
+                </aura:if>
+            </div>
+        </lightning:accordionSection>
+    </lightning:accordion>
+</div>
+</div>
+</aura:component>

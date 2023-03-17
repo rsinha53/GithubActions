@@ -1,0 +1,179 @@
+<!-- US2098661 - Thanish - 17th Mar 2020 -->
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,lightning:isUrlAddressable" access="global" controller="ACET_CaseServiceRequestInfoCtrl">
+    
+    <!-- GLOBAL STYLE SHEET -->
+    <ltng:require styles="{!$Resource.ACET_MasterStyle}"/>
+    
+    <!-- ATTRIBUTES -->
+    <aura:attribute name="cmpUniqueId" type="string" default="SAE_CaseServiceRequestInfo"/><!-- US2041480 - Thanish 31st March 2020 -->
+    <aura:attribute name="openedTabs" type="List" default="[]"/><!-- US2041480 - Thanish 1st April 2020 -->
+    <aura:attribute name="rowCount" type="integer" default="0"/>
+    <aura:attribute name="tableData" type="Object"/>
+    <aura:attribute name="tableColumns" type="List"/>
+    <aura:attribute name="sortDirection" type="String" default="asc"/>
+    <aura:attribute name="defaultSortDirection" type="String" default="asc"/>
+    <aura:attribute name="sortedBy" type="String"/>
+    <aura:attribute name="sortedColumnLabel" type="String"/>
+    <aura:attribute name="timeInterval" type="Object"/>
+    <aura:attribute name="dataLoaded" type="boolean" default="false"/>
+	<lightning:workspaceAPI aura:id="workspace"/>
+    <aura:handler event="c:ACET_SRICloseTabEvent" action="{!c.enableORSIdLink}"/>
+	<aura:attribute name="selectedColumn" type="String" />
+    <aura:attribute name="selectedOption" type="String" default="CLIP" />
+    <aura:attribute name="columnOptions" type="String[]" default="['CLIP', 'CLIP', 'CLIP', 'CLIP', 'CLIP']" />
+    <aura:handler name="change" value="{!v.selectedColumn}" action="{!c.columnOptionsChange}"/>
+    <aura:handler name="change" value="{!v.selectedOption}" action="{!c.columnOptionsChange}"/>
+    <!--US3145625 - Sravan -->
+    <aura:attribute name="recordId" type="String" default=""/>
+    <!-- /ATTRIBUTES -->
+
+    <!-- HANDLERS -->
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <!-- /HANDLERS -->
+    
+    <div class="slds-card">
+        <!-- SPINNER -->
+        <aura:if isTrue="{!!v.dataLoaded}">
+            <lightning:spinner aura:id="spinner" variant="brand"/>
+        </aura:if>
+
+        <!-- PAGE HEADER -->
+        <div class="slds-card card_padding" style="background: rgb(243, 242, 242);">
+            <div class="slds-grid">
+                <div class="slds-col slds-has-flexi-truncate">
+                    <div class="slds-media slds-no-space slds-grow">
+                        <div class="slds-media__figure">
+                            <span class="slds-icon_container slds-icon-standard-case">
+                                <lightning:icon iconName="standard:case" size="small"/>
+                            </span>
+                        </div>
+                        <div class="slds-media__body">
+                            <div class="slds-page-header__name">
+                                <div class="slds-page-header__name-title">
+                                    <h1 class="component_title slds-m-right_small slds-align-middle slds-truncate slds-p-top_xx-small">
+                                        Service Request Information ({!v.rowCount})
+                                    </h1>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- ACTION BUTTONS -->
+                <lightning:buttonIcon iconName="utility:refresh" variant="border-filled" alternativeText="Refresh" title="Refresh" onclick="{!c.onRefresh}"/>
+            </div>
+            <!-- PAGE HEADER DETAIL ROW -->
+            <span class="description">
+                {!v.rowCount} Items &bull; {! (v.sortedColumnLabel) ? 'Sorted by ' + v.sortedColumnLabel + ' &bull;' : '' } Updated {!v.timeInterval.updatedDuration} ago
+            </span>
+        </div>
+        <!-- / PAGE HEADER -->
+
+        <!-- TABLE -->
+        <div class="card_bottom_padding" style="border-top: 1px solid rgb(221,219,218);">
+            <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-no-row-hover ServiceRequestInfo"> <!-- US2041480 - Thanish 1st April 2020 -->
+            <thead>
+                <tr class="">
+                    <th scope="col">
+                        <div title="ID">
+                            <span >ID</span>&nbsp;
+                            <c:SAE_TableColumnButtonMenu columnMenuID="0" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                        </div>
+                    </th>
+                    <th scope="col">
+                        <div title="ID Type">
+                            <span >ID Type</span>&nbsp;
+                            <c:SAE_TableColumnButtonMenu columnMenuID="1" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                        </div>
+                    </th>
+                    <th scope="col">
+                        <div title="Route To">
+                            <span >Route To</span>&nbsp;
+                            <c:SAE_TableColumnButtonMenu columnMenuID="2" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                        </div>
+                    </th>
+                    <th scope="col">
+                        <div title="Issue Status">
+                            <span >Issue Status</span>&nbsp;
+                            <c:SAE_TableColumnButtonMenu columnMenuID="3" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                        </div>
+                    </th>
+                    <th scope="col">
+                        <div title="Created By">
+                            <span >Created By</span>&nbsp;
+                            <c:SAE_TableColumnButtonMenu columnMenuID="4" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                        </div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                <aura:iteration items="{!v.tableData}" var="item" indexVar="index">
+                <tr class="slds-hint-parent">
+                    <td class="table_cell_value" style="width: 20%; min-width: 20%; max-width: 20%;">
+                        <aura:if isTrue="{!item.infoId != ''}">
+                            <div class="{! ((equals(v.columnOptions[0], 'CLIP') ? ' truncate ' : '' )) }" >
+                                <div class="{! ((equals(v.columnOptions[0], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }">
+                                    <a href="javascript:void(0);" data-index="{!index}" data-orsId="{!item.infoId}" data-idType="{!item.idType}" data-facetResp="{!item.facetResponse}" data-createdBy="{!item.createdBy}" class="idLink" onclick="{!c.openServiceRequestDetail}">{!item.infoId}</a>
+                                </div>
+                            </div>
+                            <aura:set attribute="else">
+                                <div class="slds-truncate">--</div>
+                            </aura:set>
+                        </aura:if>
+                    </td>
+                    <td class="table_cell_value" style="width: 20%; min-width: 20%; max-width: 20%;">
+                        <aura:if isTrue="{!item.idType != ''}">
+                            <div class="{! ((equals(v.columnOptions[1], 'CLIP') ? ' truncate ' : '' )) }" >
+                                <div class="{! ((equals(v.columnOptions[1], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }">
+                                    {!item.idType}
+                                </div>
+                            </div>
+                            <aura:set attribute="else">
+                                <div class="slds-truncate">--</div>
+                            </aura:set>
+                        </aura:if>
+                    </td>
+                    <td class="table_cell_value" style="width: 20%; min-width: 20%; max-width: 20%;">
+                        <aura:if isTrue="{!item.routeTo != ''}">
+                            <div class="{! ((equals(v.columnOptions[2], 'CLIP') ? ' truncate ' : '' )) }" >
+                                <div class="{! ((equals(v.columnOptions[2], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }">
+                                    {!item.routeTo}
+                                </div>
+                            </div>
+                            <aura:set attribute="else">
+                                <div class="slds-truncate">--</div>
+                            </aura:set>
+                        </aura:if>
+                    </td>
+                    <td class="table_cell_value" style="width: 20%; min-width: 20%; max-width: 20%;">
+                        <aura:if isTrue="{!item.issueStatus != ''}">
+                            <div class="{! ((equals(v.columnOptions[3], 'CLIP') ? ' truncate ' : '' )) }" >
+                                <div class="{! ((equals(v.columnOptions[3], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }">
+                                    {!item.issueStatus}
+                                </div>
+                            </div>
+                            <aura:set attribute="else">
+                                <div class="slds-truncate">--</div>
+                            </aura:set>
+                        </aura:if>
+                    </td>
+                    <td class="table_cell_value" style="width: 20%; min-width: 20%; max-width: 20%;">
+                        <aura:if isTrue="{!item.createdBy != ''}">
+                            <div class="{! ((equals(v.columnOptions[4], 'CLIP') ? ' truncate ' : '' )) }" >
+                                <div class="{! ((equals(v.columnOptions[4], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }">
+                                    {!item.createdBy}
+                                </div>
+                            </div>
+                            <aura:set attribute="else">
+                                <div class="slds-truncate">--</div>
+                            </aura:set>
+                        </aura:if>
+                    </td>
+                </tr>
+                </aura:iteration>
+            </tbody>
+        </table>
+        </div>
+        <!-- /TABLE -->
+    </div>
+
+</aura:component>

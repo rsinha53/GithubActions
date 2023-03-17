@@ -1,0 +1,225 @@
+<aura:component
+    implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,lightning:isUrlAddressable"
+    access="global" controller="ACET_BenefitCheckController">
+    <!-- US3089189 -->
+
+    <!-- US2974833 -->
+    <aura:handler name="init" value="{!this}" action="{!c.init}" />
+
+    <!-- US3067258 Swapnil -->
+    <aura:attribute name="isShowBenefitandAuthResults" type="Boolean" default="false" />
+    <!-- US2974833 Errors -->
+    <aura:attribute name="errors" type="Object" />
+    <aura:attribute name="showErrorMessage" type="Boolean" default="false" />
+    <aura:attribute name="error" type="object" />
+    <aura:attribute name="fieldsToValidate" type="List" default="procedureCode,diagnosisCode,modifier" />
+    <aura:attribute name="btnClicked" type="String" />
+
+    <!-- US3089189 -->
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute name="interactionOverviewTabId" type="String" />
+    <aura:attribute name="memberTabId" type="String" />
+    <aura:attribute name="currenttabId" type="String" default="" />
+    <aura:attribute name="memberCardSnap" type="Object" access="public" />
+    <aura:attribute name="PACheckData" type="Object" />
+    <aura:attribute name="benefitResult" type="Object" />
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0" />
+    <aura:attribute name="priorAuthResult" type="ACET_BenefitCheckController.PriorAuthInquiryWrap[]" default=""
+        access="public" />
+    <aura:attribute name="priorAuthResultTemp" type="ACET_BenefitCheckController.PriorAuthInquiryWrap[]" default=""
+        access="public" />
+    <aura:attribute name="benefitCheckResult" type="Object" />
+    <aura:attribute name="isShowBenefitResults" type="Boolean" />
+    <aura:attribute name="paCheckTabId" type="String" />
+
+    <!-- US2974833 -->
+    <aura:attribute name="measureList" type="List" default="[
+    {'label': 'Days', 'value': 'Days'},
+    {'label': 'Hours', 'value': 'Hours'},
+    {'label': 'Units', 'value': 'Units'},
+    {'label': 'Visits', 'value': 'Visits'}                                                      
+    ]" />
+
+    <!-- US3379720 -->
+    <aura:attribute name="lastRequestCount" type="Integer" default="0" />
+
+    <!-- US2974833 -->
+    <aura:registerEvent name="ACETPaCheckFireValidations" type="c:ACET_PaCheck_FireValidations" />
+    <aura:handler event="c:ACET_PaCheck_FireValidations" action="{!c.fireValidations}" /> 
+	<aura:attribute name="selectedKLDataMap" type="Map" default="" access="public"/>
+    <aura:handler name="sendData" event="c:ACET_SendKLDataToParentCmp" action="{!c.handleKLData}" />
+
+    <aura:attribute name="memberInfo" type="Object" />
+    <aura:attribute name="healthServiceProductCode" type="String" />
+    <aura:attribute name="vendorBenefitOptionTypeCode" type="String" />
+    <aura:attribute name="isParticipating" type="Boolean"/>
+
+    <!-- US3379720 -->
+    <aura:attribute name="showAddNewLink" type="Boolean" default="false" />
+    <aura:attribute name="priorAuthResultSize" type="Integer" default="0" access="public" />
+    <aura:attribute name="procedureCodeMap" type="Map" />
+
+    <div aura:id="card" class="slds-card card_padding">
+
+        <!-- US3089189 -->
+        <lightning:spinner class="slds-hide" aura:id="pacheckprocedure" alternativeText="Loading.." title="Loading.."
+            variant="brand" size="medium" />
+
+        <lightning:layout class="slds-card slds-m-bottom_x-small" multipleRows="true">
+            <lightning:layoutItem size="4">
+                <h2 class="component_title">
+                    Procedure Code
+                </h2>
+            </lightning:layoutItem>
+            <lightning:layoutItem size="5">
+                <div  style = "color:red" >
+                    A diagnosis code is required in order to provide accurate authorization requirements. If the caller does not have a diagnosis code enter R69 and educate that without a specific diagnosis code authorization requirements may vary.
+                </div>
+            </lightning:layoutItem>
+        </lightning:layout>
+
+        <table width="100%" class="slds-table slds-no-row-hover slds-table_bordered slds-table_cell-buffer"
+            style="cursor:pointer; table-layout:fixed;color:black">
+
+            <thead>
+                <tr class="slds-line-height_reset">
+
+                    <th scope="col" title="PROCEDURE CODE" class="slds-line-height_reset" style="width: 13%;">
+                        <span title="PROCEDURE CODE"> <abbr class="slds-required" title="required">* </abbr>
+                            PROCEDURE CODE
+                        </span>
+                    </th>
+                    <th scope="col" title="DIAGNOSIS CODE" class="slds-line-height_reset">
+                        <span title="DIAGNOSIS CODE">
+                            <abbr class="slds-required" title="required">* </abbr>
+                            DIAGNOSIS CODE</span>
+                    </th>
+                    <th scope="col" title="MODIFIER" class="slds-line-height_reset">
+                        <span title="MODIFIER">MODIFIER</span>
+                    </th>
+                    <th scope="col" title="CHARGE" class="slds-line-height_reset">
+                        <span title="CHARGE">CHARGE</span>
+                    </th>
+                    <th scope="col" title="COUNT" class="slds-line-height_reset">
+                        <span title="COUNT">COUNT</span>
+                    </th>
+                    <th scope="col" title="UNIT" class="slds-line-height_reset">
+                        <span title="UNIT">UNITS</span>
+                    </th>
+                    <th scope="col" title="MEASURE" class="slds-line-height_reset">
+                        <span title="MEASURE">MEASURE</span>
+                    </th>
+                    <th scope="col" title="FREQUENCY" class="slds-line-height_reset">
+                        <span title="FREQUENCY">FREQUENCY</span>
+                    </th>
+                    <th scope="col" title="ACTION" class="slds-line-height_reset">
+                        <span title="ACTION">ACTION</span>
+                    </th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                <aura:iteration items="{!v.PACheckData.ProcedureCode.ProcedureCodes}" var="obj" indexVar="index">
+
+                    <tr class="slds-hint-parent" id="">
+                        <td>
+                            <!-- <span onkeypress="{! c.alphanumericAndNoSpecialCharacters }"
+                                onpaste="{! c.alphanumericAndNoSpecialCharacters }">
+                                <lightning:input style="margin-top:-17px" type="text" aura:id="procedureCode"
+                                    name="{! 'procedureCode' + index }" value="{!obj.procedureCode}" minlength="5"
+                                    maxlength="5" onchange="{! c.bindValues }" class="input-code" required="true" />
+                            </span> -->
+                            <c:ACET_KLExtract aura:id="procedureCode" codeType="ProcedureCode"
+                                value="{!obj.procedureCode}" label="" required="true" isshowHoverOnCode="true"
+                                conditionalRequired="true" disabled="{!obj.disabled}" />
+                        </td>
+                        <td>
+                            <c:ACET_KLExtract aura:id="diagnosisCode" codeType="DiagnosisCode"
+                                value="{!obj.diagnosisCode}" label="" required="true" isshowHoverOnCode="true"
+                                conditionalRequired="true" disabled="{!obj.disabled}"  autoPopulateString= "{!obj.diagnosisCode}" isCopy="{!obj.copyClick}" />
+                            <!--span onkeypress="{! c.alphanumericAndNoSpecialCharacters }"
+                                onpaste="{! c.alphanumericAndNoSpecialCharacters }">
+                                <lightning:input style="margin-top:-17px" type="text" aura:id="diagnosisCode"
+                                    name="{! 'diagnosisCode' + index }" value="{!obj.diagnosisCode}" minlength="3"
+                                    maxlength="8" onchange="{! c.bindValues }" class="input-code" required="true" />
+                            </span-->
+                        </td>
+                        <td>
+                            <span onkeypress="{! c.alphanumericAndNoSpecialCharacters }"
+                                onpaste="{! c.alphanumericAndNoSpecialCharacters }">
+                                <lightning:input style="margin-top:-17px" type="text" aura:id="modifier"
+                                    name="{! 'modifier' + index }" value="{!obj.modifier}" minlength="2" maxlength="2"
+                                    disabled="{!obj.disabled}" />
+                            </span>
+                        </td>
+                        <td>
+                            <lightning:input style="margin-top:-17px" type="number" aura:id="charge"
+                                name="{! 'charge' + index }" value="{!obj.charge}" formatter="currency" step="0.01"
+                                disabled="{!obj.disabled}" />
+                        </td>
+                        <td>
+                            <lightning:input style="margin-top:-17px" type="number" aura:id="count"
+                                name="{! 'count' + index }" value="{!obj.count}" disabled="{!obj.disabled}" />
+                        </td>
+                        <td>
+                            <lightning:input style="margin-top:-17px" type="number" aura:id="units"
+                                name="{! 'units' + index }" value="{!obj.units}" disabled="{!obj.disabled}" />
+                        </td>
+                        <td>
+                            <lightning:combobox style="margin-top:-17px" aura:id="measure" name="{! 'measure' + index }"
+                                options="{!v.measureList}" value="{!obj.measure}" disabled="{!obj.disabled}" />
+                        </td>
+                        <td>
+                            <lightning:input style="margin-top:-17px" type="number" aura:id="frequency"
+                                name="{! 'frequency' + index }" value="{!obj.frequency}" disabled="{!obj.disabled}" />
+                        </td>
+                        <td>
+                            <aura:If isTrue="{! greaterthan(index, 0) }">
+                                <div>
+                                    <aura:If isTrue="{! !obj.disabled }">
+                                        <a href="javascript:void(0)" data-row-index="{!index}"
+                                            onclick="{!c.copyDX}">Copy DX</a>  &nbsp;
+                                        <!-- US3379720 -->
+                                        <a href="javascript:void(0)" data-row-index="{!index}"
+                                            onclick="{!c.deleteRaw}">Clear</a>
+                                    </aura:If>
+                                </div>
+                            </aura:If>
+                        </td>
+                    </tr>
+                </aura:iteration>
+
+            </tbody>
+        </table>
+
+        <!-- US3379720 -->
+        <aura:If isTrue="{!v.showAddNewLink}">
+            <aura:If isTrue="{! lessthanorequal(v.PACheckData.ProcedureCode.ProcedureCodes.length, 19) }">
+                <div class="slds-m-top_small">
+                    <a href="javascript:void(0)" onclick="{!c.addRaw}" disabled="false">Add Procedure Code</a>
+                </div>
+            </aura:If>
+        </aura:If>
+
+        <lightning:layoutItem class="slds-m-top_small" size="6">
+
+            <!-- US3089189 -->
+            <!-- <lightning:button variant="brand" label="Check Benefit" onclick="{! c.callBenefitCheck }" />
+            &nbsp;&nbsp; -->
+            <aura:If isTrue="{! not(v.showAddNewLink) }">
+                <lightning:button variant="brand" label="Benefit/PA Check" onclick="{! c.showBenefitandAuthResults }" />
+            </aura:If>
+            <!-- &amp; Benefit" title="Check PA &amp; Benefit -->
+
+            <aura:If isTrue="{!v.showErrorMessage}" >
+                <div style="margin-left: 36%; margin-top: -5.5%;">
+                    <c:ACET_ErrorPopup aura:id="errorPopup" errorMessage="{!v.error.message}"
+                        topDescription="{!v.error.topDescription}" bottomDescription="{!v.error.bottomDescription}"
+                        descriptionList="{!v.error.descriptionList}" moveLeft="-17" isNubbinLeft="true" />
+                </div>
+            </aura:If>
+
+        </lightning:layoutItem>
+    </div>
+</aura:component>

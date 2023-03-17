@@ -1,0 +1,329 @@
+<aura:component 
+                implements="forceCommunity:themeLayout,forceCommunity:availableForAllPageTypes,forceCommunity:layout,force:lightningQuickAction,force:appHostable,force:hasRecordId" access="global" 
+                controller="SNI_FL_CaseManagementUtil">
+    
+    <aura:attribute name="selectFamilyId" type="String" description="Selected family id from the SNI_FL_Home"/>
+    <aura:attribute name="IsOpenCaseComment" type="boolean" default="false" description="Flag will be true if click on case comment link"/>
+    <aura:attribute name="IsOpenCaseAttachment" type="boolean" default="false" description="Flag will be true if click on case attachment link"/>
+    <aura:attribute name="device" type="String" default="" /><!--Vamsi Please add comment-->
+    <aura:attribute name="isSmallScreen" type="Boolean" default=""  description="Detect the screen size" />
+    <aura:attribute name="listOfCases" type="SNI_FL_CaseManagementController.CaseObjectWrapper[]" description="Holds all open close cases"></aura:attribute>
+    <aura:attribute name="listOfSortOrder" type="Object[]" description="Holds all open close cases based on individual level"></aura:attribute>
+    <aura:attribute name="listOfOpenCases" type="SNI_FL_CaseManagementController.CaseObjectWrapper[]" description="Store open cases"></aura:attribute>
+    <aura:attribute name="listOfClosedCases" type="SNI_FL_CaseManagementController.CaseObjectWrapper[]" description="Store closed cases"></aura:attribute>
+    <aura:handler name="change" value="{!v.selectFamilyId}" action="{!c.retrieveCaseData}" description="Handle case loading  if isCaseViewed value change(SNI_FL_Home)"></aura:handler>
+    <aura:attribute name="selectedCase" type="String" description="Selected case for the view comments"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"></aura:handler>
+    <aura:attribute name="selectedTab" type="String" default="All Cases" description="Store selected tab"/>
+    <aura:attribute name="selectedView" type="String" default="Grid View" description="Store selected view"/>
+    <aura:attribute name="userRecord" type="Object" default="All Cases" description="Logged in user details"/>
+    <force:recordData fields="Name, ContactId" recordId="{!$SObjectType.CurrentUser.Id}" targetFields="{!v.userRecord}"/>
+    <aura:attribute name="IsModalOpen" type="boolean" default="false" description=""/>
+    
+    <div  aura:id="modal" class="modalOpen"><!--class="modalOpen"-->
+        <aura:if isTrue="{!!v.isSmallScreen}">
+            <div class="slds-grid slds-grid_align-spread">
+                <div class="record-top-nav" style = "width: auto;" >
+                    <div class="slds-col">
+                        <ul class="slds-has-block-links record-nav">
+                            <li aura:id="allCaseView" class="active">
+                                <a href="javascript:void(0);" onclick="{!c.viewAllCases}" class="slds-m-left_small" style="color:grey;font-weight:bold;font-size:15px;">All Cases</a>
+                            </li> 
+                            
+                            <li aura:id="myCaseView" class="inactive">
+                                <a href="javascript:void(0);" onclick="{!c.viewMyCases}" class="slds-m-left_small" style="color:grey;font-weight:bold;font-size:15px;">My Cases</a>
+                            </li> 
+                        </ul>  
+                        
+                        <ul class="slds-has-block-links tab-nav" >
+                            <li aura:id="gridView" class="active">
+                                <a href="javascript:void(0);" onclick="{!c.gridViewCases}">
+                                    <img src="{!$Resource.SNI_FL_Case_Image + '/SNI_FL_ListIcon.png'}" class="imgheight"/>
+                                </a>
+                                <!-- <img src="{!$Resource.SNI_FL_ListIcon}" class="imgheight"/>-->
+                            </li> 
+                            <li aura:id="individualView" class="inactive" >
+                                <!--<img src="{!$Resource.SNI_FL_AvatarIcon}" class="imgheight"/>-->
+                                <a href="javascript:void(0);" onclick="{!c.individualViewCases}">
+                                    <img src="{!$Resource.SNI_FL_Case_Image + '/SNI_FL_AvatarIcon.png'}" class="imgheight"/>
+                                </a>
+                            </li>
+                        </ul>
+                    </div> 
+                </div>           
+            </div> 
+            <aura:set attribute = "else">
+                <div class="slds-grid slds-grid_align-spread">
+                    <div class="slds-col">
+                        <ul class="slds-has-block-links tab-nav" style="height:45px !important">
+                            <li aura:id="allCaseView" class="active">
+                                <a href="javascript:void(0);" onclick="{!c.viewAllCases}" style="color:grey;font-weight:bold;font-size:15px;">
+                                    <lightning:icon iconName="utility:overflow" title="User" size="xxx-small" />
+                                </a>
+                            </li> 
+                            
+                            <li aura:id="myCaseView" class="inactive">
+                                <a href="javascript:void(0);" onclick="{!c.viewMyCases}" style="color:grey;font-weight:bold;font-size:15px;">
+                                    <lightning:icon iconName="utility:location_permit" title="User" size="xxx-small" />
+                                </a>
+                            </li> 
+                        </ul>  
+                    </div>
+                    <div class="slds-col">
+                        <ul class="slds-has-block-links tab-nav" style="height:45px !important">
+                            <li aura:id="gridView" class="active">
+                                <a href="javascript:void(0);" onclick="{!c.gridViewCases}">
+                                    <lightning:icon iconName="utility:list" title="User" size="xxx-small" />
+                                </a>
+                            </li> 
+                            <li aura:id="individualView" class="inactive" >
+                                <a href="javascript:void(0);" onclick="{!c.individualViewCases}">
+                                    <lightning:icon iconName="utility:user" title="User" size="xxx-small" />
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+            </aura:set>
+        </aura:if>
+        
+        <aura:if isTrue="{!v.selectedView == 'Grid View'}">
+            <lightning:layout horizontalAlign="space"  verticalAlign="center" multipleRows="true">
+                <lightning:layoutItem size="12"  padding="around-large" flexibility="auto">
+                    <div class="slds-card"  style="padding :5px; border-color: #b5e8ff; background-color: #fafeff;">
+                        <!--<img src="{!$Resource.SNI_FL_Opencase}" width="13" height="13"/>-->
+                        <img src="{!$Resource.SNI_FL_Case_Image + '/SNI_FL_Opencase.png'}" width="13" height="13"/>
+                        <b class="slds-m-left_small" style="color:#5dc916;font-weight:bold;font-size:16px;">Open Cases</b>
+                    </div>
+                </lightning:layoutItem>       
+                
+                <aura:iteration items="{!v.listOfOpenCases}" var="case">
+                    
+                    <lightning:layoutItem size="12"  padding="around-medium" flexibility="auto" aura:id="{!case.caseID}"> 
+                        <lightning:formattedDateTime value="{!case.caseCreatedDateTime}" year="numeric" month="numeric" day="numeric" hour="2-digit"
+                                                    minute="2-digit"  timeZone="CST" hour12="true" class="slds-hide"/>
+                        <div  class="slds-card"  style="padding :5px;  border-color: #000000; background-color: white;">
+                            <b class="slds-m-left_small" style="color:#122377;font-weight:bold;font-size:14px;">{!case.caseNumber} - {!case.caseName} - {!case.caseType} </b>
+                            <b class="slds-m-left_small" style="color:#0070d2;font-weight:bold;font-size:14px; float:right;">
+                                <aura:if isTrue="{!!v.isSmallScreen}">
+                                    <p>
+                                        <aura:if isTrue="{!case.caseAttachments.length>0}" >
+                                            <a onclick="{! c.viewCaseAttachments }" data-value="{!case.caseID}" id="{!case.caseID}"> View Attachments</a>
+                                        </aura:if>    
+                                        
+                                        <aura:if isTrue="{!and(case.caseAttachments.length>0,case.caseComments.length>0)}">
+                                            <b> | </b>
+                                        </aura:if>
+                                        
+                                        <aura:if isTrue="{!case.caseComments.length>0}">
+                                            <a onclick="{! c.viewCaseComments }" data-value="{!case.caseID}">View Comments</a>
+                                        </aura:if>
+                                    </p>
+                                    
+                                    <aura:set attribute = "else">  
+                                        <aura:if isTrue="{!case.caseAttachments.length>0}">
+                                            <img src="{!$Resource.SNI_FL_Case_Image + '/SNI_FL_File.png'}" class="imgheight1" onclick="{! c.viewCaseAttachments }" data-value="{!case.caseID}" id="{!case.caseID}"/>
+                                        </aura:if>
+                                        
+                                        <aura:if isTrue="{!case.caseComments.length>0}">
+                                            <img src="{!$Resource.SNI_FL_Case_Image + '/SNI_FL_Comments.png'}" class="slds-p-left_x-small slds-p-right_medium imgheight1" onclick="{! c.mobileViewCaseComments }" data-value="{!case.caseID}" id="{!case.caseID}"/>
+                                            
+                                            <!--<lightning:icon iconName="utility:comments" class="slds-p-left_x-small slds-p-right_medium imgheight1" onclick="{! c.mobileViewCaseComments }"  id="{!case.caseID}"  data-value="{!case.caseID}" title="Comments" size="xx-small" />-->                                   
+                                        </aura:if>
+                                    </aura:set>
+                                </aura:if>
+                            </b>
+                            
+                            <p class="slds-text-color_weak slds-m-left_small" style="color:#5dc916;padding-bottom: 10px; font-weight:bold;">Open</p>
+                            <p class="slds-text-color_weak slds-m-left_small" style="color:grey;" aura:id="{!case.caseAssignToUserID}">Assigned To: {!case.caseAssignToUserName}</p>
+                            <p class="slds-text-color_weak slds-m-left_small" style="color:grey;" aura:id="{!case.caseAboutUserID}">About: {!case.caseAboutUser}</p>                	
+                        </div>
+                    </lightning:layoutItem>
+                </aura:iteration>
+            </lightning:layout>
+            <lightning:layout horizontalAlign="space" verticalAlign="center" multipleRows="true">
+                <lightning:layoutItem size="12"  padding="around-small" flexibility="auto">
+                    
+                    <div  class="slds-card"  style="padding :5px;  border-color: #b5e8ff; background-color: #fafeff;">
+                        
+                        <div>
+                            <!--<img src="{!$Resource.SNI_FL_Closecase}" width="15" height="15"/>-->
+                            <img src="{!$Resource.SNI_FL_Case_Image + '/SNI_FL_Closecase.png'}" width="13" height="13"/>
+                            <b class="slds-m-left_small" style=" color: blue;font-weight:bold;font-size:16px;">Closed Cases</b>
+                        </div>
+                    </div>
+                </lightning:layoutItem>      
+                <aura:iteration items="{!v.listOfClosedCases}" var="case">
+                    <lightning:layoutItem size="12"  padding="around-small" flexibility="auto">
+                        <lightning:formattedDateTime value="{!case.caseClosedDateTime}" year="numeric" month="numeric" day="numeric" hour="2-digit"
+                                                    minute="2-digit"  timeZone="CST" hour12="true" class="slds-hide"/>
+                        <div  class="slds-card"  style="padding :5px;  border-color:#000000; background-color: white;">
+                            <b class="slds-m-left_small" style="color:#122377;font-weight:bold;font-size:14px;">{!case.caseNumber} - {!case.caseName} - {!case.caseType}</b>
+                            <b class="slds-m-left_small" style="color:#0070d2;font-weight:bold;font-size:14px; float:right;">
+                                <aura:if isTrue="{!!v.isSmallScreen}">                            
+                                    <p><aura:if isTrue="{!case.caseAttachments.length>0}" >
+                                        <a onclick="{! c.viewCaseAttachments }" data-value="{!case.caseID}" id="{!case.caseID}"> View Attachments</a>
+                                        </aura:if>    
+                                        
+                                        <aura:if isTrue="{!and(case.caseAttachments.length>0,case.caseComments.length>0)}">
+                                            <b> | </b>
+                                        </aura:if>
+                                        
+                                        <aura:if isTrue="{!case.caseComments.length>0}">
+                                            <a onclick="{! c.viewCaseComments }" data-value="{!case.caseID}">View Comments</a>
+                                        </aura:if></p>
+                                    
+                                    <aura:set attribute = "else">
+                                        <aura:if isTrue="{!case.caseAttachments.length>0}">
+                                            <img src="{!$Resource.SNI_FL_Case_Image + '/SNI_FL_File.png'}" class="imgheight1" onclick="{! c.viewCaseAttachments }" data-value="{!case.caseID}" id="{!case.caseID}"/>
+                                            
+                                        </aura:if>
+                                        <aura:if isTrue="{!case.caseComments.length>0}">
+                                            <img src="{!$Resource.SNI_FL_Case_Image + '/SNI_FL_Comments.png'}" class="slds-p-left_x-small slds-p-right_medium imgheight1" onclick="{! c.mobileViewCaseComments }" data-value="{!case.caseID}" id="{!case.caseID}"/>
+                                            
+                                            <!--<lightning:icon iconName="utility:comments" onclick="{! c.mobileViewCaseComments }"  id="{!case.caseID}" data-value="{!case.caseID}" class="slds-p-left_x-small slds-p-right_medium imgheight1" title="Comments" size="xx-small" />-->
+                                        </aura:if>
+                                    </aura:set>
+                                </aura:if>
+                            </b> <p class="slds-text-color_weak slds-m-left_small" style="color:blue;padding-bottom: 10px;font-weight:bold;">{!case.caseStatus}</p>
+                            
+                            <p class="slds-text-color_weak slds-m-left_small" style="color:grey;">Assigned To: {!case.caseAssignToUserName}</p>
+                            <p class="slds-text-color_weak slds-m-left_small" style="color:grey;">About: {!case.caseAboutUser}</p>
+                        </div>
+                    </lightning:layoutItem> 
+                </aura:iteration>
+                
+            </lightning:layout>
+
+            <aura:set attribute="else">
+               
+                <aura:iteration items="{!v.listOfSortOrder}" var="cases">
+                  
+                    <div class="customIconSize" style="border-color:#b9b9b9;border-radius:4px;border-width:thin;border-style:solid;margin-left:8px;margin-right:10px;margin-bottom:5px;">
+                        <lightning:layout verticalAlign="center" multipleRows="true">
+                            <lightning:icon class="slds-p-left_x-small slds-p-top_x-small" iconName="utility:user" title="User" size="xxx-small" />
+                            <span class="slds-p-left_x-small slds-p-top_x-small">{!cases.userName}</span>
+                        </lightning:layout>
+
+                        <lightning:layout horizontalAlign="space"  verticalAlign="center" multipleRows="true">
+                            <lightning:layoutItem size="12"  padding="around-large" flexibility="auto">
+                                <div class="slds-card"  style="padding :5px; border-color: #b5e8ff; background-color: #fafeff;">
+                                    <!--<img src="{!$Resource.SNI_FL_Opencase}" width="13" height="13"/>-->
+                                    <img src="{!$Resource.SNI_FL_Case_Image + '/SNI_FL_Opencase.png'}" width="13" height="13"/>
+                                    <b class="slds-m-left_small" style="color:#5dc916;font-weight:bold;font-size:16px;">Open Cases</b>
+                                </div>
+                            </lightning:layoutItem>       
+                            
+                            <aura:iteration items="{!cases.openCases}" var="case">
+                                
+                                <lightning:layoutItem size="12"  padding="around-medium" flexibility="auto" aura:id="{!case.caseID}"> 
+                                    <lightning:formattedDateTime value="{!case.caseCreatedDateTime}" year="numeric" month="numeric" day="numeric" hour="2-digit"
+                                                                minute="2-digit"  timeZone="CST" hour12="true" class="slds-hide"/>
+                                    <div  class="slds-card"  style="padding :5px;  border-color: #000000; background-color: white;">
+                                        <b class="slds-m-left_small" style="color:#122377;font-weight:bold;font-size:14px;">{!case.caseNumber} - {!case.caseName} - {!case.caseType} </b>
+                                        <b class="slds-m-left_small" style="color:#0070d2;font-weight:bold;font-size:14px; float:right;">
+                                            <aura:if isTrue="{!!v.isSmallScreen}">
+                                                <p>
+                                                    <aura:if isTrue="{!case.caseAttachments.length>0}" >
+                                                        <a onclick="{! c.viewCaseAttachments }" data-value="{!case.caseID}" id="{!case.caseID}"> View Attachments</a>
+                                                    </aura:if>    
+                                                    
+                                                    <aura:if isTrue="{!and(case.caseAttachments.length>0,case.caseComments.length>0)}">
+                                                        <b> | </b>
+                                                    </aura:if>
+                                                    
+                                                    <aura:if isTrue="{!case.caseComments.length>0}">
+                                                        <a onclick="{! c.viewCaseComments }" data-value="{!case.caseID}">View Comments</a>
+                                                    </aura:if>
+                                                </p>
+                                                
+                                                <aura:set attribute = "else">  
+                                                    <aura:if isTrue="{!case.caseAttachments.length>0}">
+                                                        <img src="{!$Resource.SNI_FL_Case_Image + '/SNI_FL_File.png'}" class="imgheight1" onclick="{! c.viewCaseAttachments }" data-value="{!case.caseID}" id="{!case.caseID}"/>
+                                                    </aura:if>
+                                                    
+                                                    <aura:if isTrue="{!case.caseComments.length>0}">
+                                                        <img src="{!$Resource.SNI_FL_Case_Image + '/SNI_FL_Comments.png'}" class="slds-p-left_x-small slds-p-right_medium imgheight1" onclick="{! c.mobileViewCaseComments }" data-value="{!case.caseID}" id="{!case.caseID}"/>
+                                                        
+                                                        <!--<lightning:icon iconName="utility:comments" class="slds-p-left_x-small slds-p-right_medium imgheight1" onclick="{! c.mobileViewCaseComments }"  id="{!case.caseID}"  data-value="{!case.caseID}" title="Comments" size="xx-small" />-->                                   
+                                                    </aura:if>
+                                                </aura:set>
+                                            </aura:if>
+                                        </b>
+                                        
+                                        <p class="slds-text-color_weak slds-m-left_small" style="color:#5dc916;padding-bottom: 10px; font-weight:bold;">Open</p>
+                                        <p class="slds-text-color_weak slds-m-left_small" style="color:grey;" aura:id="{!case.caseAssignToUserID}">Assigned To: {!case.caseAssignToUserName}</p>
+                                        <p class="slds-text-color_weak slds-m-left_small" style="color:grey;" aura:id="{!case.caseAboutUserID}">About: {!case.caseAboutUser}</p>                	
+                                    </div>
+                                </lightning:layoutItem>
+                            </aura:iteration>
+                        </lightning:layout>
+                        <lightning:layout horizontalAlign="space" verticalAlign="center" multipleRows="true">
+                            <lightning:layoutItem size="12"  padding="around-small" flexibility="auto">
+                                
+                                <div  class="slds-card"  style="padding :5px;  border-color: #b5e8ff; background-color: #fafeff;">
+                                    
+                                    <div>
+                                        <!--<img src="{!$Resource.SNI_FL_Closecase}" width="15" height="15"/>-->
+                                        <img src="{!$Resource.SNI_FL_Case_Image + '/SNI_FL_Closecase.png'}" width="13" height="13"/>
+                                        <b class="slds-m-left_small" style=" color: blue;font-weight:bold;font-size:16px;">Closed Cases</b>
+                                    </div>
+                                </div>
+                            </lightning:layoutItem>      
+                            <aura:iteration items="{!cases.closeCases}" var="case">
+                                <lightning:layoutItem size="12"  padding="around-small" flexibility="auto">
+                                    <lightning:formattedDateTime value="{!case.caseClosedDateTime}" year="numeric" month="numeric" day="numeric" hour="2-digit"
+                                                                minute="2-digit"  timeZone="CST" hour12="true" class="slds-hide"/>
+                                    <div  class="slds-card"  style="padding :5px;  border-color:#000000; background-color: white;">
+                                        <b class="slds-m-left_small" style="color:#122377;font-weight:bold;font-size:14px;">{!case.caseNumber} - {!case.caseName} - {!case.caseType}</b>
+                                        <b class="slds-m-left_small" style="color:#0070d2;font-weight:bold;font-size:14px; float:right;">
+                                            <aura:if isTrue="{!!v.isSmallScreen}">                            
+                                                <p><aura:if isTrue="{!case.caseAttachments.length>0}" >
+                                                    <a onclick="{! c.viewCaseAttachments }" data-value="{!case.caseID}" id="{!case.caseID}"> View Attachments</a>
+                                                    </aura:if>    
+                                                    
+                                                    <aura:if isTrue="{!and(case.caseAttachments.length>0,case.caseComments.length>0)}">
+                                                        <b> | </b>
+                                                    </aura:if>
+                                                    
+                                                    <aura:if isTrue="{!case.caseComments.length>0}">
+                                                        <a onclick="{! c.viewCaseComments }" data-value="{!case.caseID}">View Comments</a>
+                                                    </aura:if></p>
+                                                
+                                                <aura:set attribute = "else">
+                                                    <aura:if isTrue="{!case.caseAttachments.length>0}">
+                                                        <img src="{!$Resource.SNI_FL_Case_Image + '/SNI_FL_File.png'}" class="imgheight1" onclick="{! c.viewCaseAttachments }" data-value="{!case.caseID}" id="{!case.caseID}"/>
+                                                        
+                                                    </aura:if>
+                                                    <aura:if isTrue="{!case.caseComments.length>0}">
+                                                        <img src="{!$Resource.SNI_FL_Case_Image + '/SNI_FL_Comments.png'}" class="slds-p-left_x-small slds-p-right_medium imgheight1" onclick="{! c.mobileViewCaseComments }" data-value="{!case.caseID}" id="{!case.caseID}"/>
+                                                        
+                                                        <!--<lightning:icon iconName="utility:comments" onclick="{! c.mobileViewCaseComments }"  id="{!case.caseID}" data-value="{!case.caseID}" class="slds-p-left_x-small slds-p-right_medium imgheight1" title="Comments" size="xx-small" />-->
+                                                    </aura:if>
+                                                </aura:set>
+                                            </aura:if>
+                                        </b> <p class="slds-text-color_weak slds-m-left_small" style="color:blue;padding-bottom: 10px;font-weight:bold;">{!case.caseStatus}</p>
+                                        
+                                        <p class="slds-text-color_weak slds-m-left_small" style="color:grey;">Assigned To: {!case.caseAssignToUserName}</p>
+                                        <p class="slds-text-color_weak slds-m-left_small" style="color:grey;">About: {!case.caseAboutUser}</p>
+                                    </div>
+                                </lightning:layoutItem> 
+                            </aura:iteration>
+                            
+                        </lightning:layout>
+      
+                    </div>
+                </aura:iteration>
+            </aura:set>
+        </aura:if>
+    </div>
+    
+    <aura:if isTrue="{!v.IsOpenCaseComment}">     
+        <c:SNI_FL_CaseCommentDetails IsOpenCaseComment="{!v.IsOpenCaseComment}" selectFamilyId="{!v.selectFamilyId}" selectedCase="{!v.selectedCase}" listOfCases="{!v.listOfCases}" />     
+    </aura:if>
+    
+    <aura:if isTrue="{!v.IsOpenCaseAttachment}">     
+        <c:SNI_FL_CaseAttachmentDetails  IsOpenCaseAttachment="{!v.IsOpenCaseAttachment}" selectFamilyId="{!v.selectFamilyId}" selectedCase="{!v.selectedCase}" listOfCases="{!v.listOfCases}" />     
+    </aura:if>
+</aura:component>

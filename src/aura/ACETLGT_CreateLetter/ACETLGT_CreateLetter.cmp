@@ -1,0 +1,272 @@
+<aura:component controller="ACETLGT_CreateLetterController" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,lightning:isUrlAddressable" access="global">
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:attribute name="caseId" type="string" />
+    <aura:attribute name="record" type="Case" />
+    <aura:attribute name="First_Name" type="string" />
+    <aura:attribute name="Last_Name" type="string" />
+    <aura:attribute name="Middle_Name" type="string" />
+    <aura:attribute name="Suffix" type="string" />
+    <aura:attribute name="Template_Name" type="string" />
+    <aura:attribute name="options" type="List" />
+    <aura:attribute name="Delivery_Method_1" type="string" />
+    <aura:attribute name="Delivery_Method_2" type="string" />
+    <aura:attribute name="Status" type="string" />
+    <aura:attribute name="bookOfBusiness" type="string" />
+    <aura:attribute name="Work_Item_ID" type="string" />
+    <aura:attribute name="Created_By" type="string" />
+    <aura:attribute name="Modified_By" type="string" />
+    <aura:attribute name="Submitted_By" type="string" />
+    <aura:attribute name="Revipient_Type" type="string" />
+    <aura:attribute name="Subtype" type="string" />
+    <aura:attribute name="engageOneUrl" type="string" />
+    <aura:attribute name="letterCreated" type="boolean" default="false" />
+    <aura:attribute name="letterReviewed" type="boolean" default="false" />
+    <aura:attribute name="letterCancelled" type="boolean" default="false" />
+    <aura:attribute name="letterSubmitted" type="boolean" default="false" />
+    <aura:attribute name="Loadingspinner" type="Boolean" default="false" />
+    <aura:attribute name="letter" type="map" />
+    <lightning:workspaceAPI aura:id="workspace" />
+
+    <lightning:card variant="Narrow" title="Letters" iconName="standard:note">
+        <aura:if isTrue="{! v.Loadingspinner }">
+            <lightning:spinner alternativeText="Loading" size="medium" variant="brand" />
+        </aura:if>
+        <div style="margin-left:1rem !important;margin-right:.5rem !important;margin-bottom:.5rem !important;">
+            <div class="slds-grid slds-wrap slds-form-element">
+                <div class="slds-p-around_xx-small slds-col_bump-right slds-size_1-of-4">
+                    <div class="header-column">
+                        <p class="field-title slds-form-element__label autodocFieldName" title="Case Number">Case Number</p>
+                        <p class="valueCls autodocValue">
+                            <div class="slds-form-element__static">{!v.record.CaseNumber} </div>
+                        </p>
+                    </div>
+                </div>
+                <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+                    <div class="header-column">
+                        <p class="field-title slds-form-element__label autodocFieldName" title="Topic">Topic</p>
+                        <p class="valueCls autodocValue">
+                            <div class="slds-form-element__static">{!v.record.Topic__c} </div>
+                        </p>
+                    </div>
+                </div>
+                <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+                    <div class="header-column">
+                        <p class="field-title slds-form-element__label autodocFieldName" title="Originator Name">Originator Name</p>
+                        <p class="valueCls autodocValue">
+                            <div class="slds-form-element__static">{!v.record.Originator_name__c} </div>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+                    <div class="header-column">
+                        <p class="field-title slds-form-element__label autodocFieldName" title="Subject Name">Subject Name</p>
+                        <p class="valueCls autodocValue">
+                            <div class="slds-form-element__static">{!v.record.Subject_Name__c} </div>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <aura:if isTrue="{!!v.letterCreated}">
+            <div style="margin-left:1rem !important;margin-right:.5rem !important;margin-bottom:.5rem !important;" class="slds-border_top">
+                <div class="slds-grid slds-wrap slds-form-element">
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_1-of-4">
+                        <span>
+							<lightning:select name="Template_Name"  label="Template Name" required="true" aura:id="templateName" messageWhenValueMissing="Error: You must select a value.">
+                                <aura:iteration items="{!v.options}" var="item">
+                            <option text="{!item.label}" value="{!item.value}" selected="{!item.selected}"/>
+                             </aura:iteration>
+							</lightning:select>
+						</span>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+                        <span>
+                            <div class="slds-form-element " aura:id="deliveryMethodform">
+
+                              <div class="slds-form-element__control " aura:id="deliveryMethodrequired">
+							<lightning:select name="Delivery_Method_1" value="{!v.Delivery_Method_1}" label="Delivery Method 1" required="true" aura:id="deliveryMethod1" onchange="{! c.onChange_Delivery_Method }" messageWhenValueMissing="Error: You must select a value.">
+								<option value="">--None--</option>
+								<option value="US Mail">US Mail</option>
+								<option value="Overnight">Overnight</option>
+							</lightning:select>
+                            </div>
+                              <div class="slds-form-element__help slds-hide" aura:id="deliveryMethodmessageelement" id="error-message-unique-id">Error:Delivery Option1 and Delivery Option2 cannot be the Same</div>
+                            </div>
+						</span>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+                        <span>
+                                <div class="slds-form-element " aura:id="deliveryMethod2form">
+                              <div class="slds-form-element__control " aura:id="deliveryMethod2required">
+							<lightning:select name="Delivery_Method_2" value="{!v.Delivery_Method_2}" label="Delivery Method 2" aura:id="deliveryMethod2" onchange="{! c.onChange_Delivery_Method }">
+								<option value="">--None--</option>
+								<option value="US Mail">US Mail</option>
+								<option value="Overnight">Overnight</option>
+							</lightning:select>
+                                    </div>
+                                     <div class="slds-form-element__help slds-hide" aura:id="deliveryMethod2messageelement" id="error-message-unique-id">Error:Delivery Option1 and Delivery Option2 cannot be the Same</div>
+</div>
+						</span>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_1-of-4">
+                        <span>
+						<lightning:input type="string" name="First_Name" value="{!v.First_Name}" label="First Name" required="true" messageWhenValueMissing="Error: You must enter a value." aura:id="firstName"/>
+					</span>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+                        <span>
+						<lightning:input type="string" name="Middle_Name" value="{!v.Middle_Name}" label="Middle Name" required="false" />
+					</span>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+                        <span>
+						<lightning:input type="string" name="Last_Name" value="{!v.Last_Name}" label="Last Name" required="true" messageWhenValueMissing="Error: You must enter a value." aura:id="lastName"/>
+					</span>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+                        <span>
+						<lightning:input type="string" name="Suffix" value="{!v.Suffix}" label="Suffix" required="false" />
+					</span>
+                    </div>
+                </div>
+            </div>
+            <div class="slds-grid slds-gutters slds-border_top slds-m-top_xx-small slds-align_absolute-center ">
+                <div class=" ">
+                    <lightning:button label="Create Letter" onclick="{!c.onclick_Create}" class="slds-m-top_small slds-col slds-m-right--small button_border" aura:id="createCase" />
+                </div>
+            </div>
+            <aura:set attribute="else">
+                <div style="margin-left:1rem !important;margin-right:.5rem !important;margin-bottom:.5rem !important;" class="slds-border_top">
+                    <div class="slds-grid slds-wrap slds-form-element">
+                        <div class="slds-p-around_xx-small slds-col_bump-right slds-size_1-of-4">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label autodocFieldName" title="Template Name">Template Name</p>
+                                <p class="valueCls autodocValue">
+                                    <div class="slds-form-element__static">{!v.Template_Name} </div>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label autodocFieldName" title="Delivery Method 1">Delivery Method 1</p>
+                                <p class="valueCls autodocValue">
+                                    <div class="slds-form-element__static">{!v.Delivery_Method_1} </div>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label autodocFieldName" title="Delivery Method 2">Delivery Method 2</p>
+                                <p class="valueCls autodocValue">
+                                    <div class="slds-form-element__static">{!v.Delivery_Method_2} </div>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+
+                        </div>
+                        <div class="slds-p-around_xx-small slds-col_bump-right slds-size_1-of-4">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label autodocFieldName" title="First Name">First Name</p>
+                                <p class="valueCls autodocValue">
+                                    <div class="slds-form-element__static">{!v.First_Name} </div>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label autodocFieldName" title="Middle Name">Middle Name</p>
+                                <p class="valueCls autodocValue">
+                                    <div class="slds-form-element__static">{!v.Middle_Name} </div>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label autodocFieldName" title="Last Name">Last Name</p>
+                                <p class="valueCls autodocValue">
+                                    <div class="slds-form-element__static">{!v.Last_Name} </div>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label autodocFieldName" title="Suffix">Suffix</p>
+                                <p class="valueCls autodocValue">
+                                    <div class="slds-form-element__static">{!v.Suffix} </div>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-left:1rem !important;margin-right:.5rem !important;margin-bottom:.5rem !important;" class="slds-border_top">
+                    <div class="slds-grid slds-wrap slds-form-element">
+                        <div class="slds-p-around_xx-small slds-col_bump-right slds-size_1-of-4">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label autodocFieldName" title="Created By">Created By</p>
+                                <p class="valueCls autodocValue">
+                                    <div class="slds-form-element__static">{!v.letter.CreatedBy.Name} </div>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label autodocFieldName" title="Modified By">Modified By</p>
+                                <p class="valueCls autodocValue">
+                                    <div class="slds-form-element__static">{!v.Modified_By} </div>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label autodocFieldName" title="Submitted By">Submitted By</p>
+                                <p class="valueCls autodocValue">
+                                    <div class="slds-form-element__static">{!v.Submitted_By} </div>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+                        </div>
+                        <div class="slds-p-around_xx-small slds-col_bump-right slds-size_1-of-4">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label autodocFieldName" title="Work Item ID">Work Item ID</p>
+                                <p class="valueCls autodocValue">
+                                    <div class="slds-form-element__static">{!v.letter.Work_Item_Id__c} </div>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label autodocFieldName" title="Status">Status</p>
+                                <p class="valueCls autodocValue">
+                                    <div class="slds-form-element__static">{!v.letter.Letter_Status__c} </div>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+                        </div>
+                        <div class="slds-p-around_xx-small slds-col_bump-left slds-size_1-of-4">
+                        </div>
+                    </div>
+                </div>
+                <aura:if isTrue="{!!v.letterCancelled}">
+                    <div class="slds-grid slds-gutters slds-border_top slds-m-top_xx-small slds-align_absolute-center ">
+                        <div class=" ">
+                            <aura:if isTrue="{!!v.letterSubmitted}">
+                                <lightning:button label="Review/Edit Letter" onclick="{!c.onclick_Review_Edit}" class="slds-m-top_small slds-col slds-m-right--small button_border" aura:id="createCase" />
+                                <lightning:button label="Cancel Letter" onclick="{!c.onclick_Cancel}" class="slds-m-top_small slds-col slds-m-right--small button_border" aura:id="createCase" />
+                                <aura:if isTrue="{!v.letterReviewed}">
+                                    <lightning:button label="Submit" onclick="{!c.onclick_Submit}" class="slds-m-top_small slds-col slds-m-right--small button_border" aura:id="createCase" />
+                                </aura:if>
+                            </aura:if>
+                        </div>
+                    </div>
+                </aura:if>
+            </aura:set>
+        </aura:if>
+    </lightning:card>
+</aura:component>

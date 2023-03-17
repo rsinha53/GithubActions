@@ -1,0 +1,143 @@
+<aura:component controller="SAE_ProviderSnapshotController">
+    <!-- US1807421 - Provider Snapshot - Sanka Dharmasena -->
+    <!-- 15.08.2019 -->
+	<aura:attribute name="AutodocKey" type="string" access="public"/>
+    <!-- <ltng:require styles="{! $Resource.datatable + '/DataTables-1.10.16/media/css/jquery.dataTables.min.css'}" scripts="{!join(',',
+                           $Resource.datatable + '/DataTables-1.10.16/media/js/jquery.dataTables.min.js')
+                           }" /> -->
+
+    <!-- US1934400 - Thanish - 8th Nov 2019 - Provider Autodoc -->
+    <aura:attribute name="autodocPageFeature" type="String"/>
+    <aura:attribute name="taxId" type="String" />
+    <aura:attribute name="providerId" type="String" />
+    <aura:attribute name="Affiliations" type="List" />
+
+    <aura:handler name="change" value="{!v.providerId}" action="{!c.providerIdChange}" />
+    <aura:attribute name="pageNumber" type="Integer" access="public" />
+
+    <!-- Autodoc Pagination Tabele -->
+    <aura:attribute name="lgt_dt_DT_Object" type="Object" />
+    <aura:Attribute name="dynamicKey" type="String" />
+    <aura:handler name="ACETLGT_DataTable_initComplete_Event" event="c:ACETLGT_DataTable_initComplete_Event"
+        action="{!c.initComplete_Event}" />
+    <aura:handler name="ACETLGT_DataTable_createdRow_Event" event="c:ACETLGT_DataTable_createdRow_Event"
+        action="{!c.handlecreatedRow_Event}" />
+    <aura:handler name="ACETLGT_DataTable_Callback_Event" event="c:ACETLGT_DataTable_Callback_Event"
+        action="{!c.handledtcallbackevent}" />
+    <aura:handler name="ACETLGT_DataTable_SetPageNumber_Event" event="c:ACETLGT_DataTable_SetPageNumber_Event"
+        action="{!c.handle_dt_pageNum_Event}" />
+
+        <aura:attribute name="webservicecalled" type="Boolean" default="false"/>
+
+    <!-- US2045625 - Thanish - 2nd Oct 2019 -->
+    <div class="FixHeight slds-card">
+
+        <div class="slds-section slds-is-close" aura:id="affliationSection">
+            <!--section header-->
+            <h3 class="slds-section__title">
+                <button aria-controls="activeAffs" class="slds-button slds-section__title-action">
+                    <span onclick="{!c.toggleSection}" data-auraId="affliationSection">
+                        <lightning:icon iconName="utility:switch" size="x-small"
+                            class="slds-section__title-action-icon slds-button__icon_left"
+                            alternativeText="button icon" />
+                    </span>
+                    <span class="slds-truncate" title="Active Affiliations">
+                        <h2 class="component_title">Active Affiliations</h2>
+                    </span>
+                </button>
+            </h3>
+            <!--section body-->
+            <div class="slds-section__content slds-is-relative" id="activeAffs" style="padding-top: 0;">
+
+                <lightning:spinner class="slds-show" aura:id="case-spinner" alternativeText="Loading.."
+                title="Loading.." variant="brand" size="medium" />
+
+
+                <!-- <div class="card_bottom_margin">
+        	<h2 class="component_title">Active Affiliations</h2>
+        </div> -->
+        <p>
+            <div id="{! v.AutodocKey + '_affiliation'}" class="card_padding">
+            <!-- DE318085 - Thanish - 9th Apr 2020 -->
+                        <!-- <c:ACETLGT_DataTable aura:id="providerAffiliations_auraid"
+                lgt_dt_table_name="ProviderAffiliationsTable" lgt_dt_DT_Object="{!v.lgt_dt_DT_Object}"
+                pageFeature="{!v.autodocPageFeature}" lgt_dt_searching="true"
+                lgt_dt_isPagenationReq="false"
+                lgt_dt_section_header="Active Affiliations" lgt_dt_section_caseitem="false"
+                lgt_disable_resolved_checkbox="true"/> -->
+
+                        <!-- New Code -->
+                        <div class="autodocTableView" data-auto-doc="auto"
+                            data-auto-doc-feature="{!v.autodocPageFeature}"
+                            data-auto-doc-section-key="Active Affiliations" data-auto-doc-case-items="false"
+                            autodoc-case-item-resolved="true">
+                            <table class="slds-table slds-table_cell-buffer slds-table_bordered CNSTable">
+                                <thead>
+                                    <tr class="slds-line-height_reset">
+                                        <th style="width:30px; padding: 4px 8px;" class="autodoc">
+                                            <input style="margin-left: 0px;" class="autodoc" type="checkbox"
+                                                onclick="{!c.autodocHeaderClicked}" />
+                                        </th>
+                                        <th class="table_column_header" scope="col" style="width: 25%;cursor:pointer;">
+                                            NAME
+                                        </th>
+                                        <th class="table_column_header" scope="col" style="width: 20%;cursor:pointer;">
+                                            PROVIDER
+                                            ID
+                                        </th>
+                                        <th class="table_column_header" scope="col" style="width: 20%;cursor:pointer;">
+                                            EFFECTIVE
+                                            DATE
+                                        </th>
+                                        <th class="table_column_header" scope="col" style="width: 15%;cursor:pointer;">
+                                            AFFILIATION TYPE
+                                        </th>
+                                        <th class="table_column_header" scope="col" style="width: 20%;cursor:pointer;">
+                                            ADMIT
+                                            PRIVILEGE
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:if isTrue="{!not(empty(v.Affiliations))}">
+                                        <aura:iteration items="{!v.Affiliations}" var="item" indexVar="index">
+                                            <tr class="slds-hint-parent">
+                                                <td style="width:30px; padding: 4px 8px;" class="autodoc">
+                                                    <input class="autodoc" type="checkbox" />
+                                                </td>
+                                                <td class="slds-truncate" onclick="" title="{!item.Name}">{!(item.Name)
+                                                    ? item.Name_Substr : '--'}</td>
+                                                <td class="slds-truncate" onclick="">{!(item.ProviderId) ?
+                                                    item.ProviderId : '--'}</td>
+                                                <td class="slds-truncate" onclick="">{!(item.EffectiveDate) ?
+                                                    item.EffectiveDate : '--'}</td>
+                                                <td class="slds-truncate" onclick="">{!(item.AffiliationType) ?
+                                                    item.AffiliationType : '--'}</td>
+                                                <td class="slds-truncate" onclick="">{!(item.AdmittingPriv) ?
+                                                    item.AdmittingPriv : '--'}</td>
+                                            </tr>
+                                        </aura:iteration>
+                                        <aura:set attribute="else">
+                                            <tr>
+                                                <th style="width:30px; padding: 4px 8px;" class="autodoc">
+                                                    <input style="margin-left: 0px;" class="autodoc" type="checkbox"/>
+                                                </th>
+                                                <td colspan="5">
+                                                  <div style="text-align: center;">
+                                                    No Records Found.
+                                                  </div>
+                                                </td>
+                                              </tr>
+                                        </aura:set>
+                                    </aura:if>
+                                </tbody>
+                            </table>
+                        </div>
+            </div>
+        </p>
+    </div>
+        </div>
+    </div>
+    <!-- End of Code - US2045625 - Thanish - 2nd Oct 2019 -->
+
+</aura:component>

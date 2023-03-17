@@ -1,0 +1,279 @@
+<aura:component controller="ACET_FAST_ProviderSearchCtrl" access="global">
+    <ltng:require scripts="{!$Resource.ACET_SAESessionData}" />
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:handler name="change" value="{!v.isOther}" action="{!c.handleOtherChange}" />
+    <aura:registerEvent name="ProviderFlowDetailsEvt" type="c:ACETFast_ProviderFlowDetailsEvent"/>
+    <aura:attribute name="selectedProviderDetails" type="Object"/>
+    <aura:attribute name="interactionType" type="String" default="" />
+    <aura:attribute name="flowDetails" type="Object" />
+    <aura:attribute name="providerSearchResults" type="Object" />
+    <aura:attribute name="lstproviderSearchResults" type="list" />
+    <aura:attribute name="providerDetails" type="Object" />
+    <aura:attribute name="practicingStatusOptions" type="List" />
+    <aura:attribute name="refineSearchCriteriaMsg" type="String" />
+    <aura:attribute name="isMemSearchDisabledFromPrv" type="Boolean" />
+    <aura:attribute name="isFastrecordtype" type="Boolean" default="false"/>
+    <aura:attribute name="parent" type="Aura.Component" required="true"/>
+      
+    <aura:method name="caseRecordTypepass" action="{!c.doAction}"
+     description="Case Record type passing from parent cmp"> 
+    <aura:attribute name="caseRecordType" type="String" default="parameter 1"/> 
+   </aura:method>
+    
+    <!-- US2598275: Updates to Contact Name Entry Field -->
+    <!--<aura:attribute name="providerFieldsToValidate" type="List"
+        default="taxIdOrNPIAI,contactNameAI,contactNumberAI,contactTypeAI,otherContactNameAI,otherContactNumberAI,filterType,providerFirstNameAI,providerLastNameAI,providerZipAI,providerPhoneNumberAI" />-->
+    <aura:attribute name="providerFieldsToValidate" type="List"
+                    default="taxIdOrNPIAI,contactFirstNameAI,contactLastNameAI,contactNumberAI,contactTypeAI,otherContactNameAI,otherContactNumberAI,filterType,providerFirstNameAI,providerLastNameAI,providerZipAI,providerPhoneNumberAI" />
+    <aura:attribute name="selectedProviderRecord" type="Object" />
+    <aura:attribute name="calloutProviderNotFound" type="Boolean" default="false" />
+    <aura:attribute name="filterTypeOptions" type="List" />
+    <aura:attribute name="stateOptions" type="List" />
+    <aura:attribute name="refineSearchCriteria" type="String" />
+    <aura:attribute name="showProviderDropdown" type="Boolean" default="false" />
+    <aura:attribute name="isOther" type="Boolean" default="true" />
+    <!-- US3128839 - FAST/E2E - Clear Button on Explore Page-->
+    <aura:attribute name="clearValues" type="Boolean" default="false" />
+    
+    <aura:attribute name="showErrorMessage" type="Boolean" default="false" />
+    <aura:attribute name="error" type="object" />
+    <aura:attribute name="timer" type="Integer"/>
+    <aura:attribute name="lastNameErrorMessage" type="String"
+        default="Enter at least three characters followed by an asterisk, and no character after the asterisk, in order to perform a wildcard search on the last name field (example: abc*)" />
+    <aura:attribute name="firstNameErrorMessage" type="String"
+        default="Enter at least two character followed by an asterisk, and no character after the asterisk, in order to perform a wildcard search on the first name field (example: ab*)" />
+    
+        <!-- <aura:attribute name="isPysician" type="Boolean" default="false" /> -->
+    <aura:attribute name="contactTypesOptions" type="List" default="[{'label': '--None--', 'value': ''},
+                                                                    {'label': 'Attorney', 'value': 'Attorney'},
+                                                                    {'label': 'Reporter/Media Representative', 'value': 'Reporter/Media Representative'},
+                                                                    {'label': 'Member Representative (Friend, Family, Navigator, Representative, etc.)', 'value': 'Member Representative (Friend, Family, Navigator, Representative, etc.)'},
+                                                                    {'label': 'Internal/UHG Employee', 'value': 'Internal/UHG Employee'},
+                                                                    {'label': 'Pharmacy/Pharmacist', 'value': 'Pharmacy/Pharmacist'},
+                                                                    {'label': 'Prospective Member', 'value': 'Prospective Member'},
+                                                                    {'label': 'Other Carrier/Payor/Billing Vendor', 'value': 'Other Carrier/Payor/Billing Vendor'},
+                                                                    {'label': 'State Regulatory Agent/Government Agency', 'value': 'State Regulatory Agent/Government Agency'},
+                                                                    {'label': 'Other', 'value': 'Other'}]" />
+    
+    <!--US2757958-Contact Number/Ext - Carry Over to Other/Misdirect Entry Fields -->
+    <aura:attribute name="isClearbuttonClciked" type="Boolean" default="false"/>
+    <!--VCCD Handler-->
+    <aura:handler event="c:ACET_VCCDInBoundRouting" action="{!c.handleVCCDEvent}"/>
+    <!-- US2826419-->
+    <aura:handler event="c:SAE_ProviderValidationFromMemberEvent" action="{!c.handlePrvValidation}" />
+    <!--Provider-->
+    <aura:if aura:id="memberCardSpinnerAI" isTrue="false">
+        <lightning:spinner alternativeText="Loading" size="medium" />
+    </aura:if>
+    <div onkeyup="{!c.onClickOfEnter}" >
+        <lightning:layout multipleRows="true" class="slds-m-top_medium slds-m-right_medium">
+            <lightning:layoutItem size="6" class="headerSectionHeight">
+                <lightning:layout multipleRows="true">
+                    <lightning:layoutItem size="4">
+                        <div class="headerClass" style="font-weight:bold">
+                            <div style="font-size:16px">{!v.isOther ? 'Provider' : 'Other'}</div>
+                        </div>
+                    </lightning:layoutItem>
+                    <!--<lightning:layoutItem size="8"><c:ACET_ToggleButton width="74" checked="{!v.isOther}" checkedText="Other"
+                            uncheckedText="Provider" /></lightning:layoutItem>-->
+                </lightning:layout>
+            </lightning:layoutItem>
+            <lightning:layoutItem size="6" class="headerSectionHeight">
+                <div class="slds-float_right">
+                    <!-- US3128839 - FAST/E2E - Clear Button on Explore Page-->
+                    <lightning:button variant="neutral" label="Clear" name="provClearName" class="clearBtn"
+                        onclick="{!c.clearFieldValidationsAndValues}" value="{!v.providerDetails.clearValues}"
+                         />
+                </div>
+            </lightning:layoutItem>
+            <aura:if isTrue="{!!v.providerDetails.isOther}">
+              
+                <lightning:layoutItem class="slds-m-top_small" size="12">
+                    <!-- US3067950 - Numeric field validation - numericFieldValidation -->
+                    <lightning:input aura:id="taxIdOrNPIAI" type="text" name="taxIdOrNPI" label="Tax ID/NPI"
+                                     value="{!v.providerDetails.taxIdOrNPI}"
+                                     required="{!!v.providerDetails.isAdvancedSearch || v.providerDetails.isProviderNotFound ? true : false}"
+                                     disabled="{!v.providerDetails.isNoProviderToSearch}" minlength="9" maxlength="10"
+                                     onchange="{!c.numericFieldValidation}" onblur="{!c.handleOnBlur}" messageWhenTooShort="Enter nine digits." 
+                                     pattern="^[0-9_ ]*$" messageWhenPatternMismatch="Enter a numeric value." autocomplete="off" />
+                </lightning:layoutItem>
+                <lightning:layoutItem size="6" class="slds-m-top_medium showOrHideAdvancedSearchSectionHeight">
+                    <a href="#" aura:id="searchTypeAI" onclick="{!c.showOrHideAdvancedSearch}"
+                        name="providerAdvanceSearchName" disabled="{!v.providerDetails.isNoProviderToSearch}"
+                        class="{!v.providerDetails.isNoProviderToSearch ?
+                            'linkField showOrHideAdvancedSearch' : 'linkField'}">{!v.providerDetails.isAdvancedSearch ?
+                        'Hide Advanced Search' : 'Show Advanced Search'}</a>
+                </lightning:layoutItem>
+				
+				<!--Start US2960738 Silk -->
+				
+                <aura:if isTrue="{!v.providerDetails.isNoProviderToSearch}">
+                    <lightning:layoutItem flexibility="grow" size="12" class="slds-m-top_medium">
+                        <lightning:input aura:id="noPdFirstname" type="text" name="noPdFirstname" label="First Name" value="{!v.selectedProviderDetails.firstName}"
+                                         onchange="{!c.handleOnChangeNoproviderSearch}"  required="{!v.isFastrecordtype}"/>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem flexibility="grow" size="12" class="slds-m-top_medium">
+                        <lightning:input aura:id="noPdLastname" type="text" name="noPdLastname" label="Last Name" value="{!v.selectedProviderDetails.lastName}"
+                                         onchange="{!c.handleOnChangeNoproviderSearch}"  required="{!v.isFastrecordtype}"/>
+                    </lightning:layoutItem>
+					<!-- US3067950 - Numeric field validation - numericFieldValidation -->
+                    <lightning:layoutItem flexibility="grow" size="12" class="slds-m-top_medium">
+                        <lightning:input aura:id="noPdtaxIdOrNPIAI" type="text" name="noPdtaxIdOrNPIAI" label="Tax ID/NPI"
+								value="{!v.providerDetails.taxIdOrNPI}"
+								required="{!v.isFastrecordtype}"
+								minlength="9" maxlength="10"
+								onchange="{!c.numericFieldValidation}" onblur="{!c.handleOnBlur}" messageWhenTooShort="Enter nine digits." 
+								pattern="^[0-9_ ]*$" messageWhenPatternMismatch="Enter a numeric value." autocomplete="off" />
+                    </lightning:layoutItem>
+					
+                    <lightning:layoutItem flexibility="grow" size="12" class="slds-m-top_medium">
+                        <lightning:input aura:id="noPdProvidertype" type="text" name="noPdProvidertype" label="Provider Type" value="{!v.selectedProviderDetails.providerType}"
+                                         onchange="{!c.handleOnChangeNoproviderSearch}"   required="{!v.isFastrecordtype}"/>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem flexibility="grow" size="12" class="slds-m-top_medium">
+                        <lightning:input aura:id="noPdProviderSpeciality" type="text" name="noPdProviderSpeciality" label="Provider Speciality" value="{!v.selectedProviderDetails.providerSpeciality}" 
+                                         onchange="{!c.handleOnChangeNoproviderSearch}"  required="{!v.isFastrecordtype}"/>
+                    </lightning:layoutItem>
+                </aura:if>
+				
+				<!--END US2960738 Silk -->
+				
+                <lightning:layoutItem size="6" class="slds-m-top_medium showOrHideAdvancedSearchSectionHeight">
+                    <lightning:layout multipleRows="true">
+                        <lightning:layoutItem size="12">
+                            <lightning:input type="checkbox" label="No provider to search" name="noProviderToSearch" 
+                                checked="{!v.providerDetails.isNoProviderToSearch}"
+                                onchange="{!c.handleNoProviderToSearch}" />
+                        </lightning:layoutItem>
+                        <aura:if isTrue="{!v.calloutProviderNotFound}">
+                            <lightning:layoutItem size="12" class="slds-m-top_x-small">
+                                <lightning:input aura:id="providerNotFoundAI" type="checkbox" label="Provider not found" name="providerNotFound"
+                                     onchange="{!c.handleProviderNotFound}"
+                                    checked="{!v.providerDetails.isProviderNotFound}"
+                                    disabled="{!v.providerDetails.isNoProviderToSearch}" />
+                            </lightning:layoutItem>
+                        </aura:if>
+                    </lightning:layout>
+                </lightning:layoutItem>
+            </aura:if>
+            <aura:if isTrue="{!v.providerDetails.isAdvancedSearch}">
+                <lightning:layoutItem flexibility="grow" size="12" class="slds-m-top_medium">
+                    <lightning:combobox aura:id="filterType"  label="Filter Type" name="filterType" 
+                        required="{!v.providerDetails.isProviderNotFound || v.providerDetails.isAdvancedSearch}"
+                        value="{!v.providerDetails.filterType}" options="{!v.filterTypeOptions}"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}" />
+                </lightning:layoutItem>
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="12">
+                    <lightning:combobox aura:id="practicingStatusAI" options="{!v.practicingStatusOptions}"
+                        label="Practicing Status" name="practicingStatus" 
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" value="{!v.providerDetails.practicingStatus}"
+                        onchange="{!c.handleOnChange}"
+                        fieldLevelHelp="Termed: Address, NPI, Provider ID, Specialty and/or TIN are no longer active" />
+                </lightning:layoutItem>
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="12">
+                    <lightning:input aura:id="providerFirstNameAI" label="First Name" name="providerFirstName" type="text" 
+                        value="{!v.providerDetails.firstName}"
+                        required="{!v.providerDetails.isProviderNotFound &amp;&amp; v.providerDetails.filterType == 'Physician' ? true : false || v.providerDetails.isOther}"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}" autocomplete="off" />
+                </lightning:layoutItem>
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="12">
+                    <lightning:input aura:id="providerLastNameAI" label="{!v.providerDetails.isOther ? 'Last Name' : 'Account Last Name'}" 
+                        name="providerLastName" type="text"
+                        value="{!v.providerDetails.lastName}"
+                        required="{!v.providerDetails.isProviderNotFound || v.providerDetails.isAdvancedSearch}"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}" autocomplete="off" />
+                </lightning:layoutItem>
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="12">
+                    <lightning:combobox aura:id="StateAI" label="State" name="state"  required="false"
+                        value="{!v.providerDetails.state}" options="{!v.stateOptions}"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}"
+                        onchange="{!c.handleOnChange}" />
+                </lightning:layoutItem>
+                <!-- US3067950 - Numeric field validation - numericFieldValidation -->
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="12">
+                    <lightning:input aura:id="providerZipAI" name="providerZip" type="text" label="Zip Code"
+                        value="{!v.providerDetails.zip}" required=""
+                        disabled="{!v.providerDetails.isNoProviderToSearch}"
+                        minlength="5" maxlength="5" messageWhenTooShort="To search by Zip Code, enter five digits"
+                        onchange="{!c.numericFieldValidation}" autocomplete="off" />
+                </lightning:layoutItem>
+                <!--US2548729: Not MVP - Explore Page & Interaction Overview - Member and Provider Advanced Searches - Remove Phone Number Field -->
+                <!--<lightning:layoutItem class="{!v.calloutProviderNotFound == false ? 'slds-hide' : 'slds-show slds-m-top_small'}" flexibility="grow" size="12">
+                    <lightning:input aura:id="providerPhoneNumberAI" name="phoneNumber" label="Phone Number" type="text" 
+                        value="{!v.providerDetails.phoneNumber}"
+                        required="{!v.providerDetails.isProviderNotFound || v.providerDetails.isOther}"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" minlength="10" maxlength="10" pattern="[0-9]*"
+                        messageWhenTooShort="Enter 10 digits" onchange="{!c.handleOnChange}" autocomplete="off" />
+                </lightning:layoutItem> -->
+            </aura:if>
+            <aura:if isTrue="{!v.providerDetails.isOther}">
+                <lightning:layoutItem flexibility="grow" class="" size="12">
+                    <lightning:combobox aura:id="contactTypeAI" label="Contact Type" name="contactType" 
+                        value="{!v.providerDetails.contactType}" options="{!v.contactTypesOptions}" required="true"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}" />
+                </lightning:layoutItem>
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="12">
+                    <!-- US2598275: Updates to Contact Name Entry Field -->
+                    <!--<lightning:input aura:id="otherContactNameAI" type="text" label="Contact Name" name="contactName" 
+                        value="{!v.flowDetails.contactName}" required="true"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}" autocomplete="off" />-->
+                    <lightning:layout multipleRows="true">
+                        <lightning:layoutItem flexibility="grow" size="5">
+                            <lightning:input aura:id="otherContactFirstNameAI" type="text" label="First Name" name="contactFirstName" 
+                                            value="{!v.flowDetails.contactFirstName}" required="true"
+                                            disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}" autocomplete="off"
+                                            class="slds-m-right_x-small"/>
+                        </lightning:layoutItem>
+                        <lightning:layoutItem flexibility="grow" size="7">
+                            <lightning:input aura:id="otherContactLastNameAI" type="text" label="Last Name" name="contactLastName" 
+                                            value="{!v.flowDetails.contactLastName}" required="true"
+                                            disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}" autocomplete="off"
+                                            class="slds-m-right_x-small"/>
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                </lightning:layoutItem>
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="8">
+                    <lightning:input aura:id="otherContactNumberAI" type="text" label="Contact Number" name="contactNumber" 
+                        value="{!v.flowDetails.contactNumber}" required="true" class="slds-m-right_x-small"
+                        disabled="{!v.providerDetails.isNoProviderToSearch}" onchange="{!c.handleOnChange}" minlength="10"
+                        maxlength="10" messageWhenTooShort="Enter 10 digits" autocomplete="off" />
+                </lightning:layoutItem>
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="4">
+                    <lightning:input aura:id="otherContactExtAI" type="text" label="Ext" name="contactExt" 
+                        value="{!v.flowDetails.contactExt}" disabled="{!v.providerDetails.isNoProviderToSearch}"
+                        onchange="{!c.handleOnChange}" autocomplete="off" />
+                </lightning:layoutItem>
+            </aura:if>
+            <aura:if isTrue="{!!v.providerDetails.isProviderNotFound &amp;&amp; !v.providerDetails.isOther}">
+                <lightning:layout>
+                    <lightning:layoutItem class="slds-p-right_small">
+                        <lightning:button label="Search" variant="brand"  class="searchButton slds-m-top_medium"
+                            disabled="{!v.providerDetails.isNoProviderToSearch}" onclick="{!c.searchProvider}" />
+                    </lightning:layoutItem>
+                    <aura:if isTrue="{!v.showErrorMessage}">
+                        <lightning:layoutItem class="validationErrorMsgPosition">
+                            <c:ACET_ErrorPopup aura:id="errorPopup" errorMessage="{!v.error.message}"
+                                topDescription="{!v.error.topDescription}" bottomDescription="{!v.error.bottomDescription}"
+                                descriptionList="{!v.error.descriptionList}" moveLeft="-17" isNubbinLeft="true" />
+                        </lightning:layoutItem>
+                    </aura:if>
+                </lightning:layout>
+                <aura:if isTrue="{!v.refineSearchCriteriaMsg}">
+                    <lightning:layoutItem  size="12" flexibility="grow" class="slds-p-top_small refineSearchError">
+                        {!v.refineSearchCriteriaMsg}
+                    </lightning:layoutItem>
+                </aura:if>
+                <aura:if isTrue="{!not(v.isClearbuttonClciked)}"> 
+                <aura:if isTrue="{!not(empty(v.lstproviderSearchResults))  &amp;&amp; !v.providerDetails.isNoProviderToSearch}">
+               <lightning:layoutItem flexibility="grow" size="12" class="slds-m-top_medium slds-m-right_medium">
+                    <c:ACET_FAST_ProviderResultsDatatable providerSearchResults="{!v.lstproviderSearchResults}"
+                        providerDetails="{!v.flowDetails}"  />
+
+                </lightning:layoutItem>  
+                    </aura:if>
+                    </aura:if>
+            </aura:if>
+        </lightning:layout>
+    </div>
+</aura:component>

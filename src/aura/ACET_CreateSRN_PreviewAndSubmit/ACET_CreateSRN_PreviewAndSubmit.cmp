@@ -1,0 +1,561 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,lightning:isUrlAddressable"
+                controller="ACET_CreateAuthCtrl">
+	
+    <ltng:require scripts="{!$Resource.ACET_SAESessionData}" />
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:handler name="init" value="{!this}" action="{!c.init}" />
+    <aura:attribute name="type" type="String"/>
+    <aura:attribute name="SRNData" type="Object" />
+    <aura:attribute name="servStartDt" type="String" default=""/>
+    <aura:attribute name="servEndDt" type="String" default=""/>
+    <aura:attribute name="actAdmitDt" type="String" default=""/>
+    <aura:attribute name="actDischargeDt" type="String" default=""/>
+    <aura:attribute name="flipflop" type="Boolean" default="true"/>
+    <aura:attribute name="disclaimerMsg" type="String" default=""/>
+    <aura:attribute name="currenttabId" type="String" default=""/>
+    <aura:attribute name="showICUE" type="Boolean" default="false"/>
+
+    <aura:attribute name="reqInfo" type="Object" />
+    <aura:attribute name="memberCardSnap" type="Object" access="public" />
+    <aura:attribute name="providerDetails" type="Object" access="public" />
+    <aura:registerEvent name="closePreviewModalBox" type="c:SAE_TtsModalCloseEvent"/>
+    <aura:attribute name="srnResponsd" type="ACET_CreateAuthCtrl.ACET_SRNResponseWrap" access="public" />
+
+    <!-- US2816983	Populate Selected Provider from Provider Lookup on Create SRN Page - Sarma - 28/09/2020 -->
+    <aura:attribute name="srnProviderDetailList" type="Object[]" />
+    <aura:attribute name="hscProviders" type="ACET_CreateAuthRequest.HscProviders" access="public" />
+    <!-- <aura:attribute name="hscProviders" type="ACET_CreateAuthRequest.HscProvider[]" access="public" /> -->
+
+    <aura:attribute name="policyCoverageType" type="String" default=""/>
+
+    <!-- US2819909 -->
+    <aura:registerEvent name="ACET_CreateSRN_RecordCreatedEvent" type="c:ACET_CreateSRN_RecordCreatedEvent" />
+	
+    <!-- US3026437 -->
+    <aura:attribute name="memberTabId" type="String" />
+    <!-- US2356238	Create Authorizations - Determine if Code is TTAP Eligible - Sarma - 19/11/2020 -->
+    <aura:attribute name="ttapUrl" type="String" default=""/>
+    <aura:attribute name="isTtapEligible" type="Boolean" default="false" />
+    <aura:attribute name="isTtapDisabled" type="Boolean" default="false" />
+    <aura:attribute name="autoDocString" type="String" default=""/>
+    <aura:attribute name="createdAuthNumber" type="String" default=""/>
+    <aura:attribute name="lineOfBusiness" type="String" default=""/><!-- US3116511 TTAP Vishnu-->
+    <aura:attribute name="insuranceTypeCode" type="String" default=""/><!-- US3116511 TTAP Vishnu-->
+	<ltng:require scripts="{!$Resource.ACET_SAESessionData}" />
+    <aura:registerEvent name="ACET_CreateSRNAppEvent" type="c:ACET_CreateSRNAppEvent" />
+    <!-- US3587915	Create Auth : Call new API for Case Provider Search Provider  Mappings - Sarma- 03rd June 2021 -->
+    <aura:attribute name="caseProviderRequstProviders" type="ACET_CaseProvidersReq.HscProvider[]" access="public" />
+    <aura:attribute name="caseProviderRequstMember" type="ACET_CaseProvidersReq.Member" access="public" />
+    <!-- US3587913	Create Auth : Call new API for Case Provider Search - Member Mappings - Sarma - 18th June 2021 -->
+    <aura:attribute name="caseDetailsForCreateAuth" type="ACET_CreateAuthorizationRequest.caseDetails" access="public" />
+    <aura:attribute name="caseBuildInfo" type="String" default="" access="public" />
+
+    <section style="top: 2%; bottom: 3%;" role="dialog" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+        <lightning:spinner class="slds-hide" aura:id="srncspinner" alternativeText="Loading.." title="Loading.."
+            variant="brand" size="medium" />    
+        <div class="slds-modal__container" style="width: 85%; max-width:85%; background-color:white; border-radius: 5px; border: 2px solid gray;">
+            <header class="slds-modal__header card_padding" style="font: 15px Arial, sans-serif; margin-top: -3%;">
+                <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Authorization Summary &amp; Confirmation Page</h2>
+            </header>
+            <div class="slds-modal__content card_right_padding card_left_padding card_bottom_padding slds-is-relative">
+            
+            <div class="BorderStyle">
+                <div class="slds-page-header headersAlign" style="border-bottom-left-radius: 0rem !important;border-bottom-right-radius: 0rem !important;padding: .7rem .7rem">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                            <h1 class="slds-page-header__title slds-m-right_small slds-align-middle slds-truncate" style="font-size:.800rem !important;line-height:1.3 !important;">Member Details
+                            </h1>
+                        </div>
+                    </div>
+                </div>
+            <div>
+                <div class="slds-grid slds-wrap slds-form-element leftMargin">
+                    <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding preselect">Name</p>
+                            <p style="margin-left: 16px;" class="valueCls"></p>
+                            <div class="slds-form-element__static">{!v.memberCardSnap.memberName}</div>
+                        </div>
+                    </div>
+                    <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                        <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding preselect">Member ID</p>
+                                <p style="margin-left: 16px;" class="valueCls"></p>
+                                <div class="slds-form-element__static">{!v.memberCardSnap.memberId}</div>
+                        </div>
+                    </div>
+                    <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                        <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding preselect">DOB</p>
+                                <p style="margin-left: 16px;" class="valueCls"></p>
+                                <div class="slds-form-element__static">{!v.memberCardSnap.memberDOB},&nbsp;{!v.memberCardSnap.age} Years</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+
+            <!-- US2816983	Populate Selected Provider from Provider Lookup on Create SRN Page - Sarma - 29/09/2020 : Starts-->
+            <aura:iteration items="{!v.srnProviderDetailList}" var="provider">
+                <aura:if isTrue="{!provider.isShowProviderDetails}">
+                <div class="BorderStyle">
+                    <div class="slds-page-header headersAlign" style="border-bottom-left-radius: 0rem !important;border-bottom-right-radius: 0rem !important;padding: .7rem .7rem">
+                        <div class="slds-grid">
+                            <div class="slds-col slds-has-flexi-truncate">
+                                <h1 class="slds-page-header__title slds-m-right_small slds-align-middle slds-truncate" style="font-size:.800rem !important;line-height:1.3 !important;">
+                                    <aura:if isTrue="{!provider.hscProviderDetails.providerCategory =='H' }">
+                                        {!'Provider: ' + provider.hscProviderDetails.businessName} 
+                                        <aura:set attribute="else"> 
+                                            {!'Provider: ' + provider.hscProviderDetails.firstName + ' ' + provider.hscProviderDetails.lastName} 
+                                        </aura:set>
+                                    </aura:if>
+                                </h1>
+                            </div>
+                        </div>
+                    </div>
+                <div>
+                    <div class="slds-grid slds-wrap slds-form-element leftMargin">
+                       
+                        <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding preselect">TAX ID</p>
+                                <p style="margin-left: 16px;" class="valueCls"></p>
+                                <div class="slds-form-element__static">{!provider.createSrnNetworkStatusRequestParams.taxId ? provider.createSrnNetworkStatusRequestParams.taxId : '--'}</div>
+                            </div>
+                        </div>
+
+                        <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                            <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect">NPI</p>
+                                    <p style="margin-left: 16px;" class="valueCls"></p>
+                                    <div class="slds-form-element__static">{!provider.createSrnNetworkStatusRequestParams.npi ? provider.createSrnNetworkStatusRequestParams.npi : '--'}</div>
+                            </div>
+                        </div>
+                        <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                            <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect">Status</p>
+                                    <p style="margin-left: 16px;" class="valueCls"></p>
+                                    <div class="slds-form-element__static">{!provider.hscProviderDetails.networkStatusTypeDesc ? provider.hscProviderDetails.networkStatusTypeDesc : '--'}</div>
+                            </div>
+                        </div>
+                       
+                    </div>
+                </div>
+                </div>
+                </aura:if>
+            </aura:iteration>
+            <!-- US2816983 : End -->
+
+            <div class="BorderStyle">
+                <div class="slds-page-header headersAlign" style="border-bottom-left-radius: 0rem !important;border-bottom-right-radius: 0rem !important;padding: .7rem .7rem">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                            <h1 class="slds-page-header__title slds-m-right_small slds-align-middle slds-truncate" style="font-size:.800rem !important;line-height:1.3 !important;">Date of Service Summary
+                            </h1>
+                        </div>
+                    </div>
+                </div>
+            <div>
+                <div class="slds-grid slds-wrap slds-form-element leftMargin">
+                    <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding preselect">Service Start Date</p>
+                            <p style="margin-left: 16px;" class="valueCls"></p>
+                            <div class="slds-form-element__static">{!v.servStartDt ? v.servStartDt : '--'}</div>
+                        </div>
+                    </div>
+                    <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                        <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding preselect">Service End Date</p>
+                                <p style="margin-left: 16px;" class="valueCls"></p>
+                                <div class="slds-form-element__static">{!v.servEndDt ? v.servEndDt : '--'}</div>
+                        </div>
+                    </div>
+                    <aura:If isTrue="{!and(v.type=='Inpatient',v.SRNData.RequiredInfo.HasAdmitted=='Yes')}" >
+                        <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                            <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect">Actual Admission</p>
+                                    <p style="margin-left: 16px;" class="valueCls"></p>
+                                    <div class="slds-form-element__static">{!v.actAdmitDt ? v.actAdmitDt : '--'}</div>
+                            </div>
+                        </div>
+                        <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                            <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding preselect">Actual Discharge</p>
+                                    <p style="margin-left: 16px;" class="valueCls"></p>
+                                    <div class="slds-form-element__static">{!v.actDischargeDt ? v.actDischargeDt : '--'}</div>
+                            </div>
+                        </div>
+                    </aura:If>
+                </div>
+            </div>
+            </div>
+
+            <div class="BorderStyle">
+                <div class="slds-page-header headersAlign" style="border-bottom-left-radius: 0rem !important;border-bottom-right-radius: 0rem !important;padding: .7rem .7rem">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                            <h1 class="slds-page-header__title slds-m-right_small slds-align-middle slds-truncate" style="font-size:.800rem !important;line-height:1.3 !important;">Diagnoses Codes Summary
+                            </h1>
+                        </div>
+                    </div>
+                </div>
+            <div>
+                <div class="slds-grid slds-wrap slds-form-element leftMargin">
+                    <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding preselect">Primary Diagnoses Code</p>
+                            <p style="margin-left: 16px;" class="valueCls"></p>
+                            <div class="slds-form-element__static">{!v.reqInfo.PrimaryCode ? v.reqInfo.PrimaryCode : '--'}</div>
+                        </div>
+                    </div>
+                    <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                        <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding preselect">Primary Description</p>
+                                <p style="margin-left: 16px;" class="valueCls"></p>
+                                <div class="slds-form-element__static">{!v.reqInfo.PrimaryDescription ? v.reqInfo.PrimaryDescription : '--'}</div>
+                        </div>
+                    </div>
+                    <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                        <aura:if isTrue="{!v.type=='Inpatient'}">
+                        <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding preselect">Admitting Diagnoses Code</p>
+                                <p style="margin-left: 16px;" class="valueCls"></p>
+                                <div class="slds-form-element__static">{!v.reqInfo.AdmittingCode ? v.reqInfo.AdmittingCode : '--'}</div>
+                        </div>
+                        </aura:if>
+                    </div>
+                    <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                        <aura:if isTrue="{!v.type=='Inpatient'}">
+                        <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding preselect">Admitting Description</p>
+                                <p style="margin-left: 16px;" class="valueCls"></p>
+                                <div class="slds-form-element__static">{!v.reqInfo.AdmittingDescription ? v.reqInfo.AdmittingDescription : '--'}</div>
+                        </div>
+                        </aura:if>
+                    </div> 
+                </div>
+                <aura:iteration items="{! v.reqInfo.DiagnosisData }" var="diag" > 
+                    <aura:If isTrue="{! or(diag.DiagnosisCode, diag.DiagnosisDesc) }" >
+                        <div class="slds-grid slds-wrap slds-form-element leftMargin card_bottom_margin">
+                            <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12">
+                                <div class="header-column">
+                                        <p class="field-title slds-form-element__label field_label_padding">Secondary Diagnoses Code</p>
+                                        <p style="margin-left: 16px;" class="valueCls"></p>
+                                        <div class="slds-form-element__static">{! diag.DiagnosisCode ? diag.DiagnosisCode : '--'}</div>
+                                </div>
+                            </div>
+                            <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12">
+                                <div class="header-column">
+                                        <p class="field-title slds-form-element__label field_label_padding">Secondary Description</p>
+                                        <p style="margin-left: 16px;" class="valueCls"></p>
+                                        <div class="slds-form-element__static">{! diag.DiagnosisDesc ? diag.DiagnosisDesc : '--'}</div>
+                                </div>
+                            </div> 
+                        </div>
+                    </aura:If>
+                </aura:iteration>  
+            </div>
+            </div>
+
+                <!-- US3222360 -->
+                <aura:if isTrue="{! (v.type == 'Outpatient') }">
+            <div class="BorderStyle">
+                <div class="slds-page-header headersAlign" style="border-bottom-left-radius: 0rem !important;border-bottom-right-radius: 0rem !important;padding: .7rem .7rem">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                                    <h1 class="slds-page-header__title slds-m-right_small slds-align-middle slds-truncate"
+                                        style="font-size:.800rem !important;line-height:1.3 !important;">Standard of
+                                        Measure Summary
+                            </h1>
+                        </div>
+                    </div>
+                </div>
+                <aura:iteration items="{! v.reqInfo.ProcedureData }" var="proc" >
+                            <!-- DE387912 Swapnil-->
+                            <div class="slds-grid slds-wrap slds-form-element leftMargin">
+                                <div style="padding:0px;"
+                                    class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                                    <div class="header-column">
+                                        <p class="field-title slds-form-element__label field_label_padding preselect">
+                                            Standard of Measure</p>
+                                        <p style="margin-left: 16px;" class="valueCls"></p>
+                                        <div class="slds-form-element__static">{! proc.StandardOfMeasures ?
+                                            proc.StandardOfMeasures : '--'}</div>
+                                    </div>
+                                </div>
+                                <div style="padding:0px;"
+                                    class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                        <p class="field-title slds-form-element__label field_label_padding preselect">
+                                            Count</p>
+                                    <p style="margin-left: 16px;" class="valueCls"></p>
+                                        <div class="slds-form-element__static">{! proc.Count ?
+                                            proc.Count :
+                                            '--'}</div>
+                                </div>
+                            </div>
+                                <div style="padding:0px;"
+                                    class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                        <p class="field-title slds-form-element__label field_label_padding preselect">
+                                            Frequency</p>
+                                        <p style="margin-left: 16px;" class="valueCls"></p>
+                                        <div class="slds-form-element__static">{! proc.Frequency ?
+                                            proc.Frequency : '--'}</div>
+                                </div>
+                            </div>
+                                <div style="padding:0px;"
+                                    class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                                <div class="header-column">
+                                        <p class="field-title slds-form-element__label field_label_padding preselect">
+                                            Total</p>
+                                        <p style="margin-left: 16px;" class="valueCls"></p>
+                                        <div class="slds-form-element__static">{! proc.Total ?
+                                            proc.Total :
+                                            '--'}</div>
+                                </div>
+                            </div>
+                        </div>
+                </aura:iteration>
+            </div>
+            <div class="BorderStyle">
+                <div class="slds-page-header headersAlign" style="border-bottom-left-radius: 0rem !important;border-bottom-right-radius: 0rem !important;padding: .7rem .7rem">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                                    <h1 class="slds-page-header__title slds-m-right_small slds-align-middle slds-truncate"
+                                        style="font-size:.800rem !important;line-height:1.3 !important;">DME Summary
+                            </h1>
+                        </div>
+                    </div>
+                </div>
+                        <aura:iteration items="{! v.reqInfo.ProcedureData }" var="proc">
+                            <div class="slds-grid slds-wrap slds-form-element leftMargin">
+                                <div style="padding:0px;"
+                                    class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                    <div class="header-column">
+                                        <p class="field-title slds-form-element__label field_label_padding preselect">
+                                            DME Procurement Type</p>
+                        <p style="margin-left: 16px;" class="valueCls"></p>
+                                        <div class="slds-form-element__static">
+                                            {! proc.DMEProcurementType ?
+                                            proc.DMEProcurementType : '--'}</div>
+                    </div>
+                </div>
+                                <div style="padding:0px;"
+                                    class="slds-p-around_xx-small slds-size_3-of-12 card_bottom_margin">
+                    <div class="header-column">
+                                        <p class="field-title slds-form-element__label field_label_padding preselect">
+                                            DME Total Cost</p>
+                        <p style="margin-left: 16px;" class="valueCls"></p>
+                                        <div class="slds-form-element__static">
+                                            <aura:if isTrue="{! proc.DMETotalCost}">
+                                                <lightning:formattedNumber value="{! proc.DMETotalCost}"
+                                                    maximumFractionDigits="5" />
+                                                <aura:set attribute="else">
+                                                    --
+                                                </aura:set>
+                                            </aura:if>
+                    </div>
+                </div>
+                    </div>
+                </div>
+                        </aura:iteration>
+            </div>
+            </aura:if>
+
+            <div class="BorderStyle">
+                <div class="slds-page-header headersAlign" style="border-bottom-left-radius: 0rem !important;border-bottom-right-radius: 0rem !important;padding: .7rem .7rem">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                                <h1 class="slds-page-header__title slds-m-right_small slds-align-middle slds-truncate"
+                                    style="font-size:.800rem !important;line-height:1.3 !important;">Procedure Code
+                                    Summary
+                            </h1>
+                        </div>
+                    </div>
+                </div>
+                    <aura:iteration items="{! v.reqInfo.ProcedureData }" var="proc">
+                        <aura:If isTrue="{! (proc.ProcedureCode || proc.ProcedureDesc || proc.ProcedureType) }">
+                            <div class="slds-grid slds-wrap slds-form-element leftMargin card_bottom_margin">
+                                <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12">
+                        <div class="header-column">
+                                        <p class="field-title slds-form-element__label field_label_padding">Procedure
+                                            Code</p>
+                                <p style="margin-left: 16px;" class="valueCls"></p>
+                                        <div class="slds-form-element__static">{! proc.ProcedureCode ?
+                                            proc.ProcedureCode : '--'}</div>
+                        </div>
+                    </div>
+                                <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12">
+                        <div class="header-column">
+                                        <p class="field-title slds-form-element__label field_label_padding">Procedure
+                                            Description</p>
+                                <p style="margin-left: 16px;" class="valueCls"></p>
+                                        <div class="slds-form-element__static">{! proc.ProcedureDesc ?
+                                            proc.ProcedureDesc : '--'}</div>
+                    	</div>
+                	</div>
+                                <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12">
+                        <div class="header-column">
+                                        <p class="field-title slds-form-element__label field_label_padding">Procedure
+                                            Type</p>
+                                <p style="margin-left: 16px;" class="valueCls"></p>
+                                        <div class="slds-form-element__static">{! proc.ProcedureType ?
+                                            proc.ProcedureType : '--'}</div>
+                    	</div>
+                	</div>
+            	</div>
+                        </aura:If>
+                    </aura:iteration>
+        	</div>
+
+                <!-- US2978756 -->
+                <aura:if isTrue="{! ((v.type == 'Outpatient') || (v.type == 'Outpatient Facility')) }">
+            <div class="BorderStyle">
+                <div class="slds-page-header headersAlign" style="border-bottom-left-radius: 0rem !important;border-bottom-right-radius: 0rem !important;padding: .7rem .7rem">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                                    <h1 class="slds-page-header__title slds-m-right_small slds-align-middle slds-truncate"
+                                        style="font-size:.800rem !important;line-height:1.3 !important;">Notes Summary
+                            </h1>
+                        </div>
+                    </div>
+                </div>
+
+                        <div class="slds-grid slds-wrap slds-form-element leftMargin card_bottom_margin">
+                            <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12">
+                        <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding">Note Type</p>
+                                <p style="margin-left: 16px;" class="valueCls"></p>
+                                    <div class="slds-form-element__static">{! v.SRNData.RequiredInfo.NoteType }</div>
+                        </div>
+                    </div>
+                            <div style="padding:0px;" class="slds-p-around_xx-small slds-size_3-of-12">
+                        <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding">Subject Type</p>
+                                <p style="margin-left: 16px;" class="valueCls"></p>
+                                    <div class="slds-form-element__static">{! v.SRNData.RequiredInfo.SubjectType }</div>
+                            	</div>
+                    	</div>
+                            <div style="padding:0px;"
+                                class="slds-m-top_medium slds-p-around_xx-small slds-size_12-of-12">
+                                <div class="header-column">
+                                    <p class="field-title slds-form-element__label field_label_padding">Comments: Note
+                                        Details</p>
+                                    <p style="margin-left: 16px;" class="valueCls"></p>
+                                    <div class="slds-form-element__static">{! v.SRNData.RequiredInfo.NoteDetails ?
+                                        v.SRNData.RequiredInfo.NoteDetails : '--'}</div>
+                    </div>
+            	</div>
+            	</div>
+        	</div>
+            </aura:if>
+                
+            <div class="BorderStyle">
+                <div class="slds-page-header headersAlign" style="border-bottom-left-radius: 0rem !important;border-bottom-right-radius: 0rem !important;padding: .7rem .7rem">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                            <h1 class="slds-page-header__title slds-m-right_small slds-align-middle slds-truncate" style="font-size:.800rem !important;line-height:1.3 !important;">Additional Information
+                            </h1>
+                        </div>
+                    </div>
+                </div>
+            	<div>
+                    <div class="slds-grid slds-wrap slds-form-element leftMargin">
+                        <div style="padding:0px;" class="slds-p-around_xx-small slds-size_12-of-12 card_bottom_margin">
+                            <div class="header-column">
+                                <p style="margin-left: 16px;" class="valueCls"></p>
+                                <div class="slds-form-element__static">{!v.reqInfo.isSAIOpen ? 'Special Account Instructions accessed ' : '--'} </div>
+                            </div>
+                        </div>
+                    </div>
+            	</div>
+            </div>
+            <div class="BorderStyle">
+                <div class="slds-page-header headersAlign" style="border-bottom-left-radius: 0rem !important;border-bottom-right-radius: 0rem !important;padding: .7rem .7rem">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                            <h1 class="slds-page-header__title slds-m-right_small slds-align-middle slds-truncate" style="font-size:.800rem !important;line-height:1.3 !important;">Case Build Additional Information
+                            </h1>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="slds-grid slds-wrap slds-form-element leftMargin">
+                        <div style="padding:0px;" class="slds-p-around_xx-small slds-size_12-of-12 card_bottom_margin">
+                            <div class="header-column">
+                                <p style="margin-left: 16px;" class="valueCls"></p>
+                                <div class="slds-form-element__static">Case Build Additional Information accessed. <br/><br/>{!v.reqInfo.CaseBuildAddInfo ?v.reqInfo.CaseBuildAddInfo: '--'}
+                                    <div class="fixDiv" style="line-height: 2em;">
+                                        <b>Provider Roles:</b><br/>
+                                        {!v.reqInfo.providerRoles}
+                                    </div>
+                                </div>
+                                <!--{!v.reqInfo.isCBInfoOpen ?v.caseBuildInfo}-->
+                            </div>
+                        </div>
+                    </div>
+            	</div>
+            </div>
+            <aura:if isTrue="{!!v.flipflop}">
+                <div class="BorderStyle">
+                <div class="slds-page-header headersAlign" style="border-bottom-left-radius: 0rem !important;border-bottom-right-radius: 0rem !important;padding: .7rem .7rem">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                            <h1 class="slds-page-header__title slds-m-right_small slds-align-middle slds-truncate" style="font-size:.800rem !important;line-height:1.3 !important;">Disclaimer
+                            </h1>
+                        </div>
+                    </div>
+                </div>
+            	<div>
+                    <div class="slds-grid slds-wrap slds-form-element leftMargin" style="text-align:justify;padding-right:1%;line-height:1.5;">
+                        <div style="padding:0px;" class="slds-p-around_xx-small slds-size_12-of-12 card_bottom_margin">
+                            <div class="header-column">
+                                <p style="margin-left: 16px;" class="valueCls"></p>
+                                <!-- US2356238	Create Authorizations - Determine if Code is TTAP Eligible - Sarma - 19/11/2020 -->
+                                <aura:if isTrue="{!v.isTtapEligible}">
+                                        <div onload="{!c.scroll}" id="ttapScroll">
+                                            Please Access <a href="javascript:void(0)" onclick="{!c.navigateToUrl}" class="{!(v.isTtapDisabled) ? 'disableLink' : ''}">TTAP</a>
+                                        </div>
+                                    <aura:set attribute="else">
+                                        <div class="slds-form-element__static" id="msgID">{!v.disclaimerMsg}</div>
+                                    </aura:set>
+                                </aura:if>
+                            </div>
+                        </div>
+                    </div>
+            	</div>
+            </div>
+            </aura:if>
+                
+        </div>
+            <footer class="slds-modal__footer card_padding" style="margin-bottom: -4%;">
+                <aura:if isTrue="{!v.showICUE}">
+                    <lightning:button variant="neutral"
+                                      label="Create SRN"
+                                      title="Create SRN"
+                                      onclick="{!c.callICUE}"/>
+                </aura:if>
+                <aura:if isTrue="{!v.flipflop}">
+                    <lightning:button variant="neutral"
+                                      label="Edit"
+                                      title="Edit"
+                                      onclick="{!c.editAuth}"/>
+                    <lightning:button variant="brand"
+                                      label="Submit"
+                                      aura:id="SubmitAuth"
+                                      title="Submit Authorization"
+                                      onclick="{!c.submitAuth}"/>
+                    <aura:set attribute="else">
+                        <lightning:button variant="neutral"
+                                      label="Close"
+                                      title="Close"
+                                      onclick="{!c.closeTab}"/>
+                    </aura:set>
+                </aura:if>
+            </footer>
+        </div>
+    </section>
+    <div class="slds-backdrop slds-backdrop_open"></div>
+</aura:component>

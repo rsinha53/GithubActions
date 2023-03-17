@@ -1,0 +1,108 @@
+<!-- 
+Component Name    : SNI_FL_ProviderProgramLookup
+Description       : Lookup component to load ProviderAffliations
+Created By        : Vamsi Krishna
+Created Date      : 18-12-2020
+
+Modification Log: 
+Developer                   Date                   Description
+-->
+
+<aura:component controller="SNI_FL_ProviderMessageUtil" >
+    
+    <!--Provider Messageing Feature--> 
+    <aura:attribute name="selectProviderGroup" type="Object" description="selected provider group" />
+    <aura:attribute name="selectProviderAfliation" type="Object" description="selected provider group" />
+    <!--Provider Messageing Feature-->
+    
+    
+    <!-- Attributes that can be set while component calling-->
+    <aura:attribute name="objectName" 	type="string" default="" required="true" />
+    <aura:attribute name="fieldName" 	type="string" default="" required="true" />
+    <aura:attribute name="value" 		type="String" default="" description="To pre-populate a value" />
+    <aura:attribute name="recordCount" 	type="string" default="5" description="Records visible at once"/>
+    <aura:attribute name="iconName" 	type="string" default="standard:drafts" description="complete icon name eg. standard:account" />
+    <aura:attribute name="label" 		type="string" default="" description="Label will be displayed above input Box" />
+    <aura:attribute name="placeholder" 	type="string" default="Search..." description="placeholder for input Box" />
+    <aura:attribute name="userIdValue" 	type="string"  />
+    <aura:attribute name="isSearchBoxValidation" type="boolean" default="true" />
+    <aura:attribute name="isInit" type="boolean" default="true" />
+    <aura:attribute name="isBackupAgentView" type="boolean" />
+    <aura:attribute name="familyAccountName" type="String"/>  
+    <aura:attribute name="isRecordSelected" type="boolean" default="false"  />
+    <!-- Internal Use Attributes -->
+    
+    <!--Added by Nanthu-->
+    <aura:attribute name="selectedTabId" type="String"/>
+    
+    <aura:attribute name="searchString"   type="string" access="private" default="" description="String to search"/>
+    <aura:attribute name="selectedRecord" type="Object" access="public" default="" description="selected Record Details" />    
+    <aura:attribute name="recordsList" 	  type="List"   access="private" description="List of Records having data" />
+    <aura:attribute name="message" 		  type="String" access="private" default="" />
+    <aura:attribute name="isFamilyLevel" type="Boolean" default="false"/>
+    <aura:attribute name="familyId" type="String"/>
+    
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:registerEvent name="cmpEventx" type="c:SNI_FL_MultiSelectEvent"/>
+    <aura:method name="childFamilyMethod" action="{!c.onblur}" access="public"/>
+    <aura:method name="clearFunction" action="{!c.handleClear}" access="public"/>
+    <aura:attribute name="showOnclickCurtain" type="boolean" default="false"/>
+    <aura:attribute name="showDropdown" type="boolean" default="false"/>
+    <aura:handler name="change" value="{!v.showOnclickCurtain}" action="{!c.onblur}"/>
+    <aura:registerEvent name="SNI_FL_MessageOnclickCurtainEvent" type="c:SNI_FL_MessageOnclickCurtainEvent"/>
+    
+    <!-- Component Markup   onmouseleave="{!c.onblur}" -->
+    <div>
+        <div aura:id="searchRes"   class="slds-form-element slds-lookup slds-is-close" >
+            <aura:if isTrue="{!!empty(v.label)}">            
+                <label class="slds-form-element__label">
+                    <abbr class="slds-required" title="required">* </abbr> {!v.label}
+                </label>
+            </aura:if>
+            <div class="slds-combobox_container slds-has-selection"  >
+                <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click slds-is-open" aria-expanded="false" aria-haspopup="listbox" role="combobox" aura:id="resultsDiv" style="{!(v.showOnclickCurtain == true)?(v.showDropdown == true)?'z-index:20;position:relative;': '':''}">
+                    <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right" role="none">
+                        <div aura:id="lookup-pill" class="{! 'slds-pill-container ' + if(v.selectProviderAfliation == '','slds-hide','') }" >
+                            <!-- Selected Value Pill -->
+                            <lightning:pill class="fullWidth" label="{!v.selectProviderAfliation.label}" name="{!v.selectProviderAfliation.value}" onremove="{! c.removeItem }" >
+                                <aura:set attribute="media">
+                                    <lightning:icon iconName="{!v.iconName}" size="small" alternativeText="icon"/>
+                                </aura:set>
+                            </lightning:pill>
+                        </div>
+                        <div aura:id="lookupField" class="{! if(v.selectProviderAfliation == '','slds-show','slds-hide') }" >
+                            <!-- Icon, Search Bar, Search Icon -->
+                            <lightning:icon aura:id="familyIcon" class="slds-combobox__input-entity-icon"  iconName="{!v.iconName}" size="large" alternativeText="icon"/>  
+                            <lightning:input aura:id="inputLookup" class="inputBox"  placeholder="{!v.placeholder}"  onclick="{!c.showRecords}" onkeyup="{!c.searchRecords}" value="{!v.searchString}" autoComplete="off" variant="label-hidden" id="combobox-id-1"/><!--  onblur="{!c.blurEvent}"-->
+                            <lightning:icon  class="slds-input__icon" iconName="utility:search" size="x-small" alternativeText="search"/> 
+                            <lightning:spinner class="slds-hide" aura:id="Spinner" alternativeText="Loading" size="small" variant="brand"/>
+                            
+                        </div>
+                    </div>
+                    <!-- Dropdown List -->
+                    <div aura:id="dropDown" id="listbox-id-1"  class="slds-dropdown slds-dropdown_length-5 slds-dropdown_fluid dropdownMargin" style="{! 'max-height:' + (8 + (v.recordCount * 40)) + 'px' }" >
+                        <ul class="slds-listbox slds-listbox_vertical recordListBox" role="presentation"  >
+                            <aura:if isTrue="{!empty(v.message)}" >
+                                <!-- To display Drop down List -->
+                                <aura:iteration items="{!v.recordsList}" var="rec" >
+                                    <li id="{!rec.value}" class="slds-listbox__item eachItem" onmousedown="{!c.selectItem}" onfocusout="{!c.blurEvent}">
+                                        <div class="slds-media slds-listbox__option_entity">
+                                            <lightning:icon iconName="{!v.iconName}" size="small" alternativeText="icon" />
+                                            <span class="verticalAlign slds-truncate">{!rec.label}</span>
+                                        </div>
+                                    </li>
+                                </aura:iteration>
+                                <!-- To display Error Message -->
+                                <aura:set attribute="else">
+                                    <li class="slds-listbox__item" >
+                                        <span class="slds-media slds-listbox__option_entity">{!v.message}</span>
+                                    </li>
+                                </aura:set>
+                            </aura:if>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</aura:component>

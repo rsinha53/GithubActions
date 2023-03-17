@@ -1,0 +1,208 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,lightning:isUrlAddressable" 
+				controller="ACET_AuthECAAController" access="global">
+   
+	<lightning:workspaceAPI aura:id="workspace"/>
+
+   <aura:attribute type="ACET_ECAALetterResult.ResponseData[]" name="eccaObj" />
+   <aura:attribute type="String" name="SRN" />
+   <aura:attribute name="IsInitializedTable" type="Boolean" default="false" />
+   <aura:attribute name="dataTblId" type="String"/> 
+   <aura:attribute name="interactionRec" type="Interaction__c"/>   
+   <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+
+	<!--US2433262 Avish -->
+	<aura:attribute name="memberTabId" type="string" access="public" />
+	<aura:handler event="c:ACET_EDMSClosedTabEvent" action="{!c.onTabClosed}"/>
+	<aura:handler event="lightning:tabClosed" action="{!c.closedAllTabs}" />
+	<aura:registerEvent name="ACET_ECAATabClosed" type="c:ACET_ECAATabClosed"/>
+	<aura:attribute name="tabIDName" type="String"/>
+	<aura:attribute name="docIdLst" type="List" />
+	<aura:attribute name="subTabIDMap" type="Map" />
+	<aura:attribute name="currentTabId" type="String" />
+	<!--US2433262 Avish Ends-->
+	
+	<ltng:require styles="{! $Resource.datatable + '/DataTables-1.10.16/media/css/jquery.dataTables.min.css'}" 
+    scripts="{!join(',', 
+            $Resource.datatable + '/DataTables-1.10.16/media/js/jquery.dataTables.min.js')
+            }" />
+
+
+			<div class="slds-card card_padding" style="background: rgb(243, 242, 242);"> <!-- US2045625 - Thanish - 1st Oct 2019 -->
+
+				<div class="slds-grid">
+					<div class="slds-col slds-has-flexi-truncate">
+						<div class="slds-media slds-no-space slds-grow">
+							<div class="slds-media__figure">
+								<span class="slds-icon_container slds-icon-custom-custom38" title="External Documents">
+									<lightning:icon iconName="standard:document" alternativeText="External Documents" /><!--US2705857 - Sravan -->
+								</span>
+							</div>
+							<div class="slds-media__body">
+								<div class="slds-page-header__name">
+									<div class="slds-page-header__name-title">
+										<h1 class="page_header_label slds-m-right_small slds-align-middle slds-truncate">External Documents</h1>
+										<p class="page_header_link">
+											<a href="javascript:void(0)" data-intId="{!v.interactionRec.Id}" onclick="{!c.navigateToDetail}">{!v.interactionRec.Name}</a>
+										</p>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<lightning:buttonGroup>
+					<c:ACET_HippaGuidelines showButton="true"/><!--US2705857 - Sravan-->
+                    <lightning:button variant="neutral" label="Misdirect" name="misDirectBtnName"
+                                      class="misdirect_button" onclick=""/>
+
+					<c:SAE_Alerts/>				  
+                    <!-- <c:SAE_Alerts aura:id="alertsAI"
+                                  memberId="{!v.alertMemberId}"
+                                  groupId="{!v.alertGroupId}"
+                                  providerNotFound="{!v.providerNotFound}"
+                                  noMemberToSearch="{!v.noMemberToSearch}"
+                                  memberNotFound="{!v.mnf}"
+                                  isProviderSearchDisabled="{!v.isProviderSearchDisabled}"
+                                  taxId="{!v.alertTaxId}"
+                                  providerId ="{!v.alertProviderId}"
+                                  isMemberSnapshot="true"
+                                  houseHoldMemberId="{!v.houseHoldMemberId}"
+                                  interactionRecId="{!v.interactionRec.Id}"
+                                  policyGroupId="{!v.policyGroupId}"
+                                  policyMemberId="{!v.policyMemberId}"
+                                  /> -->
+                </lightning:buttonGroup>
+				</div>
+			</div>		
+
+
+	<div class="slds-p-around_medium slds-card">
+		<lightning:spinner class="slds-show" aura:id="ecaaspinner"
+						   alternativeText="Loading.." title="Loading.."
+						   variant="brand" size="medium"/>
+		<div>
+			<span class="component_title">ECAA: {!v.SRN}</span>  
+		</div>
+		<div class="slds-m-top_small" >
+			<div width="100%" style="{! 'overflow: auto; min-height: 120px; ' + (if(greaterthanorequal(v.eccaObj.length, 7), ' max-height: 290px; ', '') ) }"> <!-- US2307436: -->
+				<table id="{! v.dataTblId }" class="slds-table slds-no-row-hover slds-table_bordered slds-table_cell-buffer" cellspacing="0" width="100%" >
+					<thead>
+						<tr class="slds-line-height_reset">
+							<th ></th>
+							<th scope="col" >
+								<span title="DATE CREATED" >DATE CREATED</span>&nbsp;
+							</th>
+							<th scope="col" >
+								<span title="SECURITY GROUP" >SECURITY GROUP</span>&nbsp;
+							</th>
+							<th scope="col" >
+								<span title="CASE ID" >CASE ID</span>&nbsp;
+							</th>
+							<th scope="col" >
+								<span title="TITLE" >TITLE</span>&nbsp;
+							</th>
+							<th scope="col" >
+								<span title="DOC ID" >DOC ID</span>&nbsp;
+                     </th>
+                     <th scope="col" >
+								<span title="FILE SIZE" >FILE SIZE</span>&nbsp;
+							</th>
+						</tr>
+					</thead>
+					<tbody> 
+						<aura:If isTrue="{!v.eccaObj.length > 0 }" >
+							<aura:iteration items="{!v.eccaObj}" var="ecca"  >
+								<tr>
+									<td >
+										<div class="slds-checkbox">
+											<input type="checkbox" name="options" id="{! 'authchkbox' + index + ecca.caseId }" />
+											<label class="slds-checkbox__label" for="{! 'authchkbox' + index +  ecca.caseId}">
+												<span class="slds-checkbox_faux"></span>
+											</label>
+										</div>
+									</td> 
+									<td title="{!ecca.createdDate}" >
+										<div class="slds-truncate slds-text-align_left truncate" >
+											<div class="slds-truncate" >
+												<aura:If isTrue="{!ecca.createdDate}">
+													{!ecca.createdDate}
+													<aura:set attribute="else">
+														--
+													</aura:set>
+												</aura:If>
+											</div>
+										</div>
+                           </td>
+                           <td title="{!ecca.securityGroup}" >
+										<div class="slds-truncate slds-text-align_left truncate" >
+											<div class="slds-truncate" >
+												<aura:If isTrue="{!ecca.securityGroup}">
+													{!ecca.securityGroup}
+													<aura:set attribute="else">
+														--
+													</aura:set>
+												</aura:If>
+											</div>
+										</div>
+                           </td>
+                           <td title="{!ecca.caseId}" >
+										<div class="slds-truncate slds-text-align_left truncate" >
+											<div class="slds-truncate" >
+												<aura:If isTrue="{!ecca.caseId}">
+													<a href="javascript:void(0)" onclick=""> {!ecca.caseId}</a>
+													<aura:set attribute="else">
+														--
+													</aura:set>
+												</aura:If>
+											</div>
+										</div>
+                           </td>
+                           <td title="{!ecca.title}" >
+										<div class="slds-truncate slds-text-align_left truncate" >
+											<div class="slds-truncate" >
+												<aura:If isTrue="{!ecca.title}">
+													{!ecca.title}
+													<aura:set attribute="else">
+														--
+													</aura:set>
+												</aura:If>
+											</div>
+										</div>
+                           </td>
+                           <td title="{!ecca.docId}" >
+										<div class="slds-truncate slds-text-align_left truncate" >
+											<div class="slds-truncate" >
+												<aura:If isTrue="{!ecca.docId}">
+													<a href="javascript:void(0)" onclick="{!c.openEDMS}"
+                                                       id="{!ecca.docId + 'link'}"
+                                                       data-docId="{!ecca.docId}"> {!ecca.docId}</a>
+													<aura:set attribute="else">
+														--
+													</aura:set>
+												</aura:If>
+											</div>
+										</div>
+                           </td>
+                           <td title="{!ecca.fileSize}" >
+										<div class="slds-truncate slds-text-align_left truncate" >
+											<div class="slds-truncate" >
+												<aura:If isTrue="{!ecca.fileSize}">
+													{!ecca.fileSize}
+													<aura:set attribute="else">
+														--
+													</aura:set>
+												</aura:If>
+											</div>
+										</div>
+                           </td>
+								</tr>
+							</aura:iteration>
+							<aura:set attribute="else">
+								<tr><td colspan="6" ><center>No records found.</center></td></tr>
+							</aura:set>
+						</aura:If>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+</aura:component>

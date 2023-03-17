@@ -1,0 +1,310 @@
+<aura:component controller="SAEClaimSearchController">
+
+    <aura:attribute name="mapClaimSummaryDetails" type="Object" default="[]"/>
+    <!--<aura:attribute name="mapClaimproSummaryDetails" type="Object" default="[]"/>-->
+    <aura:attribute name="mapClaimAdditionalInfo" type="Object" default="[]"/>
+    <aura:attribute name="listClaimStatusDetails" type="Object"/>
+    <aura:attribute name="memberInfoDetails" type="Object"/>
+    <aura:attribute name="mapInOutPatientDetails" type="Object" default="[]"/>
+    <aura:attribute name="isOnlyActive" type="Boolean" default="true"/>
+    <aura:attribute name="isDeductible" type="Boolean" default="false"/>
+    <aura:attribute name="isApplied" type="Boolean" default="false"/>
+    <aura:attribute name="selectedIPAValue" type="String" default=""/>
+    <aura:attribute name="showWarning" type="Boolean" default="false"/>
+    <aura:attribute name="isCheckboxDisabled" type="Boolean" default="false"/>
+    <aura:attribute name="memberInfo" type="Object" />
+    <aura:attribute name="claimsMemberFullname" type="String" default=""/>
+    <aura:attribute name="claimsMemberDob" type="String" default=""/>
+
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}" />
+    <aura:attribute name="autodocClaimResult"  type="Object" default="" />
+    <aura:attribute name="claimInput" type="Object" />
+    <aura:attribute name="autodocUniqueId" type="String" default=""/>
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default="ClaimResults"/>
+    <aura:attribute name="insuranceTypeCode" type="String" default=""/>
+    <aura:attribute name="memberId" type="string" access="public"/>
+    <aura:attribute name="showComments" type="boolean" default="false" access="public"/>
+    <aura:attribute name="isModalOpen" type="boolean" default="false"/>
+    <aura:attribute name="caseWrapperMNF" type="SAETTSCaseWrapper" access="public"/>
+    <aura:attribute name="commentsValue" type="String" default=""  access="public"/>
+
+    <aura:attribute name="autodocPageFeature" type="String" default="feature"/>
+    <aura:attribute name="AutodocKey" type="string" access="public"/>
+    <aura:attribute name="pageNumber" type="Integer" default="1"/>
+	<aura:handler event="c:ACET_ChangePageEvt" name="changePageEvent" action="{!c.getResults}"/>
+    <aura:method name="enableLink" action="{!c.enableLink}" >
+     <aura:attribute name="resultsTableRowData" type="Object"/>
+    </aura:method>
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute type="Map" name="TabMap" />
+    <aura:handler event="lightning:tabClosed" action="{! c.onTabClosed }" />
+    <aura:attribute name="contactUniqueId" type="string" access="public" />
+    <aura:attribute name="memberTabId" type="string" access="public" default="abc"/>
+    <aura:attribute name="hipaaEndpointUrl" type="String" default=""/>
+    <aura:attribute name="interactionOverviewTabId" type="String" />
+    <aura:attribute name="interactionRec" type="Interaction__c"/>
+    <aura:handler event="c:ACET_OpenTTSPopUPForClaim" action="{!c.openModal}"/>
+        <!--Tilak autodoc -->
+    <aura:attribute name="closedClaimDetails" type="String[]"/>
+    <aura:attribute name="selectAllCheckBox" type="Boolean"/>
+    <ltng:require scripts="{!$Resource.ACET_AutodocJS}" />
+    <aura:attribute name="showpreview" type="Boolean" default="false"/>
+    <aura:attribute name="tableDetails_prev" type="Object" />
+    <aura:attribute name="selectedRows" type="Object[]"/>
+    <aura:handler name="selectedRowData" event="c:ACET_AutoDocSelectedRow" action="{!c.getSelectedRecords}" />
+    <!--Tilak Autodoc end here-->
+    <aura:attribute name="policyChange" type="Boolean" default="false"/>
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0" />
+    <aura:attribute name="memberautodocUniqueId" type="String" default="auto" />
+    <aura:attribute name="tableDetails" type="Object"/>
+    <aura:attribute name="isAutodocForMultiplePages" type="Boolean" default="false" />
+    <aura:attribute name="enableAutodocWarningMessage" type="boolean" default="true" />
+     <!--chandra-->
+    <aura:attribute name="providerDetailsForRoutingScreen" type="Object" access="public" />
+	<aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+
+    <!-- Added by Jay for Case Items -->
+    <aura:handler name="selectedRowLink" event="c:ACET_AutoDocSelectedRow" action="{!c.navigateToDetail}" />
+    <aura:attribute name="caseItemMap" type="Object" />
+    <!-- End of addition -->
+
+    <!--Added by Jay for Audit Details -->
+    <aura:attribute name="isMRlob" type="Boolean" default="false" />
+    <aura:attribute name="policyDetails" type="SAEPolicyDetailsResult" />
+    <aura:handler event="c:ACET_PolicyswitchclaimsEvent" action="{!c.policySwitched}"/>
+    <!-- End of Jay -->
+    <aura:attribute name="showNewMessage" type="boolean" default = "false"/>
+    <!--Added Chandra for View PCP START-->
+    <aura:attribute name="componentId" type="String"/>
+    <aura:attribute name="memberDOB" type="string" access="public" />
+    <aura:attribute name="memberFN" type="string" access="public" />
+    <aura:attribute name="policyNumber" type="String" access="public"/>
+    <aura:attribute name="houseHoldMemberId" type="String" access="public" />
+    <aura:attribute name="currentPayerId" type="String" access="public"/>
+    <aura:attribute name="autoDocToBeDeleted" type="Object"/>
+    <aura:attribute name="isDependent" type="boolean" default="false" access="public"/>
+    <aura:attribute name="memberCardData" type="Object" access="public" />
+    <aura:attribute name="memberCardSnap" type="Object" access="public" />
+    <aura:attribute name="memberPolicies" type="SAEMemberProviderSearchCoveragesResult.CoverageLine[]" access="public"/>
+    <!--Added Chandra for View PCP END-->
+
+   <!--Added Bharat for Authorization START-->
+    <aura:attribute name="memberLN" type="string" access="public" />
+    <aura:attribute name="Type" type="String" />
+    <aura:attribute name="SubType" type="String" />
+    <aura:attribute name="IsCaseSaved" type="Boolean" default="false" />
+    <aura:attribute name="AuthAutodocPageFeature" type="String" default="authPageDetails" />
+    <aura:attribute name="authContactName" type="String" />
+    <aura:attribute name="SRNFlag" type="Boolean" default="false" />
+    <aura:attribute name="interactionType" type="string" />
+    <aura:attribute name="AutodocPageFeatureMemberDtl" type="String" />
+    <aura:attribute name="AutodocKeyMemberDtl" type="String"/>
+    <aura:attribute name="isHippaInvokedInProviderSnapShot" type="Boolean" default="false"/>
+    <aura:attribute name="caseNotSavedTopics" type="String[]"/>
+    <aura:attribute name="noMemberToSearch" type="Boolean" default="false" />
+    <aura:attribute name="interactionCard" type="Object" access="public"/>
+    <aura:attribute name="selectedTabType" type="String" access="public"/>
+    <aura:attribute name="originatorType" type="string" access="public"/>
+
+        <!--Added Bharat for Authorization END-->
+        <!--Added Bharat for Financial Start-->
+
+    <aura:attribute name="selectedPolicy" type="SAEMemberProviderSearchCoveragesResult.FinancialsWrapper" access="public"/>
+    <!--<aura:attribute name="memberPolicies" type="SAEMemberProviderSearchCoveragesResult.CoverageLine[]" /> -->
+    <aura:attribute name="callTopicOrder" type="Object" />
+    <aura:attribute name="planLevelBenefitsRes" type="ACET_ExtendedServiceController.PlanLevelBenefits" access="Public"/>
+    <aura:attribute name="eligibleDate" type="String" access="public"/>
+    <aura:attribute name="highlightedPolicySourceCode" type="String" default=""/>
+    <aura:attribute name="isSourceCodeChanged" type="Boolean" default="false"/>
+    <aura:attribute name="policyStatus" type="Boolean" default="false"/>
+    <aura:attribute name="isTierOne" type="boolean" access="public" default="false"/>
+    <aura:attribute name="flowDetails" type="Object" access="public" />
+       <!--Added Bharat for Financial END-->
+
+    <aura:method name="clearTable" action="{!c.clearTable}" access="public"/>
+    <aura:method name="refreshClaimSearch" action="{!c.onInit}" access="public"/>
+    <aura:attribute name="currentIndexOfOpenedTabs" type="Integer" default="0"/>
+
+     <!-- Durga-->
+    <aura:attribute name="showAdvanceSearch" type="Boolean" default="false" access="public"/>
+    <aura:attribute name="advClaimInput" type="object"/>
+    <aura:handler name="change" value="{!v.advClaimInput}" action="{!c.adVClaimChange}"/>
+    <aura:attribute name="advClaimNumbers" type="List" default="[]" />
+    <aura:attribute name="advSearchNoMatch" type="Boolean" default="false" />
+
+    <aura:handler event="c:ACET_claimDetailsCOBEvent" action="{!c.getClaimDetails}"/>
+	<aura:attribute name="claimDetailsObj" type="Object[]"/>
+    <aura:attribute name="claimEngineCodeObj" type="Object[]"/>
+
+    <!--DE393490 - Sravan-->
+    <aura:attribute name="memberMap" type="Map" access="public"/>
+
+    <!--US3189884 - Highlight Panel Default Close upon Scrolling and Default Close on details page - Sravan-->
+    <aura:attribute name="callTopicLstSelected" type="sObject[]"/>
+    <aura:attribute name="callTopicTabId" type="String" />
+
+    <!--US3117073 - Multiple Policies -  Creating Multiple Unique ORS Records Check In ISET - Sravan-->
+    <aura:attribute name="memberPolicyNumberMap" type="Map" default=""/>
+	<!--pagination-->
+	<aura:attribute name="paginationClaimResult"  type="Object" default="" />
+
+    <aura:attribute name="providerDetails" type="Object" access="public" />
+
+    <!-- Ketki open member snapshot for claim  -->
+
+     <aura:attribute name="contactName" type="Object" access="public" />
+     <aura:attribute name="isOtherSearch" type="Object" access="public" />
+     <aura:attribute name="providerNotFound" type="Object" access="public" />
+     <aura:attribute name="isProviderSearchDisabled" type="Object" access="public" />
+     <aura:attribute name="memberCardFlag" type="Object" access="public" />
+     <aura:attribute name="contactCard" type="Object" access="public" />
+
+     <aura:attribute name="claimsMemberFirstname" type="Object"  />
+     <aura:attribute name="claimsMemberLastname" type="Object" />
+     <aura:attribute name="claimsMemberId" type="Object"  />
+     <aura:attribute name="claimsServiceDates" type="Object"  />
+    <aura:attribute name="claimspolicyNbr" type="Object"  />
+
+    <aura:attribute name="isClaim" type="boolean" access="public" default="false"/>
+    <aura:attribute name="houseHoldData" type="Object[]" />
+    <aura:attribute name="dependentCode" type="String" />
+    <aura:attribute name="cobData" type="Object" />
+    <aura:attribute name="secondaryCoverageList" type="Object[]" />
+    <aura:attribute name="cobMNRCommentsTable" type="Object"/>
+    <aura:attribute name="regionCode" type="String" />
+    <aura:attribute name="cobENIHistoryTable" type="Object"/>
+    <aura:attribute name="enablePopup" type="Boolean" default="false"/>
+    <aura:attribute name="claimStatusSet" type="Set" default="['Acknowledgement','Rejected','Action Required']" />
+    <!-- Ketki open member snapshot for claim end  -->
+    <aura:attribute name="isMoreThan90days" type="Boolean" default="false"/>
+    <!-- Save Case Consolidation - US3505075 - Nikhil -->
+    <aura:attribute name="disableButtons" type="Boolean" default="true" />
+    <!-- US3177995 - Thanish - 22nd Jun 2021 -->
+    <aura:attribute name="subjectCard" type="Object" access="public"/>
+    <!--US1983608-->
+    <aura:attribute name="disableClaimLauncher" type="Boolean" default="true" />
+    <aura:attribute name="responseCount" type="Integer" default="0" />
+    <aura:attribute name="originalclaimdata" type="Object"/>
+
+    <aura:handler event="c:ACET_AutoDocRefreshEvent" action="{!c.handleAutodocRefresh}" />
+    <!-- US3507751 - Save Case Consolidation -->
+    <aura:handler event="c:ACET_HandleCaseWrapperEvent" action="{!c.createCaseWrapper}" />
+    <div style="width:99.5%" class="slds-is-relative">
+        <lightning:spinner class="slds-show" aura:id="lookup-spinner" alternativeText="Loading.."
+                    title="Loading.." variant="brand" size="medium" />
+        <div class="slds-card__header slds-grid slds-p-top_medium">
+            <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                <div class="slds-media__body slds-p-left_x-small">
+                    <!-- <h2 class="slds-card__header-title">
+                <span class="slds-text-heading_large slds-text-title_bold">Claim Results</span>
+            </h2>-->
+                    <p class="component_title ">Claim Results</p>
+                </div>
+                <aura:if isTrue="{!v.showNewMessage}">
+                <div class="slds-media__body slds-p-center_x-small" style = "color:red" >
+                   Claim results reflect the selected policy eligibility dates only.
+
+                </div>
+                </aura:if>
+                <div class="slds-no-flex">
+                    <lightning:buttonGroup>
+                        <!--US2817735-->
+                        <!-- Save Case Consolidation - US3505075 - Nikhil -->
+                        <!--US1983608-->
+                        <lightning:button class="slds-button slds-button_neutral neutral_button" variant="neutral"
+                        label="Launch Multiple Claims" onclick="{!c.launchSelectedClaim}" disabled="{!v.disableClaimLauncher}" />
+                    <lightning:button class="slds-button slds-button_neutral neutral_button" variant="neutral"
+                        label="Autodoc" onclick="{!c.getPreview}" disabled="{!v.disableButtons}" />
+                    <aura:if isTrue="{!!v.showComments}">
+                        <lightning:button class="slds-button slds-button_neutral neutral_button " variant="neutral"
+                            label="Add Comments" onclick="{!c.commentsShow}" disabled="{!v.disableButtons}" />
+                        <aura:set attribute="else">
+                            <lightning:button variant="brand" label="Add Comments" disabled="true"/>
+                        </aura:set>
+                    </aura:if>
+                        <!--US2817735-->
+                        <lightning:button class="slds-button slds-button_brand" variant="brand" label="Route"
+                            onclick="{!c.openModal}" disabled="{!v.disableButtons}" />
+                    </lightning:buttonGroup>
+                </div>
+            </header>
+        </div>
+
+        <div class="slds-grid" style="position: absolute;right: 260px;margin-top: 22px;z-index: 75;" id="filterSection">
+                        <div class="slds-size_5-of-12" style="width: 120px;">
+                        </div>
+            <aura:if isTrue="{!v.highlightedPolicySourceCode =='CS' ? false : true}">
+                        <div class="slds-size_3-of-12" style="width: 140px;">
+                            <lightning:input aura:id="DeductibleId" checked="{!v.isDeductible}" type="checkbox" label="Deductible Only" onchange="{!c.deductibleSelect}"/>
+                        </div>
+                        <div class="slds-size_4-of-12" style="width: 150px;">
+                           <lightning:input aura:id="AppliedId" checked="{!v.isApplied}" type="checkbox" label="Applied to OOP" onchange="{!c.appliedSelect}"/>
+                        </div>
+            </aura:if>
+
+        </div>
+        <!--<div class="slds-grid slds-wrap">
+                  <div class="slds-col slds-size_12-of-12">
+                      <div style="display: inline-flex;float: right;">
+                          <lightning:input aura:id="DeductibleId" checked="{!v.isDeductible}" type="checkbox" label="Deductible Only" style="padding-top: 20px;" onclick="{!c.deductibleSelect}"/>
+                          <lightning:input aura:id="AppliedId" checked="{!v.isApplied}" type="checkbox" label="Applied to OOP" style="padding-top: 20px;" onclick="{!c.appliedSelect}"/>
+
+                      </div>
+                  </div>
+         </div> -->
+
+        <!-- removing from herr -->
+        <c:ACET_AutoDocDataTable aura:id="autodoc" tableID="{!v.autodocUniqueId+'xyz'}" enablePagination="true"
+            hasCaseItems="true" bodySize="10" tableDetails="{!v.autodocClaimResult}"
+            autodocUniqueId="{!v.autodocUniqueId}" selectAllCheckBox="{!v.selectAllCheckBox}"
+            pageNumber="{!v.pageNumber}" enableSearch="true" selectedRows="{!v.selectedRows}"
+                                 autodocUniqueIdCmp="{!v.policySelectedIndex}" enableSort="true"
+            isCheckboxDisabled="{!v.isCheckboxDisabled}" />
+
+
+            <aura:if isTrue="{!v.isModalOpen}">
+            <c:SAE_TtsModalCaseCreation Topic="View Claims"
+                enableAutodocWarningMessage="{!v.enableAutodocWarningMessage}" caseWrapper="{!v.caseWrapperMNF}"
+                isModalOpen="{!v.isModalOpen}" pagefeature="{!v.AutodocPageFeature}" AutodocKey="{!v.AutodocKey}"
+                                            freeFormCommentsVal="{!v.commentsValue}"
+                                            providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}"
+                flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}" isMemberLookup="false" isProvider="false"
+                autodocUniqueId="{!v.autodocUniqueId}" memberMap="{!v.memberMap}"
+                memberPolicyNumberMap="{!V.memberPolicyNumberMap}" onlyRoute="true" flowDetails="{!v.flowDetails}"
+                                        mapClaimSummaryDetails= "{!v.mapClaimSummaryDetails}"/>
+            <!--DE393490 - Sravan-->
+        	</aura:if>
+         </div>
+
+        <aura:if isTrue="{!v.showpreview}">
+        	<c:ACET_PreviewAutoDoc  tableDetails_prev="{!v.tableDetails_prev}" isModalOpen="{!v.showpreview}" />
+    	</aura:if>
+    	<!--tilak autodoc end here-->
+    <!--test-->
+    <aura:if isTrue="{!v.showWarning}">
+        <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" style="position: fixed !important;" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container"  style="min-width: 54rem;">
+               <div class="slds-modal__content card_padding no_radius slds-form-element__static"  id="modal-content-id-1">
+                    This claim is not for the member in focus. Do you want to load the Snapshot page for {!v.claimsMemberFullname} DOB {!v.claimsMemberDob}?
+                    <br/> <br/>
+                    <div style="color: red;">
+                        BE SURE TO RE-VERIFY PER HIPAA GUIDELINES.<br/>
+                    </div>
+                </div>
+                <footer class="slds-modal__footer card_padding">
+                    <lightning:button variant="brand"
+                                      label="Yes"
+                                      title="Yes"
+                                      onclick="{! c.switchClaimsYes}"
+                                      class="brand_button"/>
+                    <lightning:button variant="brand"
+                                      label="No"
+                                      title="No"
+                                      onclick="{! c.switchClaimsNo}"
+                                      class="brand_button"/>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+</aura:component>

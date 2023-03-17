@@ -1,0 +1,166 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,lightning:isUrlAddressable"  access="global">
+    <ltng:require styles="{!$Resource.ACETLink_MasterStyle}" />
+    <aura:attribute name="yesOrNoOptions" type="List"/>
+      <aura:attribute name="isEscalatedValue" type="String" default="No"/>
+     <aura:attribute name="isPaidorPre" type="Boolean" default="false"/>
+    <aura:attribute name="checked" type="Boolean" default="false"/>
+     <aura:attribute name="hideValues" type="Boolean" default="false"/>
+    <aura:attribute name="EsReason" type="Boolean" default="false"/>
+    <aura:attribute name="PriorExternal" type="Boolean" default="false"/>
+    <aura:attribute name="viewClaimsSubType" type="string" />
+    <aura:attribute name="sendToListInputs" type="Object"/>
+    <aura:attribute name="showError" type="boolean" default="false" />
+    <aura:attribute name="stopChngTab" type="string" default="" />
+    <!--
+      <aura:attribute name="Commentvalue" type="String"/>
+   -->
+    <aura:handler name="init" value="{!this}" action="{!c.onLoad}" />
+    <aura:attribute name="policyName" type="string" />
+    <aura:attribute name="optionName" type="String" />
+     <aura:attribute name="expPaymentValue" type="String" />
+      <aura:attribute name="EscalatedOptions" type="List" default="[{'label': 'Called 3+ times without resolution', 'value': 'Called 3+ times without resolution'},
+                                                                 {'label': 'Disputing prior route identified as NAN via any method (LINK, phone, etc.)  ', 'value': 'Disputing prior route identified as NAN via any method (LINK, phone, etc.) '},
+                                                                 {'label': 'Disputing prior route outcome', 'value': 'Disputing prior route outcome'},
+                                                                 {'label': 'Prior route open past TAT', 'value': 'Prior route open past TAT'}]"/>
+     <aura:registerEvent name="ClaimRoutingTabChangeEvent" type="c:ACET_ClaimRoutingTabChangeEvent"  />
+     <aura:method name="validation" action="{!c.validation}" />
+     <aura:handler event="c:ACET_SubmitButtonValidation" action="{!c.validation}"/>
+     <!--Ketki ORS case creation -->
+      <aura:attribute name="additionalReqDtl" type="Object"  />
+     <!--Ketki ORS case creation end-->
+     <!--US3463210 - Sravan-->
+    <aura:attribute name="enableTat" type="Boolean" default="true"/>
+    <aura:attribute name="enableTatToggle" type="Boolean" default="true"/>
+    <aura:attribute name="disableSubmit" type="Boolean" default="false"/>
+    <aura:attribute name="showSubmit" type="Boolean" default="false"/>
+    <aura:attribute name="sbtBName" type="string" default="Next" />
+    <aura:attribute name="claimPolicyList" type="List" access="public"/>
+    <aura:attribute name="Tabs" type="string" default="" />
+    <aura:attribute name="selTabId" type="string" default="" />
+    <aura:attribute name="prvselTabId" type="string" default="" />
+    <aura:attribute name="caseWrapper" type="Object" />
+    <aura:registerEvent name="ClaimRoutingValidationEvent" type="c:ACET_ClaimRoutingValidationEvent"/>
+
+      <div aura:id="AdditionalDet" class="slds-card card_padding" style="border:1px solid rgba(221, 219, 218, 1)">
+            <div>
+                <span class="component_title ">Additional Request Details</span>
+            </div>
+           <div class="slds-grid card_bottom_margin">
+                <lightning:layout  class="slds-p-left_none" >
+                    <lightning:layoutItem  padding="around-small"  class="slds-p-left_none">
+                        <div class="slds-p-left_none">
+                            Is this an escalated request?
+                        </div>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem   class="slds-p-top_x-small" >
+                        <lightning:radioGroup options="{!v.yesOrNoOptions}"
+                                              name="{!v.optionName}"
+                                              value="{!v.isEscalatedValue}"
+                                              onchange="{!c.onchangeEscalated}"/>
+                    </lightning:layoutItem>
+                </lightning:layout>
+            </div>
+            <aura:if isTrue="{!v.isEscalatedValue == 'Yes'}">
+                <div class="c-container">
+                    <lightning:layout verticalAlign="center">
+                        <lightning:layoutItem flexibility="auto" size="4">
+                            <div  onclick="{!c.EsReasonValChng}">
+                            <lightning:combobox aura:id="EscalationReason" name="Escalation Reasons" label="Escalation Reason"  required="true"
+                                                  class="slds-m-right_x-small"  messageWhenValueMissing ="This field is required"
+                                                placeholder="Select" options="{!v.EscalatedOptions}" onchange="{!c.onchngValue}" value="{!v.additionalReqDtl.escalationReason}" />
+                            </div>
+                            </lightning:layoutItem>
+                    </lightning:layout>
+                    <lightning:layout verticalAlign="center">
+                        <lightning:layoutItem flexibility="auto" size="4">
+                             <div  onclick="{!c.PriorExValChng}">
+                            <lightning:input aura:id="PriorExternalID" type="text" name="Prior External ID's" label="Prior External ID's"
+                                               messageWhenValueMissing ="This field is required" required="true" class="slds-m-right_x-small" onchange="{!c.onchngValue}"  value="{!v.additionalReqDtl.priorExternalId}"  />
+                            </div>
+                            </lightning:layoutItem>
+                    </lightning:layout>
+                </div>
+            </aura:if>
+            <div class="c-container">
+                <lightning:layout verticalAlign="center" >
+                    <lightning:layoutItem flexibility="auto" size="4">
+                       <div onkeypress="{!c.allowOnlyNumbers}" onchange= "{!c.allowOnlyNumbers}">
+                        <lightning:input aura:id="ExpectedPayment" type="text" name="Expected Payment Amount" label="Expected Payment Amount"
+                             value="{!v.additionalReqDtl.expPaymentValue}"  messageWhenValueMissing ="This field is required" required="true" class="slds-m-right_x-small" onchange="{!c.onchngValue}" onblur="{!c.checkValue}" />
+                            </div>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem flexibility="auto" padding="around-small" size="4">
+                        <lightning:input type="checkbox" label="Does not know"  checked="{!v.checked}" class="slds-p-top_x-small"  aura:id="donotknow"  name="input1" onchange="{!c.onchngDNK}"/>
+                    </lightning:layoutItem>
+                </lightning:layout>
+                <lightning:layout verticalAlign="center">
+                    <lightning:layoutItem flexibility="auto" size="4">
+                        <lightning:input aura:id="TATProvided" type="text" name="TAT Provided" label="TAT Provided"  messageWhenValueMissing ="This field is required"
+                                          required="true" class="slds-m-right_x-small" onchange="{!c.onchngValue}" disabled="{!!v.enableTat}"  value="{!v.additionalReqDtl.tatProvided}" />
+                    </lightning:layoutItem>
+                    <lightning:layoutItem flexibility="auto" padding="around-small" size="5">
+                        <p class="field_label field_label_padding"></p>
+                        Days&nbsp;
+                        <c:ACET_ToggleButton width="70" checked="{!v.additionalReqDtl.days}" checkedText="Bus" uncheckedText="Cal" isRoutingToggle="{!!v.enableTatToggle}" />
+                    </lightning:layoutItem>
+                </lightning:layout>
+                <div class="slds-p-left_small" style="padding-left:0px">
+                    <c:ACET_HoverPopup aura:id="commentsId"
+                                       moveRight=""
+                                       description=""
+                                       isNubbinLeft="true"
+                                       descriptionList="[ 'Use the comments to include a brief','description of the issue, research performed,', 'and any attempts to resolve' ]" />
+                </div>
+                <abbr class="slds-required" title="required">* </abbr>
+                <span style="border-bottom:1px dashed;padding:0px"
+                      data-popupId="commentsId"
+                      onmouseover="{!c.togglePopup}"
+                      onmouseout="{!c.togglePopup}">
+                    Comments:
+                </span>
+                    <lightning:textarea name="commentBox"
+                                        aura:id="commentsBoxId"
+                                        class="slds-p-top_small"
+                                        value="{!v.additionalReqDtl.Commentvalue}"
+                                        maxlength="2000"
+                                        required="true"
+                                        variant="label-hidden"
+                                        messageWhenValueMissing ="This field is required"
+                                        onchange="{!c.onchngValue}"/>
+                 <span class="floatToRight valueCls slds-form-element__static">
+                                Characters remaining:
+                                <lightning:formattedNumber value = "{!2000-v.additionalReqDtl.Commentvalue.length}" />
+                            </span>
+                <!--US3463210 - Sravan-->
+          <aura:if isTrue="{!v.showSubmit}">
+              <div class="slds-float_right slds-p-top_large">
+              	<lightning:button label="{!v.sbtBName}" variant="brand" aura:id="AddSbName"  disabled="{!v.disableSubmit}" onclick="{!c.onSubmit}"/>
+              </div>
+          </aura:if>
+            </div>
+            <aura:if isTrue="{!v.isPaidorPre}">
+                <div class="slds-grid card_bottom_margin">
+                    <div class="slds-col slds-size_8-of-12 slds-p-right_small justifys">
+                        <div>
+                            <p>
+                                <div class="slds-checkbox">
+                                    <input type="checkbox" name="attested"  id="attested" value="" checked="" />
+                                    <label class="slds-checkbox__label" for="attested">
+                                        <span class="slds-checkbox_faux"></span>
+                                        <div style="margin-top: -2%;margin-left: 2%;">
+                                            &nbsp;I attest that based on my research of the claim and information available, I have determined
+                                            that the claim paid correctly.
+                                            I explained the processing to the provider,
+                                            however they requested that the claim be sent back as a reconsideration
+                                            to satisfy the need to have a reconsideration on file prior to filing an appeal.
+
+                                        </div>
+                                    </label>
+                                </div></p>
+                        </div>
+                    </div>
+                    <div class="slds-col slds-p-top_small slds-size_4-of-12 slds-p-around_xx-small"></div>
+                </div>
+            </aura:if>
+        </div>
+</aura:component>

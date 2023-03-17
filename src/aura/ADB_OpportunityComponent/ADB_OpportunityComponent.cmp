@@ -1,0 +1,448 @@
+<aura:component controller="ADBOpportunityController" >
+    <!--<aura:handler event="force:refreshView" action="{!c.isRefreshed}" /> -->
+    <!--<aura:handler name="init" value="{!this}" action="{!c.onInit}" />-->
+    <aura:handler name="change" value="{!v.decodedMemberId}" action="{!c.onInit}" />
+    <!-- Component attributes  -->
+    <!--	Values are coming from apex class	-->
+    <aura:attribute name="decodedMemberId" type="String" />
+    <aura:attribute name="memberId" type="String" />
+    <aura:attribute name="displayOffers" type="List" />
+    <aura:attribute name="originalOffers" type="List" />
+    <aura:attribute name="memberXrefId" type="String" />
+    <aura:attribute name="responseOfferList" type="List" />
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+    <aura:attribute name="AutodocSection" type="string" access="public" default="false"/>
+    <aura:attribute name="isMoreButtonVisible" type="boolean" default="true"/>
+    <aura:attribute name="isCommentBoxVisible" type="boolean" default="false"/>
+    <aura:attribute name="isOkButtonDisabled" type="Boolean" default="true" />
+    <aura:attribute name="removeOpportunityComment" type="String"/>
+    <aura:attribute name="listIndex" type="String"/>
+    <aura:attribute name="checked" type="boolean" />   
+    <aura:attribute name="isSaveButtonDisabled" type="Boolean" default="true" />
+    <aura:attribute name="isServicePending" type="Boolean" default="true" />
+    <!-- added for using on functional role api : US2620797 - sunil Vennam-->
+    <aura:attribute name="agentUserId" type="String"/>
+    <aura:attribute name="isIntegrationUser" type="Boolean" default="false" />
+    <aura:attribute name="parmacyCount" type="Integer"/>
+    <aura:attribute name="medicalCount" type="Integer"/>
+    <aura:attribute name="clinicalCount" type="Integer"/>
+    <aura:attribute name="financialCount" type="Integer"/>
+    <aura:attribute name="totalCount" type="Integer"/> 
+    <aura:attribute name="allProgramSubCardVisible" type="boolean" default="false"/>
+    <aura:attribute name="isHoverVisible" type="boolean" default="false"/>
+    <aura:attribute name="xrefPartitionID" type="String" />
+    
+    <aura:attribute name="offerResponse" type="List" />
+    <aura:attribute name="memberDOB" type="String" />
+    <aura:attribute name="memberTypeId" type="String" default="CDB_XREF_ID" />
+    <aura:attribute name="noOfOffers" type="Integer" default="10"/>
+    <aura:attribute name="showUpDate" type="boolean" default="true"/>       <!--Added default value by Metallica US2430908 to hide the disposition column and submit button-->
+    <!--	Dashboard Button for ICUE SSO - Added by Metallica US2430899-->
+    <aura:attribute name="showLaunchBtn" type="boolean" default="false"/>
+    <!--	/Values are coming from apex class	-->
+    
+    <!--	Attributes for handle the UI	-->
+    <aura:attribute name="hoverRow" type="Integer" default="-1" />
+    <aura:attribute name="hoverCol" type="Integer" default="-1" />
+    <aura:attribute name="listEndCount" type="Integer" default="3" /> 
+    <aura:attribute name="selectedValue" type="String"/>
+    <aura:attribute name="listOfDisposision" type="List" /> 
+    <!--	/ Attributes for handle the UI	-->
+    
+    <!-- Attributes for Error Handling -->
+    <aura:attribute name="errorMessage" type="String"/>
+    <aura:attribute name="isError" type="boolean" default="false"/>
+    <aura:attribute name="isTerminated" type="boolean" default="false"/>
+    
+    <!-- More Link -->
+    <aura:attribute name="showMoreLink" type="boolean" default="true"/>      <!--Added by Metallica US2430908-->
+    <!-- Dashboard button Attributes--> <!--Added by Metallica US2430899-->
+    <aura:attribute name="highlightPanel" type="ACETLGT_HighlightPanelInfo" access="global"/>
+    <aura:attribute name="subject_firstName" type="String" />
+    <aura:attribute name="subject_lastName" type="String" />
+    <aura:attribute name="functionalRole" type="String" />
+    <!-- Not ready for deploy QA201 -->
+    <!--  Attributes - Sunil : US2574137 - Read Population API -->
+    <aura:attribute name="memFirstName" type="String" />
+    <aura:attribute name="memLastName" type="String" />
+    <aura:attribute name="policy" type="String" />	
+	<aura:attribute name="policyTerminated" type="Boolean" default="false"/>
+    <aura:handler name="change" value="{!v.policyTerminated}" action="{!c.validateOpportunities}" />																	 
+    
+    <aura:attribute name="isInfoMsg" type="boolean" default="false"/>
+    <!-- / Component attributes -->
+    <lightning:layout horizontalAlign="center"  multipleRows="true">
+        <aura:if isTrue="{!v.isServicePending}">
+            <div class="slds-align--absolute-center">
+                <lightning:spinner aura:id="offers_spinner" variant="brand" size="large"/>
+            </div>
+        </aura:if>
+        <lightning:layoutItem  class="slds-p-right_medium slds-p-top_small slds-p-left_small" size="2" >
+            <!-- <div style="border:3px solid red;">-->
+            <aura:if isTrue="{!v.isError == false}">
+                <div class="slds-m-right_large">
+                    <div class="outer-circle">
+                        
+                        <!-- Div to show pharmacy icon-->
+                        <aura:if isTrue="{!(v.parmacyCount!=0)}">
+                            <div class="top-left-circle" title="Pharmacy" onclick="{!c.onEventClick}" data-eventType="PAR">
+                                <div align="center" class="circle-content">
+                                    <span onclick="{!c.onEventClick}" data-eventType="PAR">{!v.parmacyCount}</span>
+                                    <img src="{!$Resource.ADB_OpportunityCardImages + '/ADB_OpportunityCardImages/pharmacy_blue.png'}"
+                                         class="opportunity-category-icon"
+                                         onclick="{!c.onEventClick}" data-eventType="PAR" style="width:20px;height:20px;"/>
+                                </div>
+                            </div>
+                        </aura:if>
+                        <!-- / Div to show pharmacy icon-->
+                        
+                        <!-- Div to show financial icon-->
+                        <aura:if isTrue="{!(v.financialCount!=0)}">
+                            <div class="top-right-circle" title="Cost Savings/Financial" onclick="{!c.onEventClick}" data-eventType="FIN">
+                                <div align="center" class="circle-content" >
+                                    <span onclick="{!c.onEventClick}" data-eventType="FIN">{!v.financialCount}</span>
+                                    <img src="{!$Resource.ADB_OpportunityCardImages + '/ADB_OpportunityCardImages/financial_blue.png'}"
+                                         class="opportunity-category-icon"
+                                         onclick="{!c.onEventClick}" data-eventType="FIN" style="width:20px;height:20px;"/>
+                                </div>                    
+                            </div>
+                        </aura:if>
+                        <!-- / Div to show financial icon-->
+                        
+                        <!-- Div to show medical icon-->
+                        <aura:if isTrue="{!(v.medicalCount!=0)}">
+                            <div class="bottom-left-circle" title="Health and Wellness" onclick="{!c.onEventClick}" data-eventType="MED">
+                                <div align="center" class="circle-content">
+                                    <span onclick="{!c.onEventClick}" data-eventType="MED">{!v.medicalCount}</span>
+                                    <img src="{!$Resource.ADB_OpportunityCardImages + '/ADB_OpportunityCardImages/medical_blue.png'}"
+                                         class="opportunity-category-icon"
+                                         onclick="{!c.onEventClick}" data-eventType="MED" style="width:20px;height:20px;"/>
+                                </div>  
+                            </div>
+                        </aura:if>
+                        <!-- / Div to show medical icon-->
+                        
+                        <!-- Div to show clinical icon-->
+                        
+                        <aura:if isTrue="{!(v.clinicalCount!=0)}">
+                            <div class="bottom-right-circle" title="Clinical Programs" onclick="{!c.onEventClick}" data-eventType="CLN">
+                                <div align="center" class="circle-content">
+                                    <span onclick="{!c.onEventClick}" data-eventType="CLN">{!v.clinicalCount}</span>
+                                    <img src="{!$Resource.ADB_OpportunityCardImages + '/ADB_OpportunityCardImages/clinical_blue.png'}" 
+                                         class="opportunity-category-icon"
+                                         onclick="{!c.onEventClick}" data-eventType="CLN" style="width:20px;height:20px;"/>
+                                </div>  
+                            </div>
+                        </aura:if>
+                        <!-- / Div to show clinical icon-->
+                        
+                        <!-- Div to show Total Count-->
+                        <div class="center-circle">
+                            <aura:if isTrue="{!greaterthanorequal(v.totalCount,10)}">
+                                <span class="maxcount"><p><a onclick="{!c.refreshCard}" >{!v.totalCount}</a></p></span>
+                            </aura:if>
+                            <aura:if isTrue="{!lessthan(v.totalCount,10)}">
+                                <span class="count"><p><a onclick="{!c.refreshCard}">{!v.totalCount}</a></p></span>
+                            </aura:if>
+                        </div>
+                        <!-- / Div to show Total Count-->
+                    </div>
+                </div>
+            </aura:if> 
+            <!--SHOULD BE REMOVED. JUST FOR SIMULATION PURPOSES-->
+            <!--  <lightning:select name="select" aura:id="role" label=""  onchange="{!c.onSelectRole}">-->
+            <!--<option value="">Choose Role</option>-->
+            <!--  <aura:iteration items="{!v.roleTypes}" var="role">
+                    <option text="{!role}"></option>
+                </aura:iteration>
+            </lightning:select> -->
+            <!--/SHOULD BE REMOVED. JUST FOR SIMULATION PURPOSES-->
+            
+        </lightning:layoutItem>
+        
+        <lightning:layoutItem class="slds-p-right_medium" size="10" >
+            <div class="autodocTableView" data-auto-doc="{!v.AutodocSection}" data-auto-doc-feature="{!v.AutodocKey}" >
+                <!-- Begin: Hide table if the member's policy is terminated -->
+                <aura:if isTrue="{!v.policyTerminated == false}">
+                    <div>
+                        <table class="slds-table preselect autodocPreselect slds-table_fixed-layout slds-table_bordered slds-m-left_medium">
+                            <thead>
+                                <tr class="slds-line-height_reset">
+                                    <th style="width: 30%" class="thCustom" scope="col">
+                                        <div class="slds-truncate" title="Events">Events</div>
+                                    </th>
+                                    <th style="width: 30%" class="thCustom" scope="col">
+                                        <div class="slds-truncate" title="Discription">Description</div>
+                                    </th>
+                                    <th style="width: 25%" class="thCustom" scope="col">
+                                        <div class="slds-truncate" title="To Do">To Do</div>
+                                    </th>
+                                    <aura:if isTrue="{!v.showUpDate == true}">
+                                        <th style="width: 15%" class="thCustom" scope="col">
+                                            <div class="slds-truncate"  title="Disposition">Disposition</div>
+                                        </th>
+                                    </aura:if>
+                                </tr>
+                            </thead>
+                            <!-- Opportunity details are iterated by OGM services-->
+                            <tbody>
+                                <aura:iteration items="{!v.displayOffers}" var="item" indexVar="index" end="{!v.listEndCount}">
+                                    <tr class="slds-hint-parent">
+                                        <td data-label="Events" scope="row" width="40%">
+                                            <div class="popover-wrapper">
+                                                <div class="slds-truncate event_word_wrap" data-index="{!index}" data-column="0" onmouseover="{!c.showHover}" onmouseout="{!c.showHover}">
+                                                    {!item.event}
+                                                </div>
+                                                <aura:if isTrue="{!and(not(empty(item.eventHoverOver)), v.isHoverVisible)}" >
+                                                    <aura:if isTrue="{!and((v.hoverRow==index),(v.hoverCol==0))}">
+                                                        <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left popover-content" role="tooltip">
+                                                            <div class="slds-popover__body">
+                                                                {!item.eventHoverOver}
+                                                            </div>
+                                                        </div>
+                                                    </aura:if>
+                                                </aura:if>
+                                            </div>
+                                        </td>
+                                        <td data-label="Discription" scope="row" width="20%">
+                                            <div class="popover-wrapper">
+                                                <div class="slds-truncate event_word_wrap" data-index="{!index}" data-column="1" onmouseover="{!c.showHover}" onmouseout="{!c.showHover}">
+                                                    {!item.description}
+                                                </div>
+                                                <aura:if isTrue="{!and(not(empty(item.descriptionHoverOver)), v.isHoverVisible)}" >
+                                                    <aura:if isTrue="{!and((v.hoverRow==index),(v.hoverCol==1))}">
+                                                        <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left popover-content" role="tooltip">
+                                                            <div class="slds-popover__body">
+                                                                {!item.descriptionHoverOver}
+                                                            </div>
+                                                        </div>
+                                                    </aura:if>
+                                                </aura:if>
+                                            </div>
+                                        </td>
+                                        <td data-label="To Do" scope="row" width="20%">
+                                            <div class="popover-wrapper">
+                                                <div class="slds-truncate event_word_wrap" data-index="{!index}" data-column="2" onmouseover="{!c.showHover}" onmouseout="{!c.showHover}">
+                                                    {!item.todo}
+                                                </div>
+                                                <aura:if  isTrue="{!and(not(empty(item.todoHoverOver)), v.isHoverVisible)}" >
+                                                    <aura:if isTrue="{!and((v.hoverRow==index),(v.hoverCol==2))}">
+                                                        <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left popover-todoContent" role="tooltip">
+                                                            <div class="slds-popover__body">
+                                                                {!item.todoHoverOver}
+                                                            </div>
+                                                        </div>
+                                                    </aura:if>
+                                                </aura:if>
+                                            </div>
+                                        </td>
+                                        <aura:if isTrue="{!v.showUpDate == true}">
+                                            <td data-label="dropdownSelection" scope="row" width="20%">
+                                                <!--    Disposition dropdown-->
+                                                <div class="slds-truncate">
+                                                    <div class="slds-form-element__control">
+                                                        <div class="slds-select_container">
+                                                            <select id="{!'dropdown' + index}"
+                                                                    aura:id="disposisionselect"
+                                                                    data-list_index="{!index}"
+                                                                    class="slds-select"
+                                                                    onfocus="{!c.getSelectedValue}"
+                                                                    onchange="{!c.dispositionChangeHandler}">
+                                                                <option value=""></option>
+                                                                <option value="Accept">Accept</option>
+                                                                <option value="Maybe_Later">Maybe Later</option>
+                                                                <option value="Decline">Decline</option>
+                                                                <option value="Not_Appropriate">Not Appropriate</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!--   / Disposition dropdown-->
+                                            </td>
+                                        </aura:if>
+                                    </tr>
+                                </aura:iteration>
+                            </tbody>
+                            <!-- / Opportunity details are iterated by OGM services-->
+                        </table>
+                    </div>
+                </aura:if>
+                <!-- End: Hide table if the member's policy is terminated -->
+            </div>
+            <!-- Error Message display on the opportunity card -->
+            <aura:if isTrue="{!v.isError == true}">
+                <aura:if isTrue="{!v.isInfoMsg}">
+                    <div id="opportunityCard_infoErrorMessage" class="informationMsg " align="left">
+                        <ui:message title="" severity="info" closable="false" class=" ">
+                            <b>{!v.errorMessage}</b>
+                        </ui:message>
+                    </div>
+                    <aura:set attribute="else">
+                        <div align="left" class="noDataMsg slds-p-left_medium slds-m-top_xx-small">
+                            <b>{!v.errorMessage}</b>
+                        </div>
+                    </aura:set>
+                </aura:if>
+            </aura:if>
+            <!-- Error Message display on the opportunity card -->
+            <!--	Comment Popup	-->
+            <aura:if isTrue="{!v.isCommentBoxVisible}">
+                <section role="dialog" class="slds-modal slds-fade-in-open" >
+                    <div class="slds-modal__container slds-p-top_small">               
+                        <header class="slds-modal__header">
+                            
+                            <!-- Close Button-->
+                            <lightning:buttonIcon iconName="utility:close"
+                                                  onclick="{!c.closeCommentBox}"
+                                                  alternativeText="close"
+                                                  variant="bare-inverse"
+                                                  class="slds-modal__close"/>
+                            <!-- / Close Button-->
+                            
+                            <h2  class="slds-text-heading_medium slds-hyphenate" align="left">Comments</h2> 
+                            
+                            <!--	Textarea for enter comments -->
+                            <div class="slds-modal__body slds-p-bottom_large" style="background:white;" align="center"> 
+                                <lightning:textarea onchange="{!c.onChangeComment}" 
+                                                    value="{!v.removeOpportunityComment}"
+                                                    aura:id="commentBox" 
+                                                    name="Comment" 
+                                                    placeholder="" 
+                                                    maxlength="256" 
+                                                    messageWhenTooLong="A maximum of 256 characters are allowed." 
+                                                    style="width:50%; height:90%">                                                                
+                                </lightning:textarea>
+                            </div>
+                            <!--	/ Textarea -->
+                            
+                            <!--	Ok button -->
+                            <div align="center">
+                                <lightning:button variant="brand" 
+                                                  label="Ok"
+                                                  title="Ok"
+                                                  disabled= "{!v.isOkButtonDisabled}" 
+                                                  onclick="{!c.okButton}"/>
+                            </div>
+                            <!--/ Ok button-->
+                            
+                        </header> 
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open"></div>
+            </aura:if>
+            <!--/ Comment Popup	for comment box -->
+            
+            
+            <lightning:layout horizontalAlign="center" >
+                <lightning:layoutItem  size="8" >
+                    
+                    <!--	More button for expand rows -->
+                    <!-- Begin: Termed Fix - Hide more button if member's policy is terminated -->
+                    <aura:if isTrue="{!v.policyTerminated == false}">
+                        <aura:if isTrue="{!v.showMoreLink}">   <!--Added by Metallica US2430908-->
+                            <aura:if isTrue="{!v.isMoreButtonVisible}">
+                                <aura:if isTrue="{!v.displayOffers.length > 3}">
+                                    <div class="more-button" onclick="{!c.onclickmore}">
+                                        <img src="{!$Resource.ADB_OpportunityCardImages + '/ADB_OpportunityCardImages/MoreButton.png'}" height="100" width="100" align="right" class="more-button" />
+                                    </div>
+                                </aura:if>
+                                <!--	/ More button  -->
+
+                                <!--	Less button for reduce rows -->
+                                <aura:set attribute="else">
+                                    <div class="more-button" onclick="{!c.onclickless}">
+                                        <img src="{!$Resource.ADB_OpportunityCardImages + '/ADB_OpportunityCardImages/LessButton.png'}" height="100" width="100" align="right" class="less-button" />
+                                    </div>
+                                </aura:set>
+                            </aura:if>
+                        </aura:if>
+                    </aura:if>
+                    <!-- End: Termed Fix - Hide more button if member's policy is terminated -->
+                    <!-- /Less button  -->
+                    
+                </lightning:layoutItem>
+            </lightning:layout>  
+        </lightning:layoutItem>
+        
+        <lightning:layoutItem size="2" class="oppButton slds-p-right_medium slds-p-top_small slds-p-left_small">
+                    <aura:if isTrue="{!v.showUpDate == true}">
+                        <aura:if isTrue="{!v.isTerminated == false}">              
+                            <div class="allprogram-button slds-p-left_large" align="left">
+                                <!-- AllProgram Button-->
+                                <lightning:button variant="brand" 
+                                                  label="All Programs"
+                                                  title="All Programs"
+                                                  onclick="{!c.handleAllPrograms}"/>
+                                <!-- /AllProgram Button--> 
+                            </div> 
+                        </aura:if> 
+                    </aura:if>
+            <!--	AllProgram SubCard Popup	-->
+            <aura:if isTrue="{!v.allProgramSubCardVisible}">
+                <section role="dialog" class="slds-modal slds-fade-in-open slds-modal_large" >
+                    <div class="slds-modal__container">
+                        <header class="slds-modal__header">
+                            <lightning:layout  horizontalAlign="space">
+                                
+                                <lightning:layoutItem size="9" padding="around-small" >
+                                    <div class="sub-headline" align="left">All Programs</div>
+                                </lightning:layoutItem>
+                                <lightning:layoutItem size="3" padding="around-small">
+                                    
+                                    <!-- Close Button-->
+                                    <div class="close-button" align="right">
+                                        <!-- updated ICon with Image - Sunil : US2574137 - -->
+                                        <img src="{!$Resource.ADBAllProgramsCardImages + '/closebutton.png'}" style="height: 30px; width: 30px;"
+                                             onclick="{! c.closeAllProgramButton}"/>
+                                    </div>
+                                    <!-- / Close Button-->
+                                    
+                                </lightning:layoutItem>
+                            </lightning:layout>
+                            
+                            <!-- All Program Component-->
+                            <!-- Added attributes - Sunil : US2574137 -->
+                            <c:ADB_AllProgramComponent  
+			    				decodedMemberId="{!v.decodedMemberId}"
+                                                       memFirstName ="{!v.memFirstName}"
+                                                       memLastName = "{!v.memLastName}"
+                                                       memberDOB = "{!v.memberDOB}"
+                                                       policy="{!v.policy}"
+			    			                           memberXrefId="{!v.memberXrefId}"
+                                                       xrefPartitionID="{!v.xrefPartitionID}"
+                                                       userId="{!v.agentUserId}" /> 
+                            <!-- /All Program Component-->
+                            
+                        </header>
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open"></div>
+            </aura:if>
+            <!--/ AllProgram SubCard Popup-->
+        </lightning:layoutItem>
+        
+        <lightning:layoutItem class="slds-p-right_medium oppButton" size="10">
+                    <!--	Save button for save comments -->
+                    <!-- Launch Consumer --> <!--Added by Metallica US2430899-->
+                    <aura:if isTrue="{!v.showLaunchBtn}">
+                        <div class="slds-align_absolute-center slds-card slds-m-top_x-small">
+                            <lightning:button variant="brand" label="Dashboard" title="" onclick="{!c.clickDashboard}" class="slds-m-right--small top_buttons"/>
+                        </div> 
+                    </aura:if>
+                    <aura:if isTrue="{!v.showUpDate == true}">
+                        <div class="save-button" align="right">
+                            <aura:if isTrue="{!v.isError == false}">
+                                <lightning:button variant="brand" 
+                                                  label="Submit"
+                                                  title="Submit"
+                                                  disabled="{!v.isSaveButtonDisabled}" 
+                                                  onclick="{!c.saveOpps}"/>
+                                <!--   disabled="{!v.isSaveButtonDisabled}" -->
+                            </aura:if>
+                        </div>
+                    </aura:if>
+                    <!--	/ Save button  -->
+                </lightning:layoutItem>
+        
+    </lightning:layout>
+</aura:component>

@@ -1,0 +1,139 @@
+<apex:component controller="ACETViewDocumentsController">
+    <!-- <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" /> 
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+          <apex:includeScript value="{!$Resource.JqueryTableSorter}"></apex:includeScript>
+  <apex:stylesheet value="{!URLFOR($Resource.ACETResources, '/css/m/memberdetail.css')}" /> 
+   <apex:includeScript value="{!URLFOR($Resource.ACETUIResources, '/JS/bootstrap.min.js')}"/>-->
+    <apex:attribute type="ACETHighlightsPanelAdditionalInfo"
+                    name="AdditionalInfoAtt"
+                    description="Additional Info Fields"
+                    assignTo="{!AdditionalInfo}" required="false" />
+    <apex:attribute type="string"
+                    name="DocumentTypeWSNameAtt"
+                    description="Document Type WSName"
+                    assignTo="{!DocumentTypeWSName}" required="true" />
+    <apex:attribute type="boolean"
+                    name="DisplayButton"
+                    description="whether or not to display button"
+                    assignTo="{!DisplayBtn}" required="false" default="true"/>     
+                     <style>
+    .ui-button{
+    font-size: 1em;
+    border: 1px solid #b5b5b5;
+    border-bottom-color: #7f7f7f;
+    background: #e8e8e9 url(/img/alohaSkin/btn_sprite.png) repeat-x right top;
+    font-weight: bold;
+    height: 27px;
+    width: 65px;
+    }
+    
+
+    </style>   
+ 
+    <apex:commandButton id="OpenPopup" value=" SBC  " rendered="{!DisplayBtn}" onclick="OpenalertModalWindow();"  reRender="alertModalWindow,casedetailpopupPanel" status="loadpanelViewDocuments"> 
+    </apex:commandButton>           
+       <div id="DocDatatableblock" style="display:none;max-height: 500px !important;overflow-y: scroll !important;background-color: #f8f8f8;">
+                             <apex:pageBlock id="DocDatatableblock1" > 
+                                    <c:ACETDataTable id="DocDatatable"
+                                        attrDataTableName="OxfordSbc"
+                                        attrDatatableWrapper="{!DocsDataWrapper}" />                                 
+                                </apex:pageBlock>   
+                                <apex:actionStatus id="loadpanelViewDocuments">
+        <apex:facet name="start">
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                &nbsp;
+            </div>
+            <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 9999; margin: 15% 50%">
+                <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                    <img src="/img/loading.gif" style="float: left; margin: 8px;" />
+                    <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                </div>
+            </div>
+        </apex:facet>
+    </apex:actionStatus>
+    
+
+                                </div>                   
+       <apex:actionFunction name="CallDocuments"  reRender="DocDatatable,DocDatatableblock" action="{!initDocuments}"
+         status="loadpanelViewDocuments" oncomplete="initDataTables('datatableOxfordSbc', 'Oxford SBC', 'pbsOxfordSbcSection');"/>
+                                        
+             <script>
+    $(document).ready(function() {
+   if (!acet.autodoc.saveDialog) {
+    acet.autodoc.saveDialog = $("[id$='DocDatatableblock']").dialog({
+     autoOpen: false,
+     height: 500,
+     width: 1200,
+     modal: true,
+     closeOnEscape: true,
+     title: "Document Search Results",
+     buttons: {
+      "Refresh": function() {
+         
+//$(".ui-button").removeAttr("title");
+//$(".ui-button").css("color","red");
+  
+       CallDocuments();
+      }
+     },
+     dialogClass: 'case-save-modal'
+    });
+
+   }
+  });
+
+  function OpenalertModalWindow() {
+  CallDocuments();
+   acet.autodoc.saveDialog.dialog("open");
+     $('button[title=Close]').removeAttr("title");
+
+   
+  }
+
+  function closealertModalWindow() {
+   // $("[id$='alertModalWindow']").css("display","none");
+   // $("[id$='casedetailpopupPanel']").css("display","none");
+
+  }
+
+  
+
+  function initDataTables(dataTableName, docType, SectionId) {
+   if (!acet.datatables[dataTableName].dataTableInited) {
+    acet.datatables[dataTableName].initDatatable();
+    acet.datatables[dataTableName].processDatatable = function(row, data, dataIndex) {
+     var docContentType = data["cmis:contentStreamMimeType"];
+     var docName = data["cmis:contentStreamFileName"];    
+      $(row).find(":nth-child(1)").html('<a style="text-decoration: underline;cursor:pointer;">' + data.DocumentId + '</a>');
+      $(row).find(":nth-child(1)").find("a").click(function() {
+       
+        openEDMSDoc(data.DocumentId);
+       
+      });
+     
+    };
+
+
+   }
+  }
+
+  function openEDMSDoc(docId) {
+  var doctypeWSName = '{!DocumentTypeWSName}';
+      //Modified by Raviteja - Team Styx - US3543138
+   Visualforce.remoting.Manager.invokeAction(
+    '{!$RemoteAction.ACETViewDocumentsController.getDoc360URL}',
+    docId,doctypeWSName,
+    function(result, event) {
+     var EDMSURL = result;
+     if (event.status) {
+      var windObj = window.open(EDMSURL, "", 'toolbars=0, width=1333, height=706 ,left=0 ,top=0 ,scrollbars=1 ,resizable=1');
+     }
+    }, {
+     escape: true
+    }
+   );
+  }
+ </script>
+  
+    
+</apex:component>

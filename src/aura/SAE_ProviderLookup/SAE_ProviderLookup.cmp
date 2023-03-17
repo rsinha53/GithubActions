@@ -1,0 +1,724 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,lightning:isUrlAddressable" access="global" controller="SAEProviderSearchResultsWrapper">
+    
+    <aura:handler name="init" value="{!this}" action="{!c.onLoad}" />
+    <ltng:require styles="{!$Resource.ACETLink_MasterStyle}" />
+    <aura:attribute name="providerTypeOptions" type="List" />
+    <aura:attribute name="genderOptions" type="List" />
+    <aura:attribute name="ratingOptions" type="List" />
+    <aura:attribute name="radiusOptions" type="List" />
+    <aura:attribute name="benefitLevelValues" type="List" />
+    <aura:attribute name="showAndHideBenefitLevelSec" type="Boolean" default="false"/>
+    <aura:attribute name="providerNotFound" type="Boolean" default="false" />
+    <aura:attribute name="noMemberToSearch" type="Boolean" default="false" /> 
+    <aura:attribute name="mnf" type="Boolean" default="" />
+    <aura:attribute name="basicAndAdvanceRadio" type="List" default="[
+                                                                     {'label': 'Basic', 'value': 'Basic'},
+                                                                     {'label': 'Advanced', 'value': 'Advanced'}
+                                                                     ]"/>
+    <aura:registerEvent name="ACETLink_ProviderSearchResultsEvent" type="c:SAE_ProviderSearchResultsEvent" />
+    
+    <aura:attribute name="prvLookupInputs" type="Object"/>
+    <aura:attribute name="isProviderSearchDisabled" type="Boolean" default="false" /> 
+    <aura:attribute name="alertTaxId" type="string" />
+    <aura:attribute name="alertProviderId" type="string" />
+    <aura:attribute name="alertMemberId" type="String" />
+    <aura:attribute name="alertGroupId" type="String" />
+    <aura:attribute name="disableFields" type="Boolean" default="true"/>
+    <aura:attribute name="disableRadius" type="Boolean" default="true"/>
+    <aura:attribute name="disablePlanType" type="Boolean" default="false"/>
+    <aura:attribute name="disableAdvancedFields" type="Boolean" default="true"/>
+    <aura:attribute name="languageDisable" type="Boolean" default="false"/>
+  
+    <aura:attribute name="isProviderSnapshot" type="boolean" default="false"/>
+    
+    <aura:attribute name="interactionRec" type="Interaction__c"/>
+
+    <!-- US1965220 - Thanish - 17th Jan 2020 -->
+    <aura:attribute name="showErrorMessage" type="boolean" default="false"/>
+    <aura:attribute name="error" type="object"/>
+    <aura:attribute name="caseWrapper" type="Object"/>
+    <!-- US2543703 - Venkatesh - 28th April 2020 -->
+    <aura:attribute name="caseWrapperMNF" type="Object"/>
+
+    <aura:attribute name="autodocPageFeature" type="String" default="feature"/>
+    <aura:attribute name="pageNumber" type="Integer" access="public" />
+	<aura:attribute name="policyDetails" type="SAEPolicyDetailsResult"/>
+    <aura:attribute name="policyList" type="list" access="public" />
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0"/>
+    <aura:attribute name="selectedRadioValue" type="String" default="Basic"/>
+
+    <!-- US2696849 - Thanish - 21st Jul 2020 -->
+    <aura:handler name="change" value="{!v.policyDetails}" action="{!c.refreshProviderLookupDetails}"/>
+    <!-- <aura:handler name="change" value="{!v.policySelectedIndex}" action="{!c.refreshProviderLookupDetails}"/> -->
+
+    <aura:attribute name="zipValue" type="String"/>
+     <aura:attribute name="sourceCode" type="String"/>
+    <aura:attribute name="isSearchEnabled" type="boolean" default="false" />
+    <!-- US1958736 - Thanish - 6th Feb 2020 -->
+    <aura:attribute name="memberDetails" type="Object"/>
+    <aura:registerEvent name="ACET_SendPolicyDetailsToCS" type="c:ACET_SendPolicyDetailsToCS"/>
+
+    <!-- Autodoc Metallica Code Merge - Thanish - 19th Feb 2020 -->
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+    <aura:attribute name="uhcProduct" type="string" access="public" />
+
+    <!-- US2320729 - Thanish - 2nd Mar 2020 - to toggle auto doc multiple pages attribute in provider search results programatically -->
+    <aura:attribute name="providerSearchResultsADMultiplePages" type="boolean" default="true"/>
+
+    <!-- US2543737 - Thanish - 22nd Apr 2020 -->
+    <aura:attribute name="AutodocPageFeatureMemberDtl" type="String" />
+    <aura:attribute name="AutodocKeyMemberDtl" type="String"/>
+	<aura:attribute name="contactUniqueId" type="string" access="public" />
+
+    <!--US2076634 - HIPAA Guidelines Button - Sravan-->
+    <aura:attribute name="hipaaEndpointUrl" type="String" default=""/>
+    <aura:attribute name="isHippaInvokedInProviderSnapShot" type="Boolean" default="false"/>
+	
+	<!-- Added by Vinay for Product Codes -->
+    <aura:attribute name="productCodesMap" type="Map"/>
+    <aura:attribute name="productCodesList" type="Object"/>
+    <aura:attribute name="convertedProductCodes" type="String"/>
+    <aura:attribute name="autodocUniqueId" type="String" default="providerLookupResults"/>
+    
+    <!--US2670819 - ProviderLookup Fixes - Sravan-->
+    <aura:attribute name="stateValue" type="String" default=""/>
+
+    <aura:attribute name="componentId" type="String"/>
+
+    <!-- US2718112 - Thanish - 2nd Jul 2020 -->
+    <aura:attribute name="caseNotSavedTopics" type="String[]"/>
+    <aura:handler name="ACETCaseCreated" event="c:ACET_ACETCaseCreated" action="{!c.handleACETCaseCreated}"/>
+    <aura:attribute name="openedLookupDetails" type="String[]"/>
+    <lightning:workspaceAPI aura:id="workspace"/>
+
+    <!-- US2712146 -->
+    <aura:attribute name="memberTabId" type="string" access="public" />
+
+    <!--DE347387: ORS Issue - Provider information is missing in ORS routing Screen - Praveen  -->
+    <aura:attribute name="providerDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+
+    <!-- US2696849 - Thanish - 22nd Jul 2020 -->
+    <aura:attribute name="memberCardData" type="Object"/>
+    <!--US2573718 - Auto Doc When No Results Are Displayed - Sravan -->
+    <aura:attribute name="policyChange" type="Boolean" default="false"/>
+    <aura:attribute name="isTierOne" type="boolean" access="public" default="false"/><!--US2973232-->
+    <aura:handler name="change" value="{!v.isTierOne}" action="{!c.setBenefitLevel}" />
+     <aura:attribute name="selectedIPAValue" type="String" default=""/>
+
+    <aura:handler name="change" value="{!v.prvLookupInputs.state}" action="{!c.handleSelectedDropdownVal}"/>
+    <aura:handler name="change" value="{!v.prvLookupInputs.language}" action="{!c.handleSelectedDropdownVal}"/>
+    <aura:handler name="change" value="{!v.prvLookupInputs.planType}" action="{!c.handleSelectedDropdownVal}"/>
+    <aura:handler name="change" value="{!v.prvLookupInputs.speciality}" action="{!c.handleSelectedDropdownVal}"/>
+    <!-- US2816912	Build UI for Create SRN for Add New Provider with Provider Look-up - 2/9/2020 - Sarma -->
+    <aura:attribute name="isCreateSrnComponent" type="Boolean" default="false" />
+
+    <!-- US2491365 - Avish -->
+    <aura:attribute name="interactionOverviewTabId" type="String" />
+    <aura:attribute name="memberId" type="String" />
+    <!-- US2491365 - Ends -->
+
+    <!-- US2808569 - Thanish - 27th Oct 2020 -->
+    <aura:attribute name="memberautodocUniqueId" type="String"/>
+
+    <!-- US2931847 - Sanka -->
+    <aura:attribute name="searchObject" type="Object" />
+    <aura:attribute name="populatedFromHeader" type="boolean" default="false"/>
+    <!-- <aura:method name="refreshDefaultValues" action="{!c.refreshDefaultValues}"/> -->
+    <aura:handler event="c:ACET_RefreshDataFromHeaderEvt" action="{!c.refreshDefaultValues}"/>
+    <!-- US2931847 - End -->
+    
+    <aura:attribute name="isRoutingAllowed" type="boolean" default="true"/>
+    <!--US3068299 - Sravan-->
+        <aura:attribute name="autoDocToBeDeleted" type="Object"/>
+    <!--DE393490 - Sravan-->
+    <aura:attribute name="memberMap" type="Map" access="public"/>
+
+    <!--US3117073 - Multiple Policies -  Creating Multiple Unique ORS Records Check In ISET - Sravan-->
+    <aura:attribute name="memberPolicyNumberMap" type="Map" default=""/>
+
+
+    <aura:attribute name="callTopicLstSelected" type="sObject[]"/>
+    <aura:attribute name="callTopicTabId" type="String" />
+
+    <!--Jitendra-->
+    <aura:attribute name="benefitPlanId" type="String" default=""/>
+
+    <aura:attribute name="boolIsProviderLookupFromReferral" type="Boolean" default="false"/>
+    <aura:attribute name="objPcpBodyData" type="object"/>
+    <aura:attribute name="boolShowProviderLookup" type="Boolean" default="false"/>
+    <aura:attribute name="objPcpHeaderData" type="object"/>
+
+    <!--Rajesh US2006160 Changes Start 01/14/2021 -->
+    <aura:attribute name="width" type="string" default="60"/>
+    <aura:attribute name="checked" type="boolean" default="false"/>
+    <aura:attribute name="checkedText" type="string" default="On"/>
+    <aura:attribute name="uncheckedText" type="string" default="Off"/>
+    <!--Rajesh US2006160 Changes Ended 01/14/2021 -->
+
+    <!-- US3446590 - Thanish - 21st Apr 2021 -->
+    <aura:attribute name="transactionId" type="String" default=""/>
+
+    <!-- US2728364: Auto Doc: Member Snapshot - Have Provider Card Included in Eligibility Auto Doc Automatically - Krish - 06th July 2021 -->
+    <aura:attribute name="interactionCard" type="Object" access="public"/>
+    <!--US3259671 - Sravan-->
+    <aura:attribute name="flowDetails" type="Object" access="public" />
+    <div class="slds-card paddingTopDiv slds-p-left_medium">
+        <div class="slds-p-left_small slds-p-top_small">
+            <h3 class="component_title">Provider Lookup</h3>
+        </div>
+        
+        
+        <div class="slds-p-bottom_large" onkeyup="{!c.onClickOfEnter}">
+            <aura:If isTrue="{!!v.providerNotFound &amp;&amp; !v.noMemberToSearch}">
+                <lightning:layout multipleRows="true" class="">
+                    <aura:if isTrue="{! !v.isProviderSnapshot}">
+                    <lightning:layoutItem padding="around-small" size="2">
+			 <label class="slds-form-element__label slds-no-flex">Benefit Level
+                            <lightning:helptext iconName="utility:info"
+                                                content="Results display based on the Benefit Level selected. If no results for Tier 1/INN, select All. This will return all provider results, including OON."
+                                                class="iconColor" />
+                        
+                        </label>
+                        <lightning:combobox label="Benefit Level" 
+			                    variant="label-hidden"
+                                            options="{!v.benefitLevelValues}"
+                                            value="{!v.prvLookupInputs.benefitLevel}"
+                                            aura:id="benefitLevelId"
+                                            class="dropDownAlignment"
+                                            name="benefitLevelName"
+                                            disabled="{!or(v.disableFields,v.boolIsProviderLookupFromReferral)}"
+                                            onchange="{!c.setFocusToSearchBtn}"/>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="1" padding="around-small">
+                    </lightning:layoutItem>
+                     <!--Rajesh US2006160 Changes Start 01/14/2021 -->
+                    <lightning:layoutItem padding="around-small" size="2" class="alignment">
+                        <!--<lightning:radioGroup options="{!v.basicAndAdvanceRadio}"
+                                              class="basicAdvaceCls slds-p-top_large"
+                                              name="basicAdvancedRadioName"
+                                              type="radio"
+                                              value="{!v.selectedRadioValue}"
+                                              onchange="{!c.changeBasicAndAdvanced}"/>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem padding="around-small" size="2" class="alignment">-->
+                        <div class="toogleClass">
+                            <div class="headerClass">Advanced&nbsp;
+                            </div>
+                            <div class="slds-form-element" style="{! 'width: ' + v.width + 'px;'}">
+                                <label class="slds-checkbox_toggle slds-grid">
+                                    <input type="checkbox" name="checkbox-toggle" value="checkbox-toggle" aria-describedby="checkbox-toggle" onclick="{!c.changeBasicAndAdvanced}"/>
+                                    <span id="checkbox-toggle" class="slds-checkbox_faux_container" aria-live="assertive" style="{! 'width: ' + v.width + 'px;'}">
+                                        <span class="{!'slds-checkbox_faux toggle-faux_faux '+(v.checked ? ' active-blue tgl-text-right ' : ' active-grey tgl-text-left ')}"
+                                              style="{! 'width: ' + v.width + 'px;' + (v.checked ? 'padding-right: 30px;' : 'padding-left: 26px;')}">
+                                            {! if(v.checked, v.checkedText, v.uncheckedText) }
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                    </lightning:layoutItem>
+                     <!--Rajesh US2006160 Changes Ended 01/14/2021 -->
+                </aura:if>
+
+                    <lightning:layoutItem padding="around-small" size="7">
+                            <div class="slds-grid checkBoxPadding slds-p-top_large">
+                                <div class="slds-col slds-size_3-of-15">
+                                    <lightning:input type="checkbox" 
+                                                     label="Accepting New Patients" 
+                                                     class="checkAlign "
+                                                     aura:id="acceptNewPatentId"
+                                                     name="acceptNewpatientName"
+                                                     disabled="{!v.disableFields}"/>
+                                </div>
+                                <div class="slds-col slds-size_3-of-15 slds-p-left--x-small">
+                                    <lightning:input type="checkbox" 
+                                                     label="Accepting Existing Patients" 
+                                                     class="checkAlign "
+                                                     aura:id="AcceptExistPatientId"
+                                                     name="acceptExistpatientName"
+                                                     disabled="{!v.disableFields}"/>
+                                </div>
+                                <div class="slds-col slds-size_3-of-15 slds-p-left--x-small">
+                                    <lightning:input type="checkbox"
+                                                     class="checkAlign " 
+                                                     label="Freestanding Facility"
+                                                     aura:id="FreeStandFacilityId"
+                                                     name="freestandFacilityName"
+                                                     disabled="{!v.disableFields}"/>
+                                </div>
+                                <div class="slds-col slds-size_3-of-15 slds-p-left--x-small">
+                                    <lightning:input type="checkbox"
+                                                     label="Preferred Lab" 
+                                                     class="checkAlign"
+                                                     aura:id="preferredLabId"
+                                                     name="prefferdLabName"
+                                                     disabled="{!v.disableFields}"/>
+                                </div>
+                                <div class="slds-col slds-size_3-of-15 slds-p-left--x-small">
+                                    <lightning:input type="checkbox"
+                                                     label="Include Inactive Providers" 
+                                                     class="checkAlign "
+                                                     aura:id="includeInacProvId"
+                                                     name="includeInacProvName"
+                                                     disabled="{!v.disableFields}"/>
+                                </div>
+                            </div>
+                    </lightning:layoutItem>
+                </lightning:layout>
+            
+        </aura:If>
+             <aura:if isTrue="{!v.noMemberToSearch}">
+            <lightning:layout multipleRows="true"  horizontalAlign="spread">
+                <lightning:layoutItem padding="around-small" size="7">
+                        <div class="slds-grid checkBoxPadding slds-p-top_large">
+                            <div class="slds-col slds-size_3-of-15">
+                                <lightning:input type="checkbox" 
+                                                 label="Accepting New Patients" 
+                                                 class="checkAlign "
+                                                 aura:id="acceptNewPatentId"
+                                                 name="acceptNewpatientName"
+                                                 checked="{!v.prvLookupInputs.acceptingNewPatients}"/>
+                            </div>
+                            <div class="slds-col slds-size_3-of-15 slds-p-left_large">
+                                <lightning:input type="checkbox" 
+                                                 label="Accepting Existing Patients" 
+                                                 class="checkAlign "
+                                                 aura:id="AcceptExistPatientId"
+                                                 name="acceptExistpatientName"
+                                                 checked="{!v.prvLookupInputs.acceptingExistingPatients}"/>
+                            </div>
+                            <div class="slds-col slds-size_3-of-15 slds-p-left_large">
+                                <lightning:input type="checkbox"
+                                                 class="checkAlign " 
+                                                 label="Freestanding Facility"
+                                                 aura:id="FreeStandFacilityId"
+                                                 name="freestandFacilityName"
+                                                 checked="{!v.prvLookupInputs.freeStandingFacility}"/>
+                            </div>
+                            <div class="slds-col slds-size_3-of-15 slds-p-left_large">
+                                <lightning:input type="checkbox"
+                                                 label="Preferred Lab" 
+                                                 class="checkAlign"
+                                                 aura:id="preferredLabId"
+                                                 name="prefferdLabName"
+                                                 checked="{!v.prvLookupInputs.preferredLab}"/>
+                            </div>
+                            <div class="slds-col slds-size_3-of-15 slds-p-left_large">
+                                <lightning:input type="checkbox"
+                                                 label="Include Inactive Providers" 
+                                                 class="checkAlign "
+                                                 aura:id="includeInacProvId"
+                                                 name="includeInacProvName"
+                                                 checked="{!v.prvLookupInputs.includeInactiveProviders}"/>
+                            </div>
+                        </div>
+                </lightning:layoutItem>
+            </lightning:layout>
+                  </aura:if>
+            <lightning:layout multipleRows="true"  horizontalAlign="spread">
+                <aura:if isTrue="{!v.providerNotFound &amp;&amp; v.noMemberToSearch}">
+                    <lightning:layoutItem padding="around-small" size="2">
+                        <lightning:input type="checkbox" 
+                                         label="Accepting New Patients" 
+                                         class="checkAlign slds-p-top_x-large"
+                                         aura:id="acceptNewPatentId"
+                                         name="acceptNewpatientName"/>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem padding="around-small" size="2">
+                        <lightning:input type="checkbox" 
+                                         label="Accepting Existing Patients" 
+                                         class="checkAlign slds-p-top_x-large"
+                                         aura:id="AcceptExistPatientId"
+                                         name="acceptExistpatientName"/>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem padding="around-small" size="2">
+                        <lightning:input type="checkbox"
+                                         class="checkAlign slds-p-top_x-large" 
+                                         label="Freestanding Facility"
+                                         aura:id="FreeStandFacilityId"
+                                         name="freestandFacilityName"/>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem padding="around-small" size="2">
+                        <lightning:input type="checkbox"
+                                         label="Preferred Lab" 
+                                         class="checkAlign slds-p-top_x-large"
+                                         aura:id="preferredLabId"
+                                         name="prefferdLabName"/>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem padding="around-small" size="2">
+                        <lightning:input type="checkbox"
+                                         label="Include Inactive Providers" 
+                                         class="checkAlign slds-p-top_x-large"
+                                         aura:id="includeInacProvId"
+                                         name="includeInacProvName"/>
+                    </lightning:layoutItem>
+                </aura:if>
+            </lightning:layout>
+            <lightning:layout multipleRows="true"  horizontalAlign="spread">
+                <lightning:layoutItem padding="around-small" size="2">
+                    <!-- US1965220 - Thanish - 17th Jan 2020 -->
+                    <lightning:input label="Tax ID"
+                                     aura:id="taxId"
+                                     value="{!v.prvLookupInputs.taxId}"
+                                     name="taxIdName"
+                                     minlength="9" maxlength="9"
+                                     pattern="[0-9]*"
+                                     messageWhenTooShort="Enter 9 digits"
+                                     messageWhenPatternMismatch="Enter 9 digits"
+                                     onblur="{!c.validateInputOnChange}"/>
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="2">
+                    <lightning:input label="Last Name or Facility/Group"
+                                     aura:id="lastNameId"
+                                     value="{!v.prvLookupInputs.lastName}"
+                                     name="lastNameIdetifier"/>
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="2">
+                    <aura:if isTrue="true">
+                        <lightning:input label="Hospital Affiliation"
+                                         aura:id="hospAffilId"
+                                         value="{!v.prvLookupInputs.hospAffil}"
+                                         name="hospAffilName"
+                                         disabled="{!or(v.disableFields,v.disableAdvancedFields)}"/>
+                    </aura:if>
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="2">
+                    <aura:If isTrue="{!!v.providerNotFound &amp;&amp; !!v.noMemberToSearch}">
+                        <lightning:combobox label="Gender" 
+                                            options="{!v.genderOptions}"
+                                            class="dropDownAlignment"
+                                            aura:id="genderId"
+                                            value="{!v.prvLookupInputs.gender}"
+                                            name="genderName"
+                                            onchange="{!c.setFocusToSearchBtn}"/>
+                    </aura:If>
+                    <aura:If isTrue="{!!v.providerNotFound &amp;&amp; !v.noMemberToSearch}">
+                         <lightning:combobox label="Gender" 
+                                            options="{!v.genderOptions}"
+                                            class="dropDownAlignment"
+                                            aura:id="genderId"
+                                            value="{!v.prvLookupInputs.gender}"
+                                            name="genderName"
+                                            disabled="{!v.disableFields}"
+                                            onchange="{!c.setFocusToSearchBtn}"/>
+                    </aura:If>
+                </lightning:layoutItem>
+                
+                <lightning:layoutItem padding="around-small" size="2">
+                </lightning:layoutItem>
+            </lightning:layout>
+            <lightning:layout multipleRows="true" horizontalAlign="spread">
+                <lightning:layoutItem padding="around-small" size="2">
+                    <!-- US1965220 - Thanish - 17th Jan 2020 -->
+                    <lightning:input label="NPI"
+                                     aura:id="npiId"
+                                     value="{!v.prvLookupInputs.npi}"
+                                     name="npiName"
+                                     minlength="10" maxlength="10"
+                                     pattern="[0-9]*"
+                                     messageWhenTooShort="Enter 10 digits only"
+                                     messageWhenPatternMismatch="Enter 10 digits only"
+                                     onblur="{!c.validateInputOnChange}"/>
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="2">
+                    <lightning:input label="First Name"
+                                     aura:id="firstNameId"
+                                     value="{!v.prvLookupInputs.firstName}"
+                                     name="fistNameIdentifier"/>
+                </lightning:layoutItem>
+                
+                <lightning:layoutItem padding="around-small" size="2">
+                    <aura:if isTrue="true">
+                        <lightning:input label="DEA" 
+                                         aura:id="deaId"
+                                         value="{!v.prvLookupInputs.dea}"
+                                         name="deaName"
+                                         disabled="{!or(v.disableFields,v.disableAdvancedFields)}"/>
+                    </aura:if>
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="2" >
+                    <aura:If isTrue="{!or(v.languageDisable,(!v.providerNotFound &amp;&amp; v.noMemberToSearch &amp;&amp; v.isProviderSnapshot))}">
+                        <c:ComboboxField aura:id="languageId"
+                                         fieldName="Language" 
+                                         objectName="Language_Codes__mdt"
+                                         searchFieldName="Label"
+                                         whereCondition="" 
+                                         orderBy="Label"
+                                         searchKeyword="{!v.prvLookupInputs.language}"
+                                         implementScrollFunc="true"
+
+                                         /><!--US2670819 - Provider Lookup - Fixes - Sravan-->
+                    </aura:If>
+                    <aura:If isTrue="{!and(and(!v.providerNotFound, !v.noMemberToSearch), and(!v.isProviderSnapshot, !v.languageDisable))}">
+                        <lightning:combobox label="Language" 
+                                            class="dropDownAlignment"
+                                            aura:id="languageDisableId"
+                                            name="langauge"
+                                            disabled="{!v.disableFields}"
+                                            onchange="{!c.setFocusToSearchBtn}"/>
+                    </aura:If>
+                </lightning:layoutItem>
+                
+                <lightning:layoutItem padding="around-small" size="2">
+                </lightning:layoutItem>
+            </lightning:layout>
+            <lightning:layout multipleRows="true" horizontalAlign="spread">
+                <lightning:layoutItem padding="around-small" size="2">
+                    <!-- US1965220 - Thanish - 17th Jan 2020 -->
+                    <!--US2990280 - Sravan-->
+                    <lightning:input label="Provider ID/MPIN"
+                                     aura:id="providerId"
+                                     value="{!v.prvLookupInputs.providerId}"
+                                     name="providerIdName"
+                                     minlength="9" maxlength="12"
+                                     pattern="[0-9]*"
+                                     messageWhenTooShort="Enter at least 9 but not more than 12 digits"
+                                     messageWhenPatternMismatch="Enter at least 9 but not more than 12 digits"
+                                     onblur="{!c.validateInputOnChange}"/>
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="2">
+                    <!-- US1965220 - Thanish - 17th Jan 2020 -->
+                    <lightning:input label="Phone"
+                                     aura:id="phoneId"
+                                     value="{!v.prvLookupInputs.phone}"
+                                     name="phoneName"
+                                     minlength="10" maxlength="10"
+                                     pattern="[0-9]*"
+                                     messageWhenTooShort="Enter 10 digits only"
+                                     messageWhenPatternMismatch="Enter 10 digits only"
+                                     onblur="{!c.validateInputOnChange}"/>
+                </lightning:layoutItem>
+                <!--lightning:layoutItem padding="around-small" size="2">
+                    <aura:if isTrue="{!v.showAndHideBenefitLevelSec || (v.providerNotFound &amp;&amp; v.noMemberToSearch)}">
+                        <lightning:input label="SSN"
+                                         aura:id="ssnId"
+                                         value="{!v.prvLookupInputs.ssn}"
+                                         name="ssnName"/>
+                    </aura:if>
+                </lightning:layoutItem-->
+                <lightning:layoutItem padding="around-small" size="2">
+                    <aura:if isTrue="true">
+                        <lightning:input label="Care Group Name"
+                                         aura:id="careGroupId"
+                                         value="{!v.prvLookupInputs.careGroupName}"
+                                         name="careGroupName"
+                                         disabled="{!or(v.disableFields,v.disableAdvancedFields)}"/>
+                    </aura:if>
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="2">
+                    <aura:if isTrue="true">
+                        <lightning:combobox label="Patient Review"
+                                            options="{!v.ratingOptions}" 
+                                            class="dropDownAlignment"
+                                            aura:id="patientReviewId"
+                                            value="{!v.prvLookupInputs.patientReview}"
+                                            name="patientReviewName"
+                                            disabled="{!or(v.disableFields,v.disableAdvancedFields)}"
+                                            onchange="{!c.setFocusToSearchBtn}"/>
+                    </aura:if>
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="2">
+                </lightning:layoutItem>
+            </lightning:layout>
+            <lightning:layout multipleRows="true" horizontalAlign="spread">
+                <lightning:layoutItem padding="around-small" size="2">
+                    <lightning:combobox label="Provider Type"
+                                        options="{!v.providerTypeOptions}" 
+                                        class="dropDownAlignment"
+                                        aura:id="providerTypeId"
+                                        value="{!v.prvLookupInputs.providerType}"
+                                        name="providerTypeName"
+                                        onchange="{!c.setFocusToSearchBtn}"
+                                        disabled="{!v.boolIsProviderLookupFromReferral}"/>
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="2">
+                 <div class="slds-grid">
+                    <div class="slds-size_12-of-12">
+                        <c:ACET_CustomStateComboboxField strSelectedCode ="{!v.prvLookupInputs.state}" aura:id="idStateId"
+                           makeRequired="false"/>
+                    </div>
+                    <!--US2670819 - Provider Lookup - Fixes - Sravan-->
+                    <div class="slds-size_1-of-12 slds-p-top--x-large slds-p-left--xx-small">
+                    <a href="javascript:void(0);" onclick="{!c.changeStateValue}"
+                       style="color: black;text-decoration: underline;">
+                        {!v.stateValue}
+                    </a>
+                </div>
+            </div>
+
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="2">
+                    <aura:if isTrue="true">
+                        <lightning:input label="Group Practice Number"
+                                         aura:id="grpPacticeId"
+                                         value="{!v.prvLookupInputs.grpPracticeNum}"
+                                         name="groupPracticeName"
+                                         disabled="{!or(v.disableFields,v.disableAdvancedFields)}"/>
+                    </aura:if>
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="2">
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="2">
+                </lightning:layoutItem>
+            </lightning:layout>
+            <lightning:layout multipleRows="true" horizontalAlign="spread">
+                <lightning:layoutItem padding="around-small" size="2">
+                    <!-- <c:ComboboxField aura:id="specialityId"
+                                     fieldName="Specialty" 
+                                     objectName="SAE_Speciality__mdt"
+                                     searchFieldName="Specialty_Values__c"
+                                     whereCondition="" 
+                                     orderBy="Specialty_Values__c"
+                                     selectedRecord="{!v.prvLookupInputs.speciality}"
+                                     /> -->
+                <c:ACET_SpecialityDropDown aura:id="specialityId"
+                                    fieldName="Specialty"
+                                    selectedRecord="{!v.prvLookupInputs.speciality}"
+                                     implementScrollFunc="true"
+                                     /><!--US2670819 - Provider Lookup - Fixes - Sravan-->
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="2">
+                    <!-- US1965220 - Thanish - 17th Jan 2020 -->
+                    <div class="slds-grid">
+                        <div class="slds-size_12-of-12">
+                            <lightning:input label="Zip Code"
+                                             aura:id="zipCodeId"
+                                             value="{!v.prvLookupInputs.zipCode}"
+                                             name="zipCodeName"
+                                             minlength="5" maxlength="5"
+                                             pattern="[0-9]*"
+                                             messageWhenTooShort="To search by Zip Code, enter 5 digits"
+                                             messageWhenPatternMismatch="To search by Zip Code, enter 5 digits"
+                                             onblur="{!c.validateInputOnChange}"
+                                             onchange="{!c.changeRadiusVal}"/>
+                        </div>
+                        <div class="slds-size_1-of-12 slds-p-top--x-large slds-p-left--xx-small">
+                            <a href="javascript:void(0);" 
+                               onclick="{!c.changeZipValue}"
+                               style="color: black;text-decoration: underline;">
+                                {!v.zipValue}
+                            </a>
+                        </div>
+                    </div>
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="2">
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="2">
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="2">
+                </lightning:layoutItem>
+            </lightning:layout>
+            <lightning:layout multipleRows="true" horizontalAlign="spread">
+                <lightning:layoutItem padding="around-small" size="2">
+                    <c:ComboboxField aura:id="planTypeId"
+                                     fieldName="Plan Type" 
+                                     objectName="SAE_Plan_Type__mdt"
+                                     searchFieldName="Plan_Type_Values__c"
+                                     whereCondition="" 
+                                     orderBy="Plan_Type_Values__c"
+                                     selectedRecord="{!v.prvLookupInputs.planType}"
+                                         searchKeyword="{!v.prvLookupInputs.planType}"
+                                         fieldsdisabled="{!v.disablePlanType}"
+                                     implementScrollFunc="true"
+                                         /><!--US2670819 - Provider Lookup - Fixes - Sravan-->
+                    </lightning:layoutItem> 
+               
+                <lightning:layoutItem padding="around-small" size="2">
+                    <lightning:combobox label="Radius"
+                                        options="{!v.radiusOptions}" 
+                                        value="{!v.prvLookupInputs.radius}"
+                                        class="dropDownAlignment"
+                                        aura:id="radiusId"
+                                        name="radiusName"
+                                        disabled="{!v.disableRadius}"
+                                        onchange="{!c.setFocusToSearchBtn}"/>
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="2">
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="2">
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="2">
+                </lightning:layoutItem>
+            </lightning:layout><br/>
+            <!-- US1965220 - Thanish - 16th Jan 2020 -->
+            <lightning:layout multipleRows="true">
+                <lightning:layoutItem padding="around-small">
+                    <div class="btnClass">
+                        <lightning:button class="slds-button slds-button_brand brand_button"
+                                        label="Search" aura:id="searchBtnID" 
+                                        name="searchButtonName"
+                                        onclick="{!c.searchProvider}"/>&nbsp;&nbsp;&nbsp;
+                        <lightning:button  class="slds-button slds-button_neutral neutral_button"  
+                                        label="Clear"
+                                        name="clearButtonName"
+                                        onclick="{!c.clearLookupValues}"/>
+                    </div>
+                </lightning:layoutItem>
+
+                <lightning:layoutItem class="{!(v.showErrorMessage) ? 'slds-p-top_x-small' : 'slds-p-top_x-small slds-hide'}">
+                    <c:ACET_ErrorPopup aura:id="errorPopup" errorMessage="{!v.error.message}" topDescription="{!v.error.topDescription}"
+                                        bottomDescription="{!v.error.bottomDescription}" descriptionList="{!v.error.descriptionList}"
+                                        moveLeft="-17" isNubbinLeft="true"/>
+                </lightning:layoutItem>
+            </lightning:layout>
+        </div>
+    </div>
+    
+    <aura:if isTrue="" aura:id="providerResultsId">
+        <!-- US2670819: Provider Lookup - Fixes Praveen -->
+        <!-- Do not remove the below div with aurea:id=providerlookupsearchresults,
+			 using it for scrollintoview function -->
+        <div aura:id="providerlookupsearchresults" >
+
+        </div>
+        <div aura:id="providersearch" class="slds-p-top_small">
+            <div aura:id="providerLookupPrvdSearchResults">
+            </div>
+            <c:ACET_ProviderLookupSearchResults aura:id="searchResults" productCodesMap="{!v.productCodesMap}"
+                                                providerDetails="{!v.prvLookupInputs}"
+                                                policyDetails="{!v.policyDetails}"
+                                                isProviderSnapshot="{!v.isProviderSnapshot}"
+                                                openedLookupDetails="{!v.openedLookupDetails}"
+						                        caseWrapperMNF="{!v.caseWrapperMNF}"
+                                                providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}"
+                                                flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}"
+                                                sourceCode="{!v.sourceCode}"
+                                                uhcProduct="{!v.uhcProduct}"
+                                                memberDetails="{!v.memberDetails}"
+                                                interactionRec="{!v.interactionRec}" 
+                                                noMemberToSearch="{!v.noMemberToSearch}"
+                                                contactUniqueId="{!v.contactUniqueId}"
+                                                caseWrapper="{!v.caseWrapper}"
+                                                isHippaInvokedInProviderSnapShot="{!v.isHippaInvokedInProviderSnapShot}"
+                                                hipaaEndpointUrl="{!v.hipaaEndpointUrl}"
+                                                autodocUniqueId="{!v.autodocUniqueId}"
+                                                memberCardData="{!v.memberCardData}"
+                                                isCreateSrnComponent="{!v.isCreateSrnComponent}"
+                                                memberTabId = "{!v.memberTabId}"
+                                                interactionOverviewTabId="{!v.interactionOverviewTabId}"
+                                                memberId="{!v.memberId}"
+                                                policyChange="{!v.policyChange}"
+                                                memberautodocUniqueId="{!v.memberautodocUniqueId}" policySelectedIndex="{!v.policySelectedIndex}" autodocUniqueIdCmp="{!v.policySelectedIndex}"
+                                                isRoutingAllowed="{!v.isRoutingAllowed}"
+                                                autoDocToBeDeleted="{!v.autoDocToBeDeleted}"
+                                                callTopicLstSelected="{!v.callTopicLstSelected}"
+                                                callTopicTabId="{!v.callTopicTabId}"
+                                                strBenefitPlanId="{!v.benefitPlanId}"
+                                                memberMap ="{!v.memberMap}"
+                                                memberPolicyNumberMap="{!V.memberPolicyNumberMap}"
+                                                boolIsProviderLookupFromReferral="{!v.boolIsProviderLookupFromReferral}"
+                                                objPcpBodyData="{!v.objPcpBodyData}"
+                                                boolShowProviderLookup ="{!v.boolShowProviderLookup}" selectedIPAValue= "{!v.selectedIPAValue}"
+                                                objPcpHeaderData="{!v.objPcpHeaderData}" policyList="{!v.policyList}"
+                                                flowDetails="{!v.flowDetails}" transactionId="{!v.transactionId}"
+                                                interactionCard = "{!v.interactionCard}"/><!--US3117073 - Sravan, DE393490 - Sravan, US3308070 - Thanish - 2nd Mar 2021-->
+            									<!--Jitendra-->
+            <!--Added attribute as part of US2573718- Sravan -->
+            <!--US2491365 - Avish; US2816912	Build UI for Create SRN for Add New Provider with Provider Look-up - 2/9/2020 - Sarma -->
+        </div>
+    </aura:if>
+    
+ 
+    
+</aura:component>

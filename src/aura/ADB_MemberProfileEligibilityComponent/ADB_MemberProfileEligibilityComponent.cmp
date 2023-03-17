@@ -1,0 +1,926 @@
+<aura:component controller="ADBCallerProfileController">
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}" />
+    
+    <!--  Component attributes -->
+    <aura:attribute name="parent" type="Aura.Component" required="true"/>
+    <aura:attribute name="memberId" type="String" />
+    <!-- BIG 5 -->
+    <aura:attribute name="decodedMemberId" type="String" />
+    <aura:attribute name="memberDOB" type="String"/>
+    <aura:attribute name="memFirstName" type="String" />
+    <aura:attribute name="memLastName" type="String" />
+    <aura:attribute name="memberPolicy" type="String"/>
+    <!-- BIG 5 -->
+    <!--  <US2512550>: Line 14 - Added agenId attribute to pass as field to save on account - <Sunil Vennam>[04/22/2020] -->
+    <aura:attribute name="agentId" type="String" />
+    <aura:attribute name="isRequiredUpdate" type="boolean" default="true"/> 
+    <aura:attribute name="isEPMPTextBoxVisible" type="boolean" default="false"/> 
+    <!-- Attribute to store Eligibility v2 response to use for caller profile popup -->
+    
+    <aura:attribute name="displayPops" type="ADBCallerProfilePopupDetailsWrapper" />
+    <!-- / Attribute to store Eligibility v2 response to use for caller profile popup -->
+    
+    <!-- Alert Messages -->
+    <aura:attribute name="prefMsg" type="String" />
+    <aura:attribute name="emailMsg" type="String" />
+    <aura:attribute name="phoneMsg" type="String" />
+    <aura:attribute name="customMsg" type="String" />
+	<aura:attribute name="alertsDetails" type="ADBEpmpAlertsResponseWrapper"/>
+    																		  
+    
+    <!-- Flag Boolean -->
+    <aura:attribute name="prefFlag" type="boolean" />
+    <aura:attribute name="emailFlag" type="boolean" />
+    <aura:attribute name="phoneFlag" type="boolean" /> 
+    <!-- -->
+    
+    <!-- Attribute to store Eligibility Extended response to use for caller profile popup -->
+    <aura:attribute name="subscriberDOB" type="String"/>
+    <aura:attribute name="spouseAge" type="String"/>
+    <aura:attribute name="coveredMemberInfo" type="Object" /> 
+    <aura:attribute name="spouseMemberInfo" type="Object" />  
+    <aura:attribute name="dependentAge" type="List"/>
+    <aura:attribute name="languagePreference" type="String"/>
+    <aura:attribute name="dependentList" type="List"/>
+    <aura:attribute name="listStartCount" type="Integer" default="0" /> 
+    <aura:attribute name="togglehover" type="boolean" default="false"/>
+    <aura:attribute name="togglehoverforPhone" type="boolean" default="false"/>
+    <aura:attribute name="togglehoverforEmail" type="boolean" default="false"/>
+    <aura:attribute name="isOption1" type="boolean" default="false"/>
+    <aura:attribute name="isOption1forPhone" type="boolean" default="false"/>
+    <aura:attribute name="isOption1forEmail" type="boolean" default="false"/>
+    <aura:attribute name="payerName" type="String"/>
+    <aura:attribute name="flagAddressed" type="String"/>
+    <aura:attribute name="employerName" type="String"/>
+    <aura:attribute name="memberXrefId" type="String" />													
+    <!-- Attribute for epmp service details: US2368815 - sunil vennam -->
+    <aura:attribute name="epmpDetails" type="Object"/>
+    <aura:attribute name="phiContacts" type="List"/>
+    <!-- Attribute to store Eligibility Extended response to use for caller profile popup -->
+    
+    <!-- Spinner Attribute -->
+    <aura:attribute name="showSpinner" type="Boolean" default="false" />
+    <!-- /Spinner  -->
+    
+    <!-- event: This event is for refreshing the dashboard when agent clicks on the memebr hyperlink the family section -->
+    <aura:registerEvent name="memberRefresh" type="c:ADB_RefreshDashboardEvent" />
+    <aura:attribute name="selectedMemberAge" type="String" />
+    <aura:attribute name="rxDetails" type="ADBMemberDetailWrapper" />
+    <aura:attribute name="transactionId" type="String" />
+    <aura:attribute name="enableCommPref" type="boolean" default="false"/>
+    <aura:attribute name="renderEpmpSave" type="boolean" default="true"/>
+    <aura:attribute name="enableEpmpPhone" type="boolean" default="false"/>
+    <aura:attribute name="enableEpmpAddress" type="boolean" default="false"/>
+    <aura:attribute name="epmpTempPhone" type="String" default=""/>
+	<aura:attribute name="epmpTempEmail" type="String" default=""/>
+	<aura:attribute name="epmpTempCommPref" type="String" default=""/>
+    <aura:attribute name="showSpinnerForEpmp" type="boolean" default="false"/>	
+    <aura:attribute name="currentEpmpFld" type="String" default=""/>
+    <aura:attribute name="renderEpmpPhoneEdit" type="Boolean" default="true"/>
+    <aura:attribute name="renderEpmpMailEdit" type="Boolean" default="true"/>
+    <aura:attribute name="renderEpmpCommPrefEdit" type="Boolean" default="true"/>
+    <aura:attribute name="renderEpmpCommPrefConsent" type="boolean" default="false"/>
+    <aura:attribute name="renderEpmpMobilePhConsent" type="boolean" default="false"/>
+    <aura:attribute name="textMsgYesNo" type="List" default="[{'label': 'Yes', 'value': 'Yes'},{'label': 'No', 'value': 'No'}]"/>
+    <aura:attribute name="epmpTxtServiceOpt" type="String" default=""/>
+    <aura:attribute name="epmpEnrollTimezone" type="String" />
+    <aura:attribute name="disableCommPrefConsentSave" type="boolean" default="true"/>
+    <aura:attribute name="commPrefTermsCheck" type="String" />
+    <aura:attribute name="renderEpmpMailError" type="boolean" default="false"/>
+    <aura:attribute name="disableMobileCnsentSave" type="boolean" default="true"/>
+    <aura:attribute name="renderEpmpPhError" type="boolean" default="false"/>
+    <aura:attribute name="selectedMemberSubscriber" type="Boolean" default="false" />
+    <aura:attribute name="memberAgeAboveThirteen" type="boolean" default="false"/>
+    <aura:attribute name="callerFirstName" type="String" />
+    <aura:attribute name="callerLastName" type="String" />
+    <aura:attribute name="callerDateofBirth" type="String" />
+    <aura:attribute name="memberSelected" type="boolean" default="false"/>
+    <aura:attribute name="renderEpmpUpdateSuccess" type="boolean" default="false"/>
+    <aura:attribute name="renderEpmpUpdateFail" type="boolean" default="false"/>
+    <aura:attribute name="renderEpmpMailSuccess" type="Boolean" default="false" />
+    <aura:attribute name="epmpFailMessage" type="String" />																			   
+    <aura:attribute name="adbEpmpMailSaveRequestWrapper" type="ADBEpmpMailSaveRequestWrapper" default="{}"/>
+    <aura:attribute name="enableTimezone" type="boolean" default="true"/>
+    <aura:attribute name="renderEpmpMobileSuccess" type="boolean" default="false"/>
+    <aura:attribute name="enableEpmpConsentSaveBtn" type="boolean" default="true"/>
+    <aura:attribute name="prefDetails" type="Object"/>
+    <!--  / Component attributes -->
+    <lightning:layout horizontalAlign="center" multipleRows="true">
+        <lightning:layoutItem size="12" >
+
+                                <!-- Spinner  -->
+                                <aura:if isTrue="{!v.showSpinner}">
+                                    <div class="slds-align--absolute-center">
+                                        <lightning:spinner aura:id="offers_spinner" variant="brand" size="large"/>
+                                    </div>
+                                </aura:if>
+                                <!-- /Spinner  -->
+                          <header class="slds-modal__header slds-box" > <!-- onmouseleave="{!c.handleMouseOutOnPopup}"  -->
+                            <lightning:layout horizontalAlign="center" multipleRows="true">
+                                <!-- Card for Covered Family Members -->
+                                <lightning:layoutItem size="12" class="slds-p-top_small slds-p-bottom_small" >
+                                        <!--    covered family card heading  -->
+                                        <lightning:layoutItem size="12">
+                                            <div style="font-weight: bold; text-decoration: underline;">
+                                                Covered Family Members 
+                                            </div>
+                                        </lightning:layoutItem>
+                                        <!--   / covered family card heading  -->
+                                        <!--    covered family card body  -->
+                                        <lightning:layout horizontalAlign="center" multipleRows="true">
+                                            <lightning:layoutItem size="12" class="slds-p-top_small">
+                                                <div class="slds-grid slds-gutters">
+                                                    <div class="slds-col slds-size_2-of-2"> 
+                                                        <table class="slds-table slds-table_fixed-layout">
+                                                            <tbody>
+                                                                <tr class="slds-hint-parent">
+                                                                    <!-- Subscriber details -->
+                                                                    <td width="50%">
+                                                                        <aura:if isTrue="{!v.coveredMemberInfo != null}">
+                                                                            <div>
+                                                                                {!v.coveredMemberInfo.relationship}:
+                                                                                <a onclick="{!c.refresh}" data-relationship="{!v.coveredMemberInfo.relationship}" data-lastname="{!v.coveredMemberInfo.lastName}"  data-firstname="{!v.coveredMemberInfo.firstName}" data-memdob="{!v.coveredMemberInfo.dob}">{!v.coveredMemberInfo.lastName}, {!v.coveredMemberInfo.firstName} </a>&nbsp; {!v.subscriberDOB} Years
+                                                                            </div> 
+                                                                        </aura:if>
+                                                                    </td>
+                                                                    <!-- Spouse details -->
+                                                                    <td width="50%">
+                                                                        <aura:if isTrue="{!v.spouseMemberInfo != null}">
+                                                                            <div>
+                                                                                {!v.spouseMemberInfo.relationship}:
+                                                                                <a onclick="{!c.refresh}" data-relationship="{!v.spouseMemberInfo.relationship}" data-lastname="{!v.spouseMemberInfo.lastName}"  data-firstname="{!v.spouseMemberInfo.firstName}" data-memdob="{!v.spouseMemberInfo.dob}">{!v.spouseMemberInfo.lastName}, {!v.spouseMemberInfo.firstName} </a>&nbsp; {!v.spouseAge} Years
+                                                                            </div> 
+                                                                        </aura:if>
+                                                                    </td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="slds-grid slds-gutters">
+                                                    <div class="slds-col slds-size_1-of-2"> 
+                                                        <table class="slds-table slds-table_fixed-layout">
+                                                            <tbody>
+                                                                <!-- Dependent details for odd index -->
+                                                                <aura:iteration items="{!v.dependentList}" var="item" indexVar="index" start="{!v.listStartCount}">
+                                                                    <aura:iteration items="{!v.dependentAge}" var="member" indexVar="mem">
+                                                                        <aura:if isTrue="{! (index == mem)}"> 
+                                                                            <aura:if isTrue="{! or((mod(index,2)==0),index==0)}">
+                                                                                <tr class="slds-hint-parent">
+                                                                                    <td width="50%">
+                                                                                        <div>
+                                                                                            {!item.memRelationship}:
+                                                                                            <a onclick="{!c.refresh}" data-relationship="{!item.memRelationship}" data-lastname="{!item.memLastName}"  data-firstname="{!item.memFirstName}" data-memdob="{!item.memDob}">{!item.memLastName}, {!item.memFirstName} </a>&nbsp;  {!member} Years
+                                                                                        </div> 
+                                                                                    </td>
+                                                                                </tr>
+                                                                            </aura:if>
+                                                                        </aura:if>
+                                                                    </aura:iteration>
+                                                                </aura:iteration>
+                                                                <!--/ Dependent details for odd index -->
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    <div class="slds-col slds-size_1-of-2">
+                                                        <table class="slds-table slds-table_fixed-layout">
+                                                            <tbody>
+                                                                <!-- Dependent details for even index -->
+                                                                <aura:iteration items="{!v.dependentList}" var="item" indexVar="index">
+                                                                    <aura:iteration items="{!v.dependentAge}" var="member" indexVar="mem">
+                                                                        <aura:if isTrue="{! (index == mem)}"> 
+                                                                            <aura:if isTrue="{! (mod(index,2)!=0)}">
+                                                                                <tr class="slds-hint-parent">
+                                                                                    <td width="50%">
+                                                                                        <div>
+                                                                                            {!item.memRelationship}:
+                                                                                            <a onclick="{!c.refresh}" data-relationship="{!item.memRelationship}" data-lastname="{!item.memLastName}"  data-firstname="{!item.memFirstName}" data-memdob="{!item.memDob}">{!item.memLastName}, {!item.memFirstName} </a>&nbsp; {!member} Years
+                                                                                        </div> 
+                                                                                    </td>
+                                                                                </tr>
+                                                                            </aura:if> 
+                                                                        </aura:if>
+                                                                    </aura:iteration>
+                                                                </aura:iteration>
+                                                                <!-- /Dependent details for even index -->
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </lightning:layoutItem>
+                                        </lightning:layout>
+                                        <!--   / covered family card body  -->
+                                </lightning:layoutItem>
+                                <!-- / Card for Covered Family Members -->
+                                
+                                <!-- Card for Plan Coverage -->
+                                
+                                <lightning:layoutItem size="7" class="slds-p-left_small">
+                                    <lightning:layoutItem size="12" class="slds-p-right_large">
+                                    <div  class="slds-box" style="font-weight: bold;" align="left">
+                                        <div style="text-decoration: underline;">
+                                            Plan Coverage
+                                        </div>
+                                        <div style="font-weight: bold;" align="right">
+                                            <p><a onclick="{!c.launchICUE}" target="_blank">Coverage History</a></p>
+                                        </div>
+                                        <div class="slds-grid slds-grid--pull-padded slds-p-top_small">
+                                            <div class="slds-col--padded slds-size_1-of-2">
+                                               <c:ADB_MedicalCoverage displayPops ="{!v.displayPops}" />
+                                            </div>
+                                            <div class="slds-col--padded slds-col slds-size_1-of-2">
+                                                <c:ADB_RXCoverage rxDetails ="{!v.rxDetails}" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </lightning:layoutItem>
+								<lightning:layoutItem size="12" class="slds-p-top_large slds-p-right_large">
+                                    <div  class="slds-box" style="font-weight: bold;" align="left">
+                                        <div style="text-decoration: underline;">
+                                            Ancillary Vendors 
+                                        </div>
+                                        <c:ADB_AncillaryVendors decodedMemberId="{!v.decodedMemberId}"/>
+                                    </div>
+                                </lightning:layoutItem>
+                             </lightning:layoutItem>   
+                                <!-- / Card for Plan Coverage -->
+                                
+                                <!-- Card for Selected Members -->
+                                <lightning:layoutItem size="5" class="slds-p-left_small">
+                                    <aura:if isTrue="{!v.showSpinnerForEpmp}">
+                                    <div class="slds-align--absolute-center">
+                                        <lightning:spinner aura:id="offers_spinner" variant="brand" size="large"/>
+                                    </div>
+                                </aura:if>
+                                    <div class="slds-box" style="font-weight: bold;">
+                                        <div  style="text-decoration: underline;">
+                                            Selected Member
+                                        </div>
+                                        <div class="slds-p-left_small"  align="left">
+                                            <!-- Code block for Name and Age -->
+                                            <div  class="slds-form-element slds-form-element_readonly">
+                                                <span class="slds-form-element__label">Name and Age:</span>
+                                                <div class="slds-form-element__control">
+                                                    <div class="slds-form-element__static">
+                                                        <aura:if isTrue="{!v.displayPops != null}">
+                                                            <aura:if isTrue="{!or(v.displayPops.memberLastName != null, v.displayPops.memberFirstName != null)}">
+                                                                <div class="slds-p-top_small" align="left">
+                                                                    {!v.displayPops.memberLastName}, {!v.displayPops.memberFirstName} &nbsp; {!v.selectedMemberAge} Years 
+                                                                </div>
+                                                            </aura:if>
+                                                        </aura:if>    
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div  class="slds-form-element slds-form-element_readonly">
+                                                
+                                                <!-- Code block for Permanent Address -->
+                                                <span class="slds-form-element__label">Permanent Address:</span>
+                                                <div class="slds-form-element__control">
+                                                    <div class="slds-form-element__static">
+                                                        
+                                                        <aura:if isTrue="{!not(empty(v.displayPops.addressLine1))}">
+                                                            {!v.displayPops.addressLine1},
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!not(empty(v.displayPops.addressLine2))}">
+                                                            {!v.displayPops.addressLine2},
+                                                        </aura:if>
+                                                        <br/>
+                                                        <aura:if isTrue="{!not(empty(v.displayPops.city))}">
+                                                            {!v.displayPops.city},
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!not(empty(v.displayPops.state))}">
+                                                            {!v.displayPops.state}, 
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!not(empty(v.displayPops.zip))}">
+                                                            {!v.displayPops.zip}.
+                                                        </aura:if>
+                                                    </div>
+                                                </div>
+                                                <!-- Code block for Permanent Address -->
+                                            </div>
+                                            <div  class="slds-form-element slds-form-element_readonly">
+                                                <!-- Code block for Mailing Address -->
+                                                <span class="slds-form-element__label">Mailing Address:</span>
+                                                <div class="slds-form-element__control">
+                                                    <div class="slds-form-element__static">
+                                                        <aura:if isTrue="{!not(empty(v.coveredMemberInfo.street1))}">
+                                                            {!v.coveredMemberInfo.street1},
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!not(empty(v.coveredMemberInfo.street2))}">
+                                                            {!v.coveredMemberInfo.street2},
+                                                        </aura:if>
+                                                        <br/>
+                                                        <aura:if isTrue="{!not(empty(v.coveredMemberInfo.city))}">
+                                                            {!v.coveredMemberInfo.city},
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!not(empty(v.coveredMemberInfo.state))}">
+                                                            {!v.coveredMemberInfo.state}, 
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!not(empty(v.coveredMemberInfo.zip))}">
+                                                            {!v.coveredMemberInfo.zip}.
+                                                        </aura:if>
+                                                    </div>
+                                                </div>
+                                                <!-- / Code block for Mailing Address -->
+                                            </div>
+                                            <div  class="slds-form-element slds-form-element_readonly">
+                                                <span class="slds-form-element__label">Gender:</span>
+                                                <div class="slds-form-element__control">
+                                                    <div class="slds-form-element__static">{!v.displayPops.gender}</div>
+                                                </div>
+                                            </div>
+                                            <div  class="slds-form-element slds-form-element_readonly">
+                                                <span class="slds-form-element__label">Employer:</span>
+                                                <div class="slds-form-element__control">
+                                                    <div class="slds-form-element__static">{!v.employerName}</div>
+													
+                                                </div>
+                                            </div>
+                                            <!-- div  class="slds-form-element slds-form-element_readonly">
+                                                <span class="slds-form-element__label">HR Phone Number:</span>
+                                                <div class="slds-form-element__control">
+                                                    <div class="slds-form-element__static">(202) 456-1111</div>
+                                                </div>
+                                            </div -->
+                                            <!-- div  class="slds-form-element slds-form-element_readonly">
+                                                <span class="slds-form-element__label">HR Email Address:</span>
+                                                <div class="slds-form-element__control">
+                                                    <div class="slds-form-element__static">xxx@xxx.xxx</div> 
+                                            </div>
+                                            </div -->
+                                            <div  class="slds-form-element slds-form-element_readonly">
+                                                <span class="slds-form-element__label">Preferred Spoken Language:</span>
+                                                <div class="slds-form-element__control">
+                                                    <div class="slds-form-element__static">{!v.languagePreference}</div>
+                                                </div>
+                                            </div>
+                                              <div  class="slds-form-element slds-form-element_readonly">
+                                                <span class="slds-form-element__label">
+                                                    <p><a onclick="{!c.navigateEmailAddressUrl}" target="_blank"> E-Mail Address</a></p>
+                                                </span>
+                                                <div class="slds-form-element__control">
+                                                    <div class="slds-form-element__static">
+                                                        <div class="slds-grid slds-gutters">
+                                                            <!-- Set attribute value for epmp service details: US2368815 - sunil vennam -->
+                                                            <div class="slds-col slds-size_10-of-12">
+                                                                
+                                                            	   <aura:if isTrue="{!v.enableEpmpAddress}">
+                                                                	<div class="slds-form-element__static slds-grid slds-wrap">
+                                                                        <span  class="slds-size_2-of-12 minWidthEdit">
+                                                                            <aura:if isTrue="{!v.memberAgeAboveThirteen}">
+                                                                            <aura:if isTrue="{!v.renderEpmpMailEdit}">
+                                                                            <img onclick="{!c.renderEpmpAddress}" id="epmpEmail" src="{!$Resource.ADB_CallerProfileCardImages + '/ADB_CallerProfileCardImages/editnew.png'}" class="editIcon"/>
+                                                                            </aura:if>
+                                                                            </aura:if>
+                                                                        </span>
+                                                                        <lightning:input type="text" class="Preference slds-size_10-of-12"  value="{!v.epmpTempEmail}"></lightning:input>
+                                                                    </div>
+                                                                    <aura:set attribute="else">
+                                                                        <div class="slds-col slds-size_12-of-12 slds-grid slds-wrap">
+                                                                        <span  class="slds-size_2-of-12">
+                                                                            <aura:if isTrue="{!v.memberAgeAboveThirteen}">
+                                                                            <aura:if isTrue="{!v.renderEpmpMailEdit}"><img onclick="{!c.renderEpmpAddress}" id="epmpEmail" src="{!$Resource.ADB_CallerProfileCardImages + '/ADB_CallerProfileCardImages/editnew.png'}"  class="editIcon"/>
+                                                                            </aura:if>
+                                                                            </aura:if>
+                                                                            </span>
+                                                                        <div class="slds-p-left_xx-small slds-p-top_x-small">{!v.epmpDetails.email_Address}</div>
+                                                                        </div>
+                                                                    </aura:set>
+                                                                </aura:if>
+                                                            </div>
+                                                            <div class="slds-col slds-size_2-of-12">
+                                                                <aura:if isTrue="{!v.emailFlag == true}">
+                                                                    <!-- Hover section for Email --> 
+                                                                    <div align="left"
+                                                                         onmouseenter="{!c.handleMouseOverForEmail}" 
+                                                                         onmouseleave="{!c.handleMouseOutForEmail}">
+                                                                        <div align='right' id="E-Mail Address">
+                                                                            <!--  <US2512550>: Line 366 - Added title attribute to save as flag addressed <Sunil Vennam>[04/22/2020] -->
+                                                                            <img title="E-Mail Address" src="{!$Resource.ADB_CallerProfileCardImages + '/ADB_CallerProfileCardImages/orangeflag.png'}"
+                                                                                 style="width:20px;height:20px;" onclick="{!c.EPMPFlagButton}"/> 
+                                                                        </div> 
+                                                                        <aura:if isTrue="{!v.togglehoverforEmail}">
+                                                                            <div style="padding-left:2.5rem;padding-top:1rem;position:absolute">
+                                                                                <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-right" role="tooltip" id="help" style="position:absolute;bottom:50px;left:-200px">
+                                                                                    <div class="slds-popover__body popover-con">
+                                                                                        {!v.emailMsg}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </aura:if>
+                                                                    </div>
+                                                                    <!-- / Hover section for Email -->
+                                                                </aura:if>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>  
+                                            <div  class="slds-form-element slds-form-element_readonly">
+                                                <span class="slds-form-element__label">
+                                                    <p><a onclick="{!c.navigateCommunicationPrefUrl}" target="_blank"> Communication Preference</a></p></span>
+                                                <div class="slds-form-element__control">
+                                                    <div class="slds-form-element__static">
+                                                        <div class="slds-grid slds-gutters">
+                                                            <!-- Set attribute value for epmp service details: US2368815 - sunil vennam -->
+                                                             <div class="slds-col slds-size_10-of-12">
+                                                                <aura:if isTrue="{!v.enableCommPref}">
+                                                                	<div class="slds-form-element__static slds-grid slds-wrap">
+                                                                        <div  class="slds-size_2-of-12" style="min-width:10% !important;">
+                                                                            <aura:if isTrue="{!v.selectedMemberSubscriber}">
+                                                                                <aura:if isTrue="{!v.renderEpmpCommPrefEdit}">
+                                                                                    <img onclick="{!c.enableCommPreference}" id="comPrefImg" src="{!$Resource.ADB_CallerProfileCardImages + '/ADB_CallerProfileCardImages/editnew.png'}" class="editIcon"/>
+                                                                                </aura:if>
+                                                                            </aura:if>
+                                                                        </div>
+                                                                       <!-- <lightning:input type="text" class="Preference slds-size_10-of-12"  value="{!v.epmpTempCommPref}"></lightning:input>-->
+                                                                        <lightning:select aura:id="epmpCommPrefnce" name="epmpCommPrefnce" value="{!v.epmpTempCommPref}" class="Preference slds-size_10-of-12" onchange="{! c.updateEpmpComPref }">
+                                                                                <option value=""></option>
+                                                                                <option value="Mail">Mail</option>
+                                                                                <option value="Paperless">Paperless</option>
+                                                                        </lightning:select>
+                                                                    </div>
+                                                                    <aura:set attribute="else">
+                                                                        <div class="slds-col slds-size_12-of-12 slds-grid slds-wrap">
+                                                                        <span class="slds-size_2-of-12" >
+                                                                            <aura:if isTrue="{!v.selectedMemberSubscriber}">
+                                                                                <aura:if isTrue="{!v.renderEpmpCommPrefEdit}">
+                                                                                    <img onclick="{!c.enableCommPreference}" id="comPrefImg"  src="{!$Resource.ADB_CallerProfileCardImages + '/ADB_CallerProfileCardImages/editnew.png'}"  class="editIcon" disable="true"/>
+                                                                                </aura:if>
+                                                                            </aura:if>
+                                                                         </span>
+                                                                        <div class="slds-p-left_xx-small slds-p-top_x-small">{!v.epmpDetails.communication_Preference}</div>
+                                                                        </div>
+                                                                    </aura:set>
+                                                                </aura:if>
+                                                            </div>
+                                                            <div class="slds-col slds-size_2-of-12">
+                                                                <aura:if isTrue="{!v.prefFlag == true}">
+                                                                    
+                                                                    <!-- Hover section for Communication Preference --> 
+                                                                    <div align="left"
+                                                                         onmouseenter="{!c.handleMouseOverCommunicationPreference}" 
+                                                                         onmouseleave="{!c.handleMouseOutCommunicationPreference}">
+                                                                        <div align='right'>
+                                                                            <!--  <US2512550>: Line 366 - Added title attribute to save as flag addressed <Sunil Vennam>[04/22/2020] -->
+                                                                            <img title="Communication Preference" src="{!$Resource.ADB_CallerProfileCardImages + '/ADB_CallerProfileCardImages/orangeflag.png'}"
+                                                                                 style="width:20px;height:20px;"  onclick="{!c.EPMPFlagButton}"/>
+                                                                            
+                                                                        </div> 
+                                                                        <aura:if isTrue="{!v.togglehover}">
+                                                                            <div style="padding-left:2.5rem;padding-top:1rem;position:absolute">
+                                                                                <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-right" role="tooltip" id="help" style="position:absolute;bottom:50px;left:-200px">
+                                                                                    <div class="slds-popover__body popover-con">
+                                                                                        {!v.prefMsg}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </aura:if>
+                                                                    </div>
+                                                                    <!-- / Hover section for Communication Preference -->
+                                                                </aura:if>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div> 
+                                           
+                                            <div  class="slds-form-element slds-form-element_readonly">
+                                                <span class="slds-form-element__label">
+                                                    <p><a onclick="{!c.navigateMobilePhoneUrl}" target="_blank">Mobile Phone</a></p>
+                                                </span>
+                                                <div class="slds-form-element__control">
+                                                    <div class="slds-form-element__static">
+                                                        
+                                                        <div class="slds-grid slds-gutters">
+                                                            <!-- Set attribute value for epmp service details: US2368815 - sunil vennam -->
+                                                            <div class="slds-col slds-size_10-of-12">
+                                                                <aura:if isTrue="{!v.enableEpmpPhone}">
+                                                                	<div class="slds-form-element__static slds-grid slds-wrap">
+                                                                        <aura:if isTrue="{!v.memberAgeAboveThirteen}">
+                                                                      	<aura:if isTrue="{!v.renderEpmpPhoneEdit}">
+                                                                        <span  class="slds-size_2-of-12"><img onclick="{!c.renderEpmpPhone}" id = "epmpPhone" src="{!$Resource.ADB_CallerProfileCardImages + '/ADB_CallerProfileCardImages/editnew.png'}" class="editIcon"/></span>
+                                                                        </aura:if>
+                                                                            </aura:if>
+                                                                        <lightning:input type="text" aura:id="epmpMobilePh" class="Preference slds-size_10-of-12"  value="{!v.epmpTempPhone}" onchange="{! c.updateEpmpMobilePh }"></lightning:input>
+                                                                    </div>
+                                                                    <aura:if isTrue="{!and(v.epmpDetails.phone != '',v.epmpDetails.phone != null) }">
+                                                                            <div   class="slds-grid slds-wrap   slds-p-top_x-small slds-p-left_xx-large">Text Services: {!v.epmpDetails.ganActivationStatus}</div>
+                                                                     </aura:if>
+                                                                    
+                                                                    <aura:set attribute="else">
+                                                                        <div class="slds-col slds-size_12-of-12 slds-grid slds-wrap">
+                                                                            <span  class="slds-size_2-of-12" >
+                                                                                <aura:if isTrue="{!v.memberAgeAboveThirteen}">
+                                                                            <aura:if isTrue="{!v.renderEpmpPhoneEdit}">
+                                                                            	<img onclick="{!c.renderEpmpPhone}" id = "epmpPhone" src="{!$Resource.ADB_CallerProfileCardImages + '/ADB_CallerProfileCardImages/editnew.png'}"  class="editIcon"/>
+                                                                            </aura:if>
+                                                                                </aura:if>
+                                                                            </span>
+                                                                        
+                                                                        <div   class="slds-size_10-of-12   slds-p-top_x-small ">{!v.epmpDetails.phone}</div>
+                                                                        </div>
+                                                                        <aura:if isTrue="{!and(v.epmpDetails.phone != '',v.epmpDetails.phone != null) }">
+                                                                            <div   class="slds-size_12-of-12   slds-p-top_x-small slds-p-left_xx-large">Text Services: {!v.epmpDetails.ganActivationStatus}</div>
+                                                                     </aura:if>
+                                                                    </aura:set>
+                                                                </aura:if>
+                                                                
+                                                                
+                                                            </div>
+                                                            <div class="slds-col slds-size_2-of-12">
+                                                                <aura:if isTrue="{!v.phoneFlag == true}">
+                                                                    <!-- Hover section for Phone --> 
+                                                                    <div align="left"
+                                                                         onmouseenter="{!c.handleMouseOverForPhone}" 
+                                                                         onmouseleave="{!c.handleMouseOutForPhone}">
+                                                                        <div align='right'>
+                                                                            <!--  <US2512550>: Line 366 - Added title attribute to save as flag addressed <Sunil Vennam>[04/22/2020] -->
+                                                                            <img title="Phone" src="{!$Resource.ADB_CallerProfileCardImages + '/ADB_CallerProfileCardImages/orangeflag.png'}"
+                                                                                 style="width:20px;height:20px;" onclick="{!c.EPMPFlagButton}"/>    
+                                                                        </div> 
+                                                                        <aura:if isTrue="{!v.togglehoverforPhone}">
+                                                                            <div style="padding-left:2.5rem;padding-top:1rem;position:absolute">
+                                                                                <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-right" role="tooltip" id="help" style="position:absolute;bottom:50px;left:-200px">
+                                                                                    <div class="slds-popover__body popover-con">
+                                                                                        {!v.phoneMsg}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </aura:if>
+                                                                    </div>
+                                                                    <!-- / Hover section for Phone -->
+                                                                </aura:if>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>                                                            
+                                           
+                                            
+                                           <!--	Advocate Action Text Box For EPMP Flag	-->
+                                            <aura:if isTrue="{!v.isEPMPTextBoxVisible}">
+                                                <div class="slds-m-around--xx-large"> 
+                                                     <div role="dialog" class="slds-modal slds-fade-in-open" style="align:right;">
+                                                        <div class="slds-modal__container" style="width:2000px;">               
+                                                               <header class="slds-modal__header">
+                                                                <div class="slds-grid slds-gutters">
+                                                                    <div class="slds-col slds-size_11-of-12">
+                                                                        <span>
+                                                                            <h2  class="slds-text-heading_medium slds-hyphenate" align="center"><b>Advocate Action</b></h2> 
+                                                                        </span>
+                                                                        <br/> <br/> 
+                                                                        <I>Address the member preference flag.</I>
+                                                                        <br/><br/> 
+                                                                        Was member receptive?
+                                                                        <br/><br/> 
+                                                                    </div>
+                                                                    <div class="slds-col slds-size_1-of-12">
+                                                                        <span>
+                                                                            <!-- Close Button-->
+                                                                            <div class="close-button" align="right">
+                                                                                <img src="{!$Resource.ADB_CallerProfileCardImages + '/ADB_CallerProfileCardImages/closebutton.png'}" style="height: 20px; width: 20px;"
+                                                                                     onclick="{! c.closeAdvocateActionBoxButton}"/>
+                                                                            </div>
+                                                                            <!-- / Close Button-->
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                
+                                                                <!-- <div class="slds-grid slds-gutters">
+                                                                <div class="slds-col slds-size_1-of-4">
+                                                                    <span>Yes</span>
+                                                                </div>
+                                                                <div class="slds-col slds-size_1-of-4">
+                                                                    <span>No</span>
+                                                                </div>
+                                                                <div class="slds-col slds-size_2-of-4">
+                                                                    <span>Not Determined</span>
+                                                                </div>
+                                                            </div>-->
+                                                            </header> 
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="slds-backdrop slds-backdrop_open"></div>
+                                                
+                                            </aura:if>
+                                            
+                                            <aura:if isTrue="{!v.renderEpmpCommPrefConsent}">
+                                                <div class="slds-m-around--xx-large "> 
+                                                     <!--<div role="dialog" class="slds-modal slds-fade-in-open slds-modal_small" style="align:left;">-->
+                                                    <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal--small" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1">
+                                                        <div class="slds-modal__container" style="width:40%;">               
+                                                               <div class="slds-modal__header">
+                                                                <div class="slds-grid slds-gutters">
+                                                                    <div class="slds-col slds-size_11-of-12">
+                                                                        <span>
+                                                                            <h2  class="slds-text-heading_medium slds-hyphenate" align="left"><b>Paperless Preference</b></h2> 
+                                                                        </span>
+                                                                        <br/> <br/> 
+                                                                        <div class="slds-grid slds-wrap">
+                                                                        	 <input type="checkbox" class="slds-size_1-of-12 slds-m-top_x-small" onchange="{!c.updateCommPrefTerms}" name="epmpCommPrefCheckbx" value="{!v.commPrefTermsCheck}" id="" checked="" />
+                                                                            <div class="slds-size_11-of-12">I have reveiwed the Required Plan Communication Notice and agree to receive required Plan Communications electronically.</div>
+                                                                        
+                                                                        </div>
+                                                                        <br/><br/> 
+                                                                    </div>
+                                                                    
+                                                                </div>
+                                                            </div> 
+                                                            <div class="slds-modal__footer"> 
+                                                                <div class="slds-align_absolute-center">
+                                                                	<button class="slds-button slds-button--brand" onclick="{!c.saveEpmpComnctnPref}" disabled="{!v.disableCommPrefConsentSave}">Save</button>
+                                                                	<button class="slds-button slds-button--neutral" onclick="{!c.closeEpmpConsent}">Cancel</button> 
+                                                            	</div>
+                                                            </div>
+                                                        </div>
+                                                    </section>
+                                                        <!--</div>-->
+                                                </div>
+                                                <div class="slds-backdrop slds-backdrop_open"></div>
+                                                
+                                            </aura:if>
+                                            <aura:if isTrue="{!v.renderEpmpMobilePhConsent}">
+                                                <div class="slds-m-around--xx-large "> 
+                                                     <!--<div role="dialog" class="slds-modal slds-fade-in-open slds-modal_small" style="align:left;">-->
+                                                    <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal--small" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" style="overflow-y:scroll !important;">
+                                                        <div class="slds-modal__container" style="width:40%;font-weight:500;">               
+                                                               <div class="slds-modal__header">
+                                                                <div class="slds-grid slds-gutters">
+                                                                   <div class="slds-col slds-size_11-of-12">
+                                                                        <span>
+                                                                            <h2  class="slds-text-heading_medium slds-hyphenate" align="left"><b>SMS Activation</b></h2> 
+                                                                        </span>
+                                                                        <br/> <br/> 
+                                                                        <div class="slds-grid slds-wrap  slds-p-left_medium">
+                                                                            <div class=" slds-size_11-of-12 slds-text-title_bold" align="left" style="font-weight:900;">Text message alerts and reminders.</div>
+                                                                        	<div class="slds-size_11-of-12"  align="left">Receive important text messages about your plan or benefits.</div>
+                                                                            <div class="slds-size_11-of-12"  align="left">You may opt out at any time.</div>
+                                                                            <div class="slds-size_11-of-12"  align="left">Message and data rates apply.</div>
+                                                                        
+                                                                        </div>
+                                                                        <br/><br/> 
+                                                                        <div class="slds-grid slds-wrap slds-p-left_medium">
+                                                                            <div class=" slds-size_11-of-12 slds-text-title_bold" align="left" style="font-weight:900;">Would you like to enroll in text message alerts and reminders?</div>
+                                                                        	<div class="slds-size_11-of-12"  align="left">We may send up to 2 text messages to verify your enrollment.</div>
+                                                                            <div class="slds-grid slds-wrap  slds-size_10-of-12" align="left">
+                                                                            	<lightning:radioGroup aura:id="epmpTextServiceOpt"  options="{! v.textMsgYesNo }" variant="label-inline" 
+                                                                                                      value="{! v.epmpTxtServiceOpt }" type="radio" onchange="{!c.updateTextServiceOpt}" class="customRadioCls" style="display:inline-block !important" />    
+                                                                            </div>
+                                                                            <div class="slds-grid slds-wrap  slds-size_10-of-12" align="left">
+                                                                                <div class="slds-size_5-of-12 slds-p-right_medium slds-p-top_x-small" align="right">Your time zone:</div>
+                                                                                <lightning:select aura:id="epmpEnrollTimezone"  name="epmpEnrollTimezone" value="{!v.epmpEnrollTimezone}" class="Preference slds-size_6-of-12" onchange="{! c.updateEpmpTimezone }" disabled="{!v.enableTimezone}">
+                                                                                <option value=""></option>
+                                                                                <option value="EST">Eastern</option>
+                                                                                <option value="CST">Central</option>
+                                                                                <option value="MST">Mountain</option>
+                                                                                <option value="PST">Pacific</option>
+                                                                                <option value="AKST">Alaskan</option>
+                                                                                <option value="HST">Hawaiian</option>
+                                                                        		</lightning:select>
+                                                                            </div>
+                                                                        
+                                                                        </div>
+                                                                        <br/><br/> 
+                                                                        <div class="slds-grid slds-wrap slds-p-left_medium">
+                                                                            <div class="slds-size_11-of-12"  align="left">By activating your number and choosing Save, you agree to get texts about your benefits, programs, products, services, tools, and / or general health information from UnitedHealthcare Services, Inc., Optum Services, Inc. or their affiliates. You also agree to the texting terms and conditions.</div>
+                                                                        </div>
+																	</div>
+				                                                </div>
+                                                            </div> 
+                                                            <div class="slds-modal__footer"> 
+                                                                <div class="slds-align_absolute-center">
+                                                                	<button class="slds-button slds-button--brand" onclick="{!c.savePhoneNumber}" disabled="{!v.enableEpmpConsentSaveBtn}">Save</button>
+                                                                    <button class="slds-button slds-button--brand" onclick="{!c.closeEpmpPhConsent}" >Cancel</button>
+                                                            	</div>
+                                                            </div>
+                                                        </div>
+                                                    </section>
+                                                        <!--</div>-->
+                                                </div>
+                                                <div class="slds-backdrop slds-backdrop_open"></div>
+                                                
+                                            </aura:if>
+                                            <aura:if isTrue="{!v.renderEpmpMobileSuccess}">
+                                                <div class="slds-m-around--xx-large "> 
+                                                     <!--<div role="dialog" class="slds-modal slds-fade-in-open slds-modal_small" style="align:left;">-->
+                                                    <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal--small" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" style="overflow-y:scroll !important;">
+                                                        <div class="slds-modal__container" style="width:40%;">               
+                                                               <div class="slds-modal__header">
+                                                                <div class="slds-grid slds-gutters">
+                                                                  
+																	<div class="slds-col slds-size_11-of-12">
+																	    <span>
+                                                                            EPMP Phone update successful
+                                                                        </span>
+                                                                    </div>
+                                                                    
+                                                                </div>
+                                                            </div> 
+                                                            <div class="slds-modal__footer"> 
+                                                                <div class="slds-align_absolute-center">
+                                                                	<button class="slds-button slds-button--brand" onclick="{!c.closeEpmpPhoneConsent}" >OK</button>
+                                                            	</div>
+                                                            </div>
+                                                        </div>
+                                                    </section>
+                                                        <!--</div>-->
+                                                </div>
+                                                <div class="slds-backdrop slds-backdrop_open"></div>
+                                                
+                                            </aura:if>
+                                               <aura:if isTrue="{!v.renderEpmpMailError}">
+                                                <div class="slds-m-around--xx-large "> 
+                                                     <!--<div role="dialog" class="slds-modal slds-fade-in-open slds-modal_small" style="align:left;">-->
+                                                    <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal--small" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1">
+                                                        <div class="slds-modal__container" style="width:40%;">               
+                                                               <div class="slds-modal__header">
+                                                                <div class="slds-grid slds-gutters">
+                                                                    <div class="slds-col slds-size_11-of-12">
+                                                                        <span>
+                                                                            <h2  class="slds-text-heading_medium slds-hyphenate" align="left"><b>Error</b></h2> 
+                                                                        </span>
+                                                                        <br/> <br/> 
+                                           									Please use the correct email address format of example@example.exe.
+                                                                        <br/><br/> 
+                                                                        <br/><br/> 
+                                  									 </div>
+                                                                </div>
+                                                            </div> 
+                                                            <div class="slds-modal__footer"> 
+                                                                <div class="slds-align_absolute-center">
+                                                                	<button class="slds-button slds-button--brand" onclick="{!c.closeEpmpMailError}">OK</button>
+                                                               </div>
+                                                            </div>
+                                                        </div>
+                                                    </section>
+                                                        <!--</div>-->
+                                                </div>
+                                                <div class="slds-backdrop slds-backdrop_open"></div>
+                                                
+                                            </aura:if>
+                                            <aura:if isTrue="{!v.renderEpmpPhError}">
+                                                <div class="slds-m-around--xx-large "> 
+                                                     <!--<div role="dialog" class="slds-modal slds-fade-in-open slds-modal_small" style="align:left;">-->
+                                                    <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal--small" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1">
+                                                        <div class="slds-modal__container" style="width:40%;">               
+                                                               <div class="slds-modal__header">
+                                                                <div class="slds-grid slds-gutters">
+                                                                    <div class="slds-col slds-size_11-of-12">
+                                                                        <span>
+                                                                            <h2  class="slds-text-heading_medium slds-hyphenate" align="left"><b>Error</b></h2> 
+                                                                        </span>
+                                                                        <br/> <br/> 
+                                           									Please use the correct phone number format of (212)555-1212.
+                                                                        <br/><br/> 
+                                                                        <br/><br/> 
+                                  									</div>
+                                                                </div>
+                                                            </div> 
+                                                            <div class="slds-modal__footer"> 
+                                                                <div class="slds-align_absolute-center">
+                                                                	<button class="slds-button slds-button--brand" onclick="{!c.closeEpmpPhError}">OK</button>
+                                                                	
+                                                            	</div>
+                                                            </div>
+                                                        </div>
+                                                    </section>
+                                                        <!--</div>-->
+                                                </div>
+                                                <div class="slds-backdrop slds-backdrop_open"></div>
+                                                
+                                            </aura:if>
+                                           <aura:if isTrue="{!v.renderEpmpUpdateSuccess}">
+                                                <div class="slds-m-around--xx-large "> 
+                                                     <!--<div role="dialog" class="slds-modal slds-fade-in-open slds-modal_small" style="align:left;">-->
+                                                    <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal--small" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" style="overflow-y:scroll !important;">
+                                                        <div class="slds-modal__container" style="width:40%;">               
+                                                               <div class="slds-modal__header">
+                                                                <div class="slds-grid slds-gutters">
+                                                                    <div class="slds-col slds-size_11-of-12">
+                                                                        <span>
+                                                                            EPMP preference change has been successfully saved
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            </div> 
+                                                            <div class="slds-modal__footer"> 
+                                                                <div class="slds-align_absolute-center">
+                                                                    <button class="slds-button slds-button--brand" onclick="{!c.closeEpmpPhoneConsent}" >OK</button>
+                                                                	
+                                                            	</div>
+                                                            </div>
+                                                        </div>
+                                                    </section>
+                                                        <!--</div>-->
+                                                </div>
+                                                <div class="slds-backdrop slds-backdrop_open"></div>
+                                                
+                                            </aura:if>
+                                            
+                                            <aura:if isTrue="{!v.renderEpmpUpdateFail}">
+                                                <div class="slds-m-around--xx-large "> 
+                                                     <!--<div role="dialog" class="slds-modal slds-fade-in-open slds-modal_small" style="align:left;">-->
+                                                    <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal--small" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" style="overflow-y:scroll !important;">
+                                                        <div class="slds-modal__container" style="width:40%;">               
+                                                               <div class="slds-modal__header">
+                                                                <div class="slds-grid slds-gutters">
+                                                                    <div class="slds-col slds-size_11-of-12">
+                                                                        <span>
+                                                                            {!v.epmpFailMessage}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            </div> 
+                                                            <div class="slds-modal__footer"> 
+                                                                <div class="slds-align_absolute-center">
+                                                                    <button class="slds-button slds-button--brand" onclick="{!c.closeEpmpFailModal}" >OK</button>
+                                                                	
+                                                            	</div>
+                                                            </div>
+                                                        </div>
+                                                    </section>
+                                                        <!--</div>-->
+                                                </div>
+                                                <div class="slds-backdrop slds-backdrop_open"></div>
+                                                
+                                            </aura:if> 
+                                            <aura:if isTrue="{!v.renderEpmpMailSuccess}">
+                                                <div class="slds-m-around--xx-large "> 
+                                                     <!--<div role="dialog" class="slds-modal slds-fade-in-open slds-modal_small" style="align:left;">-->
+                                                    <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal--small" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" style="overflow-y:scroll !important;">
+                                                        <div class="slds-modal__container" style="width:40%;">               
+                                                               <div class="slds-modal__header">
+                                                                <div class="slds-grid slds-gutters">
+                                                                    <div class="slds-col slds-size_11-of-12">
+                                                                        <span>
+                                                                            {!v.epmpFailMessage}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            </div> 
+                                                            <div class="slds-modal__footer"> 
+                                                                <div class="slds-align_absolute-center">
+                                                                    <button class="slds-button slds-button--brand" onclick="{!c.closeEpmpPhoneConsent}" >OK</button>
+                                                                	
+                                                            	</div>
+                                                            </div>
+                                                        </div>
+                                                    </section>
+                                                        <!--</div>-->
+                                                </div>
+                                                <div class="slds-backdrop slds-backdrop_open"></div>
+                                                
+                                            </aura:if> 
+											<!--/ Advocate Action Text Box For EPMP Flag-->
+												<div class="close-button slds-p-top_medium slds-p-bottom_medium" align="center">
+                                                      <lightning:button  label="Cancel"  onclick="{! c.cancelEpmpSave }" disabled="{!v.renderEpmpSave}" />
+                                                     <lightning:button variant="brand" label="Save"   disabled="{!v.renderEpmpSave}" onclick="{!c.showConsent}"/>
+                                                  </div>																										  
+                                            <div  class="slds-form-element slds-form-element_readonly">
+                                                <span class="slds-form-element__label">Primary Care Doctor:</span>
+                                                <div class="slds-form-element__control">
+                                                    <div class="slds-form-element__static">
+                                                        <aura:if isTrue="{!not(empty(v.displayPops.physicianFirstName))}">
+                                                            {!v.displayPops.physicianLastName}, {!v.displayPops.physicianFirstName}
+                                                        </aura:if>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div  class="slds-form-element slds-form-element_readonly">
+                                                <!-- Added on onclick for PHI Contacts - US2781361 : Sunil Vennam -->
+                                                <span class="slds-form-element__label">
+                                                    <p><a onclick="{!c.openPHIUrl}">PHI Contacts:</a></p>
+                                                </span>
+                                                <div class="slds-form-element__control">
+                                                    <div class="slds-form-element__static">
+                                                        <aura:iteration items="{!v.phiContacts}" var="item" indexVar="index" >
+                                                            <tr class="slds-hint-parent">
+                                                                <td width="50%">
+                                                                    <div class="slds-p-top_xxx-small">
+                                                                        {!item.memLastName}, {!item.memFirstName} 
+                                                                    </div> 
+                                                                </td>
+                                                            </tr>
+                                                        </aura:iteration>    
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <br/><br/>
+                                    </div>
+                                    </div>
+                                </lightning:layoutItem>
+                                <!-- / Card for Selected Members -->
+                            </lightning:layout>  
+                        </header>
+                  <!--/div>  
+                </section>
+            </div-->  
+        </lightning:layoutItem>
+    </lightning:layout>
+
+</aura:component>

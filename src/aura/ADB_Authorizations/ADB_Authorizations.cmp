@@ -1,0 +1,135 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome" access="global" controller="ADBAuthorizatonsController">
+    <aura:handler name="change" value="{!v.decodedMemberId}" action="{!c.doInit}" />
+    <aura:attribute name="windowHostName" type="String" />    
+    <aura:attribute name="windowName" type="String" /> 
+    <aura:attribute name="AuthDetails" type="List" />
+    <aura:attribute name="listEndCount" type="Integer" default="5" />
+    <aura:attribute name="showSpinner" type="boolean" default="true"/>
+    <aura:attribute name="openModal" type="boolean" default="false"/>
+    <aura:attribute name="decodedMemberId" type="String"/>
+    <aura:attribute name="firstName" type="String"/>
+    <aura:attribute name="memberPolicy" type="String" />
+    <aura:attribute name="memberRelationID" type="String"/>
+    <aura:attribute name="agentUserId" type="String" />
+    <aura:attribute name="unAuthorizedMsg" type="boolean" default="false"/>
+    
+    <lightning:layout horizontalAlign="center" multipleRows="true">
+        <aura:if isTrue="{!v.showSpinner}">
+            <div class="slds-align--absolute-center">
+            <lightning:spinner aura:id="offers_spinner" variant="brand" size="large"/>
+            </div>
+        </aura:if>
+        <lightning:layoutItem size="11" >
+            <div class="slds-scrollable">    
+                <!-- Header  -->
+                <div class="slds-grid">
+                    <div>
+                        <span><b>Authorizations</b></span>
+                    </div>
+                    <aura:if isTrue="{!not(empty(v.AuthDetails))}">
+                        <div class="slds-col_bump-left">
+                            <span><p><a onclick="{!c.openAuthNumberUrl}" target="_blank">View Additional Authorizations</a></p></span>
+                        </div>
+                    </aura:if>
+                </div>
+                <!-- /Header End -->
+                
+                <!-- Data table for Authorizations -->
+                <aura:if isTrue="{!v.unAuthorizedMsg}">
+                    <div id="authNoAuthorizationMsg" class="noDataMsg slds-p-left_medium slds-m-top_xx-small slds-p-right_medium authorizationsNoDataMsg">
+                        {!$Label.c.ADB_NoAuthorizationMsg}
+                    </div>
+                    <aura:set attribute="else">
+                        <aura:if isTrue="{!not(empty(v.AuthDetails))}">
+                            <table class="tableWidth slds-table slds-table_fixed-layout slds-no-row-hover slds-table_bordered slds-border_right slds-border_left">
+                                <thead class="" >
+                                    <tr class="slds-line-height_reset ">
+                                        <th class="thCustom tableHeader" scope="col" style="width: 12.5%">
+                                            <div class="slds-text-align_left">Create Date</div>
+                                        </th>
+                                        <th class="thCustom tableHeader" scope="col" style="width: 10%">
+                                            <div class="slds-text-align_left">Authorization Number</div>
+                                        </th>
+                                        <th class="thCustom tableHeader" scope="col" style="width: 12.5%">
+                                            <div class="slds-text-align_left">Record Type</div>
+                                        </th>
+                                        <th class="thCustom tableHeader" scope="col" style="width: 25%">
+                                            <div class="slds-text-align_left slds-p-right_large">Service Date Range</div>
+                                        </th>
+                                        <th class="thCustom tableHeader" scope="col" style="width: 5%">
+                                            <div class="slds-text-align_left" >Procedure<br/> Code</div>
+                                        </th>
+                                        <th class="thCustom tableHeader" scope="col" style="width: 27% ">
+                                            <div class="slds-text-align_left" >Reason</div>
+                                        </th>
+                                        <th class="thCustom tableHeader" scope="col" style="width: 8%">
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.AuthDetails}" var="Auth" end="{!v.listEndCount}">
+                                        <tr class="slds-hint-parent slds-border_top">
+                                            <td data-label="dateRecieved" style="vertical-align:top;">
+                                                <div class="slds-text-align_left" >
+                                                    {!Auth.advancedNotificationDate}
+                                                </div>
+                                            </td>
+                                            <td data-label="caseNum" style="vertical-align:top;">
+                                                <div class="slds-text-align_left" >
+                                                    <a id="{!Auth.notificationNumber}" data-authNumber="{!Auth.notificationNumber}" onclick="{!c.authNumberUrl}" target="_blank">{!Auth.notificationNumber}</a>
+                                                </div>
+                                            </td>
+                                            <td data-label="recType" style="vertical-align:top;">
+                                                <div class="slds-text-align_left wordWraped" >
+                                                    {!Auth.programRecordIndicator.description}
+                                                </div>
+                                            </td>
+                                            <td data-label="dateRange" style="vertical-align:top;">
+                                                <div class="slds-text-align_left " >
+                                                    {!Auth.parsInfos[0].effectiveDate} - {!Auth.parsInfos[0].cancelDate}
+                                                </div>
+                                            </td>
+                                            <td data-label="procedureCode" style="vertical-align:top;">
+                                                <div class="slds-text-align_left" >
+                                                    {!Auth.parsInfos[0].cptDetails[0].procedure.code}
+                                                </div>
+                                            </td>
+                                            <td data-label="outcome" style="vertical-align:top;">
+                                                <div class="slds-text-align_left wordWraped" >
+                                                    {!Auth.parsInfos[0].remark.code} 
+                                                    <aura:if isTrue="{!not(empty(Auth.parsInfos[0].remark.description))}"> - </aura:if>
+                                                    {!Auth.parsInfos[0].remark.description}
+                                                </div>
+                                            </td>
+                                            <td data-label="flag" style="vertical-align:top;">
+                                                <div class="slds-text-align_left" >
+                                                    <aura:if isTrue="{!Auth.isFlagVisible == 'true'}">
+                                                        <div align="left" onclick="{!c.dispAdvoActionBox}">
+                                                            <img id="authFlag" src="{!$Resource.ADB_CallerProfileCardImages + '/ADB_CallerProfileCardImages/orangeflag.png'}"
+                                                                 style="width:20px;height:20px;" />
+                                                        </div>
+                                                    </aura:if> 
+                                                </div>
+                                            </td>
+                                        </tr> 
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            <!-- /End Data table for Appleals -->
+                            <aura:set attribute="else">
+							<div id="authNoDataMsg" class="errMsg errMsgWidthFull slds-m-top_xx-small ">
+							<ui:message title="" severity="info" closable="false" class=" ">
+								{!$Label.c.ADB_AuthorizationsNoDataMsg}
+							</ui:message>
+							</div>
+                            </aura:set>
+                        </aura:if>       
+                    </aura:set>
+                </aura:if>
+            </div>
+        </lightning:layoutItem>
+    </lightning:layout>
+    <div class="sub-headline">
+    <c:ADB_AdvocateActionFlag openModal="{!v.openModal}"/>
+    </div>
+</aura:component>

@@ -1,0 +1,194 @@
+<!--
+ Name           : OPTUM_DemographicsInfo
+ Created By     : Virtusa(Prasad kammella)
+ Created Date   : Sep 8th, 2020
+ Description    : US2879125: View Demographic Information
+-->
+<aura:component  implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" controller="OPTUM_MemberSearchService" access="global"  >
+  
+    <!--US3241994 Autodoc Demographics-->
+    <ltng:require scripts="{!$Resource.ACET_AutodocJS}" />
+    <ltng:require styles="{!$Resource.ACET_MasterStyle}" />
+    <aura:attribute name="autoDocDemographicsAddress" type="Object" />
+    <aura:attribute name="autoDocDemographicsPhone" type="Object" />
+    <aura:attribute name="autoDocDemographicsEmail" type="Object" />
+    <aura:attribute name="autodocUniqueId" type="String"/>
+    <aura:attribute name="autodocUniqueIdCmp" type="String"/>
+        
+    <aura:attribute name = "memberDetails" type = "Object"/>
+    <aura:attribute name = "phoneMobile" type = "String"/>
+    <aura:attribute name = "phoneWork" type = "String"/>
+    <aura:attribute name = "phoneHome" type = "String"/>
+    <aura:attribute name = "AddressLine2" type = "String"/>
+    <aura:attribute name = "HomeAddressLine1" type = "String"/>
+	<aura:attribute name = "HomeAddressLine2" type = "String"/>
+	<aura:attribute name = "HomeAddressLine3" type = "String"/>
+	<aura:attribute name = "HomeAddressLine4" type = "String"/>
+	<aura:attribute name = "HomeAddressLine5" type = "String"/>
+    <aura:attribute name = "homeAddressCity" type = "String"/>
+	<aura:attribute name = "homeAddressState" type = "String"/>
+	<aura:attribute name = "homeAddressZip" type = "String"/>
+<!-- Added by Iresh, Field mapping-Primary phone indicator: US3083536 -->
+    <aura:attribute name = "phonePreferredHomeNo" type = "String"/>
+    <aura:attribute name = "phonePreferredMobileNo" type = "String"/>
+    <aura:attribute name = "phonePreferredWorkNo" type = "String"/>
+    <aura:handler name="init" value="this" action="{!c.doInit}"/>
+	<!--Added by Sanjay for US3150934: Update Demographics - Validation-->
+    <aura:attribute name="isOpen" type="boolean" default="false" />
+    <aura:attribute name="ppCheck" type="boolean" default="true" />
+    <aura:attribute name="ppErrorMessage" type="String" />
+    <aura:attribute name="phonePreferred" type="List" default="[
+    {'label': 'Home', 'value': 'Home'},
+    {'label': 'Mobile', 'value': 'Mobile'},
+    {'label': 'Work', 'value': 'Work'}
+    ]" />
+	<!--Added by prasad	US3296038: Preferred Phone update -->
+    <aura:attribute name="pfvalue" type="String" />
+    <aura:attribute name="rsphonepf" type="String" />
+    <aura:attribute name="prhome" type="String" default="H" />
+    <aura:attribute name="prwork" type="String" default="W" />
+    <aura:attribute name="prmobile" type="String" default="M" />
+    <!-- US3296038: Preferred Phone update-->
+    <aura:attribute name="value" type="String" />
+    <aura:attribute name="home" type="String" default="Home" />
+    <aura:attribute name="work" type="String" default="Work" />
+    <aura:attribute name="mobile" type="String" default="Mobile" />
+    <aura:attribute name="pHome" type="String" />
+    <aura:attribute name="pWork" type="String" />
+    <aura:attribute name="pMobile" type="String" />
+	<aura:attribute name="faroId" type="String" />
+    <aura:attribute name="Spinner" type="boolean" default="false" />
+	<aura:attribute name="emailAdd" type="String" />
+    <aura:attribute name="mAddLine1" type="String" />
+    <aura:attribute name="mAddLine2" type="String" />
+    <aura:attribute name="mCity" type="String" />
+    <aura:attribute name="mState" type="String" />
+    <aura:attribute name="mZip" type="String" />
+    <aura:attribute name="hAddLine1" type="String" />
+    <aura:attribute name="hAddLine2" type="String" />
+    <aura:attribute name="hCity" type="String" />
+    <aura:attribute name="hState" type="String" />
+    <aura:attribute name="hZip" type="String" />
+    <aura:attribute name="zip" type="String" />
+    <aura:attribute name="zip4" type="String" />
+	<aura:attribute name="states" type="String[]" default="AA,AE,AK,AL,AP,AR,AS,AZ,CA,CO,CT,DC,DE,FL,FM,GA,GU,HI,IA,ID,IL,IN,KS,KY,LA,MA,MD,ME,MH,MI,MN,MO,MP,MS,MT,NC,ND,NE,NH,NJ,NM,NV,NY,OH,OK,OR,PA,PR,PW,RI,SC,SD,TN,TX,UT,VA,VI,VT,WA,WI,WV,WY"/>
+       
+        <!--    <lightning:layout multipleRows="true">
+                <lightning:layoutItem padding="around-small"  size="12" smallDeviceSize="12" mediumDeviceSize="12">
+                    <div class="cls-cart">Demographics</div>
+                </lightning:layoutItem>
+           </lightning:layout> -->
+    <p> 
+    <div class="slds-p-top_none"></div>
+    <div class="slds-p-left_medium slds-text-title_bold cls-cart">Demographics
+	<!--Added by Sanjay for US3150934: Update Demographics - Validation-->
+    <lightning:buttonIcon iconName="utility:edit" class="slds-col_bump-left" iconClass="slds-button__icon_hint" variant="bare" size="medium" onclick="{!c.openModal}" />
+	</div>
+	<!--Added by Sanjay for US3150934: Update Demographics - Validation-->
+    <div>
+        <aura:if isTrue="{!v.isOpen}">
+            <!--###### MODAL BOX Start######-->
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <!-- ###### MODAL BOX HEADER Start ######-->
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close" onclick="{! c.closeModal }" alternativeText="close" variant="bare-inverse" class="slds-modal__close" />
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Edit demographic details</h2>
+                    </header>
+                    <!--###### MODAL BOX BODY Part Start######-->
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <div class="slds-form-element">
+                            <div>
+                                <h2 class="header">Mailing Address Details</h2>
+                            </div>
+                            <div>
+                                <lightning:input aura:id="mAddressLine1" type="text" name="AddressLine1" value="{!v.memberDetails.member.mailAddressLine1}"  messageWhenValueMissing="This field is required." required="true" maxlength="40" label="Address Line 1" />
+                                <lightning:input aura:id="mAddressLine2" type="text" name="AddressLine2" value="{!v.memberDetails.member.mailAddressLine2}"  maxlength="40" label="Address Line 2" />
+                                <div class="slds-grid slds-wrap">
+                                    <div class="slds-col slds-size_1-of-3 slds-p-right_x-small">
+                                        <lightning:input aura:id="mCity" type="text" name="AddressCity" value="{!v.memberDetails.member.mailAddressCity}" pattern="^[a-zA-Z0-9_ ]*$" required="true" messageWhenPatternMismatch="Please provide alphabets and numbers only." messageWhenValueMissing="This field is required." maxlength="24" label="City" />
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-3 slds-p-right_x-small">
+                                        <lightning:select aura:id="selectState" name="stateCode" label="State Code" value="{!v.mState}" required="true" messageWhenValueMissing="Please select a valid state">        
+                                        <option value="">None</option>
+                                        <aura:iteration items="{!v.states}" var="state">
+                                        <option text="{!state}"></option>
+                                        </aura:iteration>
+                                        </lightning:select>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-3">
+                                        <lightning:input aura:id="mZip" type="text" name="AddressZip" pattern="([0-9]{5}|[0-9]{9}|([0-9]{5}-[0-9]{4}))" minlength="5" maxlength="10" required="true" messageWhenTooShort="Please enter atleast 5 digit number" messageWhenPatternMismatch="Please provide numbers in format 12345 or 123456789 or 12345-6789." messageWhenValueMissing="This field is required." value="{!v.memberDetails.member.mailAddressZip}" label="Zip Code" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-p-top_small">
+                                <h2 class="header">Home Address Details</h2>
+                            </div>
+                            <div>
+                                <lightning:input aura:id="hAddressLine1" type="text" name="AddressLine1" messageWhenValueMissing="This field is required." maxlength="40" label="Address Line 1" disabled= "true"/>
+                                <lightning:input type="text" name="AddressLine2" maxlength="40" label="Address Line 2" disabled= "true"/>
+                                <div class="slds-grid slds-wrap">
+                                    <div class="slds-col slds-size_1-of-3 slds-p-right_x-small">
+                                        <lightning:input aura:id="hCity" type="text" name="AddressCity" pattern="^[a-zA-Z0-9_]*$" messageWhenPatternMismatch="Please provide alphabets and numbers only." messageWhenValueMissing="This field is required." maxlength="24" label="City" disabled= "true"/>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-3 slds-p-right_x-small">
+                                        <lightning:input aura:id="hState" type="text" name="AddressState" pattern="^[a-zA-Z]*$" messageWhenPatternMismatch="Please provide alphabets only." messageWhenValueMissing="This field is required." maxlength="2" label="State Code" disabled= "true"/>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-3">
+                                        <lightning:input aura:id="hZip" type="text" name="AddressZip" pattern="([0-9]{5}|[0-9]{9}|([0-9]{5}-[0-9]{4}))" minlength="5" maxlength="10" messageWhenTooShort="Please enter atleast 5 digit number" messageWhenPatternMismatch="Please provide numbers in format 12345 or 123456789 or 12345-6789." messageWhenValueMissing="This field is required." label="Zip Code" disabled= "true"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-p-top_small">
+                                <h2 class="header">Phone Numbers</h2>
+                            </div>
+                            <div>
+                                <div class="slds-grid slds-wrap">
+                                    <div class="slds-col slds-size_1-of-3 slds-p-right_x-small">
+                                        <lightning:input aura:id="hPhone" type="tel" label="Home Phone" name="homePhone" pattern="^[0-9_]*$" messageWhenTooShort="Please enter a 10 digit number" messageWhenPatternMismatch="Please provide numbers only." minlength="10" maxlength="10" value="{! v.pHome }" />
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-3 slds-p-right_x-small">
+                                        <lightning:input aura:id="mPhone" type="tel" label="Mobile Phone" name="mobilePhone" pattern="^[0-9_]*$" messageWhenTooShort="Please enter a 10 digit number" messageWhenPatternMismatch="Please provide numbers only." minlength="10" maxlength="10" value="{! v.pMobile }" />
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-3">
+                                        <lightning:input aura:id="wPhone" type="tel" label="Work Phone" name="workPhone" pattern="^[0-9_]*$" messageWhenTooShort="Please enter a 10 digit number" messageWhenPatternMismatch="Please provide numbers only." minlength="10" maxlength="10" value="{! v.pWork }" />
+                                    </div>
+                                </div>
+                            </div>
+                            <lightning:radioGroup name="radioGroup" label="Preferred Phone" options="{! v.phonePreferred }" disabled= "false" type="radio" value="{! v.value }" onchange="{! c.handleChange }" />
+                            <aura:if isTrue="{!not(v.ppCheck)}">
+                                <div>
+                                    <p class="pp-error">{! v.ppErrorMessage }</p>
+                                </div>
+                            </aura:if>
+                            <div>
+                                <lightning:input aura:id="emailId" type="email" name="emailID" messageWhenValueMissing="This field is required." value="{! v.emailAdd }" required="true" maxlength="75" label="Email Address" />
+                            </div>
+                        </div>
+                    </div>
+                    <!--###### MODAL BOX FOOTER Part Start ######-->
+                    <footer class="slds-modal__footer">
+                        <lightning:button variant="neutral" label="Cancel" title="Cancel" onclick="{! c.closeModal }" />
+                        <lightning:button variant="brand" label="Save" title="Save" onclick="{! c.save }" />
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+            <!--###### MODAL BOX Part END Here ######-->
+        </aura:if>
+    </div>
+	<aura:if isTrue="{!v.Spinner}">
+                <lightning:spinner alternativeText="Loading, Please Wait..." title="Loading, Please Wait..." variant="brand" size="medium" />
+    </aura:if>
+    <div class="slds-p-top_x-small"></div>
+    <!--US3241994 Autodoc Demographics-->
+    <c:ACET_AutoDocCard autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"
+    cardDetails="{!v.autoDocDemographicsAddress}" showComponentName="false"
+    aura:id="memberDetails"/>
+    <c:ACET_AutoDocCard autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"
+    cardDetails="{!v.autoDocDemographicsEmail}" showComponentName="false"/>
+    <c:ACET_AutoDocDataTable autodocUniqueId="{!v.autodocUniqueId}"
+             autodocUniqueIdCmp="{!v.autodocUniqueId}" 
+             tableDetails="{!v.autoDocDemographicsPhone}" />    
+</p> 
+</aura:component>

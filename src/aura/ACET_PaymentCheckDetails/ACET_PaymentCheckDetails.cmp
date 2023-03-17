@@ -1,0 +1,201 @@
+<!--  US2851678 -ketki  9/10  Created this component to show payment check details-->
+<aura:component controller="SAEClaimSearchController"
+    implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes" access="global">
+
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+
+    <!-- US3456351 - Kavinda -->
+    <aura:attribute name="tableDetails" type="Object" />
+    <aura:attribute name="autodocUniqueId" type="String" default="auto" />
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default="ViewPayments" />
+    <aura:attribute name="allowAutoCheck" type="Boolean" default="false" />
+    <aura:attribute name="tableBody" type="Object" />
+
+    <!-- US3456351 - Kavinda -->
+    <aura:attribute name="checkSearchRespObj" type="ACET_ViewPaymentsCheckSearchWrapper[]" default="" access="public" />
+    <aura:attribute name="requestObject" type="ACET_ViewPaymentsRequest.PaymentDetailsParams" />
+
+    <!-- US3182022 - Swapnil -->
+    <aura:handler name="selectedRowLink" event="c:ACET_AutoDocSelectedRow" action="{!c.getClaimSummaryData}" />
+    <aura:attribute name="checkNo" type="String" /> <!-- To be deleted -->
+    <!--US3182022: Build New Tab for Claim # Hyperlink Access UI - Swapnil -->
+    <aura:attribute name="currentIndexOfOpenedTabs" type="Integer" default="0"/>
+    <aura:attribute name="cobMNRCommentsTable" type="Object" />
+    <aura:attribute name="regionCode" type="String" />
+    <aura:attribute name="cobENIHistoryTable" type="Object" />
+    <aura:attribute name="AuthAutodocPageFeature" type="String" default="authPageDetails" />
+    <aura:attribute name="SRNFlag" type="Boolean" default="false" />
+    <aura:attribute name="isHippaInvokedInProviderSnapShot" type="Boolean" default="false" />
+    <aura:attribute name="dependentCode" type="String" />
+    <aura:attribute name="secondaryCoverageList" type="Object[]" />
+    <aura:attribute name="pageNumber" type="Integer" default="1" />
+    <aura:attribute name="isMRlob" type="Boolean" default="false" />
+    <aura:attribute name="memberautodocUniqueId" type="String" default="auto" />
+    <aura:attribute name="houseHoldData" type="Object[]" />
+    <aura:attribute name="cobData" type="Object" />
+    <aura:attribute name="claimStatusSet" type="Set" default="['Acknowledgement','Rejected','Action Required']" />
+    <aura:attribute name="mapClaimSearchResult" type="Object" />
+    <aura:attribute name="mapClaimSummaryDetails" type="Object" default="[]" />
+    <aura:attribute name="listClaimStatusDetails" type="Object" />
+    <aura:attribute name="memberInfoDetails" type="Object" />
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute type="Map" name="TabMap" />
+    <aura:attribute name="memberTabId" type="string" access="public" />
+    <aura:attribute name="policyDetails" type="SAEPolicyDetailsResult" />
+    <aura:attribute name="insuranceTypeCode" type="String" default="" />
+    <aura:attribute name="claimInput" type="Object" />
+    <aura:attribute name="memberId" type="string" access="public" />
+    <aura:attribute name="policyNumber" type="String" />
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0" />
+    <aura:attribute name="memberPolicies" type="SAEMemberProviderSearchCoveragesResult.CoverageLine[]" />
+    <aura:attribute name="selectedPolicy" type="SAEMemberProviderSearchCoveragesResult.FinancialsWrapper"
+        access="public" />
+    <aura:attribute name="callTopicLstSelected" type="sObject[]" />
+    <aura:attribute name="providerDetails" type="Object" access="public" />
+    <aura:attribute name="hipaaEndpointUrl" type="String" default="" />
+    <aura:attribute name="contactUniqueId" type="string" access="public" />
+    <aura:attribute name="interactionRec" type="Interaction__c" />
+    <aura:attribute name="interactionOverviewTabId" type="String" />
+    <aura:attribute name="caseWrapperMNF" type="SAETTSCaseWrapper" access="public" default="[]" />
+    <aura:attribute name="componentId" type="String" access="global" />
+    <aura:attribute name="memberDOB" type="string" access="public" />
+    <aura:attribute name="memberFN" type="string" access="public" />
+    <aura:attribute name="memberCardData" type="Object" />
+    <aura:attribute name="memberCardSnap" type="Object" access="public" />
+    <aura:attribute name="houseHoldMemberId" type="String" access="public" />
+    <aura:attribute name="currentPayerId" type="String" access="public" />
+    <aura:attribute name="autoDocToBeDeleted" type="Object" />
+    <aura:attribute name="memberLN" type="string" access="public" />
+    <aura:attribute name="authContactName" type="String" />
+    <aura:attribute name="interactionType" type="string" />
+    <aura:attribute name="AutodocPageFeatureMemberDtl" type="String" />
+    <aura:attribute name="AutodocKeyMemberDtl" type="String" />
+    <aura:attribute name="noMemberToSearch" type="Boolean" default="false" />
+    <aura:attribute name="interactionCard" type="Object" access="public" />
+    <aura:attribute name="selectedTabType" type="String" access="public" />
+    <aura:attribute name="originatorType" type="string" access="public" />
+    <aura:attribute name="callTopicOrder" type="Object" />
+    <aura:attribute name="planLevelBenefitsRes" type="ACET_ExtendedServiceController.PlanLevelBenefits"
+        access="Public" />
+    <aura:attribute name="eligibleDate" type="String" access="public" />
+    <aura:attribute name="highlightedPolicySourceCode" type="String" default="" />
+    <aura:attribute name="isSourceCodeChanged" type="Boolean" default="false" />
+    <aura:attribute name="policyStatus" type="Boolean" default="false" />
+    <aura:attribute name="isTierOne" type="boolean" access="public" default="false" />
+    <aura:attribute name="callTopicTabId" type="String" />
+
+    <aura:attribute name="seriesDesignator" type="String" />
+
+    <!-- US3597656 -->
+    <aura:attribute name="nextKey" type="String" />
+
+    <!-- US3476420 -->
+    <aura:attribute name="showViewMoreBtn" type="Boolean" default="false" />
+
+    <!-- US3389424: View Payments - Select Claim # Hyperlink in Payment Details - For Different Member : Swapnil (7/2/2021) -->
+    <aura:attribute name="showWarning" type="Boolean" default="false"/>
+    <aura:attribute name="claimsServiceDates" type="Object"/>
+    <aura:attribute name="contactName" type="Object" access="public" />
+    <aura:attribute name="isOtherSearch" type="Object" access="public" />
+    <aura:attribute name="providerNotFound" type="Object" access="public" />
+    <aura:attribute name="isProviderSearchDisabled" type="Object" access="public" />
+    <aura:attribute name="memberCardFlag" type="Object" access="public" />
+    <aura:attribute name="contactCard" type="Object" access="public" />
+    <aura:attribute name="providerDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="isClaim" type="boolean" access="public" default="false"/>
+
+    <!-- US3701717: View Claims: Select Claim # Hyperlink in Payment Status Card - Swapnil -->
+    <aura:handler event="lightning:tabClosed" action="{! c.onTabClosed }" />
+    <aura:attribute name="isFromClaimDetails" type="boolean" default="false"/>
+
+    <aura:attribute name="currentRowIndex" type="Integer" />
+    <aura:attribute name="currentCellIndex" type="Integer" />
+
+    <!-- Bulk Recovery - US3449703 -->
+    <aura:attribute name="enableRecovery" type="Boolean" default="false" />
+    <aura:attribute name="showRecovery" type="Boolean" default="false" />
+    <aura:attribute name="originalTableData" type="Object" />
+    <aura:handler name="change" value="{!v.showRecovery}" action="{!c.toggleRecovery}" />
+    <aura:attribute name="paymentDetails" type="object" />
+    <aura:attribute name="taxId" type="string" access="public" />
+    <aura:attribute name="bulkRecoveryData" type="Object" access="public" />
+
+    <!-- DE477141 Swapnil -->
+    <aura:attribute name="mapInOutPatientDetails" type="Object" default="[]"/>
+    <aura:attribute name="selectedIPAValue" type="String" default=""/>
+
+    <div class="slds-is-relative slds-p-vertical_none slds-card card_padding"
+        style="background:white; width: 100%; padding-left: 0px; padding-right: 0px;">
+
+        <!-- US3476420 -->
+        <lightning:spinner class="slds-hide" variant="brand" size="medium" aura:id="srncspinner"
+            alternativeText="Loading" />
+        <div class="slds-grid slds-grid_vertical-align-center" style="margin-top: 6px;">
+            <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                <div class="slds-media_body">
+                    <!--Start - US3476420-->
+                    <p class="component_title ">Payment Details:&nbsp;{!v.seriesDesignator}{!v.requestObject.checkNumber}</p>
+                </div>
+            </header>
+            <!-- US3476420 -->
+            <!-- US3449703 -->
+            <aura:if isTrue="{!v.enableRecovery}">
+                <div class="slds-col" style="text-align: center;right: 50%;position: absolute;">
+                    <span class="recoveryTxt">This Payment is subject to a Bulk Recovery.</span>
+                </div>
+                <div class="slds-col recovery-toggle">
+                    <div class="slds-grid slds-grid_vertical-align-center" style="">Bulk Recovery
+                        <c:ACET_ToggleButton width="55" checked="{!v.showRecovery}" checkedText="On"
+                            uncheckedText="Off" />
+                    </div>
+                </div>
+            </aura:if>
+            <!-- end -->
+            <!-- <div class="slds-no-flex slds-p-top_medium slds-p-right_none"> -->
+            <div class="slds-col" style="position: absolute;right: 0;">
+                <lightning:buttonGroup>
+                    <lightning:button
+                        class="{! ' slds-button slds-button_neutral neutral_button ' + ( v.showViewMoreBtn ? ' visibility-yes ' :  ' visibility-no ') }"
+                        variant="neutral" label="View More" onclick="{!c.searchPaymentDetails}" />
+                </lightning:buttonGroup>
+            </div>
+        </div>
+        <!-- US3476420 -->
+        <!-- US3484619 -->
+        <div class=" slds-grid slds-col slds-size_12-of-12 slds-p-bottom_small" style="margin-top: -26px;">
+            <c:ACET_AutoDocDataTable fixLayout="table-layout:fixed;" autodocUniqueId="{!v.autodocUniqueId}"
+                autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}" enablePagination="false" tableDetails="{!v.tableDetails}"
+                autoCheck="{!v.autoCheck}" allowAutoCheck="{!v.allowAutoCheck}" showSearchBox="true"
+                enableSearch="true" tableBody="{!v.tableBody}"  isAutodocHidden="true"/>
+        </div>
+    </div>
+
+    <!-- US3389424: Swapnil -->
+    <aura:if isTrue="{!v.showWarning}">
+        <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" style="position: fixed !important;" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container"  style="min-width: 54rem;">
+               <div class="slds-modal__content card_padding no_radius slds-form-element__static"  id="modal-content-id-1">
+                    This claim is not for the member in focus. Do you want to load the Snapshot page for {! v.memberInfoDetails.ptntFn + ' ' + v.memberInfoDetails.ptntLn } DOB {! v.memberInfoDetails.ptntDob}?
+                    <br/> <br/>
+                    <div style="color: red;">
+                        BE SURE TO RE-VERIFY PER HIPAA GUIDELINES.<br/>
+                    </div>
+                </div>
+                <footer class="slds-modal__footer card_padding">
+                    <lightning:button variant="brand"
+                                      label="Yes"
+                                      title="Yes"
+                                      onclick="{! c.switchClaimsYes}"
+                                      class="brand_button"/>
+                    <lightning:button variant="brand"
+                                      label="No"
+                                      title="No"
+                                      onclick="{! c.switchClaimsNo}"
+                                      class="brand_button"/>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if> <!-- US3389424 -->
+</aura:component>

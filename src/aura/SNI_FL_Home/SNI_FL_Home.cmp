@@ -1,0 +1,240 @@
+<aura:component implements="forceCommunity:themeLayout,forceCommunity:availableForAllPageTypes,forceCommunity:layout,force:lightningQuickAction,force:appHostable" access="global" controller="SNI_FL_HomeController">
+    <!--<aura:attribute name="User" type="User"/>-->
+
+    <aura:attribute name="displayedSection" type="String" default="dashboardSec"/>
+   <!-- <aura:attribute name="displayedSection1" type="String" default="false"/> -->
+    <aura:attribute name="pageReference" type="Object"/>
+    <aura:handler event="c:SNI_FL_getSelectedFamily" action="{!c.setCurrentFamily}"/>
+    <aura:attribute name="selectFamilyId" type="string"/>
+    <aura:attribute name="familyAccountOwner" type="string"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="isChatView" type="Boolean" default="false"/>
+    <aura:attribute name="selectedFamilyId" type="string" description="to store salected family id"/> <!-- Added by Nanthu (AC/DC) DE411854 filter messages based on the selected family-->
+    <aura:attribute name="isNewMessageAvailable" type="Boolean" />
+    <aura:attribute name="IsValidProfile" type="Boolean" />
+    <aura:attribute name="userIdValue" type="String"/>
+    <aura:attribute name="isNewCaseAvailable" type="Boolean" />
+    <aura:attribute name="refreshDashBoard" type="Boolean" default="true" />
+    <aura:attribute name="fetchDashBoard" type="Boolean" default="false" />
+    <aura:handler name="SNI_FL_WelcomeScreenMessageEvent" event="c:SNI_FL_WelcomeScreenMessageEvent" action="{!c.handleMessageEvent}"/>
+    <div class="mobile-menu-container">
+        <div class="mobile-actions">
+            <div class="team ">
+                <!-- Team Goes here
+                {!v.User.FirstName}&nbsp;{!v.User.LastName}
+                 -->
+                {!v.familyAccountOwner}
+            </div>
+            <a onclick="{!c.getMobileNavUI}">
+                <lightning:icon class="mobile-icon slds-float_right" iconName="utility:rows" size="large" />
+            </a>
+            <!--Commented by ACDC team with the instructions of Randi-->
+           <!-- <a>
+               <lightning:icon class="mobile-icon" iconName="utility:comments" size="large" />
+            </a>-->
+        </div>
+    </div>
+   
+    <div class="dashboard">         
+        <div class="navigation bgn mobile-hide">
+            <div class="navigation-top">                
+                <c:SNI_FL_FamilySelection selectedFamilyId="{!v.selectedFamilyId}"/>
+                <ul class="navigation-ul">
+                    
+                    <li class="{! if(v.displayedSection == 'dashboardSec','active','inactive')}">
+                        <a  class="applyTabStyles" id="Dashboard" href="javascript:void(0);" onclick="{!c.displayDashboard}">
+                            <lightning:icon class="imageSize" iconName="standard:home" size="small"/>
+                            <span class="dashboard-name" style="padding:1rem">Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="inactive">
+                        <a  class="applyTabStyles" id="Messages" href="javascript:void(0);" onclick="{!c.displayMessage}"> 
+                            <!--<lightning:icon iconName="standard:rtc_presence" class="imageSize" size="small"/>-->
+                            <lightning:icon iconName="utility:comments" size="small" class="imageSize"/>
+                            <span class="Message-name" style="padding:1rem">Messages</span>
+                             <!--AC/DC Added by Pavithra-->
+                             <aura:if isTrue="{!v.isNewMessageAvailable}">
+                                <lightning:icon  iconName="utility:notification" alternativeText="priority" title="priority" size="xx-small" class="notificationIcon slds-m-right_xx-small "/>
+                            </aura:if> 
+                            <!--End of AC/DC Added by Pavithra-->
+                        </a>
+                    </li>
+                    <li class="{! if(v.displayedSection == 'careTeamSec','active','inactive')}">
+                        <a class="applyTabStyles" id="Careteam" href="javascript:void(0);" onclick="{!c.displayCareTeam}">
+                            <lightning:icon iconName="standard:record_create" class="imageSize" size="small"/>
+                            <span class="Careteam-name" style="padding:1rem">Personal Care Team</span>
+                        </a>
+                    </li>
+                    <li class="{! if(v.displayedSection == 'casesSec','active','inactive')}">
+                        <a  class="applyTabStyles" id="Tasks" href="javascript:void(0);"  onclick="{!c.displayCases}">
+                            <lightning:icon iconName="standard:task2" class="imageSize" size="small"/>
+                            <span class="Tasks-name" style="padding:1rem">Cases</span>
+                             <!--AC/DC Added by Pavithra-->
+                            <aura:if isTrue="{!v.isNewCaseAvailable}">
+                                <lightning:icon  iconName="utility:notification" alternativeText="priority" title="priority" size="xx-small" class="notificationIcon slds-m-right_xx-small "/>
+                            </aura:if>
+                            <!--End of AC/DC Added by Pavithra-->
+                        </a>
+                    </li>
+                    <li class="{! if(v.displayedSection == 'recordsSec','active','inactive')}">
+                        <a  class="applyTabStyles" id="Records" href="javascript:void(0);" onclick="{!c.displayRecords}" >
+                            <lightning:icon iconName="standard:record" class="imageSize" size="small"/>
+                            <span class="Records-name" style="padding:1rem">Records</span>
+                        </a>
+                    </li>
+                    <!--WHAM TEAM - Commented below Marketplace tab from menu by Ankit Agarwal as per User Story US3083305-->
+                    <!--<li class="inactive">
+                        <a class="applyTabStyles" id="Marketplace" href="http://marketplace.ocp-elr-dmz-nonprod.optum.com/marketplace/program-list" onclick="">
+                            <lightning:icon iconName="standard:webcart" class="imageSize" size="small"/>
+                            <span class="Marketplace-name" style="padding:1rem">Marketplace</span>
+                        </a>
+                    </li> -->
+                     <li class="{! if(v.displayedSection == 'supportSec','active','inactive')}">
+                        <a class="applyTabStyles" id="Support" href="javascript:void(0);" onclick="{!c.displaySupport}">
+                            <lightning:icon iconName="standard:omni_supervisor" class="imageSize" size="small"/>
+                            <span class="Support-name" style="padding:1rem">Support</span>
+                        </a>
+                    </li>
+                    <!--<li class="inactive">
+                            <img src="{!$Resource.UHG_Logo}"/>
+                        </li> -->
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="desktopview_height">
+        <div class="slds-grid SNI_FL_HomeId"  style="height:100% !important;overflow-y: auto;">
+            <div class="slds-size_3-of-12  mobile-navigation-display-grid-1-hide slds-scroll-hide" style="transition : width 2s ease;width:23% !important;min-width: 200px;overflow-y: auto;">
+                <div class="slds-grid slds-grid_vertical mobile-navigation-grid-ui" style="height:100% !important">
+                    <div style="height:100% !important; " class="mobile-navigation-tabs-hide">
+                       <!-- <div class="tabs" Style="background:linear-gradient(to bottom, #04A0B6, #2075A2);">-->
+                            <div class="tabs" Style="background:#ed7016;">
+                            <div class="slds-col changeUserStyle" style="clear:both;border-bottom:1px solid #B5E8FF;font-weight:400;color:#fff;font-size:12px;padding-left:15px">
+                               <c:SNI_FL_FamilySelection selectedFamilyId="{!v.selectedFamilyId}"/>
+                            </div>
+                            <div class="{! if(v.displayedSection == 'dashboardSec','slds-col changeTabBgColor activeTab','slds-col changeTabBgColor')}" style="padding-left:15px">
+                                <a  class="applyTabStyles" id="DashboardDT" href="javascript:void(0);" onclick="{!c.displayDashboard}" >
+                                    <lightning:icon class="imageSize" iconName="standard:home" size="small"/>
+                                    <span class="dashboard-name" style="padding:1rem">Dashboard</span>
+                                </a>
+                            </div>
+                            <!--linked onclick with displayMessage action in controller by Sameera AC/DC-->
+                            <div class="{!if(v.displayedSection == 'messagesSec','slds-col changeTabBgColor activeTab','slds-col changeTabBgColor')}" style="padding-left:15px">
+                                
+                                <a  class="applyTabStyles" id="MessagesDT" href="javascript:void(0);" onclick="{!c.displayMessage}" >
+                                    <lightning:icon iconName="standard:messaging_conversation" size="small" class="imageSize"/>
+                                    <span class="Message-name" style="padding:1rem">Messages</span>
+                                     <!--AC/DC Added by Pavithra-->
+                                    <aura:if isTrue="{!v.isNewMessageAvailable}">
+                                        <lightning:icon  iconName="utility:notification" alternativeText="priority" title="priority" size="xx-small" class="notificationIcon slds-m-right_xx-small "/>
+                                    </aura:if> 
+                                    <!--End of AC/DC Added by Pavithra-->
+                                </a>
+                            </div>
+                             <div class="{! if(v.displayedSection == 'careTeamSec','slds-col changeTabBgColor activeTab','slds-col changeTabBgColor')}" style="padding-left:15px">
+                                <a class="applyTabStyles" id="CareteamDT" href="javascript:void(0);" onclick="{!c.displayCareTeam}" > <!-- onclick="{!c.displayCompass}" -->
+                                    <lightning:icon iconName="standard:team_member" class="imageSize" size="small"/>
+                                    <span class="Careteam-name" style="padding:1rem">Personal Care Team</span>
+                                </a>
+                            </div>
+                            <div class="{! if(v.displayedSection == 'casesSec','slds-col changeTabBgColor activeTab','slds-col changeTabBgColor')}" style="padding-left:15px">
+                                <a  class="applyTabStyles" id="CasesDT" href="javascript:void(0);" onclick="{!c.displayCases}" > <!--onclick="{!c.displayTasks}" -->
+                                    <lightning:icon iconName="standard:task2" class="imageSize" size="small"/>
+                                    <span class="Tasks-name" style="padding:1rem">Cases</span>
+                                    <!--AC/DC Added by Pavithra-->
+                                    <aura:if isTrue="{!v.isNewCaseAvailable}">
+                                        <lightning:icon  iconName="utility:notification" alternativeText="priority" title="priority" size="xx-small" class="notificationIcon slds-m-right_xx-small "/>
+                                    </aura:if>
+                                    <!--End of AC/DC Added by Pavithra-->
+                                </a>
+                            </div>
+                            <div class="{! if(v.displayedSection == 'recordsSec','slds-col changeTabBgColor activeTab','slds-col changeTabBgColor')}" style="padding-left:15px">
+                                <a  class="applyTabStyles" id="RecordsDT"  href="javascript:void(0);" onclick="{!c.displayRecords}"  >
+                                    <lightning:icon iconName="standard:record" class="imageSize" size="small"/>
+                                    <span class="Records-name" style="padding:1rem">Records</span>
+                                </a>
+                            </div>
+                            <!--WHAM TEAM - Commented below Marketplace tab from menu by Ankit Agarwal as per User Story US3083305-->
+                            <!--<div class="slds-col changeTabBgColor" style="padding-left:15px">
+                                <a class="applyTabStyles" id="MarketplaceDT" href="javascript:void(0);" onclick="{!c.displayMarketPlace}">
+                                    <lightning:icon iconName="standard:webcart" class="imageSize" size="small"/>
+                                    <span class="Marketplace-name" style="padding:1rem">Marketplace</span>
+                                </a>
+                            </div>-->
+                            <div class="{! if(v.displayedSection == 'supportSec','slds-col changeTabBgColor activeTab','slds-col changeTabBgColor')}" style="padding-left:15px;border-bottom:1px solid #B5E8FF;">
+                                <a class="applyTabStyles" id="SupportDT" href="javascript:void(0);" onclick="{!c.displaySupport}">
+                                    <lightning:icon iconName="standard:omni_supervisor" class="imageSize" size="small"/>
+                                    <span class="Support-name" style="padding:1rem">Support</span>
+                                </a>
+                            </div>
+                        </div>
+                        <!--<div style="padding: 0px;background: #122377;">
+                            <img src="{!$Resource.UHG_Logo}"/>
+                        </div>-->
+                    </div>
+                </div>
+            </div>
+            <div class="{!if((v.displayedSection == 'ToHide'),'slds-size_7-of-12 contentDiv slds-border_top mobile-navigation-display-grid-2','slds-size_9-of-12 contentDiv slds-border_top mobile-navigation-display-grid-2')}" style="border-top:1px solid #d6c8f5;"> <!--;width:77% !important;-->
+                <div aura:id="flActivities" class="{!if(v.displayedSection == 'dashboardSec','slds-show','slds-hide')}" >
+                    <div><aura:if isTrue="{!v.refreshDashBoard}">
+                        <c:SNI_FL_Activities familyId="{!v.selectFamilyId}" getDataonLoad="{!v.fetchDashBoard}"/>
+                    </aura:if></div>
+                </div>
+                <aura:if isTrue="{!if(v.displayedSection == 'careTeamSec',true,false)}" >
+                    <div aura:id="flCareTeam" class="{!if(v.displayedSection == 'careTeamSec','slds-show','slds-hide')}" >
+                        <div>
+                            <!--<c:ACETFamilyLinkCareTeam/> -->
+                            	<!-- commented by Prajnith -->
+                          <c:SNI_FL_CareTeam familyId="{!v.selectFamilyId}"/>
+                        </div>
+                    </div>
+                </aura:if>
+                <div aura:id="flLinkTask" class="{!if(v.displayedSection == 'tasksSec','slds-show','slds-hide')}" >
+                    <div>
+                        <!--<c:ACETFamilyLinkTask/> -->
+                    </div>
+                </div>
+                <div aura:id="flRecords" class="{!if(v.displayedSection == 'recordsSec','slds-show','slds-hide')}" >
+                    <div>
+                        <c:SNI_FL_Records familyId="{!v.selectFamilyId}" />
+                    </div> 
+                </div>
+                <div aura:id="flCases" class="{!if(v.displayedSection == 'casesSec','slds-show','slds-hide')}" >
+                    <div>
+                        <c:SNI_FL_Cases selectFamilyId="{!v.selectFamilyId}"></c:SNI_FL_Cases>
+                    </div> 
+                </div>
+                <div aura:id="flMessages" class="{!if(v.displayedSection == 'messagesSec','slds-show','slds-hide')}" >
+                    <div>
+                        <c:SNI_FL_FamilyView isChatView="{!v.isChatView}" selectedFamilyId="{!v.selectedFamilyId}" SelectedAccountName="{!v.selectFamilyId}"></c:SNI_FL_FamilyView>
+                    </div>
+                </div>
+                <aura:if isTrue="{!if(v.displayedSection == 'supportSec',true,false)}" >
+                    <div aura:id="flSupportTeam" class="{!if(v.displayedSection == 'supportSec','slds-show','slds-hide')}" >
+                        <div>
+                            <c:SNI_FL_Support/>
+                        </div>
+                    </div>
+                </aura:if>
+                <aura:if isTrue="{!if(v.displayedSection == 'settingSec',true,false)}" >
+                    <div aura:id="flsetting" class="{!if(v.displayedSection == 'settingSec','slds-show','slds-hide')}" >
+                        <div>
+                            <c:SNI_FL_AccountSetting selectFamilyId ="{!v.selectFamilyId}"/>
+                        </div>
+                    </div>
+                </aura:if>
+               <!-- <aura:if isTrue="{v.displayedSection1}" >
+                    
+                        <div>
+                            <c:SNI_FL_HSIDmemSettingpage selectFamilyId ="{!v.selectFamilyId}"/>
+                        </div>
+                    
+                </aura:if> -->
+            </div>
+        </div>
+    </div>
+    <div>
+        <c:SNI_FL_LoginPopUp />
+        <div class="slds-backdrop slds-backdrop_open"> </div>
+    </div>
+</aura:component>

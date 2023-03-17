@@ -1,0 +1,288 @@
+<aura:component controller="ACET_MemberSearchCtrl" access="global">
+    <ltng:require scripts="{!$Resource.ACET_SAESessionData}" />
+    <aura:registerEvent name="updateInteractionDetails" type="c:ACET_UpdateInteractionDetailsAppEvt" />
+    <aura:registerEvent name="SAE_ProviderValidationFromMemberEvent" type="c:SAE_ProviderValidationFromMemberEvent" />
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:attribute name="interactionType" type="String" default="" />
+    <aura:attribute name="flowDetails" type="Object" />
+    <aura:attribute name="providerDetails" type="Object" />
+    <aura:attribute name="selectedProviderRecord" type="Object" />
+    <aura:attribute name="memberDetails" type="Object" />
+    <aura:attribute name="isMemSearchDisabledFromPrv" type="Boolean" />
+    <aura:handler name="change" value="{!v.isMemSearchDisabledFromPrv}"
+        action="{!c.handleMemSearchDisabledFromPrvChange}" />
+    <aura:handler name="change" value="{!v.selectedProviderRecord}" action="{!c.handleSelectedProvider}" />
+    <aura:attribute name="calloutMemberNotFound" type="Boolean" default="false" />
+    <aura:attribute name="stateOptions" type="List" />
+    <!-- US2598275: Updates to Contact Name Entry Field  -->
+    <!--<aura:attribute name="memberFieldsToValidate" type="List"
+        default="memberIdAI,dobAI,contactNameAI,contactNumberAI,firstNameAI,lastNameAI,StateAI,zipCodeAI,phoneNumberAI" />-->
+    <aura:attribute name="memberFieldsToValidate" type="List"
+        default="memberIdAI,dobAI,contactFirstNameAI,contactLastNameAI,contactNumberAI,StateAI,firstNameAI,lastNameAI,zipCodeAI,phoneNumberAI" />
+    <aura:attribute name="firstNameErrorMessage" type="String"
+        default="For a wild card search, enter at least two characters followed by an asterisk (example ab*). Do not add characters after the asterisk." />
+    <aura:attribute name="lastNameErrorMessage" type="String"
+        default="For a wild card search, enter at least Three characters followed by an asterisk (example abc*). Do not add characters after the asterisk." />
+    <aura:attribute name="showMemberDropdown" type="Boolean" default="false" />
+    <aura:attribute name="findIndividualSearchResults" type="Object" />
+    <aura:attribute name="selectedIndividualMemberDetails" type="Object" />
+    <aura:handler name="change" value="{!v.selectedIndividualMemberDetails}" action="{!c.handleSelectedMember}" />
+    <!-- <aura:attribute name="disableContinueButton" type="Boolean" default="true" /> -->
+    <aura:attribute name="showErrorMessage" type="Boolean" default="false" />
+    <aura:attribute name="error" type="object" />
+    <aura:attribute name="noProviderFoundTabNo" type="Integer" default="1" />
+    <aura:attribute name="timer" type="Integer" />
+    <aura:attribute name="payerIdOptions" type="List"
+        default="[{'value':'87726', 'label':'87726 - UnitedHealthcare'},
+                                                               {'value':'00773', 'label':'00773 - UHC Vision'},
+                                                               {'value':'03432', 'label':'03432 - Community Plan of AZ'},
+                                                               {'value':'04271', 'label':'04271 - Harvard Pilgrim'},
+                                                               {'value':'04567', 'label':'04567 - Community Plan - All Other States'},
+                                                               {'value':'06111', 'label':'06111 - Oxford'},
+                                                               {'value':'25463', 'label':'25463 - Bind'},
+                                                               {'value':'36273', 'label':'36273 - AARP (Hospital Indemnity/Medicare Supplement)'},
+                                                               {'value':'37602', 'label':'37602 - Golden Rule'},
+                                                               {'value':'39026', 'label':'39026 - UMR/Shared Services'},
+                                                               {'value':'41161', 'label':'41161 - OptumHealth Physical Health'},
+                                                               {'value':'41194', 'label':'41194 - OptumHealth Complex Medical Conditions'},
+                                                               {'value':'52133', 'label':'52133 - UHC Dental'},
+                                                               {'value':'52461', 'label':'52461 - March Vision'},
+                                                               {'value':'65088', 'label':'65088 - Preferred Care Partners'},
+                                                               {'value':'74227', 'label':'74227 - Student Resources'},
+                                                               {'value':'76342', 'label':'76342 - Health Plan of NV/Sierra Health'},
+                                                               {'value':'76343', 'label':'76343 - Health Plan of NV/Sierra Health/Encounters'},
+                                                               {'value':'78857', 'label':'78857 - Medica Florida'},
+                                                               {'value':'81400', 'label':'81400 - All Savers'},
+                                                               {'value':'84065', 'label':'84065 - Rocky Mountain Health Plans'},
+                                                               {'value':'86047', 'label':'86047 - Community Plan of NJ'},
+                                                               {'value':'86050', 'label':'86050 - Community Plan of MO'},
+                                                               {'value':'86273', 'label':'86273 - AARP (Hospital Indemnity/Medicare Supplement)'},
+                                                               {'value':'88461', 'label':'88461 - The Alliance'},
+                                                               {'value':'94265', 'label':'94265 - Medica'},
+                                                               {'value':'95378', 'label':'95378 - Community Plan of TN, MS, IA/ River Valley'},
+                                                               {'value':'95467', 'label':'95467 - Community Plan of MI'},
+                                                               {'value':'95958', 'label':'95958 - Encounters'},
+                                                               {'value':'96385', 'label':'96385 - Community Plan of KS- KanCare'},
+                                                               {'value':'E3287', 'label':'E3287 - OptumCare of CT'},
+                                                               {'value':'LIFE1', 'label':'LIFE1 - OptumCare'},
+                                                               {'value':'NYU01', 'label':'NYU01 - Community Plan of NY'},
+                                                               {'value':'SX141', 'label':'SX141 - Rocky Mountain Health Plans'},
+                                                               {'value':'TEX01', 'label':'TEX01 - Community Plan of TX'},
+                                                               {'value':'UFNEP', 'label':'UFNEP - Community Plan of NE'},
+                                                               {'value':'UHNDC', 'label':'UHNDC - NDC Home Infusion Speciality Pharmacy'},
+                                                               {'value':'VACCN', 'label':'VACCN - Veterans Affairs/Community Care Network'},
+                                                               {'value':'WELM2', 'label':'WELM2 - WellMed/AARP'},
+                                                               {'value':'WID01', 'label':'WID01 - Community Plan of WI'},
+                                                               {'value':'95959', 'label':'95959 - UnitedHealthcare West'}]" />
+    <!--VCCD Handler Jitendra-->
+    <aura:handler event="c:ACET_VCCDInBoundRouting" action="{!c.handleVCCDEvent}" />
+    <aura:attribute name="isVCCD" type="Boolean" default="false" />
+    <aura:attribute name="VCCDObjRecordId" type="String" />
+    <aura:attribute name="selectedMemberSource" type="String" />
+
+    <!-- US3625646 -->
+    <aura:attribute name="blockMemberSources" type="String[]" default="['AL']" />
+
+    <!--US2699880-Interaction Overview Page - Remove EEID & SSN Fields and Add 'Source Code' Field-->
+    <!--US2570805 - Sravan -->
+    <aura:attribute name="VCCDQuestionType" type="String" />
+    <!--Jitendra Member Email Id-->
+    <aura:attribute name="strEmails" type="String" default=""/>
+    <!--US3612768 - Sravan -->
+    <aura:attribute name="selectedMemberDetails" type="Object" />
+    <!--Member-->
+    <aura:if aura:id="memberCardSpinnerAI" isTrue="false">
+        <lightning:spinner alternativeText="Loading" size="medium" />
+    </aura:if>
+    <!--State defect-->
+    <aura:attribute type="Map" name="mapOfStateandCodes"/>
+
+    <!-- US3762727 -->
+    <aura:attribute name="isContactDetailsRequired" type="boolean" default="false"/>
+    <!-- DE482480- Swapnil 08/25/2021 -->
+    <aura:attribute name="isContactDetailsInvalid" type="boolean" default="false"/>
+
+    <div onkeyup="{!c.onClickOfEnter}">
+        <lightning:layout multipleRows="true">
+            <lightning:layoutItem flexibility="grow" size="3" class="headerSectionHeight">
+                <div class="headerClass">Member</div>
+            </lightning:layoutItem>
+            <lightning:layoutItem flexibility="grow" size="7" class="headerSectionHeight">
+                <!-- US3334581: Removing Payer ID dropdown on UI -->
+                <!-- lightning:combobox label="payerId" variant="label-hidden" value="{!v.memberDetails.payerId}"
+                    options="{!v.payerIdOptions}" disabled="{!v.memberDetails.isNoMemberToSearch}" / -->
+            </lightning:layoutItem>
+            <lightning:layoutItem flexibility="grow" size="2" class="headerSectionHeight">
+                <div class="slds-float_right">
+                    <lightning:button variant="neutral" label="Clear" name="provClearName" class="clearBtn"
+                        onclick="{!c.clearFieldValidationsAndValues}"
+                        disabled="{!v.memberDetails.isNoMemberToSearch }" />
+                </div>
+            </lightning:layoutItem>
+
+            <lightning:layoutItem flexibility="grow" size="6">
+                <aura:if isTrue="{!v.providerDetails.isNoProviderToSearch}">
+                    <!-- US2598275: Updates to Contact Name Entry Field  -->
+                    <!--<lightning:input type="text" aura:id="contactNameAI" name="contactName" label="Contact Name"
+                        value="{!v.flowDetails.contactName}" required="true"
+                        disabled="{!v.memberDetails.isNoMemberToSearch }"
+                        onchange="{!c.handleOnChange}" class="slds-m-right_x-small" autocomplete="off" />-->
+                    <lightning:layout multipleRows="true">
+                        <lightning:layoutItem flexibility="grow" size="5">
+                            <lightning:input type="text" aura:id="contactFirstNameAI" name="contactFirstName"
+                                label="First Name" value="{!v.flowDetails.contactFirstName}" required="{!v.isContactDetailsRequired}"
+                                disabled="{!v.memberDetails.isNoMemberToSearch}" onchange="{!c.handleOnChange}"
+                                class="slds-m-right_x-small" autocomplete="off" />
+                        </lightning:layoutItem>
+
+                        <lightning:layoutItem flexibility="grow" size="7">
+                            <lightning:input type="text" aura:id="contactLastNameAI" name="contactLastName"
+                                label="Last Name" value="{!v.flowDetails.contactLastName}" required="{!v.isContactDetailsRequired}"
+                                disabled="{!v.memberDetails.isNoMemberToSearch}" onchange="{!c.handleOnChange}"
+                                class="slds-m-right_x-small" autocomplete="off" />
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                </aura:if>
+            </lightning:layoutItem>
+
+            <lightning:layoutItem flexibility="grow" size="3">
+                <aura:if isTrue="{!v.providerDetails.isNoProviderToSearch}">
+                    <lightning:input type="text" aura:id="contactNumberAI" name="contactNumber" label="Contact Number"
+                        value="{!v.flowDetails.contactNumber}" 
+                        disabled="{!v.memberDetails.isNoMemberToSearch }" minlength="10" maxlength="10"
+                        messageWhenTooShort="Enter 10 digits" onchange="{!c.handleOnChange}"
+                        class="slds-m-right_x-small" autocomplete="off" />
+                </aura:if>
+            </lightning:layoutItem>
+
+            <lightning:layoutItem flexibility="grow" size="2">
+                <aura:if isTrue="{!v.providerDetails.isNoProviderToSearch}">
+                    <lightning:input type="text" aura:id="contactExtAI" name="contactExt" label="Ext"
+                        onchange="{!c.handleOnChange}" value="{!v.flowDetails.contactExt}"
+                        disabled="{!v.memberDetails.isNoMemberToSearch}" autocomplete="off" />
+                </aura:if>
+            </lightning:layoutItem>
+
+            <lightning:layoutItem flexibility="grow" size="12">
+                <lightning:input
+                    fieldLevelHelp="Options include the following: Alt ID, Member ID, SSN, EE ID, Medicare ID, Medicaid ID, HCIN ID, MBI ID"
+                    aura:id="memberIdAI" required="{!!v.memberDetails.isAdvancedSearch}" type="Search" name="memberId"
+                    label="Member ID" value="{!v.memberDetails.memberId}"
+                    disabled="{!v.memberDetails.isNoMemberToSearch || v.memberDetails.isMemberNotFound }"
+                    autocomplete="off" minlength="9" messageWhenTooShort="Enter at least 9 characters." maxlenght="20"
+                    messageWhenTooLong="Input cannot be longer than 20 characters" pattern="^[a-zA-Z0-9_ ]*$"
+                    messageWhenPatternMismatch="Enter an alphanumeric value." onchange="{!c.handleOnChange}" />
+            </lightning:layoutItem>
+            <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="12">
+                <lightning:input aura:id="dobAI" type="date" label="DOB (mm/dd/yyyy)"
+                    disabled="{!v.memberDetails.isNoMemberToSearch}" dateStyle="short"
+                    required="{!v.memberDetails.isMemberNotFound}" name="dob"
+                    pattern="/^([0-9]{4})\-([0-9]{2})\-([0-9]{2})$/" messageWhenBadInput="Error: Invalid Date"
+                    messageWhenPatternMismatch="Error: Invalid Date" autocomplete="off" />
+            </lightning:layoutItem>
+
+            <lightning:layoutItem size="6" class="slds-m-top_medium showOrHideAdvancedSearchSectionHeight">
+                <a href="#" aura:id="searchTypeAI" onclick="{!c.showOrHideAdvancedSearch}"
+                    name="memberAdvanceSearchName" disabled="{!v.memberDetails.isNoMemberToSearch}" class="{!v.memberDetails.isNoMemberToSearch ?
+                        'linkField showOrHideAdvancedSearch' : 'linkField'}">{!v.memberDetails.isAdvancedSearch ?
+                    'Hide Advanced Search' : 'Show Advanced Search'}</a>
+            </lightning:layoutItem>
+
+            <lightning:layoutItem size="6" class="slds-m-top_medium showOrHideAdvancedSearchSectionHeight">
+                <lightning:layout multipleRows="true">
+                    <lightning:layoutItem size="12">
+                        <lightning:input type="checkbox" name="noMemberToSearch" aura:id="noMemberToSearchAI"
+                            label="No member to search" checked="{!v.memberDetails.isNoMemberToSearch}"
+                            onchange="{!c.handleNoMemberToSearch}" />
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="12" class="slds-m-top_x-small">
+                        <aura:if isTrue="{!v.calloutMemberNotFound}">
+                            <lightning:input type="checkbox" name="memberNotFound" aura:id="memberNotFoundAI"
+                                label="Member not found" checked="{!v.memberDetails.isMemberNotFound}"
+                                onchange="{!c.handleMemberNotFound}" />
+                        </aura:if>
+                    </lightning:layoutItem>
+                </lightning:layout>
+            </lightning:layoutItem>
+
+            <aura:if isTrue="{!v.memberDetails.isAdvancedSearch}">
+                <lightning:layoutItem flexibility="grow" size="12" class="slds-m-top_medium">
+                    <lightning:input label="First Name" required="{!v.memberDetails.isMemberNotFound}" name="firstName"
+                        aura:id="firstNameAI" disabled="{!v.memberDetails.isNoMemberToSearch}"
+                        value="{!v.memberDetails.firstName}" autocomplete="off" onchange="{!c.handleOnChange}" />
+                </lightning:layoutItem>
+
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="12">
+                    <lightning:input label="Last Name" required="{!v.memberDetails.isMemberNotFound}" name="lastName"
+                        aura:id="lastNameAI" disabled="{!v.memberDetails.isNoMemberToSearch}"
+                        value="{!v.memberDetails.lastName}" autocomplete="off" onchange="{!c.handleOnChange}" />
+                </lightning:layoutItem>
+
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="12">
+                    <lightning:input label="Group Number" name="groupNumber" aura:id="groupNumberAI"
+                        disabled="{!v.memberDetails.isNoMemberToSearch || v.memberDetails.isMemberNotFound}"
+                        value="{!v.memberDetails.groupNumber}" autocomplete="off" onchange="{!c.handleOnChange}" />
+                </lightning:layoutItem>
+
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="12">
+                    <c:ACET_CustomStateComboboxField strSelectedCode="{!v.memberDetails.state}" aura:id="StateAI"
+                        makeRequired="{!v.memberDetails.isMemberNotFound}"
+                        fieldsdisabled="{!v.memberDetails.isNoMemberToSearch}" mapOfStateandCodes="{!v.mapOfStateandCodes}"/>
+
+                </lightning:layoutItem>
+
+                <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="12">
+                    <lightning:input label="Zip Code" class="" name="zipCode" aura:id="zipCodeAI"
+                        disabled="{!v.memberDetails.isNoMemberToSearch || v.memberDetails.isMemberNotFound}"
+                        value="{!v.memberDetails.zip}" minlength="5" maxlength="5"
+                        messageWhenTooShort="To search by Zip Code, Enter 5 digits" onchange="{!c.handleOnChange}"
+                        autocomplete="off" />
+                </lightning:layoutItem>
+                <!--US2548729: Not MVP - Explore Page & Interaction Overview - Member and Provider Advanced Searches - Remove Phone Number Field -->
+                <aura:if isTrue="{!v.calloutMemberNotFound}">
+                    <lightning:layoutItem class="slds-m-top_small" flexibility="grow" size="12">
+                        <lightning:input aura:id="phoneNumberAI" name="phoneNumber" type="text" label="Phone Number"
+                            value="{!v.memberDetails.phoneNumber}" required="{!v.memberDetails.isMemberNotFound}"
+                            disabled="{!v.memberDetails.isNoMemberToSearch}" minlength="10" maxlength="10"
+                            pattern="[0-9]*" messageWhenTooShort="Enter 10 digits" onchange="{!c.handleOnChange}"
+                            autocomplete="off" />
+                    </lightning:layoutItem>
+                </aura:if>
+            </aura:if>
+
+            <lightning:layoutItem flexibility="grow" size="6" class="slds-m-top_medium">
+                <lightning:layout multipleRows="true">
+                    <lightning:layoutItem flexibility="grow" size="6">
+                        <lightning:button variant="brand"
+                            label="{!v.memberDetails.isMemberNotFound ? 'Add Member' : 'Search'}" name="searchName"
+                            class="searchButton" onclick="{!c.openInteractionOverview}"
+                            disabled="{!v.memberDetails.isNoMemberToSearch || v.isMemSearchDisabledFromPrv}" />
+                    </lightning:layoutItem>
+                    <aura:if isTrue="{!v.showErrorMessage}">
+                        <lightning:layoutItem class="validationErrorMsgPosition">
+                            <c:ACET_ErrorPopup aura:id="errorPopup" errorMessage="{!v.error.message}"
+                                topDescription="{!v.error.topDescription}"
+                                bottomDescription="{!v.error.bottomDescription}"
+                                descriptionList="{!v.error.descriptionList}" moveLeft="-17" isNubbinLeft="true" />
+                        </lightning:layoutItem>
+                    </aura:if>
+                </lightning:layout>
+            </lightning:layoutItem>
+
+            <lightning:layoutItem flexibility="grow" size="6" class="slds-m-top_medium">
+                <lightning:button variant="brand" label="Continue" name="continueButton" aura:id="continueBtnID"
+                    class="searchButton slds-float_right" onclick="{!c.openInteractionOverview}"
+                    disabled="{!or(!or(v.memberDetails.isFindIndividualSearch, and(v.memberDetails.isNoMemberToSearch, or(v.providerDetails.isProviderNotFound, v.providerDetails.isValidProvider))),v.isMemSearchDisabledFromPrv)}" />
+            </lightning:layoutItem>
+
+            <!-- Member search dropdown -->
+            <lightning:layoutItem flexibility="grow" size="12" class="slds-m-top_medium">
+                <c:ACET_MemberResultsDropdown findIndividualSearchResults="{!v.findIndividualSearchResults}"
+                    memberDetails="{!v.memberDetails}" showMemberDropdown="{!v.showMemberDropdown}"
+                    selectedIndividualMemberDetails="{!v.selectedIndividualMemberDetails}" />
+            </lightning:layoutItem>
+
+        </lightning:layout>
+    </div>
+</aura:component>

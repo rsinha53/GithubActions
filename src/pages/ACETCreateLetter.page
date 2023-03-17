@@ -1,0 +1,698 @@
+<apex:page standardController="case" extensions="ACETCreateLetterController" sidebar="false" showHeader="false">
+    <script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous">
+    </script>
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    <apex:includeScript value="/support/console/20.0/integration.js" />
+    <apex:includeScript value="/support/console/25.0/integration.js" />
+    <script type="text/javascript">
+    $(document).ready(function() {
+       /* $("[id$='ProviderTaxId']").attr("disabled","true");*/
+        $("[id$='template']").change(function(){
+            
+            
+         /* $("[id$='RecipientFacilityName']").parent().find(".errorMsg").remove();
+            $("[id$='RecipientFacilityName']").parent().find(".requiredBlock").remove();
+            $("[id$='RecipientFacilityName']").removeClass('error'); 
+            $("[id$='ProviderTaxId']").parent().find(".errorMsg").remove();
+            $("[id$='ProviderTaxId']").parent().find(".requiredBlock").remove();
+            $("[id$='ProviderTaxId']").removeClass('error'); */
+            
+            $("[id$='RecipientFirstName']").parent().find(".errorMsg").remove();
+            $("[id$='RecipientFirstName']").parent().find(".requiredBlock").remove();
+            //$("[id$='Emailaddress']").parent().find(".errorMsg").remove();
+            $("[id$='RecipientFirstName']").removeClass('error');  
+            //$("[id$='Emailaddress']").removeClass('errorEmail');
+            $("[id$='RecipientLastName']").parent().find(".errorMsg").remove();
+            $("[id$='RecipientLastName']").parent().find(".requiredBlock").remove();
+            $("[id$='RecipientLastName']").removeClass('error'); 
+            var $recipientsubtype = $("[id$='recipientsubtype']");
+            $("[id$='RecipientFirstName']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+                $("[id$='RecipientLastName']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+            /*$("[id$='RecipientFacilityName']").removeAttr("disabled"); 
+              $("[id$='ProviderTaxId']").removeAttr("disabled"); 
+               if($(this).val() != 'Balance_Bill_Letter'){
+                $("[id$='RecipientFacilityName']").val('');
+                $("[id$='ProviderTaxId']").val('');
+                $("[id$='RecipientFacilityName']").attr("disabled","true");
+                $("[id$='ProviderTaxId']").attr("disabled","true");
+                $("[id$='RecipientFirstName']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+                $("[id$='RecipientLastName']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+                $("[id$='RecipientFacilityName']").parent().find(".requiredBlock").remove();
+            }
+            else{*/
+                
+               /* $("[id$='ProviderTaxId']").removeAttr("disabled"); 
+                $("[id$='ProviderTaxId']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');*/
+           // }
+        });  
+        //limit number only
+       /* $("[id$='ProviderTaxId']").keypress(function (e){               
+        var regex = new RegExp("^[0-9]+$");
+        var str = String.fromCharCode(!e.charCode ? e.which : e.charCode);
+        //set max length of field if needed        
+        this.setAttribute("maxlength", '9');
+        // Allow delete, tab, enter and escape keys through
+        if (regex.test(str) || (/^(8|9|13|27)$/.test("" + e.keyCode))) {
+        return true;
+        }
+        
+        e.preventDefault();
+        return false;
+        });
+        
+        $("[id$='ProviderTaxId']").keyup(function (e){   
+            removeNonNumericProvTaxID();
+            return true;
+        });
+        
+        $("[id$='ProviderTaxId']").bind("cut copy paste",function (e){ 
+            
+            
+            var regex = new RegExp("^[0-9]+$");
+        var str = String.fromCharCode(!e.charCode ? e.which : e.charCode);
+            
+        //set max length of field if needed        
+        this.setAttribute("maxlength", '9');
+        // Allow delete, tab, enter and escape keys through
+        if (regex.test(str) || (/^(8|9|13|27)$/.test("" + e.keyCode))) {
+        return true;
+        }
+            e.preventDefault();
+            return false;
+        });*/
+    });
+    function refresh(){
+        onchangerecipienttype();
+    }
+    function removeNonNumericProvTaxID(){ 
+        var regex = new RegExp("^[0-9]+$");
+        //Allow delete, tab, enter and escape keys through
+        /*var str = $("[id$='ProviderTaxId']").val();
+        if (!regex.test(str)) {
+            $("[id$='ProviderTaxId']").val($("[id$='ProviderTaxId']").val().replace(/[^0-9]/g, ''));
+        }*/
+    }
+    function SetTabTitle() {
+        sforce.console.setTabTitle('Letters');
+    }
+    var pageLoad = window.onload;
+    window.onload = function() {
+        if (pageLoad) {
+            pageLoad();
+        }
+        SetTabTitle();
+        var cancelres = "{!JSENCODE($CurrentPage.parameters.cancelresult)}";
+        var subRes = "{!JSENCODE($CurrentPage.parameters.submitresult)}";
+        var findRes = "{!JSENCODE($CurrentPage.parameters.findresult)}";
+        
+        if(cancelres == "true"){
+            RefreshandCloseTab();
+            
+        }
+        else if(subRes == "true" && findRes == "true"){
+            RefreshandCloseTab();
+        }
+            else if((subRes != "" && findRes == "true") || (subRes == "false" && findRes == "true"))
+            {
+                displayerror('Letter template is incomplete. Select Review/Edit Letter to finalize/Submit or Cancel Letter');
+            }
+                else if(cancelres=="false"){
+                    displayerror('Encountered a Problem while canceling the Letter');
+                }
+    }
+    function testGetFocusedSubtabId() {
+        sforce.console.getFocusedSubtabId(showTabId);
+    }
+    var showTabId = function showTabId(result) {
+        
+    };
+    function RefreshandCloseTab() {
+        sforce.console.getEnclosingPrimaryTabId(RefreshPrimarytab);
+        sforce.console.getFocusedSubtabId(closeSubtab);
+        
+        
+    }
+    var RefreshPrimarytab = function RefreshPrimarytab(result) {
+        var tabId = result.id;
+        sforce.console.refreshPrimaryTabById(tabId, true,refreshSuccess);
+    };
+    var refreshSuccess = function refreshSuccess(result) {
+        
+    };
+    var closeSubtab = function closeSubtab(result) {
+        var tabId = result.id;
+        sforce.console.closeTab(tabId);
+    };
+    function launchactivex(){ 
+        var url = '{!JSENCODE(getActiveXUrl)}';
+        window.open(url,'_blank', 'toolbars=0, width=1333, height=706 ,left=0 ,top=0 ,scrollbars=1 ,resizable=1');
+    }
+    /*function deliveryoptionvalidation(){
+        var a = $("[id$='deliveryOption']").val();
+        var b = $("[id$='deliveryOption2']").val();*/
+    
+    /*var a = document.getElementById('{!$Component.j_id0:TheForm:j_id56:j_id57:j_id64:deliveryOption}').value;
+        var b = document.getElementById('{!$Component.j_id0:TheForm:j_id56:j_id57:j_id71:deliveryOption2}').value;*/
+    
+    /*if((a == 'Email' && b == '--None--') || (a == 'Email' && b == 'Mail') || (a == 'Email' && b == 'Overnight') || (a=='--None--' && b == 'Email') || (a=='Mail' && b == 'Email') || (a=='Overnight' && b == 'Email') || (a=='Email' && b == 'Email'))
+        {
+            $("[id$='Emailaddress']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');   
+            $("[id$='faxAddress']").wrap('<div></div>').parent().prepend('<div class="requiredBlock" style="background-color: #fbf3f3;"></div>');   
+        }
+        if((a == 'Fax' && b == '--None--') || (a == 'Fax' && b == 'Mail') || (a == 'Fax' && b == 'Overnight') || (a=='--None--' && b == 'Fax') || (a=='Mail' && b == 'Fax') || (a=='Overnight' && b == 'Fax') || (a=='Fax' && b == 'Fax'))
+        {
+            $("[id$='faxAddress']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');   
+            $("[id$='Emailaddress']").wrap('<div></div>').parent().prepend('<div class="requiredBlock" style="background-color: #fbf3f3;"></div>');   
+        }
+        if((a == 'Fax' && b == 'Email') || (a=='Email' && b == 'Fax'))
+        {
+            $("[id$='faxAddress']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');   
+            $("[id$='Emailaddress']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');   
+        }
+        if((a == '--None--' && b == '--None--') || (a == '--None--' && b == 'Mail') || (a == '--None--' && b == 'Overnight') || (a == 'Mail' && b == '--None--') || (a == 'Overnight' && b == '--None--') || (a == 'Overnight' && b == 'Mail') || (a == 'Mail' && b == 'Overnight') || (a == 'Mail' && b == 'Mail') || (a == 'Overnight' && b == 'Overnight'))
+        {
+            $("[id$='Emailaddress']").wrap('<div></div>').parent().prepend('<div class="requiredBlock" style="background-color: #fbf3f3;"></div>');   
+            $("[id$='faxAddress']").wrap('<div></div>').parent().prepend('<div class="requiredBlock" style="background-color: #fbf3f3;"></div>');   
+        }
+    }*/
+    
+    function alignValidation(value) {
+       /* $("[id$='RecipientFacilityName']").parent().find(".errorMsg").remove();
+        $("[id$='RecipientFacilityName']").parent().find(".requiredBlock").remove();
+        $("[id$='RecipientFacilityName']").removeClass('error'); */
+        $("[id$='RecipientFirstName']").parent().find(".errorMsg").remove();
+        $("[id$='RecipientFirstName']").parent().find(".requiredBlock").remove();
+        $("[id$='RecipientFirstName']").removeClass('error');  
+        $("[id$='RecipientLastName']").parent().find(".errorMsg").remove();
+        $("[id$='RecipientLastName']").parent().find(".requiredBlock").remove();
+        $("[id$='RecipientLastName']").removeClass('error'); 
+       /* $("[id$='RecipientFacilityName']").removeAttr("disabled");*/  
+        
+        if(value == 'Person') {
+            console.log('Email Address');
+           /* $("[id$='RecipientFacilityName']").val('');
+            $("[id$='RecipientFacilityName']").attr("disabled","true");*/
+            $("[id$='RecipientFirstName']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');   
+            $("[id$='RecipientLastName']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');   
+        }
+        if(value == 'Facility') {
+           /* $("[id$='RecipientFacilityName']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');*/   
+        }
+    }
+    
+    function changerecipienttype(value)
+    {
+      /*$("[id$='RecipientFacilityName']").parent().find(".errorMsg").remove();
+        $("[id$='RecipientFacilityName']").parent().find(".requiredBlock").remove();
+        $("[id$='RecipientFacilityName']").removeClass('error');*/ 
+        $("[id$='RecipientFirstName']").parent().find(".errorMsg").remove();
+        $("[id$='RecipientFirstName']").parent().find(".requiredBlock").remove();
+        $("[id$='RecipientFirstName']").removeClass('error');  
+        $("[id$='RecipientLastName']").parent().find(".errorMsg").remove();
+        $("[id$='RecipientLastName']").parent().find(".requiredBlock").remove();
+        $("[id$='RecipientLastName']").removeClass('error'); 
+     /* $("[id$='RecipientFacilityName']").removeAttr("disabled");*/  
+        
+        if(value == 'Member') {
+            console.log('Email Address');
+         /* $("[id$='RecipientFacilityName']").val('');
+            $("[id$='RecipientFacilityName']").attr("disabled","true");*/
+            $("[id$='RecipientFirstName']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');   
+            $("[id$='RecipientLastName']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');   
+        }
+        onchangerecipienttype(value);
+    }
+    
+    function validate() {
+        
+        var $template = $("[id$='template']");
+        var $deliveryOption = $("[id$='deliveryOption']");
+        var $deliveryOption2 = $("[id$='deliveryOption2']");
+        var $recipientType = $("[id$='recipientType']");
+        var $recipientsubtype = $("[id$='recipientsubtype']");
+        //var $Emailaddress = $("[id$='Emailaddress']"); 
+        //var $faxAddress = $("[id$='faxAddress']"); 
+        //var $RecipientFacilityName = $("[id$='RecipientFacilityName']"); 
+        var $RecipientFirstName = $("[id$='RecipientFirstName']"); 
+        var $RecipientLastName = $("[id$='RecipientLastName']"); 
+        //var $ProviderTaxId = $("[id$='ProviderTaxId']"); 
+        
+        $template.removeClass("error").parent().find(".errorMsg").remove();
+        $deliveryOption.removeClass("error").parent().find(".errorMsg").remove();
+        $deliveryOption2.removeClass("error").parent().find(".errorMsg").remove();
+        $recipientType.removeClass("error").parent().find(".errorMsg").remove();
+        $recipientsubtype.removeClass("error").parent().find(".errorMsg").remove();
+      //$Emailaddress.removeClass("error").parent().find(".errorMsg").remove();
+      //$faxAddress.removeClass("error").parent().find(".errorMsg").remove();
+        $RecipientFirstName.removeClass("error").parent().find(".errorMsg").remove();
+        $RecipientLastName.removeClass("error").parent().find(".errorMsg").remove();
+      //$RecipientFacilityName.removeClass("error").parent().find(".errorMsg").remove();
+      //$Emailaddress.removeClass("errorEmail").parent().find(".errorMsg").remove();
+      //$ProviderTaxId.removeClass("error").parent().find(".errorMsg").remove();
+        
+       // var len = parseInt($($ProviderTaxId).val()); 
+        var regex = new RegExp("^[0-9]+$");
+                
+        console.log('*****'+$deliveryOption.val()+'****'+$deliveryOption2.val());         
+        if($template.val()=='--None--' ){
+            var errorMsg = "You must enter a value."; 
+            $template.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            return false;
+        }
+        else if($deliveryOption.val()=='--None--'){
+            var errorMsg = "You must enter a value."; 
+            $deliveryOption.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>');
+            return false; 
+        }
+        /*else if(($deliveryOption.val()=='Email' || $deliveryOption2.val()=='Email') && !$Emailaddress.val()){
+            var errorMsg = "You must enter a value."; 
+            $Emailaddress.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            return false;
+        }
+        else if($Emailaddress.val() && !validateEmail($Emailaddress.val())){
+            var errorMsg = "Incorrect format."; 
+            $Emailaddress.addClass("errorEmail").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            return false;
+        }
+        
+        else if(($deliveryOption.val()=='Fax' || $deliveryOption2.val()=='Fax') && !$faxAddress.val()){
+            var errorMsg = "You must enter a value."; 
+            $faxAddress.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            return false;
+        }
+        
+        else if($faxAddress.val() && ((!$faxAddress.val().match(letters)) || ($faxAddress.val().length != 10))){
+            console.log('***********************'+$faxAddress.val().length);
+            var letters = /^[0-9]+$/; 
+            var $fax = $faxAddress.val(); 
+            if(!$fax.match(letters)) {
+                console.log('Matching table');
+                var errorMsg = "Incorrect format."; 
+                $faxAddress.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                return false;
+            }
+            else if($fax.length != 10) {
+                var errorMsg = "Incorrect format."; 
+                $faxAddress.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>');    
+                return false;
+            }
+        }*/
+        
+            else if($deliveryOption.val() == $deliveryOption2.val()){
+                var errorMsg = "Delivery option 1 and Delivery option 2 cannot be the same"; 
+                $deliveryOption.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                $deliveryOption2.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                return false;
+            }
+                else if($recipientType.val()=='--None--'){
+                    var errorMsg = "You must enter a value."; 
+                    $recipientType.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                    return false;
+                }   
+                    else if($recipientsubtype.val()=='--None--'){
+                        
+                        var errorMsg = "You must enter a value."; 
+                        $recipientsubtype.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                        return false;
+                    }
+        //else if($template.val()=='Balance_Bill_Letter'){
+        
+        if($recipientsubtype.val() == 'Person' && $RecipientFirstName.val() == '' && $RecipientLastName.val() == '')
+        {
+            var errorMsgFN = "Recipient First Name required";
+            var errorMsgLN = "Recipient Last Name required";
+            $RecipientFirstName.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsgFN + '</div>'); 
+            $RecipientLastName.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsgLN + '</div>');   
+            return false;
+        }
+        else if($recipientsubtype.val() == 'Person' && $RecipientFirstName.val() == '')
+        {
+            var errorMsgFN = "Recipient First Name required";
+            $RecipientFirstName.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsgFN + '</div>'); 
+            return false;
+        }
+            else if($recipientsubtype.val() == 'Person' && $RecipientLastName.val() == '')
+            {
+                var errorMsgLN = "Recipient Last Name required";
+                $RecipientLastName.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsgLN + '</div>');   
+                return false;
+            }
+               /* else if($recipientsubtype.val() == 'Facility' && $RecipientFacilityName.val() == '')
+                {
+                    var errorMsg = "Recipient Facility Name required"; 
+                    $RecipientFacilityName.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                    return false;
+                } */
+                   /* else if($template.val()=='Balance_Bill_Letter' && $ProviderTaxId.val() == '')
+                    {
+                            
+                            var errorMsgtaxid = 'Provider Tax ID is required.';
+                            $ProviderTaxId.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsgtaxid + '</div>'); 
+                            return false;
+                    } */
+                       /* else if($template.val()=='Balance_Bill_Letter' && len > 0 && $($ProviderTaxId).val().length != '9'){
+                            $($ProviderTaxId).addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + 'Invalid Format (9 digits only).' + '</div>');
+                            return false;
+                        }*/
+        
+                        else{
+                            
+                            createLetter();
+                        }            
+        
+    }
+    
+    function validateEmail($email) {
+        var emailReg = /^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/;
+        return emailReg.test( $email );
+    }
+    
+    function validateFax($fax) {
+        var letters = /^[0-9]+$/;  
+        return $fax.value.match(letters);     
+    }
+    </script>
+    
+    
+    
+    <apex:form rendered="{!ispagevisible}" id="TheForm">
+        
+        <apex:image url="{!$Resource.ACETLetterIcon}" height="50"/> <apex:outputText value="Letters" style="font-size: 200%;position: absolute;top: 11px;"/>
+        <apex:actionFunction name="onchangerecipienttype" action="{!onchangerecipienttype}" rerender="recipientsubtype" >
+            <apex:param assignTo="{!receipentVal}" value="" name="selectedReceType" />
+        </apex:actionFunction>
+        <apex:actionFunction name="createLetter" action="{!CreateLetter}" status="loadpanel" reRender="TheForm" />
+        <apex:actionStatus id="loadpanel">
+        <apex:facet name="start">
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                &nbsp;
+            </div>
+            <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 9999; margin: 15% 50%">
+                <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                    <img src="/img/loading.gif" style="float: left; margin: 8px;" />
+                    <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                </div>
+            </div>
+        </apex:facet>
+    </apex:actionStatus>
+        <apex:actionFunction name="onchangetemplate" action="{!onchangetemplate}" rerender="recipientType,recipientsubtype" >
+            <apex:param assignTo="{!selectedTemplate}" value="" name="selectedtemp" />
+        </apex:actionFunction>
+        <apex:actionFunction name="displayerror" action="{!DisplayMessage}" reRender="TheForm" >
+            <apex:param name="myParam" value=""/>
+        </apex:actionFunction>
+        <apex:pageMessages id="pagemesage" />
+        <center>
+            <apex:outputPanel layout="none" rendered="{!rendercreateletter}">
+                <input type="button" class="btn" value="Create Letter" id="btnCreateLetter" onclick="return validate()"/>
+            </apex:outputPanel>&nbsp;&nbsp;
+            <apex:commandButton action="{!LaunchActiveX}" onclick="launchactivex()" value="Review/Edit Letter" rendered="{!renderreviewletter}" />&nbsp;&nbsp;
+            <apex:commandButton value="Cancel Letter"  action="{!CancelLetter}" rendered="{!rendercancelletter}" status="loadpanel" reRender="TheForm" />&nbsp;&nbsp;
+            <apex:commandButton value="Submit" action="{!SubmitLetter}" rendered="{!rendersubmitletter}" status="loadpanel" reRender="TheForm"/>
+        </center>
+        
+        <br/>
+        <apex:pageBlock mode="detail">
+            <apex:pageBlockSection columns="2">
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Case Number"></apex:outputLabel>
+                    <apex:outputText value="{!Case.CaseNumber}" />
+                </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Originator Name"></apex:outputLabel>
+                    <apex:outputText value="{!Case.Originator_name__c}" />
+                </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Topic"></apex:outputLabel>
+                    <apex:outputText value="{!Case.Topic__c}" />
+                </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Subject Name"></apex:outputLabel>
+                    <apex:outputText value="{!Case.Subject_Name__c}" />
+                </apex:pageBlockSectionItem>
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+        
+        <apex:pageBlock rendered="{!rendereditfields}">
+            <apex:pageBlockSection columns="2">
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Template Name"></apex:outputLabel>
+                    <apex:outputPanel styleClass="requiredInput" layout="block">
+                        <apex:outputPanel styleClass="requiredBlock" layout="block" />
+                        <apex:selectList value="{!selectedTemplate}" size="1"
+                                         multiselect="false" id="template" onchange="onchangetemplate(this.value);">
+                            <apex:selectOptions value="{!templates}" />
+                        </apex:selectList>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+                <br />
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Delivery Method 1"></apex:outputLabel>
+                    <apex:outputPanel styleClass="requiredInput" layout="block">
+                        <apex:outputPanel styleClass="requiredBlock" layout="block" />
+                        <apex:selectList value="{!selectedDeliveryOption}" size="1"
+                                         multiselect="false" id="deliveryOption">
+                            <apex:selectOptions value="{!deliveryOptions}" />
+                            <!--apex:actionSupport event="onchange" rerender="TheForm" /-->
+                        </apex:selectList>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem id="theemailID">
+                    <!--apex:outputLabel value="Email"></apex:outputLabel>
+<apex:inputText id="Emailaddress" value="{!emailAddress}" /-->
+                </apex:pageBlockSectionItem>
+                
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Delivery Method 2"></apex:outputLabel>
+                    <apex:outputPanel layout="block">
+                        <apex:outputPanel layout="block" />
+                        <apex:selectList value="{!selectedDeliveryOption2}"
+                                         onchange="deliveryoptionvalidation();" size="1"
+                                         multiselect="false" id="deliveryOption2">
+                            <apex:selectOptions value="{!deliveryOptions}" />
+                        </apex:selectList>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+                
+                
+                <apex:pageBlockSectionItem id="thefaxID">
+                    <!--apex:outputLabel value="Fax"></apex:outputLabel>
+<apex:inputText value="{!faxNumber}" id="faxAddress" /-->
+                    
+                </apex:pageBlockSectionItem>
+                
+                
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="CC"></apex:outputLabel>
+                    <apex:outputText value="{!CC}" />
+                </apex:pageBlockSectionItem>
+                <br />
+                
+                
+                
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+        <apex:pageBlock rendered="{!rendereditfields}">
+            
+            <apex:pageBlockSection id="Recipient" columns="2">
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Recipient Type"></apex:outputLabel>
+                    <apex:outputPanel styleClass="requiredInput" layout="block">
+                        <apex:outputPanel styleClass="requiredBlock" layout="block" />
+                        <apex:selectList onchange="changerecipienttype(this.value);"
+                                         value="{!selectedRecipientType}" size="1" multiselect="false"
+                                         id="recipientType">
+                            <apex:selectOptions value="{!RecipientType}" />
+                        </apex:selectList>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Created By"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.CreatedBy.Name}" />
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem id="Recipientitem">
+                    
+                    <apex:outputLabel value="Subtype"></apex:outputLabel>
+                    <apex:outputPanel styleClass="requiredInput" layout="block">
+                        <apex:outputPanel styleClass="requiredBlock" layout="block" />
+                        <apex:selectList onchange="alignValidation(this.value);"
+                                         id="recipientsubtype" value="{!selectedRecipientSubType}"
+                                         size="1" multiselect="false">
+                            <apex:selectOptions value="{!RecipientSubType}" />
+                        </apex:selectList>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Modified By"></apex:outputLabel>
+                    <apex:outputText value="{!strModifiedBy}" />
+                </apex:pageBlockSectionItem>
+                <!--<apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Provider Tax ID"></apex:outputLabel>
+                    <apex:inputText id="ProviderTaxId" value="{!providertaxid}" onblur="removeNonNumericProvTaxID();"/>
+                </apex:pageBlockSectionItem>-->
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="First Name"></apex:outputLabel>
+                    <apex:inputText id="RecipientFirstName"
+                                    value="{!recipientfirstName}" />
+                </apex:pageBlockSectionItem>
+                           
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Submitted By"></apex:outputLabel>
+                    <apex:outputText value="{!strSubmittedBy}" />
+                </apex:pageBlockSectionItem>
+                <!--<apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Facility Name"></apex:outputLabel>
+                    <apex:inputText id="RecipientFacilityName" value="{!recipientfacilityName}" />
+                </apex:pageBlockSectionItem>-->
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Middle Name"></apex:outputLabel>
+                    <apex:inputText value="{!recipientMiddleName}" />
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Work Item ID"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Work_Item_Id__c}" />
+                </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Last Name"></apex:outputLabel>
+                    <apex:inputText id="RecipientLastName" value="{!recipientLastName}" />
+                </apex:pageBlockSectionItem>
+                
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Status"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Letter_Status__c}" />
+                </apex:pageBlockSectionItem>
+                                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Suffix"></apex:outputLabel>
+                    <apex:inputText value="{!recipientSuffix}" />
+                </apex:pageBlockSectionItem>
+                
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+        <apex:pageBlock rendered="{!renderreadonlyfields}">
+            <apex:pageBlockSection columns="2">
+                
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Template Name"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Letter_Name__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Delivery Method 1"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Delivery_Method_1__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem id="theemailID1">
+                    <!--apex:outputLabel value="Email"></apex:outputLabel>
+<apex:outputText value="{!newletter.Email__c}"></apex:outputText-->
+                </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Delivery Method 2"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Delivery_Method_2__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem id="thefaxID1">
+                    <!--apex:outputLabel value="Fax"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Fax__c}"></apex:outputText-->
+                </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="CC"></apex:outputLabel>
+                    <apex:outputText value="{!CC}" />
+                </apex:pageBlockSectionItem>
+                
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+        <apex:pageBlock rendered="{!renderreadonlyfields}">
+            <apex:pageBlockSection columns="2">
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Recipient Type"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Recipient_Type__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>    
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Created By"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.CreatedBy.Name}" />
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Subtype"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Recipient_Sub_Type__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>              
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Modified By"></apex:outputLabel>
+                    <apex:outputText value="{!strModifiedBy}" />
+                </apex:pageBlockSectionItem>
+               <!-- <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Provider Tax ID"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Provider_Tax_Id__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>-->
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="First Name"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Recipient_Name__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>
+
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Submitted By"></apex:outputLabel>
+                    <apex:outputText value="{!strSubmittedBy}" />
+                </apex:pageBlockSectionItem>
+               <!-- <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Facility Name"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Recipient_Facility_Name__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>-->
+                
+                                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Middle Name"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Recipient_MI__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Work Item ID"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Work_Item_Id__c}" />
+                </apex:pageBlockSectionItem>
+
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Last Name"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Recipient_Last_Name__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Status"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Letter_Status__c}" />
+                </apex:pageBlockSectionItem>
+
+                
+                
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Suffix"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Recipient_Suffix__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>
+                
+                
+            </apex:pageBlockSection>
+            
+        </apex:pageBlock>
+        <center>
+            <apex:outputPanel layout="none" rendered="{!rendercreateletter}">
+                <input type="button" class="btn" value="Create Letter" id="btnCreateLetter" onclick="return validate()" status="loadpanel"/>
+            </apex:outputPanel>&nbsp;&nbsp;
+            <apex:commandButton action="{!LaunchActiveX}" onclick="launchactivex()" value="Review/Edit Letter" rendered="{!renderreviewletter}" />&nbsp;&nbsp;
+            <apex:commandButton value="Cancel Letter"  action="{!CancelLetter}" rendered="{!rendercancelletter}" status="loadpanel" reRender="TheForm" />&nbsp;&nbsp;
+            <apex:commandButton value="Submit" action="{!SubmitLetter}" rendered="{!rendersubmitletter}" status="loadpanel" reRender="TheForm"/>
+        </center>
+        
+    </apex:form>
+    
+</apex:page>

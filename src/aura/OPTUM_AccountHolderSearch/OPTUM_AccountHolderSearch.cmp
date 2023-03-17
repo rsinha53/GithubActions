@@ -1,0 +1,108 @@
+<!--
+ Name           : OPTUM_AccountHolderSearch
+ Created By     : Virtusa(Sanjay Pandey)
+ Created Date   : Aug 31st, 2020
+ Description    : US1036246: To search SSN details
+-->
+<aura:component controller = "OPTUM_MemberSearchService" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome" access="global">
+    
+    <aura:attribute name="SSNValue" type="Integer" default=""/>
+    <aura:attribute name="erromessage" type="Boolean" default="false"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="InteractionType" type="String" access="public" default="Phone Call"/>
+    <aura:attribute name="options" type="List"/>
+    <aura:attribute name="Spinner" type="boolean" default="false"/>
+    <aura:attribute name="MemberSearchResult" type = "Object"/>
+    <aura:attribute name = "MemberDetails" type = "Object"/>
+    <aura:attribute name="showErrorMessage" type="string" />
+    <aura:attribute name="isVisible" type="Boolean" default="true" />
+    <aura:registerEvent name="MemberDetailsData" type="c:OPTUM_MemberDetailEvent"/>
+    <aura:attribute name="memberFieldsToValidate" type="List"
+                    default="ssn"/>
+	<!--for Advance Search-->
+    <aura:attribute name="ShowID" type="boolean" default="true"/>
+    <aura:attribute name="enableID" type="boolean" default="false"/>
+    <aura:attribute name="buttonsHide" type="boolean" default="true"/>
+    <aura:registerEvent name="advEvent" type="c:OPTUM_RefreshAdvanceSearch" />
+					
+    <!-- UI changed by Dimpy after Winter21 release -->
+   <div class="cls-FieldSet slds-p-bottom_medium slds-p-top_medium">
+        <lightning:layout class="cls-FieldSet slds-box slds-theme--default slds-container--small slds-align_absolute-center slds-grid_vertical">
+          <lightning:layoutitem class = "slds-size_10-of-12">
+            <div >  
+                <span style="font-family: default; font-size: 16px; " class="slds-page-header__title header-text">Find a Member</span>
+              </div>
+           <div class="slds-form ">
+                
+                <div class="card_element_bottom_margin ">     
+                    <div class="slds-form-element_stacked slds-p-top_small cls-Interaction">
+                        <lightning:select aura:id="selectInt" name="selectInt" label="Interaction Type" value="{!v.InteractionType}" >
+                            <aura:iteration items="{!v.options}" var="opt">
+                                <option value="{!opt}">{!opt}</option>
+                            </aura:iteration>	
+                        </lightning:select>
+                    </div> 
+                </div>
+                
+                <div class="slds-form-element_stacked slds-p-top_small cls-ID">  
+                    <div onkeypress="{!c.keyCheck}">
+                    	<lightning:input aura:id="ssn" name="SSN" pattern="[0-9()-]+" disabled="{!!v.ShowID}" minlength="9" maxlength="11" required="true" messageWhenPatternMismatch="Please provide SSN in correct format (123-45-6789)." messageWhenTooShort="Please provide SSN in correct format (123-45-6789)." messageWhenValueMissing="SSN is required." label="ID" value="{!v.SSNValue}" placeholder="Full SSN" onchange="{!c.onChange}" onblur="{!c.formatSSN}"></lightning:input>
+                    </div>
+                </div>
+                <!--toggle button-->
+                <div class="slds-form-element_stacked slds-p-top_large advancedsearch-text cls-AS">
+                    <label class="slds-checkbox_toggle slds-grid  ">
+                        <span  class="slds-form-element__label slds-m-bottom_none cls-Ad">Advanced Search</span>
+                          <lightning:input aura:id="toggleSearch"
+                                           type="toggle"
+                                           name="togglevalue"
+                                           value="ToggleValue"
+                                           onchange="{!c.selectChange}"
+                                           messageToggleActive=""
+                                           messageToggleInactive="" />
+                        </label>
+                </div>
+				<!--Advance search component-->
+               <div aura:id="DivID" class="slds-hide">
+                <c:OPTUM_AdvancedSearch advanceSearchEvent="{!c.handleAdvanceSearchEvent}" errorEvent = "{!c.handleError}" />
+               </div>
+            </div>
+            </lightning:layoutitem>
+            
+             <aura:if isTrue="{!v.buttonsHide}">
+                <lightning:layoutitem class="slds-grid slds-align_absolute-center">
+                    <div id="searchbuttons" class="slds-button-group">
+                        
+                        <lightning:button label="Search" onclick="{!c.showResults}" class="header-text buttonBorderRadius slds-m-top--large slds-col slds-m-right--small" 
+                                          variant="brand" aura:id="searchbtn" type="submit"/>   
+                        
+                        <lightning:button label="Clear" onclick="{!c.clear}" class="header-text buttonBorderRadius slds-m-top--large slds-m-left--small slds-col"
+                                          variant="brand"/>
+                        
+                    </div>
+                    
+                </lightning:layoutitem>
+            </aura:if>
+            
+            <aura:if isTrue="{!not(empty(v.showErrorMessage))}">
+                <div class="slds-m-top--large slds-align_absolute-center slds-text-color_error">
+                    <p>{!v.showErrorMessage}</p></div>
+            </aura:if>
+            
+        </lightning:layout>
+   </div>
+    
+    <aura:if isTrue="{!v.Spinner}">
+        <lightning:spinner alternativeText="Loading, Please Wait..." title="Loading, Please Wait..." variant="brand" size="medium"/>
+    </aura:if>
+    
+    
+    
+    <div class="slds-p-top_large" ></div>
+    <aura:if isTrue="{!not(empty(v.MemberDetails))}"> 
+        
+        <c:OPTUM_MemberSearchResults InteractionType="{!v.InteractionType}"></c:OPTUM_MemberSearchResults>
+    </aura:if>
+    
+    
+</aura:component>

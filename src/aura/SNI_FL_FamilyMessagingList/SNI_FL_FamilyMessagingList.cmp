@@ -1,0 +1,130 @@
+<!-- 
+Component Name    : SNI_FL_FamilyMessagingList
+Description       : Component which holds the messaging list(family link user) for mobile view
+Created By        : Pavithra Fernando	
+Created Date      : 22/09/2020
+
+Modification Log: 
+Developer                   Date                   Description
+
+-->
+
+<aura:component access="global" controller="SNI_FLDirectMessageUtil">
+    
+    <aura:attribute name="isConnectAPI" type="Boolean" />
+    <aura:attribute name="lstDirectMessages" type="List"></aura:attribute>
+    <aura:attribute name="recordStart" type="Integer"></aura:attribute>
+    <aura:attribute name="recordEnd" type="Integer"></aura:attribute>
+    <aura:attribute name="totalRecords" type="Integer"></aura:attribute>
+    <aura:attribute name="pageNumber" type="Integer"></aura:attribute>
+    <aura:attribute name="totalPages" type="Integer"></aura:attribute>
+    <aura:attribute name="isFamilyLevel" type="Boolean"></aura:attribute>
+    <aura:attribute name="selectedDirectMessage" type="SNI_FLDirectMessageWrapper"></aura:attribute>
+    <aura:attribute name="currentId" type="string" default="null"></aura:attribute>
+    <aura:attribute name="isClearSelectedMessage" type="Boolean" description="value passing from familyview"></aura:attribute>
+    <aura:attribute name="selectedFamilyId" type="string" description="to store salected family id"/> <!-- Added by Nanthu (AC/DC) DE411854 filter messages based on the selected family-->
+
+    <aura:handler name="change" value="{!v.isClearSelectedMessage}" action="{!c.clearSelectedMessages}" description="handle messagelist clear event"></aura:handler>
+    <aura:handler name="change" value="{!v.isFamilyLevel}" action="{!c.setisFamilyLevel}"></aura:handler>
+    <aura:registerEvent name="pagination" type="c:SNI_FL_FamilyLinkPaginationEvt"></aura:registerEvent>
+    <aura:registerEvent name="selectedFamilyLinkMessage" type="c:SNI_FL_SelectedMessageEvt"></aura:registerEvent>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"></aura:handler>
+    
+    <aura:attribute name="isChatView" type="Boolean"/>
+    <!--loading spinner start-->
+    <lightning:spinner aura:id="mySpinner" class="slds-hide" alternativeText="Loading" size="medium" variant="brand"/>
+    <!-- Loading spinner end-->
+    <span>
+        
+        <div class="scrollerContainer slds-scrollable " style="{!v.isConnectAPI == true ? 'height:36rem;font-size: 90%;' : 'height:42.4rem; font-size: 90%;'}">
+            
+            <div class="scroller  uiScroller scroller-wrapper scroll-vertical native " tabindex="-1" data-aura-rendered-by="63:437;a" data-aura-class="uiScroller">
+                
+                <div class="scroller mobile">
+                    
+                    <aura:iteration items="{!v.lstDirectMessages}" var="item" indexVar="index" >
+                        <li class="slds-vertical-tabs__nav-item border-class" 
+                            aura:id="vertical-tab" role="presentation"  
+                            onclick="{!c.getSelectedMsg}" data-feed-id="{!item.directMessageFeed.directMessageFeedID}" 
+                            data-id="{!index}" data-feedelement-id="{!item.directMessageFeed.directMessageFeedID}" escape="false">
+                            
+                            <a class="slds-vertical-tabs__link" href="javascript:void(0)" role="tab" tabindex="0" aria-selected="true" aria-controls="slds-vertical-tabs-0" 
+                               id="slds-vertical-tabs-0__nav" style="text-decoration:none;">
+                                
+                                <span class="slds-truncate " style="color: #333; margin-left: 0.2rem;">
+                                    <p id="{!v.selectedFamilyId}">Family: 
+                                        <aura:if isTrue="{!equals(item.flMessage.isRead,false)}">
+                                            <a><b>{!item.flMessage.familyAccountName}</b></a>
+                                            <aura:set attribute="else">
+                                                <a>{!item.flMessage.familyAccountName}</a>
+                                            </aura:set>
+                                        </aura:if>
+                                    </p>
+                                    <p>From: 
+                                        <aura:if isTrue="{!equals(item.flMessage.isRead,false)}">
+                                            <a><b>{!item.directMessageFeed.initiatedUser.userFirstName +' '+item.directMessageFeed.initiatedUser.userLastName}</b></a>
+                                            <aura:set attribute="else">
+                                                <a>{!item.directMessageFeed.initiatedUser.userFirstName +' '+item.directMessageFeed.initiatedUser.userLastName}</a>
+                                            </aura:set>
+                                        </aura:if>
+                                    </p>
+                                    <p>
+                                        <aura:if isTrue="{!equals(item.flMessage.isRead,false)}">
+                                            <a><b><lightning:formattedDateTime value="{!item.directMessageFeed.lastUpdatedDateTime}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="true" timeZone="{! $Locale.timezone }"/></b></a>
+                                            <aura:set attribute="else">
+                                                <a><lightning:formattedDateTime value="{!item.directMessageFeed.lastUpdatedDateTime}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="true" timeZone="{! $Locale.timezone }"/></a>
+                                            </aura:set>
+                                        </aura:if>
+                                        
+                                    </p>
+                                    <aura:if isTrue="{!empty(item.directMssageSubject)}">
+                                        No Subject:
+                                        <aura:set attribute="else">
+                                            <aura:if isTrue="{!equals(item.flMessage.isRead,false)}">
+                                                <b>{!item.directMssageSubject}</b>
+                                                <aura:set attribute="else">
+                                                    {!item.directMssageSubject}
+                                                </aura:set>
+                                            </aura:if>
+                                        </aura:set>
+                                    </aura:if>
+                                </span>
+                                
+                            </a>
+                            
+                        </li>
+                        
+                    </aura:iteration>                    
+                </div>    
+            </div>
+        </div>
+        <aura:if isTrue="{!!empty(v.lstDirectMessages)}" >
+           <!-- <div class="slds-text-align_center customLabel" style="font-size: 90%;">
+                <p>{!v.recordStart}-{!v.recordEnd} of {!v.totalRecords} | Page {!v.pageNumber} of {!v.totalPages}</p>
+           	</div>
+            <div class="slds-grid slds-wrap slds-m-top_xx-small " style="font-size: 90%;">
+                <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12"> 
+                    <lightning:button variant="brand" label="Prev" aura:id="Previous" title="Previous"  disabled="{!v.pageNumber == 1}" class=" slds-float_left slds-m-left_medium customButton" onclick="{!c.handlePrevious}"/>
+                	<lightning:button variant="brand" label="Next" title="Next" aura:id="Next"  disabled="{!v.pageNumber == v.totalPages}" class="slds-float_right slds-m-right_medium customButton" onclick="{!c.handleNext}"/>
+                </div>
+            </div> -->
+          <div class="  slds-border-bottom slds-grid slds-wrap slds-m-top_xx-small " style="font-size: 100%;">
+            <div class="  slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 slds-list_horizontal"> 
+                <div class=" slds-col slds-size_0.5-of-4 slds-medium-size_1-of-12 slds-large-size_1-of-12 slds-float_left">
+                    <lightning:button variant="brand" label="Prev" aura:id="Previous" title="Previous"  disabled="{!v.pageNumber == 1}" class=" slds-float_left slds-m-left_medium customButton" onclick="{!c.handlePrevious}"/>
+                	
+                </div>   
+                <div class=" slds-col slds-size_3-of-4 slds-medium-size_10-of-12 slds-large-size_10-of-12 customLabel" style="font-size: 90%;">
+                    <p style="margin-top: 7px;" class="slds-text-align_center">
+                       {!v.recordStart}-{!v.recordEnd} of {!v.totalRecords} | Page {!v.pageNumber} of {!v.totalPages}</p>
+                </div>
+                <div class=" slds-col slds-size_0.5-of-4 slds-medium-size_1-of-12 slds-large-size_1-of-12  slds-float_left">
+                   <lightning:button variant="brand" label="Next" title="Next" aura:id="Next"  disabled="{!v.pageNumber == v.totalPages}" class="slds-float_right slds-m-right_medium customButton" onclick="{!c.handleNext}"/>
+               
+                </div>
+            </div>
+           </div> 
+        </aura:if>  
+    </span>
+    
+</aura:component>

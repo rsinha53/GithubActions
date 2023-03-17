@@ -1,0 +1,224 @@
+<apex:page showHeader="false" controller="ACET_LoginFlowCtrl" docType="html-5.0" lightningStylesheets="true"> <!-- US2500710 - Lightning stylesheets for the SNI users - Inshar [4/14/2020] -->   
+    <!--US2260431 - Update Password Implementation - Jitendra [27/05/2020]-->
+    <apex:includeScript value="{!$Resource.JQuery}" />
+    <apex:slds />
+    <apex:includeScript value="{!URLFOR($Resource.ACET_LoginFlowPage, 'ACET_LoginFlowPage.js')}"/>
+    <apex:stylesheet value="{!URLFOR($Resource.ACET_LoginFlowPage, 'ACET_LoginFlowPage.css')}" />
+    <!--US2260431 - Update Password Implementation - Jitendra [27/05/2020]-->
+        
+    <apex:form >
+        <!--US2260431 - Update Password Implementation - Jitendra [27/05/2020]-->
+        <apex:actionFunction name="callUpdatePassword" action="{!UpdateORSCredentials}" rendered="true" reRender="idUpdatePasswordPanel, idErrorMessage"/>
+        <apex:outputPanel rendered="{! showToggle}">
+            <div class="bPageTitle">
+                <div id="idMVPHeader">
+                    <div class="clsAvatar">
+                        <span class="slds-icon_container slds-icon-standard-avatar" title="">
+                            <svg class="slds-icon" aria-hidden="true"  width="24px" height="24px" style="fill:azure;">
+                                <use xmlns:xlink="http://www.w3.org/1999/xlink"
+                                     xlink:href="/apexpages/slds/latest/assets/icons/standard-sprite/svg/symbols.svg#avatar"></use>
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="clsHeader">
+                        <apex:outputLink id="theLink" onclick="toggleMainDiv();return false;"><u>My TOPS Credentials</u></apex:outputLink>
+                    </div>
+                    <div class="clsToggle " onclick="toggleMainDiv()">
+                        <div class="box toggleClass" id="idChevronUp">
+                            <svg class="slds-button__icon slds-icon_x-small clsChevronToggle" aria-hidden="true" width="14px" height="18px">
+                                <use xmlns:xlink="http://optumhealthd2c--emidscm.my.salesforce.com/xlink"
+                                     xlink:href="/apexpages/slds/latest/assets/icons/utility-sprite/svg/symbols.svg#down"></use>
+                            </svg>
+                        </div>
+                        <div class="box" id="idChevronDown" >
+                            <svg class="slds-button__icon slds-icon_x-small clsChevronToggle" aria-hidden="true" width="14px" height="18px">
+                                <use xmlns:xlink="http://optumhealthd2c--emidscm.my.salesforce.com/xlink"
+                                     xlink:href="/apexpages/slds/latest/assets/icons/utility-sprite/svg/symbols.svg#up"></use>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </apex:outputPanel>
+        <!--US2260431 - Update Password Implementation - Jitendra [27/05/2020]-->
+        <div class="aligncenter" id="idMainDiv">
+        <apex:sectionHeader title="UnitedHealth Group"/>
+        <apex:outputPanel rendered="{!bannerPage}">
+            <apex:pageBlock >
+                This is a private computer system containing confidential information. Any unauthorized use or attempt to access or use this computer system or any information on it by employees or other persons may result in discipline, termination of employment, civil fines, and/or criminal penalties. This system may only be used for authorized business purposes in accordance with applicable policies. The transmission of offensive , harassing, or sexually explicit content, including text, graphics, etc., chain mail, streaming video, or gambling material may, subject to applicable local law, result in discipline , termination of employment, civil fines, and /or criminal penalties. UnitedHealth Group monitors, subject to applicable local laws, the use of its systems, including email and internet usage, so nothing you send, create, store, or receive using email or other company systems is private and may be reviewed by UnitedHealth Group.
+                <apex:pageBlockButtons location="bottom">
+                    <apex:commandButton value="Next" action="{!validateTopsCredentials}"/>
+                </apex:pageBlockButtons>
+            </apex:pageBlock>
+        </apex:outputPanel>
+        <apex:outputPanel id="popup" rendered="{!showWarning}">
+            <apex:outputPanel styleClass="popupBackground" layout="block" rendered="{!showWarning}"/>
+            <apex:outputPanel styleClass="custPopup" layout="block" rendered="{!showWarning}">
+                Warning! Your TOPS Credentials password is set to expire on {!expiryDate}.<br/>
+                <br/>
+                Do you wish to update now?<br/>
+                <br/>
+                    <apex:commandButton value="Yes" action="{!renderUpdatePasswordPanel}" style="background-color:#005fb2;color: white;"/>
+                <apex:commandButton value="No" action="{!skipTOPSLogin}" style="background-color:#005fb2;color: white;"/>
+            </apex:outputPanel>
+        </apex:outputPanel>
+        <apex:outputPanel rendered="{!loginPage}">
+            <div style="box">
+                <span class="greeting">Please enter your TOPS user name and password!</span>
+            </div>
+            <apex:pageBlock >
+                <apex:pageBlockButtons location="bottom">
+                    <apex:commandButton value="Save" action="{!createOrUpdateORSCredentials}"/>
+                    <!-- US2500710 - Cancel button Tops Credential - Inshar [4/14/2020] -->
+                    <apex:commandButton value="Cancel" action="{!skipTOPSLogin}" rendered="{! isSNIUser && sniErrorMessage != ''}" />
+                </apex:pageBlockButtons>
+                <apex:pageBlockSection columns="1">
+                    <apex:outputLabel value="User Name"/> <apex:input type="text" value="{!userName}" />
+                    <apex:outputLabel value="Password"/> <apex:inputSecret value="{!userPassword}"/>
+                </apex:pageBlockSection>
+                <apex:pageBlockSection >
+                    <!-- US2500710 - Cancel button Tops Credential - Inshar [4/14/2020] -->
+                    <apex:outputPanel layout="none" rendered="{! isSNIUser && sniErrorMessage != ''}">
+                        <span style="color: red;">{!sniErrorMessage}</span>
+                    </apex:outputPanel>
+                    <apex:outputPanel rendered="{!showError && !isSNIUser}"> <!-- Skipped for SNI User - INSHAR [4/13/2020] -->
+                        <span style="color: red;">{!errorMessage}</span>
+                    </apex:outputPanel>
+                </apex:pageBlockSection>
+                <apex:outputPanel rendered="{!!isSNIUser}">
+                    <span style="color: red;">If you are unsure of your TOPS credentials or need to reset your TOPS credentials please click </span>
+                        <apex:commandLink action="{!renderUpdatePasswordPanel}" value="here" id="theCommandLink"/>
+                    <span style="color: red;">:</span>
+                </apex:outputPanel>
+                <apex:outputPanel rendered="{!isSNIUser}">
+                    <span style="color: red;"><br/>If you are unsure of your TOPS credentials or need to reset your TOPS credentials, please check in ISET.</span>
+                </apex:outputPanel>
+            </apex:pageBlock>
+        </apex:outputPanel>
+            <!--US2260431 - Update Password Implementation - Jitendra [27/05/2020]-->
+            <apex:outputPanel id="idUpdatePasswordPanel" rendered="{!boolShowPasswordUpdatePanel}">
+                <apex:outputPanel id="idSucessPopup" rendered="{!showSuccessMessage}">
+                    <apex:outputPanel styleClass="popupBackground" layout="block" rendered="true"/>
+                    <apex:outputPanel styleClass="clsSucessPopup" layout="block" rendered="true">
+                        <div class="slds-text-color_success slds-text-heading_small" id="idSucessMessageDiv">Success!  TOPS Credentials password was updated.  Please go to ISET and update your password in the lock icon.</div>
+                        <div class="clsPopupButton">
+                            <apex:commandButton value="Continue" action="{!skipTOPSLogin}" style="background-color:#005fb2;color: white;"/>
+                        </div>
+                    </apex:outputPanel>
+                </apex:outputPanel>
+                <apex:pageBlock id="idUpdatePassword">
+                    <apex:outputPanel rendered="{!isSucessfullyUpdated}" id="idSucessMessage">
+                        <div class="slds-text-color_success slds-text-heading_small" id="idSucessMessageDiv">Success!  TOPS Credentials password was updated.  Please go to ISET and update your password in the lock icon.</div>
+                    </apex:outputPanel>
+                    <apex:outputPanel rendered="{! isUpdateFailed}" id="idErrorMessage">
+                        <div class="slds-text-color_error slds-text-heading_small" id="idErrorMessageDiv">{!errorMessage}</div>
+                    </apex:outputPanel>
+                    <apex:pageBlockSection columns="1" id="idExistingCreds">
+                        <apex:pageBlockSectionItem >
+                            TOPS Credentials
+                        </apex:pageBlockSectionItem>
+                        <apex:pageBlockSectionItem >
+                            <apex:outputLabel value="ID (9 digit employee ID)"/>
+                        </apex:pageBlockSectionItem>
+                        <apex:pageBlockSectionItem >
+                            <apex:inputText id="idTopsUserName" disabled="true" value="{!strExistingUserName}"/>
+                        </apex:pageBlockSectionItem>
+                        <apex:pageBlockSectionItem >
+                            <apex:outputLabel value="Password"/>
+                        </apex:pageBlockSectionItem>
+                        <apex:pageBlockSectionItem dataStyleClass="clsBottomMargin">
+                            <input id="idTopsExsPassword" type="text" value="****************" disabled="true"/>
+                        </apex:pageBlockSectionItem>
+                        <apex:pageBlockSectionItem >
+                            <hr class="clsLineBreak"/>
+                        </apex:pageBlockSectionItem>
+                    </apex:pageBlockSection>
+                    <div class="clsPasswordUpdateDiv">
+                        <div>
+                            Password Update
+                            <br/>
+                            <div class="clsUpdatePasswordElements">
+                                <apex:outputLabel value="New Password " styleClass="clsLabelUpdatePassword"/>
+                                <br/>
+                                <apex:inputSecret id="idNewPwd" value="{!strNewPassword}" onmouseout="validateSame(); return false;" />
+                            </div>
+                            <div class="clsUpdatePasswordElements">
+                                <apex:outputLabel value="Confirm New Password" styleClass="clsLabelUpdatePassword"/>
+                                <br/>
+                                <apex:inputSecret id="idConfirmPwd" value="{!strConfirmPassword}" onmouseout="validateSame(); return false;"/>
+                                <div class="slds-text-color_error slds-hide" id="idErrorMessage">Password Mismatch</div>
+                            </div>
+                            <div class="clsUpdatePasswordBtn">
+                                <div>
+                                    <span>
+                                        <button type="button" class="slds-button slds-button_brand" onclick="validatePassword(); return false;">Update Password</button>
+                                    </span>
+                                    <span onclick="togglePasswordError(); return false;">
+                                        <apex:image url="{!URLFOR($Resource.ACET_LoginFlowPage,'ACET_SnagIcon1.png')}" width="26" height="14"/>
+                                        <!--<svg class="slds-button__icon slds-icon_x-small clsPasswordErrorIcon" aria-hidden="true" width="30px" height="15px" >
+                                            <use xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                 xlink:href="/apexpages/slds/latest/assets/icons/utility-sprite/svg/symbols.svg#error"></use>
+                                        </svg>-->
+                                    </span>
+                                </div>
+                                <div class="clsPasswordError slds-hide" id="idPasswordError" >
+                                    <section aria-describedby="dialog-body-id-103" aria-labelledby="dialog-heading-id-1" class="slds-popover slds-popover_error slds-nubbin_bottom-left" role="dialog" style="width:150%;">
+                                        <button class="slds-button slds-button_icon slds-button_icon-small slds-float_right slds-popover__close slds-button_icon-inverse" title="Close dialog" onclick="closePasswordError(); return false;">
+                                            <svg class="slds-button__icon" aria-hidden="true" width="10px" height="10px">
+                                                <use xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                     xlink:href="/apexpages/slds/latest/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+                                            </svg>
+                                            <span class="slds-assistive-text">Close dialog</span>
+                                        </button>
+                                        <header class="slds-popover__header">
+                                            <div class="slds-media slds-media_center slds-has-flexi-truncate ">
+                                                <div class="slds-media__figure">
+                                                    <span class="slds-icon_container slds-icon-utility-error">
+
+                                                        <svg class="slds-icon slds-icon_x-small" aria-hidden="true" width="10px" height="10px">
+                                                            <use xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                                 xlink:href="/apexpages/slds/latest/assets/icons/utility-sprite/svg/symbols.svg#error"></use>
+                                                        </svg>
+                                                    </span>
+                                                </div>
+                                                <div class="slds-media__body">
+                                                    <h2 class="slds-truncate slds-text-heading_small" id="dialog-heading-id-1" title="We hit a snag">We hit a snag</h2>
+                                                </div>
+                                            </div>
+                                        </header>
+                                        <div class="slds-popover__body" id="dialog-body-id-103">
+                                            <ul class="slds-list_dotted clsPasswordInfoFontSize">
+                                                <li>Be exactly 8 characters in length.</li>
+                                                <li>Be alpha-numeric.</li>
+                                                <li>Have at least one special character " ! @ # $ * ( ) ".</li>
+                                                <li>Not contain blanks.</li>
+                                                <li>Not be all the same characters.</li>
+                                                <li>Not be any of the prior 10 passwords..</li>
+                                            </ul>
+                                        </div>
+                                    </section>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="slds-popover__body clsPasswordInformation">
+                                <span class="clsPasswordInfoHeading">
+                                    Your new TOPS password must.
+                                </span>
+                                <ul class="slds-list_dotted clsPasswordInfoFontSize">
+                                    <li>Be exactly 8 characters in length.</li>
+                                    <li>Be alpha-numeric.</li>
+                                    <li>Have at least one special character " ! @ # $ * ( ) ".</li>
+                                    <li>Not contain blanks.</li>
+                                    <li>Not be all the same characters.</li>
+                                    <li>Not be any of the prior 10 passwords..</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </apex:pageBlock>
+            </apex:outputPanel>
+            <!--US2260431 - Update Password Implementation - Jitendra [27/05/2020]-->
+        </div>
+    </apex:form>
+</apex:page>

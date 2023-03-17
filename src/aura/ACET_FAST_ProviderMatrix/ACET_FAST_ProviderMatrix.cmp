@@ -1,0 +1,277 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction"
+                access="global" 
+                Controller="ACET_FAST_ProviderMatrixCtrl">
+    <!-- Attributes -->
+    <aura:attribute name="activeSections" type="List" default="['A','B']" />
+    <aura:attribute name="selectedLob" type="string" default=""/>
+    <aura:attribute name="lobList" type="ACET_FAST_ProviderMatrixCtrl.SelectOptionWrapper"/>
+    <aura:attribute name="selectedCategory" type="string" default=""/>
+    <aura:attribute name="CategoryList" type="ACET_FAST_ProviderMatrixCtrl.SelectOptionWrapper"/>
+    <aura:attribute name="selectedSubCategory" type="string" default=""/>
+    <aura:attribute name="SubCategoryList" type="ACET_FAST_ProviderMatrixCtrl.SelectOptionWrapper"/>
+    <aura:attribute name="globalSearchStr" type="string" default=""/>
+    <aura:attribute name="hideListSectionFirstTime" type="boolean" default="true"/>
+    <aura:attribute name="errMEssage" type="string" default="No Records to display to the search criteria"/>
+    <aura:attribute name="selectedItemId" type="id" />
+    <aura:attribute name="recordId" type="String" />
+    
+    <!-- pagination attributes -->
+    <aura:attribute name="data" type="List"/>
+    <aura:attribute name="columns" type="List"/>
+    <aura:attribute name="allData" type="List"/>
+    <aura:attribute name="currentPageNumber" type="Integer" default="1"/>
+    <aura:attribute name="pageSize" type="Integer" default="9"/>
+    <aura:attribute name="totalPages" type="Integer" default="0"/>
+    <aura:attribute name="pageList" type="List"/>
+    <!-- pagination attributes -->
+    
+    <!-- RP Record Pop Up Attributes -->
+    <aura:attribute name="caseRecordTypeName" type="string" default=""/>
+    <aura:attribute name="rpRectypeId" type="string" default=""/>
+    <aura:attribute name="rpRecordId" type="string" default=""/>
+    <aura:attribute name="showPopUp" type="boolean"/>
+   	<!-- RP Record Pop Up Attributes -->
+    
+    <!-- results Attributes -->
+    <aura:attribute name="rLob" type="string" default=""/>
+    <aura:attribute name="rCategory" type="string" default=""/>
+    <aura:attribute name="rSCategory" type="string" default=""/>
+    <aura:attribute name="rGlobalSearch" type="string" default=""/>
+    <!-- results Attributes -->
+    
+    <!-- Attributes -->
+        
+    <!-- Handlers -->
+    <aura:handler name="init" value="{!this}" action="{!c.initialize}"/>
+    <aura:handler name="change" value="{!v.selectedCategory}" action="{!c.handleCategoryChange}"/>
+    <aura:handler name="change" value="{!v.selectedSubCategory}" action="{!c.handleSubCategoryChange}"/>
+    <!-- Handlers -->
+    
+    <!-- WorkSpace -->
+    <lightning:workspaceAPI aura:id="workspace" />
+    <!-- Workspace -->
+    
+    <!-- Spinner -->
+    <div style="text-align:center">
+        <lightning:spinner class="slds-hide" aura:id="dropdown-spinner" alternativeText="Loading.."  title="Loading.." variant="brand" size="large"  style="z-index:99" />
+    </div>
+    <!-- Spinner -->
+    
+    <!-- pop up to Create RP Record -->
+    <aura:if aura:id="rpRecordPopUpId" isTrue="{!v.showPopUp}">
+        <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close">
+                        <lightning:icon iconName="utility:close" size="x-large" alternativeText="Close" onclick="{!c.closeAction}" />
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 id="modal-heading-01" class="slds-modal__title slds-hyphenate">PIR Resolution Partner</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                    <c:ACET_FAST_CreateRPRecord caseRecId="{!v.recordId}"
+                                                caseRecordTypeName="{!v.caseRecordTypeName}"
+                                                rpRectypeId="{!v.rpRectypeId}"
+                                                rpRecordId="{!v.rpRecordId}"
+                                                showPopUp="{!v.showPopUp}"
+                                                isCaseTab="true"/>
+                </div>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+    <!-- pop up to Create RP Record -->
+    
+    <!-- Component Mark Up -->
+    <div class="slds-box" style="background:#fff">
+        <!-- Page Header -->
+        <div class="slds-box" style="padding:0px">
+            <div class="slds-page-header">
+                <div class="slds-page-header__row">
+                    <div class="slds-page-header__col-title">
+                        <div class="slds-media">
+                            <div class="slds-media__figure" >
+                                <span class="slds-icon_container slds-icon-standard-opportunity" title="Provider Matrix">
+                                    <lightning:icon iconName="standard:channel_program_levels" alternativeText="Provider Matrix" title="Provider Matrix" />
+                                    <span class="slds-assistive-text" >Provider Matrix</span>
+                                </span>
+                            </div>
+                            <div class="slds-media__body">
+                                <div class="slds-page-header__name">
+                                    <div class="slds-page-header__name-title">
+                                        <h1>
+                                            <span class="slds-page-header__title slds-truncate" title="Provider Matrix" style="font-weight:bold;">Provider Matrix</span>
+                                        </h1>
+                                    </div>
+                                </div>
+                                <p class="slds-page-header__name-meta">First select LOB, then Category, then Subcategory then click on Search Data</p>
+                                <p class="slds-page-header__name-meta">If searching by keyword, first select LOB, click Search Data, then put in keyword and press Search Data.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Page Header -->
+        
+        <!-- Body -->
+        <div class="slds-p-top_small">
+            <lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="{!v.activeSections}">
+                <div class="slds-box hideLabel" style="padding:0px">
+                    <lightning:accordionSection name="A" label="Perform Search">
+                        <div class="slds-grid slds-wrap slds-p-top_small">
+                            <div class="slds-col slds-size_4-of-12">
+                                <div class="slds-p-horizontal_small">
+                                    <label>LOB</label>
+                                    <lightning:select name="LOB" aura:id="lobId" label="LOB" variant="label-hidden" onchange="{!c.handleLobChange}" value="{!v.selectedLob}">
+                                        <option value="">Select LOB</option>
+                                        <aura:iteration items="{!v.lobList}" var="lob">
+                                            <option value="{!lob.sLabel}">{!lob.sLabel}</option>
+                                        </aura:iteration>
+                                    </lightning:select>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_4-of-12">
+                                <div class="slds-p-horizontal_small">
+                                    <label>Category</label>
+                                    <aura:if isTrue="{!v.selectedLob=='' || v.selectedLob==null}">
+                                        <lightning:input name="Category" label="Category" placeholder="Search" disabled="true"/>
+                                        <aura:set attribute="else">
+                                            <c:ACET_FAST_AutoCompleteCmp selectedTextValue="{!v.selectedCategory}" searchList="{!v.CategoryList}"/>
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_4-of-12">
+                                <div class="slds-p-horizontal_small">
+                                    <label>Sub Category</label>
+                                    <aura:if isTrue="{!v.selectedCategory=='' || v.selectedCategory==null}">
+                                        <lightning:input name="Sub Category" label="Sub Category" placeholder="Search" disabled="true"/>
+                                        <aura:set attribute="else">
+                                            <c:ACET_FAST_AutoCompleteCmp selectedTextValue="{!v.selectedSubCategory}" searchList="{!v.SubCategoryList}"/>
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_4-of-12 globalSearhDiv">
+                                <div class="slds-p-horizontal_small">
+                                    <label for="globalSearchId" title="Search">Search</label>
+                                    <lightning:input name="Search" aura:id="globalSearchId" label="Search" placeholder="Search" value="{!v.globalSearchStr}" title="Search"/>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_8-of-12"></div>
+                            <div class="infoDiv">
+                                <div class="info">
+                                    <p><strong>Please Note!</strong> For Free Form Search Provide atleast two characters to search</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-align_absolute-center slds-p-top_small">
+                            <lightning:button variant="brand" class="iconWhite" iconName="utility:search" label="Search Data" title="Search Data" onclick="{!c.runQuery}" />
+                            <lightning:button iconName="utility:delete" label="Reset Filter" title="Reset Filter" onclick="{!c.reset}"/>
+                        </div>
+                    </lightning:accordionSection>
+                    <aura:if isTrue="{!!v.hideListSectionFirstTime}">
+                        <div style="padding:1%">
+                            <lightning:card title="Filters applied">
+                                <div>
+                                    <aura:if isTrue="{!and(v.rLob!=null, v.rLob!='')}">
+                                        <span style="padding-right:1%">LOB <span class="slds-badge slds-theme_success">{!v.rLob}</span></span>
+                                    </aura:if>
+                                    <aura:if isTrue="{!and(v.rCategory!=null, v.rCategory!='')}">
+                                        <span style="padding-right:1%">Category <span class="slds-badge slds-theme_success">{!v.rCategory}</span></span>
+                                    </aura:if>
+                                    <aura:if isTrue="{!and(v.rSCategory!=null, v.rSCategory!='')}">
+                                        <span style="padding-right:1%">Sub Category <span class="slds-badge slds-theme_success">{!v.rSCategory}</span></span>
+                                    </aura:if>
+                                    <aura:if isTrue="{!and(v.rGlobalSearch!=null, v.rGlobalSearch!='')}">
+                                        <span style="padding-right:1%">Global Text <span class="slds-badge slds-theme_success">{!v.rGlobalSearch}</span></span>
+                                    </aura:if>
+                                </div>
+                            </lightning:card>
+                        </div>
+                    </aura:if>
+                </div>
+                
+                <!-- List to display -->
+                <aura:if isTrue="{!!v.hideListSectionFirstTime}">
+                    <div class="slds-p-top_small"> 
+                        <div class="slds-box" style="padding:0px">
+                            <lightning:accordionSection name="B" label="Search Results">
+                                <aura:if isTrue="{!or(v.data==null, v.data.size==0)}">
+                                    <div class="slds-box slds-theme_shade" style="margin-top:1%">
+                                        {!v.errMEssage}
+                                    </div>
+                                    <aura:set attribute="else">
+                                        <lightning:layout multipleRows="true" horizontalAlign="center">
+                                            <lightning:layoutItem padding="around-small" size="12">
+                                                <div class="slds-box" style="padding:0px">
+                                                    <lightning:datatable aura:id="providerMatrixDataTable"
+                                                                         columns="{!v.columns }"
+                                                                         data="{!v.data }"
+                                                                         keyField="Id"
+                                                                         hideCheckboxColumn="true"
+                                                                         onrowselection="{!c.getSelectedName}"
+                                                                         onrowaction="{!c.handleRowAction}"/>
+                                                </div>
+                                            </lightning:layoutItem>
+                                            <lightning:layoutItem padding="around-small" flexibility="auto">
+                                                <lightning:button aura:id="providerMatrixfirst" label="First" iconName="utility:left" iconPosition="left"
+                                                                  onclick="{!c.onFirst}" disabled="{! v.currentPageNumber == 1}"/>
+                                                <lightning:button aura:id="providerMatrixleft"  iconName="utility:chevronleft" iconPosition="left"
+                                                                  onclick="{!c.onPrev}" disabled="{! v.currentPageNumber == 1}"/>
+                                                <span class="slds-p-horizontal_x-small">
+                                                    <a onclick="{!c.processMe}" name="1" 
+                                                       class="{! (v.currentPageNumber == 1) ? 'selected' : ''}">1</a>
+                                                </span>
+                                                <span class="slds-p-horizontal_xxx-small">
+                                                    <a>...</a>
+                                                </span>
+                                                
+                                                <aura:iteration items="{!v.pageList}" var="item">
+                                                    <span class="slds-p-horizontal_x-small">
+                                                        <a onclick="{!c.processMe}" name="{!item}"
+                                                           class="{! (v.currentPageNumber == item) ? 'selected' : ''}">{!item}</a>
+                                                    </span>
+                                                </aura:iteration>
+                                                
+                                                <span class="slds-p-horizontal_xxx-small">
+                                                    <a>...</a>
+                                                </span>
+                                                <span class="slds-p-horizontal_x-small">
+                                                    <a onclick="{!c.processMe}" name="{!v.totalPages}"
+                                                       class="{! (v.currentPageNumber == v.totalPages) ? 'selected' : ''}">{!v.totalPages}</a>
+                                                </span>
+                                                <lightning:button aura:id="providerMatrixright"  iconName="utility:chevronright" iconPosition="right" 
+                                                                  disabled="{! v.currentPageNumber == v.totalPages}" onclick="{!c.onNext}"/>
+                                                <lightning:button aura:id="providerMatrixlast" label="Last" iconName="utility:right" iconPosition="right" 
+                                                                  disabled="{! v.currentPageNumber == v.totalPages}" onclick="{!c.onLast}"/>
+                                            </lightning:layoutItem>
+                                        </lightning:layout>
+                                    </aura:set>
+                                </aura:if>   
+                            </lightning:accordionSection>
+                        </div>
+                    </div>
+                </aura:if>
+                <!-- List to display -->
+                
+            </lightning:accordion>
+        </div>
+        <!-- Body -->
+    </div>
+    
+    <!-- Component Mark Up -->
+    <!-- HTML Styles -->
+    <aura:html tag="style">
+        .slds-modal__container{
+        width: 80%;
+        max-width: 80rem;
+        }
+    </aura:html>
+    <aura:html tag="style">.toastMessage.forceActionsText{
+        white-space : pre-line !important;
+        }
+    </aura:html>
+    <!-- HTML Styles -->
+</aura:component>

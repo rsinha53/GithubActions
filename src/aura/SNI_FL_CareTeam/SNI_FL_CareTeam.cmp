@@ -1,0 +1,223 @@
+<aura:component controller="SNI_FL_CareTeamController" implements="forceCommunity:themeLayout,forceCommunity:availableForAllPageTypes,forceCommunity:layout,force:lightningQuickAction,force:appHostable" access="global">
+    <ltng:require styles="{!$Resource.SLDS +'/assets/styles/salesforce-lightning-design-system.css'}"/>
+    <aura:handler name="init" value="{!this}" action="{!c.myAction}"/>
+    <aura:attribute name= "familyId" type="String"/>
+    <aura:attribute name="careTeamWrapperList" type="SNI_FL_CareTeamController.careTeamWrapper[]"/>
+    <aura:attribute name= "isFLAccOwner" type="boolean"/>
+    <aura:attribute name= "isFLAccOwnerCareTeamId" type="String"/>
+    <aura:attribute name= "flAccOwnerMemName" type="String"/>
+    <aura:attribute name= "isSmallScreen" type="boolean" default="false"/>
+    <aura:attribute name="isRemoveCnfrmModalOpen" type = "boolean" default = "false"/>
+    <aura:attribute name="isInviteModalOpen" type = "boolean" default = "false"/>
+    <aura:attribute name="isEditInvite" type = "boolean" default = "false"/>
+    <aura:attribute name= "isInvited" type ="boolean" default = "false"/>
+	<aura:attribute name="typeOfInvite" type = "string"/>
+    <aura:attribute name="ctEmail" type = "string"/>
+    <aura:attribute name="ctMemDataIndex" type = "Integer"/>
+    <aura:attribute name="isAddFamilymemModalOpen" type = "boolean" default = "false"/>
+    <aura:attribute name="careTeamMemberName" type="string"/>
+    <aura:attribute name="careTeamName" type="string"/>
+    <aura:attribute name="careTeamId" type="String"/>
+    <aura:attribute name="careTeamMembfrstName" type="string"/>
+    <aura:attribute name="careTeamMemblstName" type="string"/>
+    <aura:attribute name="careTeamMembId" type="string"/>
+    <aura:attribute name="careTeamMemDob" type="date"/>
+    <aura:attribute name="openSignAuth" type="boolean"/>
+	<aura:attribute name="userExist" type="boolean"/>
+    <aura:attribute name="isViewAuthFormModalOpen" type = "boolean" default = "false"/>
+    <aura:registerEvent name="refreshCareTeam" type="c:SNI_FL_RefreshView"/>
+	<aura:handler event="c:SNI_FL_RefreshCmp" action="{!c.refreshCmp}"/>
+	<aura:handler event="c:SNI_FL_getSelectedFamily" action="{!c.setCurrentFamily}"/>
+	<aura:handler event="c:SNI_FL_RedirectToRoi" action="{!c.redirectToRoi}"/>
+    
+    <!-- Attributes to Child -->
+    <aura:attribute name="careTeamMemAdd" type="string"/>
+    <aura:attribute name="careTeamperMemAdd" type="string"/>
+    
+    <div class="slds-grid slds-wrap slds-ct-top-style"> 
+        <aura:if isTrue="{! if(v.isSmallScreen == true,false,true)}">
+            <div  class="slds-col slds-size--6-of-12 slds-myFamily-txt  slds-topsection-styles">
+                My Family &amp; Release Forms
+            </div>
+            <div  class="slds-col slds-size--6-of-12 slds-topsection-styles">
+                <aura:if isTrue="{!v.isFLAccOwner}">
+                    <div class="slds-addFamilyMem-box  slds-addFamilyMemSpec-box"><a  href="javascript:void(0);" onclick="{!c.showCareTeamPopup}" >Add Personal Care Team Member</a></div>
+                </aura:if>
+            </div>
+        </aura:if>
+        <aura:if isTrue="{!v.isSmallScreen}">
+            <div  class="slds-col slds-size--12-of-12 slds-myFamily-txt  slds-topsection-styles">
+                My Family &amp; Release Forms
+            </div>
+            <div  class="slds-col slds-size--12-of-12">
+                <aura:if isTrue="{!v.isFLAccOwner}">
+                    <div class="slds-addFamilyMem-box"><a href="javascript:void(0);" onclick="{!c.showCareTeamPopup}">Add Personal Care Team Member</a></div>
+                </aura:if>
+            </div>
+        </aura:if>
+        <div class="slds-col slds-size--12-of-12 slds-marg-styles">
+            <ul class="sld-font-styles slds-list_dotted">
+                <li style="color: #5DC916;font-size: large;"><span style="color: #797972;font-size: 14px;">Your Care Advisor is authorized to share all health information with you about this family member.</span></li>
+                <li style="color: #797972;font-size: large;">
+                    <aura:if isTrue="{!$Browser.isIPad}">
+                    	<span style="color: #797972;font-size: 14px;">An authorization form is needed in order for your Care Advisor to share sensitive health information with you about this family member.</span>  
+                            <aura:set attribute="else">
+                              <span style="color: #797972;font-size: 14px;">An authorization form is needed in order for your Care Advisor to share sensitive health information<br></br>with you about this family member.</span>  
+                            </aura:set>
+                    </aura:if>   
+                    <div class="tooltip"><lightning:icon iconName="utility:question" class="sld-img-size"></lightning:icon>
+                      <span class="tooltiptext">{!$Label.c.SNI_FL_CareTeamHelpText}</span>                 
+                    </div>  
+                </li>
+            </ul>
+        </div>
+        <div  class="slds-col slds-size--12-of-12">
+            <aura:iteration items="{!v.careTeamWrapperList}" var="careTemMem" indexVar="index">
+                <div class="{! careTemMem.primaryCaregiver ? 'slds-card slds-green-styles' : and(careTemMem.age gt 12 ,careTemMem.signROIStatus != 'Completed') ? 'slds-card slds-grey-styles':'slds-card slds-green-styles'}">
+                    <div class="slds-grid slds-authoriz-styles">
+                        <aura:if isTrue="{! if(v.isSmallScreen == true,false,true)}">
+                            <div class="slds-col slds-size--8-of-12">
+                                <span class="sld-font-styles">Age: {!careTemMem.age}y </span>
+                                <aura:if isTrue="{! if(careTemMem.createDate != null,true,false)}">
+                                    <span class="sld-font-styles">| Account Created: {!careTemMem.createDate} </span>
+                                </aura:if><br/>
+                                <span data-selected-Index="{!index}" class="slds-name-stlyes">{!careTemMem.name}</span>
+                            </div>
+                        </aura:if>
+                        <aura:if isTrue="{!v.isSmallScreen}">
+                            <div class="slds-col slds-size--8-of-12">
+                                <span class="sld-font-styles">Age: {!careTemMem.age}y </span>
+                                <aura:if isTrue="{! if(careTemMem.createDate != null,true,false)}"><br/>
+                                    <span class="sld-font-styles">Account Created: {!careTemMem.createDate} </span>
+                                </aura:if><br/>
+                                <span class="slds-name-stlyes">{!careTemMem.name}</span>
+                            </div>
+                        </aura:if>
+                        <div class="slds-col slds-size--4-of-12">
+                             <aura:if isTrue="{!and(v.isFLAccOwner,careTemMem.showHideInvbtns)}">
+                             <aura:if isTrue="{!careTemMem.inviteStatus == 'Resend'}">                   
+                                 <div class="slds-removeinvite-styles">
+                                     <span class="sld-font-styles">Invite Sent</span><br/>
+                                     <span>
+                                 		<a href="javascript:void(0)" class="slds-rightsidelinks-styles" data-selected-Index="{!index}" onclick = "{!c.resendInvitePopUp}">Resend Invite</a>
+                                     </span>    
+                                 </div>
+                              </aura:if> 
+                             <aura:if isTrue="{!or(careTemMem.inviteStatus == 'EditInvite',careTemMem.inviteStatus == 'EditInviteRoiCompltd')}">                   
+                                 <div class="slds-removeinvite-styles">
+                                     <aura:if isTrue="{!careTemMem.inviteStatus == 'EditInviteRoiCompltd'}">
+                                     <span class="sld-font-styles">Authorization Pending</span><br/>
+                                     </aura:if>
+                                     <span class="slds-editAuthS">
+                                 		<a href="javascript:void(0)" class="slds-rightsidelinks-styles" data-selected-Index="{!index}" onclick = "{!c.editInvitePopUp}">Edit Invite</a>
+                                     </span>    
+                                 </div>
+                              </aura:if>  
+                                </aura:if>
+                        </div>
+                    </div>
+                    <div class="slds-line-styles">&nbsp;</div>
+                    <div class="slds-grid slds-wrap slds-authoriz-styles">
+                       <aura:if isTrue="{!and(not(careTemMem.isNonPolicyMem),or(careTemMem.isloggedInUser, v.isFLAccOwner))}">  
+                            <div  class="slds-col slds-size--6-of-12 slds-signauthcol-styles">
+                                <aura:if isTrue = "{!and((careTemMem.signROIStatus == 'Not Started'),not(careTemMem.primaryCaregiver))}">
+                                <div class="slds-signauth-box"><a data-selected-Index="{!index}" onclick = "{! c.openSignAuthUp}">Sign Authorization</a></div>
+                                </aura:if>
+                                <aura:if isTrue = "{!(careTemMem.signROIStatus == 'Partial')}">
+                                <div class="slds-signauth-box"><a data-selected-Index="{!index}" onclick = "{! c.openSignAuthUp}">Update Sign Authorization</a></div>
+                                </aura:if>
+                                <aura:if isTrue = "{!(careTemMem.signROIStatus == 'Pending')}">
+                                <div class="slds-signauth-box"><a data-selected-Index="{!index}" onclick = "{! c.openSignAuthUp}">Pending Authorization</a></div>
+                                </aura:if>
+                                 <aura:if isTrue = "{!(careTemMem.signROIStatus == 'Completed')}">
+                                  <a href="javascript:void(0)" class="slds-viewauthlink-styles" data-selected-Index="{!index}" onclick = "{!c.viewAuthForm}">View Authorization Form</a>
+                                 </aura:if>
+                            </div>
+                        </aura:if>
+                        <div  class="slds-col slds-size--6-of-12">
+                            <aura:if isTrue="{!and(!careTemMem.primaryCaregiver, v.isFLAccOwner)}">     
+                                <div class="slds-removeinvite-styles">
+                                    <a  href="javascript:void(0)" class="slds-rightsidelinks-styles" aura:id= "careTeamMember" data-selected-Index="{!index}" onclick = "{! c.removeWarningPopUp}">Remove </a> 
+                                    <aura:if isTrue="{!and(careTemMem.showHideInvbtns,careTemMem.inviteStatus == 'Invite')}">     
+                                   		 <a  href="javascript:void(0)" class="slds-rightsidelinks-styles" aura:id= "careTeamMember" data-selected-Index="{!index}" onclick = "{! c.invitePopUp}">| Invite</a>
+                                    </aura:if>
+                                    <aura:if isTrue="{! careTemMem.isNonPolicyMem}">     
+                                         <a href="javascript:void(0)" class="slds-rightsidelinks-styles" aura:id= "ctMemEditId" data-selected-Index="{!index}" onclick = "{! c.showCareTeamPopuponEdit}"> | Edit</a> 
+                                    </aura:if>
+                                </div>
+                            </aura:if> 
+                        </div>
+                        
+                        <aura:if isTrue = "{!careTemMem.signROIStatus == 'Completed'}">
+                        <div  class="slds-col slds-size--12-of-12">
+                            <span class="sld-font-styles"> Expires: {!careTemMem.expiryDate} </span>
+                        </div>
+                        </aura:if>
+                    </div>
+                </div>
+            </aura:iteration>
+        </div>
+    </div>
+    <aura:if isTrue="{!v.isRemoveCnfrmModalOpen}"> 
+       
+    <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_small" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <lightning:buttonIcon iconName="utility:close"
+                                          onclick="{! c.closeWarning}"
+                                          alternativeText="close"
+                                          variant="bare-inverse"
+                                          class="slds-modal__close slds-change-color"/>
+                    <h2 id="modal-heading-01" class="slds-modal__title slds-hyphenate SNI_FL_ModalTitle">Warning</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                
+                   
+                    <ul class="slds-list_dotted">
+                        <p>Are you sure you want to remove <b>{!v.careTeamMemberName}</b> from  <b>{!v.careTeamName}'S</b> Personal Care Team?</p>
+                    </ul>
+                </div>
+                <footer  class="slds-modal__footer footerBgColor" >
+                   <!--<div class="slds-form-element__help slds-p-left_xx-small none" aura:id ="commentValidationMessage">Complete this field</div> -->
+                   <div class="slds-float--right">
+                    <lightning:layout>  
+                     <lightning:layoutItem>  
+                    <lightning:button variant="neutral" label="Cancel"
+                                          title="Cancel"
+                                          onclick="{!c.closeWarning}"/>
+                        </lightning:layoutItem>
+                      
+                       <lightning:layoutItem  class="delBgColor"> 
+                        <lightning:button variant="neutral"
+                                          label="Remove"
+                                          title="Remove"
+                                          onclick="{!c.removeMember}"/>
+                        </lightning:layoutItem>
+                     </lightning:layout>
+                    </div>
+                </footer>
+      
+            </div>
+        </section>
+    	
+	</aura:if>
+    
+    <aura:if isTrue="{!v.isInviteModalOpen}">
+       
+         <c:SNI_FL_Invite isInviteModalOpen="{!v.isInviteModalOpen}" typeOfInvite="{!v.typeOfInvite}" careTeamMemberName="{!v.careTeamMemberName}" careTeamId="{!v.careTeamId}" careTeamMembfrstName="{!v.careTeamMembfrstName}" careTeamMemblstName="{!v.careTeamMemblstName}" Email="{!v.ctEmail}" careTeamMembId="{!v.careTeamMembId}" isEditInvite="{!v.isEditInvite}" ctMemDataIndex="{!v.ctMemDataIndex}" />
+    </aura:if>
+     <aura:if isTrue="{!v.isAddFamilymemModalOpen}"> 
+         <c:SNI_FL_AddFamilyMember familyId="{!v.familyId}" memId="{!v.careTeamMembId}" firstName="{!v.careTeamMembfrstName}" lastName="{!v.careTeamMemblstName}" birthdate="{!v.careTeamMemDob}" />
+         <div class="slds-backdrop slds-backdrop_open"> </div>
+    </aura:if>
+    
+    <aura:if isTrue="{!v.openSignAuth}">
+        <!-- commented by Prajnith -->
+        <c:SNI_FL_ROIForm isSignAuth ="{!v.openSignAuth}" isInvited="{!v.isInvited}" careTeamMemberName = "{!v.careTeamMemberName}" careTeamId="{!v.careTeamId}" familyId="{!v.familyId}" isFAOSign ="{!v.isFLAccOwner}" isFLAccOwnerCareTeamId = "{!v.isFLAccOwnerCareTeamId}" flAccOwnerMemName= "{!v.flAccOwnerMemName}" isUserExist="{!v.userExist}" birthdate="{!v.careTeamMemDob}" careTeamperMemAdd="{!v.careTeamperMemAdd}" careTeamMemAdd="{!v.careTeamMemAdd}" />
+    </aura:if>
+     <aura:if isTrue="{!v.isViewAuthFormModalOpen}">
+        <!-- commented by Prajnith -->
+        <c:SNI_FL_ROIForm careTeamMemberName = "{!v.careTeamMemberName}" careTeamId="{!v.careTeamId}" familyId="{!v.familyId}" isViewAuth="{!v.isViewAuthFormModalOpen}" birthdate="{!v.careTeamMemDob}" careTeamperMemAdd="{!v.careTeamperMemAdd}" careTeamMemAdd="{!v.careTeamMemAdd}" />
+    </aura:if>
+	
+</aura:component>

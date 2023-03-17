@@ -1,0 +1,122 @@
+<apex:page controller="ACETCallTopicSaveCloseController" action="{!RemoveNone}">
+    <script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="/support/console/36.0/integration.js" />
+    <apex:form >
+        <apex:actionFunction name="sf_save" action="{!save}" reRender="pb"  oncomplete="closeTab();" />
+        <apex:sectionHeader title="Close Case" />
+        <apex:inputHidden id="removeNone" value="{!removeNone}" />
+        <apex:pageBlock id="pb">
+            <apex:pageBlockSection columns="1">
+                <apex:outputPanel id="callTopic">
+                    <apex:outputLabel value="Topic" id="abc" style="display:none" />
+                    <apex:inputField value="{!CaseObj.Topic__c}" id="xyz"
+                        style="display:none" />
+                </apex:outputPanel>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Case Number" />
+                    <apex:inputField value="{!CaseObj.casenumber}" id="case_number" />
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Close Reason" />
+                    <apex:inputField styleClass="removeoption"
+                        value="{!CaseObj.New_Closed_Reason__c}" required="true"
+                        id="closedReason" />
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Comments" />
+                    <apex:inputTextArea value="{!Comments}" cols="60" rows="4"
+                        id="comments" />
+                </apex:pageBlockSectionItem>
+            </apex:pageBlockSection>
+            <apex:pageBlockButtons location="bottom">
+                <apex:commandButton value="Save" onclick="return validate();" />
+                <apex:commandButton value="Clear" onclick="return resetForm();" />
+            </apex:pageBlockButtons>
+        </apex:pageBlock>
+    </apex:form>
+    <script> 
+        var subtabIds = new Array();
+        $(document).ready(function() {
+            console.log('*****');
+            //sforce.console.getFocusedPrimaryTabId(showTabId);
+            sforce.console.getFocusedPrimaryTabId(function(result){
+               console.log('*****#######');
+               sforce.console.getSubtabIds(result.id, showsubtabIds);
+            }); 
+        });
+        var showsubtabIds = function showsubtabIds(result) {
+            console.log('*****&&&&&&&&&');
+            subtabIds = result.ids;
+            console.log('Testing'+result.ids);
+        };       
+        function closeTab() {
+            sforce.console.getEnclosingTabId(function(result){ 
+                var refreshNavigationTab = "{!JSENCODE($CurrentPage.parameters.refreshNavigationTab)}";
+                var closeCallTopicTab = "{!JSENCODE($CurrentPage.parameters.closeCallTopicTab)}";
+                if(refreshNavigationTab == 'true'){
+                    sforce.console.refreshNavigationTab();
+                }    
+                sforce.console.closeTab(closeCallTopicTab);
+                var tabId = result.id; 
+                sforce.console.closeTab(tabId);
+            });
+            console.log('Entering Values'+subtabIds[0]);
+            var firstElement = subtabIds[0];
+            console.log('Display First Element');
+            sforce.console.focusSubtabById(firstElement,focusSuccess);
+            //sforce.console.focusSubtabById('scc-st-0',focusSuccess);
+        }
+        var focusSuccess = function focusSuccess(result) {
+            //Report whether going to the subtab was successful
+            if (result.success == true) {
+                //alert('Going to the subtab was successful');
+            } else {
+                //alert('Going to the subtab was not successful');
+            }
+        };
+       
+        function validate(){            
+            var $clsreason = $("[id$='closedReason']");                        
+            
+            var retFlag = true;
+            $clsreason.removeClass("error").parent().find(".errorMsg").remove();                        
+            if(!$clsreason.val()){
+               var errorMsg = "You must enter a value."; 
+               $clsreason.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+               retFlag = false;                  
+            }
+                  
+            if(retFlag){                
+                sf_save();
+            }    
+            
+            return false;             
+        }
+        
+        function resetForm(){
+           var $comments =  $("[id$='comments']");
+           $comments.val("");
+           return false;
+        }
+        
+        
+        $(document).ready(function() {                      
+             $("[id$='callTopic']").css("display","none");
+             $("[id$='closedReason']").css("display","none");
+
+              $("[id$='case_number']").css("font-weight","bolder");
+              //added by Vishakha US 413581 to make closed reason disabled
+              var callTopic = '{!JSENCODE(CaseObj.Topic__c)}';
+              var closedReason = '{!JSENCODE(CaseObj.New_Closed_Reason__c)}';
+              setTimeout(function(){
+              if(callTopic == 'View Consumer Dashboard' || callTopic == 'Create Authorization' || callTopic == 'Create PCP Referral' || (callTopic == 'Pharmacy Inquiry' && closedReason == 'System Unavailable')){   
+                 $("[id$='closedReason']").attr("disabled","disabled"); 
+              }     
+              if(callTopic == 'Pharmacy Inquiry' && closedReason != 'System Unavailable'){
+                 $('option[value="System Unavailable"]').remove();                  
+              }
+             },500);                        
+        });
+    </script>
+</apex:page>

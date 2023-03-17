@@ -1,0 +1,823 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,forceCommunity:availableForAllPageTypes" access="global"
+                controller="ACETSNILinkMemberSearch">
+    <aura:attribute name="providerDetails" type="Object" /> 
+    <aura:attribute name="providerValidated" type="Boolean" default="false"/>
+    <aura:attribute name="providerNotFound" type="Boolean" default="false" />
+    <aura:attribute name="isProviderSearchDisabled" type="Boolean" default="false" />
+    <aura:attribute name="retryModal" type="Boolean" default="false" />
+    <aura:attribute name="buttonName" type="String" default="false" />
+    <aura:attribute name="isMemSearchDisabledFromPrv" type="Boolean" default="false" />
+    <aura:attribute name="mnfCheckBoxHide" type="Boolean" default="false" />
+    <aura:attribute name="mnfCheckBoxShow" type="Boolean" default="false" />
+    <!--  Adding new attribute to get work order ID Start-->
+    <aura:attribute name="workorderids" type="String" default="" />
+    <!--  Adding new attribute to get work order ID end-->
+    <aura:attribute name="Oxford_isOxford" type="Boolean" default="false" /><!--created for Oxford Navigation-->
+    <aura:attribute name="Oxford_surrogateKey" type="String"  /><!--created for Oxford Navigation-->
+    <aura:attribute name="Oxford_effectiveDate" type="String"  /><!--created for Oxford Navigation-->
+    <aura:attribute name ="Oxford_groupNumber" type ="string"/><!--created for Oxford Navigation-->
+    <aura:attribute name ="Oxford_benefitBundleOptionId" type ="string"/><!--created for Oxford Navigation-->
+    <aura:attribute name ="Oxford_benefitPlanId" type ="string"/><!--created for Oxford Navigation-->
+    <lightning:workspaceAPI aura:id="workspace" /> 
+    <aura:handler event="lightning:tabFocused" action="{! c.init }"/> 
+    <ltng:require styles="{!$Resource.multilineToastCSS}" />
+    <aura:registerEvent name="householdEvent" type="c:ACETLinkHouseHoldDataEvent"/>
+    <aura:registerEvent name="ACETLinkSubjectCardAE" type="c:ACETLinkSubjectCardAE"/>
+    <aura:registerEvent name="ACETLinkGetProviderDetailsAE" type="c:ACETLinkGetProviderDetailsAE" />
+    <aura:handler event="c:ACETLinkSetProviderDetailsAE" action="{!c.setProviderDetails}" />
+    <aura:handler event="c:ACETLinkSearchedMembersAE" action="{!c.addSearchedMember}"/>
+    <aura:registerEvent name="ACETLinkProviderToMember" type="c:ACETLinkProvidertoMember"/>
+    <aura:handler event="c:ACETLinkProvidertoMember" action="{!c.enableContactName}"/>
+    <aura:attribute name="memberSearches" type="List" />
+
+    <aura:attribute name="selectedState" type="String" default="" />
+    <aura:handler event="c:ACETLinkStateValuesEvent" name="stateChangedEvent" action="{!c.handleSatetChange}" />
+    <aura:attribute name="display" type="Boolean" default="false" />
+    <aura:attribute name="today" type="Date" default="" />
+    <aura:attribute name="data" type="Object" />
+    <aura:attribute name="columns" type="List" />
+    <aura:handler name="init" value="{!this}" action="{!c.init}" />
+    <aura:attribute name="disableProviderSec" type="Boolean" default="false" />
+    <aura:attribute name="disableMemberSec" type="Boolean" default="false" />
+    <aura:attribute name="providerFieldsinMember" type="Boolean" default="false" />
+    <aura:attribute name="getContactVal" type="String" />
+    <aura:attribute name="memberContactNameVal" type="String" />
+    <aura:attribute name="providerContactNameVal" type="String" />
+    <aura:attribute name="setContactVal" type="String" default="" />
+    <aura:attribute name="input" type="String" default="" />
+    <aura:attribute name="memFirstName" type="String" default="" />
+    <aura:attribute name="memLastName" type="String" default="" />
+    <aura:attribute name="groupNumber" type="String" />
+    <aura:attribute name="memberData" type="Object" />
+    <aura:attribute name="responseData" type="Object[]" />
+    <aura:attribute name="searchBtnFlag" type="Boolean" />
+    <aura:attribute name="interactionCard" type="Object" />
+    <aura:attribute name="subjectCard" type="Object" default="null"/>
+    <aura:attribute name="commonErrorMessage" type="Boolean" default="false" />
+    <aura:attribute name="memPhoneNumber" type="string" />
+    <aura:attribute name="searchOptionVal" type="string" />
+    <aura:attribute name="mnf" type="string" />
+    <aura:attribute name="mnfCheckBox" type="Boolean" default="false"/>
+    <aura:attribute name="invalidResultFlag" type="Boolean"/>
+    <aura:attribute name="displayMNFFlag" type="Boolean" />
+    <aura:attribute name="interactionType" type="string" default="Incoming Call"/>
+
+    <aura:attribute name="noMemberCheckBox" type="String" />
+    <aura:attribute name="showServiceErrors" type="Boolean"/>
+    <aura:attribute name="serviceMessage" type="String"/>
+    <aura:attribute name="showHideMemAdvSearch" type="Boolean" default="false" /> <!---->
+    <aura:attribute name="profileCheck" type="Boolean"/>
+    <!--US1708392 - Malinda-->
+    <aura:attribute name="errorMessage" type="String"
+                    default="This search requires one of the following search combinations : (Member ID + DOB) or (Member ID or DOB and First Name + Last Name) or (First Name or List Name and Member ID + DOB)" />
+    <aura:attribute name="isMemIdRequired" type="Boolean" default="true" />
+    <aura:attribute name="isDobRequired" type="Boolean" default="true" />
+    <aura:attribute name="hasErrorMessage" type="Boolean" default="false" />
+    <!--US1708392 - Malinda End-->
+
+    <!--US1708392 - Sanka -->
+    <aura:attribute name="hasFirstNameError" type="Boolean" default="false" />
+    <aura:attribute name="hasLastNameError" type="Boolean" default="false" />
+    <aura:attribute name="FirstNameErrorMessage" type="String"
+                    default="Enter atleast 2 characters followed by an asterisk, and no character after the asterisk, in order to perform a wild card search on the First Name field (example: ab*)" />
+    <aura:attribute name="LastNameErrorMessage" type="String"
+                    default="Enter atleast 3 characters followed by an asterisk, and no character after the asterisk, in order to perform a wild card search on the Last Name field (example: abc*)" />
+    <!--US1708392 - END -->
+
+    <!--US1797978 - Malinda-->
+    <aura:attribute name="inputZip" type="String" default="" />
+    <aura:attribute name="inputPhone" type="String" default="" />
+
+    <aura:handler event="c:InteractionEvent" action="{!c.assignInteractionID}"/>
+    <aura:attribute name="interactionID" type="String"/>
+    <aura:attribute name="respStatusCode" type="String"/>
+
+    <!-- Added by Avish on 07/25/2019-->
+    <aura:attribute name="checkFlagmeberCard" type="Boolean" />
+	<aura:attribute name="mnfDetailsLst" type="Object[]" />
+    <aura:attribute name="tranId" type="String" access="public"/><!--Code Added By Chandan -->
+    <aura:attribute name="houseHoldData" type="Object[]"/><!--Code Added By Chandan -->
+    <aura:attribute name="concatAddress" type="String" access="public"/><!--Code Added By Chandan -->
+    <aura:attribute name="memberCardData" type="Object"/><!--Code Added By Chandan -->
+    <aura:attribute name="memberPolicies" type="ACETLinkCoveragesResult.CoverageLine[]"/><!--Code Added By Chandan -->
+    <aura:attribute name="showSpinner" type="Boolean" default="false" /> <!-- US2021959 :Code Added By Chandan  -->
+    <aura:attribute name="isModalOpen" type="boolean" default="false"/> <!-- US2216710 :Code Added By Chandan  -->
+    <aura:handler name="setShowSpinner" event="c:AcetLinkShowSpinnerEvent" action="{!c.setShowSpinner}"/> <!-- US2021959 :Code Added By Chandan  -->
+    
+    <aura:attribute name ="lob" type ="string"/>
+    <aura:attribute name ="productTypes" type ="string"/>
+    <aura:attribute name ="serviceGroup" type ="String"/>
+    
+    <aura:attribute name ="memId" type ="string"/>
+    <aura:attribute name ="memDOB" type ="string"/>
+    <aura:attribute name ="polId" type ="string"/>
+    <aura:attribute name ="assignTo" type ="String"/>
+    <aura:attribute name ="relationship" type ="object"/>
+    <!--Code for multiple Policies-->
+    <aura:attribute name ="showMemDetailsModal1" type ="boolean"/>
+    <aura:attribute name ="showMemDetailsModal" type ="boolean"/>
+    <aura:attribute name ="showMemDetailsModalNew" type ="boolean"/>
+    <aura:attribute name ="showMemDetailsModalSecnd" type ="boolean"/>
+    <aura:attribute name ="showMemDetailsModalSecnd1" type ="boolean"/>
+    <aura:attribute name="maxRowSelection" type="Integer" default="1"/>
+    <aura:attribute name="saveDisableFrstPopUp" type="boolean" default = "true"/>
+    <aura:attribute name="saveDisableScndPopUp" type="boolean" default = "true"/>
+    <!-- <aura:attribute name="datamember" type="Object"/>-->
+    <aura:attribute name="columnsFirstPopUp" type="List" />
+    <aura:attribute name="columnsFirstPopUpB" type="List" />
+    <aura:attribute name="columnsSecondPopUp" type="List" />
+    <aura:attribute name ="frstPopHeaderTextTitle" type ="String" />
+    <aura:attribute name ="frstPopHeaderTextSubtitle" type ="String" />
+    <aura:attribute name ="frstPopHeaderTextTitleB" type ="String" />
+    <aura:attribute name ="frstPopHeaderTextSubtitleB" type ="String" />
+    <aura:attribute name ="scndPopHeaderTextTitle" type ="String" />
+    <aura:attribute name ="scndPopHeaderTextSubtitle" type ="String" />
+    <aura:attribute name ="scndPopHeaderTextTitleB" type ="String" />
+    <aura:attribute name ="scndPopHeaderTextSubtitleB" type ="String" />
+    <aura:attribute name="newServiceMember" type="List" />
+    <aura:attribute name="memberDetails" type="Object" access="Public"/>
+    <aura:attribute name="newMemberMatch" type="Map" />
+    <aura:attribute name= "selectedRow" type = "Map"  default = "{}"/>
+    <aura:attribute name="memberDetailsInstances" type="Object" access="Public"/>
+    <aura:attribute name="viewIndividualpopupa" type ="integer" default='0'/>
+    <aura:attribute name="viewIndividualpopupb" type ="integer" default='0'/>
+    <aura:attribute name="viewIndividualpopupc" type ="integer" default='0'/>
+    <aura:attribute name="viewIndividualpopupd" type ="integer" default='0'/>
+    <aura:attribute name="selectrow" type="object"/>
+    <aura:attribute name="addnewUser" type="object"/> 
+    
+    <!--Cherry - Added for Wizard pop-up-->
+    <aura:attribute name="showRefferal" type="Boolean" default="false" />
+	<aura:attribute name="showWizard" type="Boolean" default="false" />
+    
+    <aura:attribute name="data1" type="Object"/>
+    <aura:attribute name="columns1" type="List"/>
+    <aura:attribute name="maxRowSelection1" type="Integer" default="1"/>
+    <aura:attribute name="showDataTableForMultipleEntries" type="Boolean" default="false" />
+    <aura:attribute name="dataSelected" type="object"/>
+
+    <aura:if isTrue="{!v.showDataTableForMultipleEntries}" >
+    	<section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open slds-modal_small">
+                <div class="slds-modal__container">
+                     <!-- Modal/Popup Box Header Starts here-->
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeshowDataTableForMultipleEntriesPopUp }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>
+                        <p id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">
+							We have found multiple records. Please select the right one and proceed.
+                        </p> 
+                        <br/>
+                        <div style="height: 100px">
+                            <lightning:datatable
+                                columns="{! v.columns1 }"
+                                data="{! v.data1 }"
+                                keyField="id"
+                                maxRowSelection="{! v.maxRowSelection1 }"
+                                onrowselection="{! c.updateSelectedText }"
+                                selectedRows="{! v.selectedRows }"/>
+                        </div>
+                    </header>
+                    <!--Modal/Popup Box Body Starts here-->
+         
+                     <div class="slds-modal__content slds-p-around_small" >
+                        <div class="slds-align_absolute-center" style="height:5rem"> 
+                           <lightning:button variant="brand"
+                                          label="Proceed"
+                                          title="Proceed"
+                      					 onclick="{!c.openSelectedEntry}"/>
+                         
+                          <lightning:button variant="brand"
+                                          label="Cancel"
+                                          title="Cancel"
+                                          onclick="{!c.closeshowDataTableForMultipleEntriesPopUp}"/>
+                         </div>   
+                    </div>                
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+    <!-- the container element determine the height of the datatable -->
+
+    
+   <!-- <aura:handler name="change" value="{!v.memId}" action="{!c.setMemID}" />
+    <aura:handler name="change" value="{!v.memDOB}" action="{!c.setMemDOB}" />-->
+    <!--Code for multiple Policies-->
+    <div class="slds-p-left_medium slds-p-right_medium divWidth" style="background:white;">
+        <!-- US2021959 :Code Added By Chandan-Start -->
+        <aura:renderIf isTrue="{!v.showSpinner}">
+            <lightning:spinner class="slds-show" aura:id="global-spinner" 
+                               alternativeText="Loading.." title="Loading.." 
+                               variant="brand" size="medium"/>
+        </aura:renderIf>
+        <!-- US2021959 :Code Added By Chandan-End -->
+        <div class="slds-text-heading_medium boxHeadings"
+             style=" color: black;font-weight: bold;padding-top: 16px;">
+            <lightning:button variant="neutral" label="Clear" title="Neutral action"
+                              name="memClearName" class="clearBtn"
+                              onclick="{!c.onClickMemberClear}"
+                              disabled="{!v.disableMemberSec || v.isMemSearchDisabledFromPrv}" />
+        </div>
+        <div class="slds-p-left_medium">
+            <div class="slds-form-element slds-lookup" data-select="single">
+                <label for="memberName" style="color: #3e3e3c;
+                                               font-size: 12px;
+                                               font-family: Arial;">
+                    <div>
+                        <abbr title="required" class="slds-required">
+                            <aura:renderIf isTrue="{!v.isMemIdRequired}">*
+                            </aura:renderIf>
+                        </abbr>Member ID
+                        <lightning:helptext iconName="utility:info"
+                                            content="Options include the following: Alt ID, Member ID, SSN, EE ID, Medicare ID, Medicaid ID, HCIN ID, MBI ID"
+                                            style="margin-top: -3px;margin-left:7px;color:grey;" />
+                    </div>
+                </label>
+                <div class="slds-form-element__control">
+                    <div class="slds-input-has-icon slds-input-has-icon--left">
+                        <lightning:buttonIcon iconName="utility:search"
+                                              variant="bare" alternativeText="Search"
+                                              class="slds-input__icon memSearchIcon" />
+
+                        <span onkeyup="{!c.checkIfNotNumber}">
+                            <lightning:input aura:id="memberId"
+                                             required="{!v.isMemIdRequired}" id="memberName"
+                                             variant="label-hidden" type="String"
+                                             name="memberIdName" class="inputsMemID"
+                                             value="{!v.input}"
+                                             disabled="{!v.disableMemberSec || v.mnfCheckBox || v.isMemSearchDisabledFromPrv}"
+                                             onblur="{!c.memberIDfieldOnBlur}">
+                            </lightning:input>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <lightning:input aura:id="inputDOB" type="date" id="memberDob" label="DOB"
+                                 disabled="{!v.disableMemberSec || v.isMemSearchDisabledFromPrv}" class="dobErrorAllign"
+                                 required="{!or(v.isDobRequired,v.mnfCheckBox)}" dateStyle="short"
+                                 name="dobName"
+                                 pattern="/^([0-9]{4})\-([0-9]{2})\-([0-9]{2})$/"
+                                 messageWhenBadInput="Error: Invalid Date"
+                                 messageWhenPatternMismatch="Error: Invalid Date" />
+            </div>
+            <br />
+            
+                <!--lightning:input type="String" name="phoneNumberName" label="Caller ANI" class="inputs" value="{!v.setCallerVal}" style="margin-top:-18px;" disabled="{!v.disableMemberSec}"/-->
+                <lightning:input type="String" aura:id="memContactId" name="contactName"
+                                 label="Contact Name" class="{!v.profileCheck == true ? 'inputs' : 'chkClass1'}" style="margin-top:-5%"
+                                 value="{!v.memberContactNameVal}" required="true" 
+                                 pattern="^[a-zA-Z ]*$"
+                                 onchange="{!c.checkContactName}"
+                                 messageWhenPatternMismatch="Enter text only"/><br/><br/>
+            
+            <div class="slds-grid slds-gutters" style="margin-top: 0%;">
+                <div class="slds-col slds-size_1-of-2">
+                    <aura:renderIf isTrue="{!!v.showHideMemAdvSearch}">
+                        
+                        <a href="javascript:void(0)" onclick="{!c.hideMemAdvaceSearch}"
+                           class="aSearch" name="memAdvanceSearchName"
+                           disabled="{!v.disableMemberSec || v.isMemSearchDisabledFromPrv}">
+                            Show Advanced Search 
+                        </a>
+                        <aura:set attribute="else">
+                            <a href="javascript:void(0)" class="aSearch"
+                               onclick="{!c.showMemAdvaceSearch}"
+                               name="memHideAdvaceName"
+                               disabled="{!v.disableMemberSec || v.isMemSearchDisabledFromPrv}">Hide Advanced
+                                Search</a>
+                        </aura:set>
+                    </aura:renderIf>
+                </div>
+                <div class="slds-col slds-size_1-of-2">
+                    <div class="slds-grid slds-grid_vertical">
+                        <div class="slds-col">
+                                                  
+                            <span>
+                                
+                                <!--<aura:if  isTrue="{!v.profileDetail}" >-->
+                                    <lightning:input type="checkbox" name="memNotFoundName"
+                                                     aura:id="noMemFoundId" label="No member to search"
+                                                     class="{!v.profileCheck == true ? 'chkClass' : 'chkClass1'}" value="{!v.noMemberCheckBox}"
+                                                     checked="{!v.disableMemberSec}" disabled="{!v.isMemSearchDisabledFromPrv}"/>
+                                <!--</aura:if> -->  
+                            </span>
+                             
+                        </div>
+                        <div class="slds-col">
+                            <span>
+                                <aura:renderIf isTrue="{!v.mnf == 'mnf'}">
+                                    <lightning:input type="checkbox" name="memNotFoundName"
+                                                     aura:id="memNotFoundID" label="Member not found"
+                                                     class="chkClass" style="margin-top:-19% !important"
+                                                     onchange="{!c.handleChangeMNF}" checked="{!v.mnfCheckBox}"
+                                                     disabled="{!v.isMemSearchDisabledFromPrv}"/>
+
+                                </aura:renderIf>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <!-- added to test the functionality not working in community -->
+           <aura:renderIf isTrue="{!v.showHideMemAdvSearch}">
+                <div class="{!v.profileCheck == true ? 'c-container container' : 'c-container containerITE'}">
+                    <lightning:layout class="x-large">
+
+                        <lightning:layoutItem flexibility="grow" class=""
+                                              size="12">
+
+                            <lightning:input label="First Name" class="" required="{!v.mnfCheckBox}"
+                                             name="memfirstName" aura:id="memFirstNameId"
+                                             disabled="{!v.disableMemberSec || v.isMemSearchDisabledFromPrv}"
+                                             value="{!v.memFirstName}" />
+
+                            <!--US1797978 - Malinda-->
+                            <div aura:id="msgTxtFname" class="slds-text-color_error slds-align_absolute-center slds-hide">
+                                {!v.FirstNameErrorMessage}
+                            </div>
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                    <lightning:layout class="x-large">
+                        <lightning:layoutItem flexibility="grow" class=""
+                                              size="12">
+                            <lightning:input label="Last Name" class="" required="{!v.mnfCheckBox}"
+                                             name="memLastName" aura:id="memLastNameId"
+                                             disabled="{!v.disableMemberSec || v.isMemSearchDisabledFromPrv}"
+                                             value="{!v.memLastName}" />
+
+                            <!--US1797978 - Malinda-->
+                            <div aura:id="msgTxtLname" class="slds-text-color_error slds-align_absolute-center slds-hide">
+                                {!v.LastNameErrorMessage}
+                            </div>
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                    <lightning:layout class="x-large">
+                        <lightning:layoutItem flexibility="grow" class=""
+                                              size="12">
+                            <lightning:input label="Group Number" class=""
+                                             name="memGroupNumber" aura:id="memGroupNumberId"
+                                             disabled="{!v.disableMemberSec || v.mnfCheckBox || v.isMemSearchDisabledFromPrv}"
+                                             value="{!v.groupNumber}"
+                                             onchange="{!c.checkGroupValidity}" />
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                    <lightning:layout class="x-large">
+                        <lightning:layoutItem flexibility="grow" class="{!v.profileCheck == true ? 'chkClass' : 'chkClass1'}"
+                                              size="12">
+
+                            <c:ACETLinkStateValues aura:id="stateMemId" requiredFlag="{!v.mnfCheckBox}" disabledFlag="{!v.disableMemberSec || v.isMemSearchDisabledFromPrv}" />
+							<!--Aligned till here Som -->
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                    <lightning:layout class="x-large">
+                        <lightning:layoutItem flexibility="grow" class=""
+                                              size="12">
+                            <!--US1797978 - Malinda - START-->
+                            <span onkeyup="{!c.checkIfNotNumberZip}">
+                                <lightning:input label="Zip Code" 
+                                                 name="memZipCodeName" aura:id="memZipCodeId" class="{!v.profileCheck == true ? 'chkClass' : 'chkClass1'}"
+                                                 disabled="{!v.disableMemberSec || v.mnfCheckBox || v.isMemSearchDisabledFromPrv}"
+                                                 value="{!v.inputZip}"
+                                                 maxlength="5"/>
+                                <!--US1797978 - Malinda-->
+                                <div aura:id="msgTxtZip"
+                                     class="slds-text-color_error slds-align_absolute-center slds-hide">
+                                    To search by Zip Code, Enter 5 digits
+                                </div>
+                            </span>
+                            <!--US1797978 - Malinda - END-->
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                    <lightning:layout class="x-large">
+                        <lightning:layoutItem flexibility="grow" class=""
+                                              size="12">
+
+                            <span onkeyup="{!c.checkIfNotNumberPhone}">
+                                <lightning:input label="Phone Number"
+                                                 required="{!v.mnfCheckBox}"
+                                                 value="{!v.inputPhone}"
+                                                 name="memPhoneNumberName"
+                                                 aura:id="memPhoneNumber"
+                                                 disabled="{!v.disableMemberSec || v.isMemSearchDisabledFromPrv}"
+                                                 maxlength="10"
+                                                 minlength="10"
+                                                 pattern="[0-9]*"
+                                                 class="{!v.profileCheck == true ? 'chkClass' : 'chkClass1'}"
+                                                 messageWhenTooShort="Enter 10 digits only"
+                                                 autocomplete="off"/>
+                            </span>
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                </div><br />
+            </aura:renderIf>
+            <br/>
+            <aura:renderIf isTrue="{!!v.disableMemberSec}">
+                <div class="slds-grid slds-gutters">
+                    <div class="slds-col slds-size_3-of-12">
+                        <aura:renderIf isTrue="{!!v.mnfCheckBox}">
+                            <lightning:button variant="brand" label="Search"
+                                              title="Brand action" name="searchName"
+                                              class="{!v.profileCheck == true ? 'searchBtn' : 'searchBtn1'}" onclick="{!c.checkValidation}"
+                                              disabled="{!v.disableMemberSec || v.mnfCheckBox || v.isMemSearchDisabledFromPrv}" />
+                        </aura:renderIf>
+
+                        <aura:renderIf isTrue="{!v.mnfCheckBox}">
+                            <lightning:button variant="brand" label="Add Member"
+                                              title="Brand action" name="addMemberBtn"
+                                              class="searchBtn"
+                                              onclick="{!c.navigateToInteraction}"
+                                              disabled="{!v.isMemSearchDisabledFromPrv}"/>
+                        </aura:renderIf>
+                    </div>
+                    <div aura:id="msgtxt"
+                         class="slds-col slds-size_9-of-12 slds-hide"
+                         style="margin-top: -7%;
+                                margin-left: 0rem;
+                                padding-left: 2%;
+                                padding-right: 5%;">
+                        <p class="errorMsg">This search requires one of the
+                            following search combinations : (Member ID + DOB) or
+                            (Member ID or DOB and First Name + Last Name) or
+                            (First Name or Last Name and Member ID + DOB)</p>
+
+                    </div>
+                </div>
+            </aura:renderIf>
+        </div>
+        
+    </div>
+    <!--US2216710 :Code Added By Chandan - Start -->
+    <div class="slds-m-around_xx-large">
+        <aura:if isTrue="{!v.isModalOpen}">
+             
+            <!-- Modal/Popup Box starts here-->
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <!-- Modal/Popup Box Header Starts here-->
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeModel }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Please Confirm</h2>
+                    </header>
+                    <!--Modal/Popup Box Body Starts here-->
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <p><b>Are you sure you want to add this family?
+                            </b>
+                        </p>
+                    </div>
+                    <!--Modal/Popup Box Footer Starts here-->
+                    <footer class="slds-modal__footer">
+                        <lightning:button variant="neutral"
+                                          label="No"
+                                          title="No"
+                                          onclick="{! c.closeModel }"/>
+                        <lightning:button variant="brand"
+                                          label="Yes"
+                                          title="Yes"
+                                          onclick="{!c.submitDetails}"/>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </aura:if>
+    </div> <!--US2216710 :Code Added By Chandan - End -->
+    
+    <div class="slds-m-around_xx-large">
+        <aura:if isTrue="{!v.showMemDetailsModal}">
+            <!-- Modal/Popup Box starts here-->
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open slds-modal_medium">
+                <div class="slds-modal__container">
+                    <!-- Modal/Popup Box Header Starts here-->
+                    <!--Modal/Popup Box Body Starts here-->
+                    <aura:iteration items="{!v.memberDetails.newMemberMatch}" var="item" indexVar="it">
+                        <aura:if isTrue="{!(v.viewIndividualpopupa==it)}">
+                            <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeModel }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">
+                            Is <b>{!item.memName}</b>{!v.frstPopHeaderTextTitle}</h2> 
+                        <p id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">
+                            {!v.frstPopHeaderTextSubtitle}</p><br/>
+                        <p id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">
+                            <b>{!item.key}</b></p>
+                    </header>
+
+                            <div class="slds-modal__content slds-p-around_medium" >
+                            <p><b></b>
+                               
+                                <lightning:datatable 
+                                                     columns="{! v.columnsFirstPopUp}"
+                                                     data="{!item.value}"
+                                                     keyField="Id"
+                                                     aura:id ="frstPopUp1"
+                                                     hideCheckboxColumn="true"/>
+                            </p>
+                        </div>
+                        </aura:if>    
+                    </aura:iteration>
+                    
+                    <!--Modal/Popup Box Footer Starts here-->
+                    <footer class="slds-modal__footer">
+                        <lightning:button variant="brand"
+                                          label="Yes"
+                                          title="Yes"
+                                          onclick="{!c.firstpop}"/>
+                        <lightning:button name = "memberInfoChangePopUpButton"
+                                          variant="brand"
+                                          label="No"
+                                          title="No"
+                                          onclick="{!c.openRetryModalWhenNo}"/>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </aura:if>
+    </div> <!--pop1 -->
+    
+    <!--Code for multiple Policies-Start-->
+    <div class="slds-m-around_xx-large">
+        <aura:if isTrue="{!v.showMemDetailsModal1}">
+            <!-- Modal/Popup Box starts here-->
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open slds-modal_medium">
+                <div class="slds-modal__container">
+                    <!-- Modal/Popup Box Header Starts here-->
+                    <!--Modal/Popup Box Body Starts here-->
+                    <aura:iteration items="{!v.memberDetails.newMemberMatch}" var="item" indexVar="it">
+                        <aura:if isTrue="{!(v.viewIndividualpopupb==it)}">
+                   <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeModel }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">
+                            {!v.frstPopHeaderTextTitleB}</h2><br/>
+                        <p id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">
+                            <b>{!item.key}</b></p>
+                    </header>
+              
+                        <div class="slds-modal__content slds-p-around_medium" >
+                            <p><b></b>
+                                <lightning:datatable 
+                                                     columns="{! v.columnsFirstPopUp}"
+                                                     data="{!item.value}"
+                                                     keyField="Id"
+                                                     selectedRows = "{!v.selectedRow}"
+                                                     onrowselection ="{!c.rowselect}"
+                                                     maxRowSelection="{! v.maxRowSelection }"
+                                                     aura:id ="frstPopUp"
+                                                     />
+                            </p>
+                        </div>
+                        </aura:if>
+                    </aura:iteration>
+                    <!--Modal/Popup Box Footer Starts here-->
+                    <footer class="slds-modal__footer">
+                        <lightning:button variant="brand"
+                                          label="Save"
+                                          title="Save"
+                                          disabled ="{!v.saveDisableFrstPopUp}"
+                                          onclick="{!c.multipopup}"/>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </aura:if>
+    </div> <!--Code for multiple Policies- End -->
+    <!--Code for multiple Policies-Start Second PopUp-->
+    <div class="slds-m-around_xx-large">
+        <aura:if isTrue="{!v.showMemDetailsModalSecnd}">
+            <!-- Modal/Popup Box starts here-->
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open slds-modal_medium">
+                <div class="slds-modal__container">
+                    
+                    
+                    <!--Modal/Popup Box Body Starts here-->
+                    
+                    <!--Modal/Popup Box Body Starts here-->
+                    <aura:iteration items="{!v.memberDetails.newMemberMatch}" var="item" indexVar="it"> 
+                        <aura:if isTrue="{!(v.viewIndividualpopupc==it)}">
+                        <!-- Modal/Popup Box Header Starts here-->
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeModel }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">
+                            {!v.scndPopHeaderTextTitle}</h2>
+                        <p id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">
+                            <b>{!item.key}</b>{!v.scndPopHeaderTextSubtitle}</p>
+                    </header>
+                        <div class="slds-modal__content slds-p-around_medium" >
+                            <p>
+                                <lightning:datatable 
+                                                     columns="{! v.columnsSecondPopUp}"
+                                                     data="{!item.value}"
+                                                     keyField="Id"
+                                                     aura:id ="secondPopUpc"
+                                                     hideCheckboxColumn="true"
+                                                     />
+                            </p>
+                        </div>
+                        </aura:if>
+                    </aura:iteration>
+                    <!--Modal/Popup Box Footer Starts here-->
+                    <footer class="slds-modal__footer">
+                        
+                        <lightning:button variant="brand"
+                                          label="Yes"
+                                          title="Yes"
+                                          onclick="{!c.secondpopyes}"/>
+                        <lightning:button name = "duplicatePoliciesButton"
+                                          variant="brand"
+                                          label="No"
+                                          title="No"
+                                          onclick="{!c.openRetryModalWhenNo}"/>
+                    
+                        </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </aura:if>
+    </div> <!--Code for multiple Policies- End -->
+    
+    
+    <div class="slds-m-around_xx-large">
+        <aura:if isTrue="{!v.retryModal}">
+            <!-- Modal/Popup Box starts here-->
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open slds-modal_medium">
+                <div class="slds-modal__container"> 
+                    
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeModel }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>
+                        <p class="slds-text-heading_medium boxHeadings">{!$Label.c.Member_Search_Multiple_Policies}</p>
+                    </header>
+                    
+                    <!--Modal/Popup Box Footer Starts here-->
+                    <footer class="slds-modal__footer">
+                        <lightning:button variant="brand"
+                                          label="Retry"
+                                          title="Retry"
+                                          onclick="{!c.retryModalAction}"/> 
+                        
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </aura:if>
+    </div>
+    
+    <!--Code for multiple Policies-Start Second PopUp-->
+    <div class="slds-m-around_xx-large">
+        <aura:if isTrue="{!v.showMemDetailsModalSecnd1}">
+            <!-- Modal/Popup Box starts here-->
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open slds-modal_medium">
+                <div class="slds-modal__container">
+                                        
+                    <!--Modal/Popup Box Body Starts here-->
+                    
+                    <!--Modal/Popup Box Body Starts here-->
+                    <aura:iteration items="{!v.memberDetails.newMemberMatch}" var="item" indexVar="it"> 
+                    <aura:if isTrue="{!(v.viewIndividualpopupd==it)}">
+                    <!-- Modal/Popup Box Header Starts here-->
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeModel }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">
+                        {!v.scndPopHeaderTextTitleB} <b> {!item.key}</b> {!v.scndPopHeaderTextSubtitleB}</h2>
+                        <p id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">
+                            </p>
+                    </header>
+
+                        <div class="slds-modal__content slds-p-around_medium" >
+                            <p>
+                                <lightning:datatable 
+                                                     columns="{! v.columnsSecondPopUp}"
+                                                     data="{!item.value}"
+                                                     keyField="Id"
+                                                     selectedRows = "{!v.selectedRow}"
+                                                     onrowselection ="{!c.rowselect}"
+                                                     maxRowSelection="{! v.maxRowSelection }"
+                                                     aura:id ="secondPopUp"
+                                                     />
+                            </p>
+                        </div>
+                        </aura:if>    
+                    </aura:iteration>
+                    <!--Modal/Popup Box Footer Starts here-->
+                    <footer class="slds-modal__footer">
+                        <lightning:button variant="brand"
+                                          label="Save"
+                                          title="Save"
+                                          disabled ="{!v.saveDisableScndPopUp}"
+                                          onclick="{!c.secondmultipopup}"/>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </aura:if>
+    </div> <!--Code for multiple Policies- End -->
+
+   
+    <c:ACETSNILinkHouseHoldDate aura:id="house" showMemDetailsModal ="{!v.showMemDetailsModal}"
+                                showMemDetailsModalSecnd = "{!v.showMemDetailsModalSecnd}"
+                                newMemberMatch ="{!v.newMemberMatch}"
+                                memberDetails = "{!v.memberDetails}"
+                                addnewUser = "{!v.addnewUser}"/>
+    
+    
+    <!-- Cherry - code added to show Wizard to create new Account-->
+    <!--<lightning:button variant="brand"
+                                          label="Wizard"
+                                          title="wizard"
+                                          onclick="{!c.openRefferal}"/>-->
+	 
+    <aura:if isTrue="{!v.showRefferal}" >
+    	<section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open slds-modal_small">
+                <div class="slds-modal__container">
+                     <!-- Modal/Popup Box Header Starts here-->
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeRefferal }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>
+                         
+                          <p id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">
+                             Is this a manual referral that you want to create ? If yes, please click "yes", if not click No and make sure you enter the right information.</p>
+                    </header>
+                    <!--Modal/Popup Box Body Starts here-->
+         
+                     <div class="slds-modal__content slds-p-around_small" >
+                        <div class="slds-align_absolute-center" style="height:5rem"> 
+                           <lightning:button variant="brand"
+                                          label="Yes"
+                                          title="Yes"
+                      					 onclick="{!c.openWizard}"/>
+                         
+                          <lightning:button variant="brand"
+                                          label="No"
+                                          title="No"
+                                          onclick="{!c.closeRefferal}"/>
+                         </div>   
+                    </div>                
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+    
+    <aura:if isTrue="{!v.showWizard}" >
+    	<section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open slds-modal_medium">
+                <div class="slds-modal__container">
+                     <!-- Modal/Popup Box Header Starts here-->
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeWizard }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>             
+                    </header>                                     
+                    <!--Modal/Popup Box Body Starts here-->
+                 	<c:SNI_FL_CreatePersonAccountWizard/>  
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+    <!-- attributes -->
+    <aura:if isTrue="{!v.multiplePersons}" >
+    	<section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open slds-modal_medium">
+                <div class="slds-modal__container">
+                     <!-- Modal/Popup Box Header Starts here-->
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeWizard }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>             
+                    </header>                                     
+                    <!--Modal/Popup Box Body Starts here-->
+                 	 
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+    <!--<c:ACETSNIEligibilityConfirmModal aura:id="sniConfirm" />-->
+</aura:component>

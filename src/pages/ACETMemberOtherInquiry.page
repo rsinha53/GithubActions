@@ -1,0 +1,145 @@
+<apex:page controller="ACETMemberOtherInquiryController" sidebar="false"> 
+<script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>  
+<script
+type="text/javascript" src="{!$Label.ACETDynatraceJSURL}"
+data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1"
+crossorigin="anonymous"></script>
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    <apex:pageMessages />
+    <apex:form >
+        <c:ACETInteractionHighlightsPanel InteractionAtt="{!wrapper.interaction}"
+            SubjectAtt="{!wrapper.Subject}"
+            AdditionalInfoAtt="{!wrapper.AdditionalInfo}" html-auto-doc="auto" selectedOriginator="{!wrapper.interaction.Originator_Name__c}"></c:ACETInteractionHighlightsPanel>
+            <apex:outputPanel id="hippapopupPanel">
+                       <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+            </apex:outputPanel>
+        <apex:sectionHeader title="Member Other Inquiry" />
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+            attrShowSaveButton="true" attrShowMisdirectButton="true"
+            attrSourceOriginator="{!wrapper.SourceOriginator}"
+            attrInteractionId="{!wrapper.Interaction.Id}"
+            attrSubjectId="{!wrapper.Subject.Id}"
+            attrCallTopic="Member Other Inquiry" />
+        <apex:pageBlock >
+            <apex:pageBlockSection columns="1" html-auto-doc="auto"
+                html-auto-doc-case-item="true">
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Resolved"></apex:outputLabel>
+                    <apex:outputPanel styleClass="autodoc-case-item-resolved">
+                        <input type="checkbox" checked="checked"></input>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+            </apex:pageBlockSection>
+            <!-- Below component Added by Divya - US564091 -->
+            <c:ACETDynamicCallTypesDisplay attrCaseDataWrapper="{!wrapper}"
+                attrCallTopic="{!wrapper.caseobj.Topic__c}"
+                attrShowPickListcallTypes="true"
+                attrShowPickListLabel="Inquiry Type" />
+            <apex:pageblockSection columns="1" html-auto-doc="auto">
+                <apex:pageBlockSectionItem html-auto-doc-item="false">
+                    <apex:outputLabel value="Comments"></apex:outputLabel>
+                    <apex:inputTextArea id="comments" cols="100" rows="5"
+                        value="{!wrapper.Comments}" />
+                </apex:pageBlockSectionItem>
+            </apex:pageblockSection>
+            <apex:pageBlockButtons location="bottom">
+                <apex:commandButton value="Clear" onclick="return resetForm()" />
+            </apex:pageBlockButtons>
+        </apex:pageBlock>
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+            attrShowSaveButton="true" attrShowMisdirectButton="true"
+            attrSourceOriginator="{!wrapper.SourceOriginator}"
+            attrInteractionId="{!wrapper.Interaction.Id}"
+            attrSubjectId="{!wrapper.Subject.Id}"
+            attrCallTopic="Member Other Inquiry" attrLocation="bottom" />
+    </apex:form>
+    <script>
+        $(document)
+                .ready(
+                        function() {
+                            $("[id$='topic']")
+                                    .wrap('<div class="requiredInput"></div>')
+                                    .parent()
+                                    .prepend(
+                                            '<div class="requiredBlock"></div>');
+                            $("[id$='comments']")
+                                    .wrap('<div class="requiredInput"></div>')
+                                    .parent()
+                                    .prepend(
+                                            '<div class="requiredBlock"></div>');
+                            
+                        });
+        function validate() {
+            var $topic = $("[id$='topic']");
+            var $comments = $("[id$='comments']");
+            var retFlag = true;
+            $topic.removeClass("error").parent().find(".errorMsg").remove();
+            $comments.removeClass("error").parent().find(".errorMsg").remove();
+
+            if (!$topic.val()) {
+                var errorMsg = "You must enter a value.";
+                $topic.addClass("error").parent().append(
+                        '<div class="errorMsg"><strong>Error:</strong> '
+                                + errorMsg + '</div>');
+                retFlag = false;
+            }
+            $("[id$='comments']").val($("[id$='comments']").val().trim());
+            if (!$comments.val()) {
+                var errorMsg = "You must enter a value.";
+                $comments.addClass("error").parent().append(
+                        '<div class="errorMsg"><strong>Error:</strong> '
+                                + errorMsg + '</div>');
+                retFlag = false;
+            }
+
+            if (retFlag) {
+                acet.autodoc.saveAutodoc();
+            }
+            
+             
+            return retFlag;
+        }
+        function resetForm() {
+            var $topic = $("[id$='topic']");
+            var $comments = $("[id$='comments']");
+
+            $topic.removeClass("error").parent().find(".errorMsg").remove();
+            $comments.removeClass("error").parent().find(".errorMsg").remove();
+
+            $topic.val("");
+            $comments.val("");
+            return false;
+        }
+        function cancel() {
+            var url = 'interactionId={!JSENCODE($CurrentPage.parameters.interactionId)}';
+            url += '&contactId={!JSENCODE($CurrentPage.parameters.contactId)}';
+            url += '&callTopic=Provider Other Inquiry';
+            url += '&originatorRelationship={!wrapper.AdditionalInfo.OriginatorRelationship}';
+            sforce.console
+                    .getFocusedPrimaryTabId(function(result) {
+                        url = 'apex/ACETMemberOpenTopicCancel?' + url;
+                        sforce.console.openSubtab(result.id, url, true,
+                                'Cancel', null);
+                    });
+            return false;
+        }
+    </script>
+    <style type="text/css">
+.imgclass:hover {
+    background-image: url('/img/help/helpOrbs.gif');
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 15px;
+    background-position: right;
+}
+
+.imgclass {
+    background-image: url('/img/help/helpOrbs.gif');
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 15px;
+}
+</style>
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+</apex:page>

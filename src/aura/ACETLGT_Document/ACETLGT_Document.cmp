@@ -1,0 +1,147 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,lightning:isUrlAddressable" access="global" controller="ACETLGT_DocumentController">
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:attribute name="docUrl" type="String" />
+     <aura:attribute name="edmsurl" type="String" />
+    <aura:attribute name="docType" type="String" />
+    <aura:attribute name="docId" type="String" />
+            <aura:attribute name="disableResend" type="Boolean" default="false" />
+    <aura:attribute name="docContentType" type="String" />
+    <aura:attribute name="docName" type="String" />
+    <aura:attribute name="docSize" type="String" />
+    <aura:attribute name="isDocSizeMoreThanOneMB" type="String" />
+    <aura:attribute name="performAction" type="String" />
+    <aura:attribute name="displayResendBtn" type="boolean" default="true" />
+    <aura:attribute name="displayResendPopup" type="boolean" default="false" />
+    <aura:attribute name="notFoundMessage" type="boolean" default="false" />
+    <aura:attribute name="subOnly" type="boolean" default="false" />
+    <aura:attribute name="memberID" type="string" default="" />
+    <aura:attribute name="srk" type="string" default="" />
+    <aura:attribute name="isIdCard" type="string" default="false" />
+    <aura:attribute name="addFirstName" type="string" default="" />
+    <aura:attribute name="memberAdd" type="Map" default="{}" />
+    <aura:attribute name="selecteddoctype"  type="string" />
+    <aura:attribute name="usInfo" type="user" access="public" />
+    <aura:attribute name="highlightPanel" type="ACETLGT_HighlightPanelInfo" access="global" />
+    <aura:attribute name="Loadingspinner" type="Boolean" default="false" />
+    <aura:attribute name="bookOfBusinessTypeCode" type="string"/>
+    <aura:handler name="change" value="{!v.pageReference}" action="{!c.doInit}" />
+    <aura:attribute name="addressRadioOptions" type="List" default="[
+    {'label': 'Address on File', 'value': 'addOnFile'},
+    {'label': 'Alternate Address', 'value': 'altAdd'}
+    ]" />
+    <aura:attribute name="addressTypeSelected" type="String" default="addOnFile" />
+        <aura:registerEvent name="docsupportevent" type="c:ACETLGT_Document_Support_event"/>
+    <aura:attribute name="personMiddleIntial" type="string" access="global"/>
+    <aura:attribute name="personMiddleIntialAA" type="string" access="global"/>
+
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:if isTrue="{!(v.displayResendBtn)}">
+   <!-- <aura:if isTrue="{!v.displayResendBtn}">-->
+        <div class="slds-float_right slds-m-bottom_x-small">
+            <lightning:button label="Resend" disabled="{!v.disableResend}" onclick="{!c.resendButtonClick}" />
+        </div>
+    </aura:if>
+    <div aura:id="iframediv">
+   <aura:if isTrue="{!v.edmsurl!=null}">
+        <iframe id="file" name="file" width="100%" height="800px" style="border:none;" src="{!v.edmsurl}"  />
+    </aura:if>
+    <aura:if isTrue="{!v.docUrl!=null}">
+        <iframe id="file" name="file" width="100%" height="800px" style="border:none;" src="{!v.docUrl}" />
+    </aura:if>
+        </div>
+   <!-- <aura:if isTrue="{!v.docUrl==null}">
+        <div id="file" name="file" width="100%" height="800px" style="border:none;background-color:black" src="{!v.EDMSUrl}" /> 
+        <lightning:spinner alternativeText="Loading" size="medium" variant="brand" />
+        <iframe id="file" name="file" width="100%" height="800px" src="{!EDMSUrl}" style="background-color:grey"></iframe>
+    </aura:if>-->
+    <aura:if isTrue="{!v.displayResendPopup}">
+
+        <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open slds-modal_large">
+           <div class="slds-modal__container">
+                <!-- ###### MODAL BOX HEADER Start ######-->
+                <header class="slds-modal__header">
+                    <lightning:buttonIcon iconName="utility:close" onclick="{! c.closeModal }" alternativeText="close" variant="bare-inverse" class="slds-modal__close" />
+
+                    <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Deliver To</h2>
+                </header>
+                <form>
+                	<div class="slds-spinner_container slds-is-relative">
+
+                    <!--###### MODAL BOX BODY Part Start######-->
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <aura:if isTrue="{! v.Loadingspinner }">
+				        <lightning:spinner alternativeText="Loading" size="medium" variant="brand" />
+				    </aura:if>
+                        <aura:if isTrue="{!and((v.notFoundMessage),(v.addressTypeSelected=='addOnFile'))}">
+                            <div style="color:red; font-weight:bold;">Select Alternate Address to resend.</div>
+                        </aura:if>
+                        <aura:if isTrue="{!v.originatorMessage}">
+                            <div style="color:red; font-weight:bold;">Originator cannot receive this document type.</div>
+                        </aura:if>
+                        <lightning:radioGroup name="addressSelector" label="" options="{! v.addressRadioOptions }" value="{! v.addressTypeSelected }" type="button" />
+                        <aura:if isTrue="{!v.addressTypeSelected=='addOnFile'}">
+
+                            <div class="slds-grid slds-gutters_xxx-small">
+                                <div class="slds-col slds-size_1-of-4">
+                                    <lightning:input aura:id="fieldId" type="text" name="input1" label="First Name" disabled="true" value="{!v.memberAdd.personFirstName}" />
+                                </div>
+                                <div class="slds-col slds-size_1-of-4">
+                                    <lightning:input aura:id="fieldId" type="text" name="input2" label="Middle Intial" disabled="true" value="{!v.personMiddleIntial}" />
+                                </div>
+                                <div class="slds-col slds-size_1-of-4">
+                                    <lightning:input aura:id="fieldId" type="text" name="input3" label="Last Name" disabled="true" value="{!v.memberAdd.personLastName}" />
+                                </div>
+                                <div class="slds-col slds-size_1-of-4">
+                                    <lightning:input aura:id="fieldId" type="text" name="input4" label="Suffix" disabled="true" value="{!v.memberAdd.personSuffix}" fieldLevelHelp="{!$Label.c.ACETSuffixHelpText}" />
+                                </div>
+                            </div>
+                            <lightning:input aura:id="fieldId" type="text" name="input5" label="Organization" disabled="true" value="{!v.memberAdd.personOrganization}" />
+                            <lightning:input aura:id="fieldId" type="text" name="input6" label="Address 1" disabled="true" value="{!v.memberAdd.personAddOne}" />
+                            <lightning:input aura:id="fieldId" type="text" name="input7" label="Address 2" disabled="true" value="{!v.memberAdd.personAddTwo}" />
+                            <lightning:input aura:id="fieldId" type="text" name="input8" label="City" disabled="true" value="{!v.memberAdd.personCity}" />
+                            <lightning:input aura:id="fieldId" type="text" name="input9" label="State" disabled="true" value="{!v.memberAdd.personState}" />
+                            <lightning:input aura:id="fieldId" type="text" name="input10" label="Zip" disabled="true" value="{!v.memberAdd.personZipCode}" />
+
+
+                        </aura:if>
+                        <aura:if isTrue="{!v.addressTypeSelected=='altAdd'}">
+                            <div class="slds-grid slds-gutters_xxx-small">
+                                <div class="slds-col slds-size_1-of-4">
+                                    <lightning:input aura:id="fieldId" type="text" name="input1" label="First Name" disabled="{!v.subOnly}" required="false" maxlength="35" value="{!v.memberAdd.personFirstNameAA}" />
+                                </div>
+                                <div class="slds-col slds-size_1-of-4">
+                                    <lightning:input aura:id="fieldId" type="text" name="input2" label="Middle Intial" disabled="{!v.subOnly}" required="false" maxlength="1" value="{!v.personMiddleIntialAA}" />
+                                </div>
+                                <div class="slds-col slds-size_1-of-4">
+                                    <lightning:input aura:id="fieldId" type="text" name="input3" label="Last Name" disabled="{!v.subOnly}" required="false" maxlength="35" value="{!v.memberAdd.personLastNameAA}" />
+                                </div>
+                                <div class="slds-col slds-size_1-of-4">
+                                    <lightning:input aura:id="fieldId" type="text" name="input4" label="Suffix" disabled="{!v.subOnly}" required="false" maxlength="6" value="{!v.memberAdd.personSuffixAA}" fieldLevelHelp="{!$Label.c.ACETSuffixHelpText}" />
+                                </div>
+                            </div>
+                            <lightning:input aura:id="fieldId" type="text" name="input5" label="Organization" required="false" maxlength="35" value="{!v.memberAdd.personOrganizationAA}" />
+                            <lightning:input aura:id="fieldId" type="text" name="input6" label="Address 1" required="true" maxlength="25" value="{!v.memberAdd.personAddOneAA}" messageWhenValueMissing="You must enter a value." />
+                            <lightning:input aura:id="fieldId" type="text" name="input7" label="Address 2" required="false" maxlength="25" value="{!v.memberAdd.personAddTwoAA}" />
+                            <lightning:input aura:id="fieldId" type="text" name="input8" label="City" required="true" maxlength="20" value="{!v.memberAdd.personCityAA}" messageWhenValueMissing="You must enter a value." />
+                            <lightning:input aura:id="fieldId" type="text" name="input9" label="State" required="true" maxlength="2" value="{!v.memberAdd.personStateAA}" messageWhenValueMissing="You must enter a value." />
+                            <lightning:input aura:id="fieldId" type="text" name="input10" label="Zip" required="true" maxlength="9" value="{!v.memberAdd.personZipCodeAA}" messageWhenValueMissing="You must enter a value." />
+                        </aura:if>
+                        <div> Select Submit to send or Cancel to cancel the request</div>
+
+                        <!--                         <lightning:input aura:id="phfieldId" type="tel" name="input7" label="Phone Number" required="true" value="{!v.phonenum}" maxlength="12" minlength="12" onkeyup="{!c.addHyphen}" onblur="{!c.checkLength}" messageWhenValueMissing="You must enter a value." messageWhenTooShort="Enter a valid 10 digit number"  /> -->
+
+
+                    </div>
+                    <!--###### MODAL BOX FOOTER Part Start ######-->
+                    <footer class="slds-modal__footer">
+                        <lightning:button variant="brand" label="Cancel" title="Cancel" onclick="{! c.closeModal }" />
+                        <lightning:button variant="brand" label="Submit" title="Submit" onclick="{! c.fireRedeliverService }" />
+                    </footer>
+                    </div>
+                </form>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+
+</aura:component>

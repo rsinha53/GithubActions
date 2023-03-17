@@ -1,0 +1,399 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes" access="global"
+                controller="ACET_AuthorizationController">
+    <!--Swapna-->
+     <aura:attribute name="currentIndexOfOpenedTabs" type="Integer"/>
+    <aura:attribute name="maxAutoDocComponents" type="Integer" default="20"/>
+    <aura:attribute name="currentIndexOfAuthOpenedTabs" type="Integer" default="-1"/>
+    <aura:attribute name="maxAutoDocAuthComponents" type="Decimal" default="0.1"/>
+    <aura:attribute name="isClaimServiceAuth" type="boolean" default="false"/>
+    <aura:attribute name="authNum" type="string" access="public" default=""/>
+    <!--Swapna-->
+    <!--US2154799-->
+
+    <ltng:require scripts="{!$Resource.ACET_SAESessionData}" />
+
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:attribute name="authResults" type="Object[]" default="[{
+                                                                'SRN':'',
+                                                                'ServiceDates':'',
+                                                                'PrimaryCode':'',
+                                                                'PrimaryDX':'',
+                                                                'StatusTypeDescription':'',
+                                                                'ServiceProviderStatus':'',
+                                                                'FacilityStatus':',
+                                                                'ServiceSetting':''
+                                                                }]" />
+    <aura:attribute type="Aura.Component[]" name="authStatusList" />
+    <aura:attribute name="IsInitializedTable" type="Boolean" default="false" />
+    <aura:attribute name="dataTblId" type="String" />
+    <aura:attribute name="tblSearchText" type="String" />
+
+    <!--US1772939  Avish -->
+    <aura:attribute name="isModalOpen" type="boolean" default="false" />
+    <aura:attribute name="caseWrapper" type="SAETTSCaseWrapper" default="[]" />
+    <aura:attribute name="cseTopic" type="String" access="public" />
+    <aura:attribute name="cseType" type="String" access="public" />
+    <aura:attribute name="cseSubtype" type="String" access="public" />
+    <aura:attribute name="topicOptions" type="List" access="public" />
+    <aura:attribute name="typeOptions" type="List" access="public" />
+    <aura:attribute name="subtypeOptions" type="List" access="public" />
+    <aura:attribute name="IsCaseSaved" type="Boolean" default="false" />
+    <aura:handler name="closeModalBox" event="c:SAE_TtsModalCloseEvent" action="{!c.closeModal}" />
+    <aura:attribute name="contactName" type="String" access="public" />
+    <aura:attribute name="ICUEURL" type="String" access="global" />
+    <aura:attribute name="policyNumber" type="String" access="public" />
+
+    <!-- US2263100 - View Authrizations and Notifications - Results and Status Wrap Text UI -->
+    <aura:attribute name="memberTabId" type="string" access="public" />
+    <aura:handler name="ACET_AuthorizationStatusClose" event="c:ACET_AuthorizationStatusClose"
+        action="{!c.handleAuthorizationStatusClose}" />
+
+    <!-- DE301090 -->
+    <aura:attribute name="AutodocPageFeatureMemberDtl" type="String" />
+
+    <!--US1772939  Avish Ends-->
+
+    <!-- US2154799 -->
+    <aura:attribute name="policy" type="SAEPolicyDetailsResult" access="public" />
+    <aura:attribute name="subjectCard" type="Object" access="public" />
+    <aura:attribute name="memberCard" type="Object" access="public" />
+
+    <aura:handler name="change" value="{!v.policy}" action="{!c.policyDataChange}" />
+    <aura:attribute name="isFireSpinner" type="Boolean" default="false" />
+    <aura:attribute name="ErrorMessage" type="String" default="No results found" />
+    <aura:attribute name="xrefId" type="String" />
+    <aura:attribute name="tabUniqueId" type="String" />
+    <aura:attribute name="OpenedTabIdSet" type="Set" />
+    <aura:attribute name="FirstName" type="String" />
+    <aura:attribute name="LastName" type="String" />
+    <aura:attribute name="Dob" type="String" />
+
+    <aura:attribute type="Object" name="authStatusDetails" />
+    <!-- US2061732 - Added by Avish -->
+    <aura:attribute name="SRNFlag" type="Boolean" default="true" />
+    <aura:attribute name="memberId" type="String" />
+    <aura:attribute name="interactionType" type="string" />
+
+    <!-- US2061071 - Auto Doc Attributes -->
+    <aura:attribute name="AutodocPageFeature" type="String" />
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+
+    <!-- US2325822 	View Authorizations - ECAA Letter Button Landing Page UI - Sarma - 30-01-2020 -->
+    <aura:attribute name="interactionRec" type="Interaction__c" />
+    <aura:attribute name="isMedicaidPlan" type="boolean" default="false" />
+
+    <!--use JQuery Data Table css,Js and jQUERY js file in lightning component by using ltng:require component-->
+    <ltng:require styles="{! $Resource.datatable + '/DataTables-1.10.16/media/css/jquery.dataTables.min.css'}" scripts="{!join(',',
+             	$Resource.jquery224,
+            	$Resource.datatable + '/DataTables-1.10.16/media/js/jquery.dataTables.min.js')
+            }" />
+
+    <lightning:overlayLibrary aura:id="overlayLib" />
+    <!-- US2396655 - Make Autodoc available for multiple pages -->
+    <aura:attribute name="isAutodocForMultiplePages" type="Boolean" default="false" />
+    <!-- US2428601 -->
+    <aura:attribute name="isCreateSrnBtnClicked" type="boolean" default="false" />
+    <aura:attribute name="enableAutodocWarningMessage" type="boolean" default="true" />
+    <aura:attribute name="authTableClsName" type="String" />
+    <aura:attribute name="btnClsName" type="String" />
+    <aura:attribute name="btnAutodocId" type="String" />
+    <!-- US2271237 - View Authorizations - Update Policies in Auto Doc : Kavinda -->
+    <aura:registerEvent name="ACET_AuthResultAutoDocActivation" type="c:ACET_AuthResultAutoDocActivation" />
+    <aura:handler event="c:ACET_SaveCaseEvent" action="{!c.handleSavePopUp}" /> <!-- US2536127 - Avish -->
+    <!-- US2423798	Preview Auto Doc Before Save Case- View Authorizations - Sarma - 27/4/2020 -->
+    <aura:attribute name="isPreviewOpen" type="boolean" default="false"/>
+
+     <!-- US2442658 -->
+     <aura:attribute name="AutodocKeyMemberDtl" type="String" />
+    <!-- DE322503 - Resetting button autodoc during case save - Sarma -->
+    <aura:handler event="c:ACET_ButtonAutodocResetEvent" action="{!c.resetBtnAutodoc}"/>
+    <aura:attribute name="assignmentFlag" type="boolean" default="false"/> <!-- US2382470 - Avish -->
+	<aura:attribute name="contactUniqueId" type="string" access="public" />
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0"/>
+	<aura:attribute name="commentsValue" type="String" default=""/>
+    <aura:attribute name="showComments" type="boolean" default="false" />
+
+    <aura:attribute name="componentId" type="String" access="global"/>
+
+    <!-- US2619791	Performance Improvement - View Authorizations - Sarma - 10/06/2020 -->
+    <aura:attribute name="isAllActive" type="Boolean" default="false"/>
+    <aura:attribute name="isAllAuthReceived" type="Boolean" default="false"/>
+    <aura:attribute name="isInitialCall" type="Boolean" default="true"/>
+    <aura:handler name="change" value="{!v.isAllActive}" action="{!c.activateAllAuth}" />
+    <aura:attribute name="authResultsTemp" type="Object[]" default="[{
+                                                                'SRN':'',
+                                                                'ServiceDates':'',
+                                                                'PrimaryCode':'',
+                                                                'PrimaryDX':'',
+                                                                'StatusTypeDescription':'',
+                                                                'ServiceProviderStatus':'',
+                                                                'FacilityStatus':'',
+                                                                'ServiceSetting':''
+                                                                }]" />
+     <!-- US2683494	Performance Improvement - View Authorizations Results - Switching Policies -->
+     <aura:attribute name="isNoRecordsFound" type="Boolean" default="false"/>
+     <aura:attribute name="isNoRecordsFoundTemp" type="Boolean" default="false"/>
+     <!-- DE322385 -->
+    <aura:attribute name="isAutodoc" type="Boolean" default="false" />
+    <aura:attribute name="isBtnAutodoc" type="String" default="true" />
+    <!--US2076634 - HIPAA Guidelines Button - Sravan-->
+    <aura:attribute name="hipaaEndpointUrl" type="String" default=""/>
+    <aura:attribute name="isHippaInvokedInProviderSnapShot" type="Boolean" default="false"/>
+
+    <!-- US2618180 -->
+    <aura:registerEvent name="ACET_CallTopicAutodoc" type="c:ACET_CallTopicAutodoc" />
+
+
+    <!--US2573718 - Auto Doc When No Results Are Displayed - Sravan -->
+    <aura:attribute name="autoCheck" type="Boolean" default="false"/>
+    <aura:attribute name="claimNo" type="String" default="" />
+
+    <!-- US2718111: View Authorizations - Switching Policies and Auto Doc - Praveen - 6th Jul 2020 -->
+    <aura:attribute name="caseNotSavedTopics" type="String[]"/>
+    <aura:handler name="ACETCaseCreated" event="c:ACET_ACETCaseCreated" action="{!c.handleACETCaseCreated}"/>
+    <aura:attribute name="openedViewAuthDetails" type="String[]"/>
+    <aura:handler event="c:ACET_PolicySwithchAuthDetailsClose" action="{!c.handlePolicySwithchAuthDetailsClose}"/>
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute type="Map" name="TabMap" />
+    <aura:attribute name="authIds" type="String[]"/>
+    <aura:attribute name="interactionOverviewTabId" type="String" /> <!-- US2330408  - Avish -->
+     <!-- New AutoDoc Changes -->
+        <aura:attribute name="autodocUniqueId" type="String" default="authSection" />
+        <aura:attribute name="authTableData" type="Object" />
+        <aura:attribute name="tableDetails_prev" type="Object" />
+        <aura:attribute name="memberautodocUniqueId" type="String" default="auto" />
+        <!-- Events -->
+        <aura:handler name="selectedRowLink" event="c:ACET_AutoDocSelectedRow" action="{!c.openStatusCard}" />
+        <!-- End -->
+    <!-- US2816912	Build UI for Create SRN for Add New Provider with Provider Look-up - 2/9/2020 - Sarma -->
+    <!-- Attributes for Provider lookup funtionality in Create SRN Tab -->
+    <aura:attribute name="noMemberToSearch" type="Boolean" default="false" />
+    <aura:attribute name="memberDetails" type="Object" access="public" />
+    <aura:attribute name="providerDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="memberCardData" type="Object" />
+    <aura:attribute name="memberPolicies" type="SAEMemberProviderSearchCoveragesResult.CoverageLine[]" />
+    <aura:attribute name="interactionCard" type="Object" access="public"/>
+    <aura:attribute name="selectedTabType" type="String" access="public"/>
+    <!-- US2816908 -->
+    <aura:handler event="c:ACET_CreateSRNAppEvent" action="{!c.goToIcue}"/>
+     <!-- US2891146	Create SRN - Warning Message  -->
+    <aura:handler event="c:ACET_OpenICUEEvent" action="{!c.gotoCreateAuth}" />
+    <!-- US2816983	Populate Selected Provider from Provider Lookup on Create SRN Page - Sarma - 29/09/2020 -->
+    <aura:attribute name="originatorType" type="string" access="public"/>
+    <!-- US2566675	FF - Create SRN Button Functionality with Error ICUE is Down - Enhancements - Sarma - 30/09/2020  -->
+    <aura:attribute name="isShowDowntimeForm" type="Boolean" default="false" />
+    <aura:attribute name="downtimeFormUrl" type="string" access="public"/>
+    <!-- Fix selected Rows Issue -->
+    <aura:attribute name="selectedRows" type="Object[]" />
+    <!-- DE373867 - Thanish - 8th Oct 2020 -->
+    <aura:handler name="change" value="{!v.isHippaInvokedInProviderSnapShot}" action="{!c.onHippaChanged}"/>
+
+     <!-- US2819909 -->
+    <aura:handler event="c:ACET_CreateSRN_RecordCreatedEvent" action="{!c.afterCreateSRNRecord}"/>
+    <aura:attribute name="SRNNumber" type="String" default="" /> <!-- A108251774 -->
+
+    <!-- Preview Autodoc - US2819895 -->
+    <aura:attribute name="createdAutodoc" type="String" default="" />
+
+    <!--US3068299 - Sravan-->
+    <aura:attribute name="autoDocToBeDeleted" type="Object"/>
+
+    <!--DE393490 - Sravan-->
+    <aura:attribute name="memberMap" type="Map" access="public"/>
+
+
+    <!--US3117073 - Multiple Policies -  Creating Multiple Unique ORS Records Check In ISET - Sravan-->
+    <aura:attribute name="memberPolicyNumberMap" type="Map" default=""/>
+
+    <aura:attribute name="callTopicLstSelected" type="sObject[]"/>
+    <aura:attribute name="callTopicTabId" type="String" />
+
+    <!--Start of logic from  Claim Details-->
+     <aura:attribute name="showButtons" type="Boolean" default="true"/>
+      <aura:attribute name="serviceFromDate" type="string" />
+      <aura:attribute name="serviceToDate" type="string" />
+    <aura:attribute name="isClaimDetail" type="Boolean" default="false"/>
+    <aura:attribute name="autodoc" type="Boolean" default="true" />
+
+    <aura:handler event="c:ACET_AutoDocRefreshEvent" action="{!c.handleAutodocRefresh}" />
+
+      <!--End of  Change-->
+
+    <!--Ketki changes-->
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default="authSection" />
+    <aura:attribute name="claimspolicyDetails" type="SAEPolicyDetailsResult" access="public" />
+    <aura:handler event="lightning:tabClosed" action="{! c.onTabClosed }" />
+    <!--Ketki changes end -->
+    <!-- Save Case Consolidation - US3424763 -->
+    <aura:handler name="selectedRowData" event="c:ACET_AutoDocSelectedRow" action="{!c.checkCaseWrapper}" />
+
+    <!-- US3430626: View Authorization Results Card Message START-->
+    <aura:attribute name="PAANLink" type="String" default="http://knowledgecentral.uhc.com/SPA/LinkEducationTool/index.html#/procedure/priorauthorizationornotification" />
+    <!-- US3430626: View Authorization Results Card Message END-->
+
+    <aura:attribute name="delegationValue" type="String" default=" "/>
+    <aura:attribute name="patientInfo" type="Object" access="public"/>
+
+    <aura:attribute name="policyStatus" type="Boolean" default="false"/>
+
+    <!-- Autodoc multiple pages - Lahiru - 3rd Mar 2020 -->
+    <div id="{!v.AutodocKey}" class="{!v.AutodocKey}" >
+        <div id="{!v.AutodocKey + 'viewauthorizations'}" >
+    <div data-auto-doc-multiple-pages="{!v.isAutodocForMultiplePages}">
+                <div style="width:100%" class="slds-is-relative slds-var-p-vertical_small slds-card card_padding">
+        <lightning:spinner class="slds-show" aura:id="auth-result-spinner" alternativeText="Loading.." title="Loading.."
+            variant="brand" size="medium" />
+        <lightning:layout multipleRows="true">
+            <lightning:layoutItem size="12">
+                            <div class="slds-var-p-bottom_small">
+                                <lightning:layout class="slds-var-p-left_medium" verticalAlign="center">
+                        <lightning:layoutItem size="2">
+                            <span class="component_title">Authorization Results</span>
+                        </lightning:layoutItem>
+                        <!-- US3430626: View Authorization Results Card Message -->
+                        <lightning:layoutItem size="4" class="sdls-m-top_x-small">
+                            <span>Educate the provider that additional information for the authorization can be added in </span>
+                            <lightning:formattedUrl value="{!v.PAANLink}" label="PAAN" target="_blank"/>
+                        </lightning:layoutItem>
+                        <lightning:layoutItem size="6">
+                            <!-- US3367999 - View Authorizations: Create Auth Button Visible for All Advocates for all LOBs - 15/03/2020 - Sarma -->
+                            <!-- <aura:if isTrue="{!and(v.isShowDowntimeForm,v.policy.resultWrapper.policyRes.isSpireCreateAuthUser)}"> -->
+                            <aura:if isTrue="{!v.isClaimDetail== false}">
+                                <span class="downtimeForm">
+                                    <a href="javascript:void(0)" onclick="{!c.navigateToDowntimeForm}">Downtime Form</a>
+                                </span>
+                            </aura:if>
+                            <!-- </aura:if> -->
+                            <!--  US2061731 Create SRN Button UI -->
+                            <aura:if isTrue="{!v.showButtons}">
+                            <lightning:buttonGroup class="right-align-btn">
+                                <lightning:buttonIcon class="slds-m-right_large" iconName="utility:refresh" variant="border-filled" alternativeText="Refresh" title="Refresh" onclick="{!c.policyDataChange}"/>
+                                <!-- US3367999 - View Authorizations: Create Auth Button Visible for All Advocates for all LOBs - 15/03/2020 - Sarma -->
+                                <!-- <aura:if isTrue="{!v.policy.resultWrapper.policyRes.isSpireCreateAuthUser}"> -->
+                                    <!-- lightning:button label="Create Auth" name="Create Auth" title="Create SRN" onclick="{! c.checkPolicyStatus }" /-->
+                                <lightning:button label="Create SRN" name="Create SRN" title="Create SRN" onclick="{! c.checkPolicyStatus }" />
+                                <!-- </aura:if> -->
+                                <!--lightning:button label="Create SRN" name="Create SRN" title="Create SRN" onclick="{! c.createAuth }" /-->
+
+                               <!-- Save Case Consolidation - US3424763 -->
+                                <!-- Commented -->
+                                <!-- <lightning:button class="slds-button slds-button_neutral neutral_button"
+                                                    variant="neutral" label="Autodoc" onclick="{!c.openPreview}" /> -->
+                                <!-- <aura:if isTrue="{!!v.showComments}">
+									<lightning:button class="slds-button slds-button_neutral neutral_button "
+                                                        variant="neutral" label="Add Comments"
+                                                        onclick="{!c.openCommentsBox}" />
+									<aura:set attribute="else">
+										<lightning:button variant="brand" label="Add Comments" disabled="true"/>
+									</aura:set>
+                                                </aura:if> -->
+                                <!--<lightning:button variant="brand" name="Save Case" label="Save Case" title="Save Case" onclick="{!c.openModal}" />--> <!-- US2536127 - Avish -->
+                            </lightning:buttonGroup>
+                            </aura:if>
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                    <!-- US2619791	Performance Improvement - View Authorizations - Sarma - 10/06/2020 -->
+                                <!-- <lightning:layout class="slds-var-p-left_small slds-var-p-right_small"
+                                    verticalAlign="center">
+                        <lightning:layoutItem size="10" >
+                        </lightning:layoutItem>
+
+                        <lightning:layoutItem size="1" class="slds-text-align_right" >
+                            <div class="slds-form-element__static" style="padding-right:5px;padding-top:10px;float:right;">
+                                All
+                            </div>
+                        </lightning:layoutItem>
+
+                        <lightning:layoutItem size="1" class="rightAlign">
+                            <div style="padding-top:10px;float:right;">
+
+                            </div>
+                        </lightning:layoutItem>
+                                </lightning:layout> -->
+                            </div>
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                    <div style="width:100%" class="slds-is-relative slds-var-p-vertical_none slds-card">
+                        <aura:if isTrue="{!v.isClaimDetail== false}">
+                            <div class="allButton" style="right: 275px;position: absolute;top: 4px;">
+                                <div style="float: right;">
+                                    <c:ACET_ToggleButton width="60" checked="{!v.isAllActive}" checkedText="On"
+                                                         uncheckedText="Off" />
+                                </div>
+                                <div style="float: right;margin-top: 4px;margin-right: -14px;">All</div>
+                            </div>
+
+                            <!-- New AutoDoc -->
+
+
+                            <c:ACET_AutoDocDataTable enableSort="true" enableSearch="true"
+                                                     autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueId + v.policySelectedIndex}"
+                                                     enablePagination="false" tableDetails="{!v.authTableData}" selectedRows="{!v.selectedRows}" dateRangeFields="[1]"
+                                                     autoCheck="{!v.autoCheck}" allowAutoCheck="true"
+                                                     isDefaultSorting="true" defaultSortingColIndex="1"
+                                                     defaultSortingColName="SERVICE DATES" defaultSortingDirection="desc"
+                                                     isCheckAutodocOnRowClick="true"/> <!-- DE385589 - Thanish - 19th Nov 2020 --> <!--Added attributes as part of US2573718 - Sravan-->
+                        </aura:if>
+                        <aura:if isTrue="{!v.isClaimDetail== true}">
+                    <c:ACET_AutoDocDataTable enableSort="true" enableSearch="true" aura:id="childComponent"
+                        autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"
+                        enablePagination="false" tableDetails="{!v.authTableData}" selectedRows="{!v.selectedRows}" dateRangeFields="[1]"
+                        autoCheck="{!v.autoCheck}" allowAutoCheck="true"
+                        isDefaultSorting="true" defaultSortingColIndex="1"
+                        defaultSortingColName="SERVICE DATES" defaultSortingDirection="desc"
+                        isCheckAutodocOnRowClick="true"
+                        isClaimServiceAuth="{!v.isClaimServiceAuth}"
+                        defaultSearchVal="{!v.authNum}"/> <!-- DE385589 - Thanish - 19th Nov 2020 --> <!--Added attributes as part of US2573718 - Sravan-->
+                       </aura:if>
+   				   </div>
+                    <!-- End -->
+
+        <aura:if isTrue="{!v.isModalOpen}">
+                        <c:SAE_TtsModalCaseCreation enableAutodocWarningMessage="{!v.enableAutodocWarningMessage}"
+                            Topic="View Authorizations" caseWrapper="{!v.caseWrapper}"
+                            pagefeature="{!v.AutodocPageFeature}" AutodocKey="{!v.AutodocKey}"
+                            freeFormCommentsVal="{!v.commentsValue}" autodocUniqueId="{!v.autodocUniqueId}"
+                            memberMap ="{!v.memberMap}"
+                            memberPolicyNumberMap="{!V.memberPolicyNumberMap}"/><!--DE393490 - Sravan--> <!-- US2428601 -->
+        </aura:if>
+    </div>
+	<aura:if isTrue="{!v.showComments}">
+                <div class="slds-card card_left_padding card_top_padding card_right_padding card_bottom_padding">
+                    <c:ACET_HoverPopup aura:id="commentsId"
+                                       moveRight=""
+                                       description=""
+                                       isNubbinLeft="true"
+                                       descriptionList="[ 'Use the comments to include a brief','description of the issue, research performed,', 'and any attempts to resolve' ]" />
+                    <p class="component_title slds-form-element__label field_label_padding"
+                       style="border-bottom:1px dashed;padding:0px"
+                       data-popupId="commentsId"
+                       onmouseover="{!c.togglePopup}"
+                       onmouseout="{!c.togglePopup}">
+                        Comments:
+                    </p>
+                        <b class="component_title slds-var-p-left_small">View Authorizations</b>
+                        <lightning:textarea name="commentsTextArea" value="{!v.commentsValue}" label="Commets"
+                            aura:id="commentsBoxId" variant="label-hidden" class="slds-var-p-top_small"
+                                        onkeyup="{!c.handleKeyup }"
+                                        maxlength="2000"/>
+                    <span class="floatToRight valueCls slds-form-element__static">Characters remaining: <lightning:formattedNumber value = "{!2000-v.commentsValue.length}" /> </span>
+                </div>
+            </aura:if>
+                <div class="card_top_margin">
+        {! v.authStatusList }
+    </div>
+    </div>
+    </div>
+    </div>
+
+    <!-- US2423798	Preview Auto Doc Before Save Case- View Authorizations - Sarma - 27/4/2020 -->
+    <!-- <aura:if isTrue="{!v.isPreviewOpen}">
+        <c:ACET_AutoDocPreview isModalOpen="{!v.isPreviewOpen}" pagefeature="{!v.AutodocPageFeature}"
+            AutodocKey="{!v.AutodocKey}" />
+    </aura:if> -->
+
+    <aura:if isTrue="{!v.isPreviewOpen}">
+        <c:ACET_PreviewAutoDoc tableDetails_prev="{!v.tableDetails_prev}" isModalOpen="{!v.isPreviewOpen}" />
+    </aura:if>
+</aura:component>

@@ -1,0 +1,153 @@
+<aura:component controller="SNI_FL_CustomCmpAdvisor" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" >  
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>  
+    <aura:attribute name="files" type="ContentDocument[]"/>  
+    <aura:attribute name="recordId" type="string"/>
+     <aura:handler event="c:SNI_FL_getSelectedFamily" action="{!c.setCurrentFamily}"/>
+    <aura:attribute name="accept" type="List" default="['.jpg','.JPG','.jpeg','.JPEG','.PDF','.pdf','.csv','.CSV','.xlsx','.XLSX','.png','.PNG','.DOCX','.docx','.RTF','.rtf','.ODT','.odt','.DOC','.doc','.TXT','.txt','.WPF','.wpf','.WPD','.wpd','.PPT','.ppt','.PPTX','.pptx','.TIF','.tif','.TIFF','.tiff','.SVG','.svg','.GIF','.gif','.PNG','.png','.BMP','.bmp','.JFIF','.jfif','.ZIP','.zip','.XLSX','.xlsx','.XLS','.xls','.XLSM','.xlsm','.XLSB','.xlsb','.CSV','.csv','.MP4','.mp4','.MOV','.mov','.AVI','.avi']"/>  
+    <aura:attribute name="multiple" type="Boolean" default="true"/>
+    <aura:attribute name="Spinner" type="boolean" default="false"/>
+    <aura:attribute name="viewAll" type="boolean" default="false"/>
+    <aura:attribute name="fulllistfiles" type="ContentDocument[]"/>
+    <aura:attribute name="shortlistfiles" type="ContentDocument[]"/>
+    <aura:attribute name="File_count" type="String" default="0"/>
+    <aura:attribute name="TitleEdit" type="boolean" default="true"/>
+     <aura:attribute name="showAllFC" type="Boolean" default="false"/>
+    <aura:attribute name="showErrorClass" type="boolean" default="false"/>
+    <aura:attribute name="showEditModal" type="Boolean" default="false"/>
+    <aura:handler event="force:refreshView" action="{!c.EditDocumentInfo}" />
+    <aura:attribute name="SelectedFamilyName" type="string" />
+    <aura:attribute name="isRemoveCnfrmModalOpen" type="Boolean" default ="false"/>
+    <aura:attribute name="selectedDocId" type="String"/>
+    <aura:attribute name="selectedDocument" type="String"/>
+    <aura:attribute name ="currentUser" type = "String"/>
+    <aura:attribute name="familyId" type="String" />
+    <aura:attribute name="recordName" type="String" />
+    <aura:attribute name="familydocwrap" type="SNI_FL_DocumentsController.familyDocumentWrapper" /> 
+    <aura:attribute name ="Ttle" type = "String"/>
+    <aura:attribute name="buttondisable" type="Boolean" default ="true"/>    
+    <div class="slds">
+        <lightning:card class="slds-text-heading_small" iconName="standard:file">
+        <lightning:notificationsLibrary aura:id="notifLib"/>
+            <aura:if isTrue="{!v.Spinner}">
+                <div class="slds-spinner_container">
+                    <div class="slds-spinner slds-spinner--medium" aria-hidden="false" role="alert">
+                        <div class="slds-spinner__dot-a"></div>
+                        <div class="slds-spinner__dot-b"></div>
+                    </div>
+                </div>
+            </aura:if>
+            <aura:set attribute="title">
+                
+            <!--<a class="slds-text-title_bold"  href="javascript:void(0)" onclick="" onmouseout="{!c.removeClass}" onmouseover="{!c.UpdateColor}" ><span title="Files" aura:id="filesOver"  >Family Link Documents ({!v.File_count})</span></a>-->
+            <div class="slds-text-title_bold"><b>Care Advisor Connect Documents ({!v.File_count})</b></div>
+            </aura:set>
+        <div class="contentbox ">  
+            <div class="slds-grid slds-theme_default">  
+                <div class="slds-m-vertical_x-large slds-mrgintop" style="width:100%">  
+                    <center>
+                        <lightning:fileUpload label="" 
+                                              multiple="{!v.multiple}"   
+                                              accept="{!v.accept}" 
+                                              recordId="{!v.recordId}"   
+                                              size="x-small"
+                                              onuploadfinished="{!c.UploadFinished}" />  
+                    </center>
+                </div>  
+            </div> 
+            <div class="slds-form--compound slds-text-body_small">
+                <table class="slds-table slds-table--bordered slds-table_cell-buffer">  
+                    <thead>  
+                        <tr>  
+                            <th>Name</th>
+                            <th>Owner</th>
+                            <th>Last Modified Date</th>  
+                            <th>Last Modified By</th>
+                            
+                            
+                            
+                        </tr>  
+                    </thead>  
+                    <tbody>
+                        <aura:iteration items="{!v.files}" var="f">  
+                            <tr >  
+                            <td><a title="{!f.Title}" Class="ellipse-titel" href=""  onclick="{!c.previewFile}" id="{!f.Id}" >{!f.Title}</a></td>
+                                <td>{!f.Owner.Name}</td>
+                                <td>
+                                    <lightning:formattedDateTime aura:id="dt"
+                                     value="{!f.LastModifiedDate}"
+                                     month="numeric"
+                                     day="numeric"
+                                     year="numeric"
+                                     hour12="true"/>
+                                    </td>
+                                <td>{!f.LastModifiedBy.Name}</td> 
+                                <td>
+                                        <lightning:buttonMenu menuAlignment="auto" iconSize="x-small"  alternativeText="Action" class="{!f.Id}" title="{!f.Title}" onselect="{! c.handleMenuSelect }" >
+                                            <aura:if isTrue = "{!f.OwnerId == v.currentUser}" >
+                                            	<lightning:menuItem label="Remove" aura:id = "fileRemove" value="delete" />
+                                           </aura:if>
+					    	<lightning:menuItem label="Edit" aura:id = "fileEdit" value="edit" />
+                                            	<lightning:menuItem label="Download" aura:id = "fileDownload"  value="download" />
+                                        </lightning:buttonMenu>
+                                </td>
+                            </tr>  
+                        </aura:iteration>  
+                    </tbody>  
+                </table> 
+                <aura:if isTrue="{!greaterthan(v.fulllistfiles.length, 5)}">
+        		<footer class="slds-card__footer">
+	        		<aura:if isTrue="{!v.showAllFC}">
+			        	<a onclick="{!c.hidefiles}" >Hide</a>
+			        	<aura:set attribute="else">
+			        		<a onclick="{!c.showfiles}" >View All</a>
+			        	</aura:set>
+		        	</aura:if>
+	        	 </footer>
+        	</aura:if>
+                
+            </div>
+        </div> 
+       <aura:if isTrue="{!v.isRemoveCnfrmModalOpen}"> 
+   <div class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <div class="slds-modal__header">
+                    <h2 class="title slds-text-heading--medium">Remove Document</h2>
+                </div>
+                <div class="slds-modal__content slds-p-around--medium">
+                    <ul class="slds-list_dotted">
+                        <p id  ="confirmation" class = "slds-text-align_center">Are you sure you want to remove this document?</p>
+                    </ul>
+                </div>
+                <div class="slds-modal__footer">
+                    <lightning:button variant="neutral" aura:id  ="removeCncl" label="Cancel" onclick="{!c.closeWarning}"/>
+                    <lightning:button  label="Remove" variant="brand" aura:id = "removeButton"  onclick="{!c.deleteFile}"/>
+                </div>
+            </div>
+        </div>
+      <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+         <aura:if isTrue="{!v.showEditModal}">
+            <div class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <div class="slds-modal__header">
+                    <h2 class="title slds-text-heading--medium">Edit Document</h2>
+                </div>
+                <div class="slds-modal__content slds-p-around--medium">
+                    <!-- if additional fields are being added, please add a lightning Edit Form fields -->
+                    <lightning:layout multipleRows="true" >
+                        <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+                            <lightning:input  label="Name" onchange="{!c.handlecheck}" value="{!v.selectedDocument}" maxlength="80"/>
+                        </lightning:layoutitem>
+                    </lightning:layout>
+                </div>
+                <div class="slds-modal__footer">
+                    <lightning:button variant="neutral" label="Cancel" onclick="{!c.closeEditModal}"/>
+                    <lightning:button  label="Save" variant="brand" onclick="{!c.EditDocumentInfo}" disabled="{!v.buttondisable}"/>
+                </div>
+            </div>
+        </div>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+            </lightning:card>
+    </div>  
+ </aura:component>

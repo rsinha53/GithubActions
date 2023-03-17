@@ -1,0 +1,129 @@
+<!-- 
+Component Name    : SNI_FL_NewMessagePopup
+Description       : New Message Pop-up
+Created By        : Vamsi
+Created Date      : 13-08-2020
+
+Modification Log: 
+Developer                   Date                   Description
+Pavithra					2020-08-21				Added New Message for specific family
+Nanthu                      2020-09-21              Added sending new message funtionality
+-->
+
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,forceCommunity:availableForAllPageTypes" controller="SNI_FLDirectMessageUtil" access="global" >
+    
+    <!--aura attributes --> 
+    <aura:attribute name="IsOpenNewMsg" type="boolean" default="false" />
+    <aura:attribute name="newMessageBody" type=    "String" />
+    <aura:attribute name="FamilyName" type="String"/>
+    <aura:attribute name="UserName" type="String" />
+    <aura:attribute name="subjectValue" type="String" default="" />
+    <aura:attribute name="selectedAccountLookUpRecords" type="sObject[]" default="[]" />
+    <aura:attribute name="selectedUserLookUpRecords" type="List" />
+    <aura:attribute name="attachId" type="String" />
+    <aura:attribute name="fileName" type="String" default="No File Selected .." />
+    <aura:attribute name="filetype" type="List" default="['.ppt', '.pptx', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.pdf', '.png', '.jpeg', '.jpg', '.gif', '.tiff', '.tif', '.bmp']" />
+    <aura:attribute name="multiple" type="Boolean" default="true" />
+    <aura:attribute name="familylist" type="Boolean" default="false" />
+    <aura:attribute name="listOfSearchRecords" type="sObject"/> 
+    <aura:attribute name="AccountName" type="String"/>  
+    <aura:attribute name="isBackupAgentView" type="Boolean" />    
+    <aura:attribute name="removedCareTeamMember" type="sObject[]" default="[]"/>
+    <aura:attribute name="isFamilyLevel" type="Boolean" default="false"/>
+    <aura:attribute name="familyId" type="String"/>
+    <aura:attribute name="isSpecificView" type="Boolean"  />
+    <aura:attribute name="isProviderMsgLevel" type="Boolean" ></aura:attribute>
+    <aura:attribute name="memberId" type="String"/>
+    <aura:attribute name="displayName" type="String"/>
+    <aura:attribute name="selectedPartnerQueue" type="Object" default="" description="selected Record Details" /> 
+    <!--US2858020 Nanthu-->
+    <aura:attribute name="selectedFamilyRecord" type="Object" description="selected Record Details" /> 
+    <aura:attribute name="selectedTabId" type="String"/>
+    <aura:attribute name="showOnclickCurtain" type="boolean" default="false"/>
+    <!-- end aura attributes -->
+    <aura:handler name="cmpEventx" event="c:SNI_FL_MultiSelectEvent" action="{!c.handleMulticmpEvent}"/>
+    <aura:registerevent name="addBkpAdvsrEventFiredx" type="c:SNI_FL_BackupAdvisorEvt" />
+    <!--Fire event to inform SNI_FL_FamilyView component-->
+    <aura:registerevent name="retrieveAllMessages" type="c:SNI_FL_NewMessageCreatedEvt"></aura:registerevent>
+    <aura:handler name="SNI_FL_MessageOnclickCurtainEvent" event="c:SNI_FL_MessageOnclickCurtainEvent" action="{!c.handleShowCurtain}"/>
+    <aura:handler name="init" value="this" action="{!c.doInit}" />
+    
+    <!--MODAL BOX Start -->
+    <section role="dialog" tabindex="-1" aria-labelledby="Meaningful description of the modal content" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+        <!--   <div class="slds-modal__container" onmousedown = "{!c.onchildblur}"> -->
+        <aura:If isTrue="{!v.showOnclickCurtain}" >
+        	<div class="onclickCurtain" onclick="{!c.hideDropdowns}"></div>
+        </aura:If>
+        <div class="slds-modal__container" style="z-index: 11;position: relative;">
+            <aura:If isTrue="{!v.showOnclickCurtain}" >
+                <div class="onclickCurtain" onclick="{!c.hideDropdowns}"></div>
+            </aura:If>
+            <!--  MODAL BOX HEADER Start -->
+            <header class="slds-modal__header">
+                <lightning:buttonIcon iconName="utility:close" onclick="{!c.closeModel}" alternativeText="close" variant="bare-inverse" class="slds-modal__close" />
+                <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">New Message</h2>
+            </header>
+            <!-- MODAL BOX BODY Part Start -->
+            <div class="slds-modal__content slds-p-around_medium " id="modal-content-id-1" style="height:34rem;" >
+                <!--loading spinner start-->
+                <lightning:spinner aura:id="mySpinner" class="slds-hide" alternativeText="Loading" size="medium" variant="brand"/>
+                <!-- Loading spinner end-->
+                
+                
+                <aura:if isTrue="{!v.isSpecificView}">
+                    <lightning:input aura:id="name" name="familyName" value="{!v.displayName}" placeholder="{!v.displayName}" label="Family" disabled="true"/><br></br>
+                    
+                    <aura:set attribute="else">
+                        <c:SNI_FL_FamilyLookup  aura:id="name" 
+                                               selectedTabId="{!v.selectedTabId}"
+                                               selectedRecord="{!v.selectedFamilyRecord}"
+                                               objectName="Account,Family_Partner__c"
+                                               fieldName="Name"
+                                               label="Family"
+                                               iconName="standard:account"
+                                               isBackupAgentView = "{!v.isBackupAgentView}"
+                                               placeholder="Search Families ..." 
+                                               isProviderMsgLevel="{!v.isProviderMsgLevel}"
+                                               familyId="{!v.familyId}"
+                                               showOnclickCurtain="{!v.showOnclickCurtain}"
+                                               /><br></br>
+                    </aura:set>
+                </aura:if>
+                
+                <c:SNI_FL_PartnerQueueLookup   IconName="standard:user" 
+                                                
+                                             selectedPartnerQueue="{!v.selectedPartnerQueue}"
+                                             showOnclickCurtain="{!v.showOnclickCurtain}"/><br></br> 
+                                
+                <c:SNI_FL_MultiSelectNewMessageLookUp   objectAPIName="Account,SNI_FL_Care_Team_Member__c,Family_Partner__c"
+                                                      IconName="standard:user" 
+                                                      removedSelectedRecords="{!v.removedCareTeamMember}" 
+                                                      evtSelectedRecords="{!v.listOfSearchRecords}"  
+                                                      lstSelectedRecords="{!v.selectedUserLookUpRecords}"
+                                                      isBackupAgentView = "{!v.isBackupAgentView}"
+                                                      isFamilyLevel = "{!v.isFamilyLevel}"
+                                                      familyId = "{!v.familyId}"
+                                                      selectedTabId="{!v.selectedTabId}"
+                                                      label="To" isFlg="true" isFL="true"
+                                                      placeholderValue="Search Care Team Members ..."
+                                                      aura:id="multiPopID"
+                                                      showOnclickCurtain="{!v.showOnclickCurtain}"/><br></br>                
+                
+                <label class="slds-form-element__label">Subject</label>
+                <lightning:input aura:id="subject" name="Subject" value="{!v.subjectValue}" placeholder="What's your message about?" maxlength="255" class="subjectField"  /><br></br> <!--required="true"-->
+                <label class="uiLabel-left form-element__label uiLabel" data-aura-class="uiLabel"><span class="">Message</span></label>
+                <lightning:inputRichText aura:id="number" value="{!v.newMessageBody}"   placeholder="Enter your message here ..." ></lightning:inputRichText>
+                <br></br>
+                <!--<lightning:buttonIcon iconName="utility:attach" size="medium" variant="container" alternativeText="Settings" title="Settings" onclick="{!c.handleUpload}" />-->
+                <lightning:fileUpload label="Attach Files" name="fileUploader" accept="{!v.filetype}"  onuploadfinished="{!c.handleUploadFinished}"  />
+                <div class= "slds-text-body_small slds-text-color_error ">{!v.fileName}</div>
+            </div>
+            <!-- MODAL BOX FOOTER Part Start -->
+            <footer class="slds-modal__footer">
+                <lightning:button  label="Cancel"  onclick="{!c.closeModel}"  />
+                <lightning:button  label="Send"  variant="brand" onclick="{!c.sendMessage}" />
+            </footer>
+        </div>
+    </section>
+    <div class="slds-backdrop slds-backdrop_open"></div>
+</aura:component>

@@ -1,0 +1,178 @@
+<aura:component controller="ACET_ProviderContractSummaryController" implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,lightning:isUrlAddressable" access="global">
+	
+    <aura:attribute name="contractApiParameters" type="Object" default="{ 'taxId' : '', 'providerId' : '', 'addressId' : ''}"/>
+    <aura:attribute name="autodocUniqueId" type="String" default=""/>
+    <aura:attribute name="autodocCNSId" type="String" default="cnsContractData"/>
+    <aura:attribute name="autodocENIId" type="String" default="eniContractData"/>
+    <aura:attribute name="autodocMNRId" type="String" default="mnrContractData"/>
+    <aura:attribute name="autodocPHSId" type="String" default="phsContractData"/>
+    <aura:attribute name="cnsTable" type="Object"/>
+    <aura:attribute name="eniTable" type="Object"/>
+    <aura:attribute name="mnrTable" type="Object"/>
+    <aura:attribute name="phsTable" type="Object"/>
+    <aura:attribute name="contractDetailsList" type="Object[]"/>
+    <aura:attribute name="selectedTab" type="string" default="ENI"/>
+    <aura:attribute name="isCNSAll" type="boolean" default="false"/>
+    <aura:attribute name="isENIAll" type="boolean" default="false"/>
+    <aura:attribute name="isMNRAll" type="boolean" default="false"/>
+    <aura:attribute name="isPHSAll" type="boolean" default="false"/>
+    <aura:attribute name="showSpinner" type="boolean" default="false"/>
+    <aura:attribute name="sourceCode" type="String" default=""/>
+    <aura:attribute name="filterParameters" type="Object"/>
+    <aura:attribute name="isMemberFocused" type="boolean" default="false"/>
+    
+    <aura:attribute name="autodocUniqueIdCmp" type="String" />
+    <aura:attribute name="isClaim" type="Boolean" default="false" />
+    <aura:attribute name="claimNo" type="String" default="" />
+    <aura:attribute name="currentIndexOfOpenedTabs" type="Integer"/>
+    <aura:attribute name="maxAutoDocComponents" type="Integer" default="21"/>
+    <aura:attribute name="isPhysician" type="Boolean" default="true" />
+    <aura:attribute name="contractId" type="String" default=""/>
+    <aura:attribute name="ENIAllData" type="Object" default="{}"/> <!--US3767751-->
+
+
+    <!-- US3507762 - Create Overall Save Case Button on Provider Snapshot Page - Thanish - 20th May 2021 -->
+    <aura:attribute name="hasUnresolvedCNS" type="boolean" default="false"/>
+    <aura:attribute name="hasUnresolvedENI" type="boolean" default="false"/>
+    <aura:attribute name="hasUnresolvedMNR" type="boolean" default="false"/>
+    <aura:handler name="change" value="{!v.contractApiParameters}" action="{!c.providerDetailsChanged}"/>
+    <aura:handler name="change" value="{!v.sourceCode}" action="{!c.defaultTab}"/>
+    <aura:handler name="change" value="{!v.selectedTab}" action="{!c.onTabChange}"/>
+    <aura:handler name="change" value="{!v.isPHSAll}" action="{!c.onPHSChange}"/>
+    <aura:handler name="change" value="{!v.isCNSAll}" action="{!c.onCNSAllChange}"/>
+    <aura:handler name="change" value="{!v.isENIAll}" action="{!c.onENIAllChange}"/>
+    <aura:handler name="change" value="{!v.isMNRAll}" action="{!c.onMNRAllChange}"/>
+    <aura:handler name="selectedRowLink" event="c:ACET_AutoDocSelectedRow" action="{!c.onDateLinkClicked}"/>
+    
+    <div class="slds-card card_top_padding card_bottom_padding">
+        <aura:if isTrue="{!v.showSpinner}"> <lightning:spinner aura:id="spinner" variant="brand"/> </aura:if>
+
+        <div class="slds-grid slds-grid_align-spread card_left_padding card_right_padding">
+            <div class="slds-col component_title">Contract Summary</div>
+            <!--div class="slds-col"><lightning:input aura:id="searchBox" variant="label-hidden" placeholder="Search" onchange="{!c.onSearch}"/></div-->
+        </div>
+        
+        <!-- TABS -->
+        <div class="slds-tabs_default">
+            <ul class="slds-tabs_default__nav" role="tablist">
+                <li class="{!(v.selectedTab == 'CNS') ? 'slds-tabs_default__item slds-is-active' : 'slds-tabs_default__item'}" role="presentation">
+                    <a class="slds-tabs_default__link" data-tab="CNS" onclick="{!c.refreshTableData}" role="tab" id="tab-default-1__item">C&amp;S</a>
+                </li>
+                <li class="{!(v.selectedTab == 'ENI') ? 'slds-tabs_default__item slds-is-active' : 'slds-tabs_default__item'}" role="presentation">
+                    <a class="slds-tabs_default__link" data-tab="ENI" onclick="{!c.refreshTableData}" role="tab" id="tab-default-2__item">E&amp;I</a>
+                </li>
+                <li class="{!(v.selectedTab == 'MNR') ? 'slds-tabs_default__item slds-is-active' : 'slds-tabs_default__item'}" role="presentation">
+                    <a class="slds-tabs_default__link" data-tab="MNR" onclick="{!c.refreshTableData}" role="tab" id="tab-default-3__item">M&amp;R</a>
+                </li>
+                <li class="{!(v.selectedTab == 'PHS') ? 'slds-tabs_default__item slds-is-active' : 'slds-tabs_default__item'}" role="presentation">
+                    <a class="slds-tabs_default__link" data-tab="PHS" onclick="{!c.refreshTableData}" role="tab" id="tab-default-4__item">PHS</a>
+                </li>
+                <li style="float: right; width: 100%;">
+                    <div class="{!((v.selectedTab == 'CNS') ? '' : 'hide') + (' card_right_padding ')}" style="float: right; margin-top: 10px; margin-right: 266px;">
+                        <div style="float: right;">
+                            <c:ACET_ToggleButton width="55" checked="{!v.isCNSAll}" checkedText="On" uncheckedText="Off"/>
+                        </div>
+                        <div class="component_title" style="width: 30px; float: right;">
+                            All
+                        </div>
+                    </div>
+                    <div class="{!((v.selectedTab == 'ENI') ? '' : 'hide')  + (' card_right_padding ')}" style="float: right; margin-top: 10px; margin-right: 266px;">
+                        <div style="float: right;">
+                            <c:ACET_ToggleButton width="55" checked="{!v.isENIAll}" checkedText="On" uncheckedText="Off"/>
+                        </div>
+                        <div class="component_title" style="width: 30px; float: right;">
+                            All
+                        </div>
+                    </div>
+                    <div class="{!((v.selectedTab == 'MNR') ? '' : 'hide') + (' card_right_padding ')}" style="float: right; margin-top: 10px; margin-right: 266px;">
+                        <div style="float: right;">
+                            <c:ACET_ToggleButton width="55" checked="{!v.isMNRAll}" checkedText="On" uncheckedText="Off"/>
+                        </div>
+                        <div class="component_title" style="width: 30px; float: right;">
+                            All
+                        </div>
+                    </div>
+                    <div class="{!((v.selectedTab == 'PHS') ? '' : 'hide') + (' card_right_padding ')}" style="float: right; margin-top: 10px; margin-right: 266px;">
+                        <div style="float: right;">
+                            <c:ACET_ToggleButton width="55" checked="{!v.isPHSAll}" checkedText="On" uncheckedText="Off"/>
+                        </div>
+                        <div class="component_title" style="width: 30px; float: right;">
+                            All
+                        </div>
+                    </div>
+                </li>
+            </ul>
+            
+            <!-- C&S TAB -->
+            <div id="CNS" class="{!(v.selectedTab == 'CNS') ? 'slds-tabs_default__content' : 'slds-tabs_default__content hide'}" role="tabpanel">
+                <div class="" style="overflow: auto;">
+                    <aura:if isTrue="{!v.isClaim== true}">
+                 <c:ACET_AutoDocDataTable autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}" enablePagination="false" tableDetails="{!v.cnsTable}" enableSort="true" enableSearch="true" hasCaseItems="true" headerHoverEnabled="true" isCheckAutodocOnRowClick="true" hasUnresolvedRows="{!v.hasUnresolvedCNS}"/> <!-- US3507762 - Thanish - 20th May 2021 -->
+                        <aura:set attribute="else">
+                        <c:ACET_AutoDocDataTable autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocCNSId}" enablePagination="false" tableDetails="{!v.cnsTable}" enableSort="true" enableSearch="true" hasCaseItems="true" headerHoverEnabled="true" isCheckAutodocOnRowClick="true" hasUnresolvedRows="{!v.hasUnresolvedCNS}"/> <!-- US3507762 - Thanish - 20th May 2021 -->
+                             </aura:set>
+                     </aura:if>
+                </div>
+            </div>
+            <!-- / C&S TAB -->
+            
+            <!-- E&I TAB -->
+            <div id="ENI" class="{!(v.selectedTab == 'ENI') ? 'slds-tabs_default__content' : 'slds-tabs_default__content hide'}" role="tabpanel">
+                <div class="" style="overflow: auto;">
+                    <aura:if isTrue="{!v.isClaim== true}">
+                       <c:ACET_AutoDocDataTable autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}" enablePagination="false" tableDetails="{!v.eniTable}" enableSort="true" enableSearch="true" hasCaseItems="true" headerHoverEnabled="true" isCheckAutodocOnRowClick="true" hasUnresolvedRows="{!v.hasUnresolvedENI}"/> <!-- US3507762 - Thanish - 20th May 2021 -->
+                         <aura:set attribute="else">
+                    <c:ACET_AutoDocDataTable autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocENIId}" enablePagination="false" tableDetails="{!v.eniTable}" enableSort="true" enableSearch="true" hasCaseItems="true" headerHoverEnabled="true" isCheckAutodocOnRowClick="true" hasUnresolvedRows="{!v.hasUnresolvedENI}"/> <!-- US3507762 - Thanish - 20th May 2021 -->
+               </aura:set>
+                        </aura:if>
+                </div>
+            </div>
+            <!-- / E&I TAB -->
+            
+            <!-- M&R TAB -->
+            <div id="MNR" class="{!(v.selectedTab == 'MNR') ? 'slds-tabs_default__content' : 'slds-tabs_default__content hide'}" role="tabpanel">
+                <div class="" style="overflow: auto;">
+                     <aura:if isTrue="{!v.isClaim== true}">
+                      <c:ACET_AutoDocDataTable autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}" enablePagination="false" tableDetails="{!v.mnrTable}" enableSort="true" enableSearch="true" hasCaseItems="true" headerHoverEnabled="true" isCheckAutodocOnRowClick="true" hasUnresolvedRows="{!v.hasUnresolvedMNR}"/> <!-- US3507762 - Thanish - 20th May 2021 -->
+                         <aura:set attribute="else">
+                	<c:ACET_AutoDocDataTable autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocMNRId}" enablePagination="false" tableDetails="{!v.mnrTable}" enableSort="true" enableSearch="true" hasCaseItems="true" headerHoverEnabled="true" isCheckAutodocOnRowClick="true" hasUnresolvedRows="{!v.hasUnresolvedMNR}"/> <!-- US3507762 - Thanish - 20th May 2021 -->
+                </aura:set>
+                        </aura:if>
+                </div>
+            </div>
+            <!-- / M&R TAB -->
+            
+            <!-- PHS TAB -->
+            <div id="PHS" class="{!(v.selectedTab == 'PHS') ? 'slds-tabs_default__content' : 'slds-tabs_default__content hide'}" role="tabpanel">
+                <div class="" style="overflow: auto;">
+                     <aura:if isTrue="{!v.isClaim== true}">
+                	<c:ACET_AutoDocDataTable autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}" enablePagination="false" tableDetails="{!v.phsTable}" enableSort="true" enableSearch="true" hasCaseItems="true" headerHoverEnabled="true" isCheckAutodocOnRowClick="true"/>
+                         <aura:set attribute="else">
+                	<c:ACET_AutoDocDataTable autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocPHSId}" enablePagination="false" tableDetails="{!v.phsTable}" enableSort="true" enableSearch="true" hasCaseItems="true" headerHoverEnabled="true" isCheckAutodocOnRowClick="true"/>
+                 </aura:set>
+                        </aura:if>
+                </div>
+            </div>
+            <!-- / PHS TAB -->
+        </div>
+    </div>
+    <div id="{!v.autodocUniqueId + 'ContractDetails'}"/> <!-- US3667063 - Thanish - 2nd Jul 2021 - used to scroll into contract details section -->
+    <aura:iteration items="{!v.contractDetailsList}" var="data" indexVar="index">
+        <aura:if isTrue="{!data.type == 'cns'}">
+            <c:ACET_ContractDetails data="{!data}" autodocUniqueId="{!v.autodocUniqueId}" contractSummary="{!v.cnsTable}"/>
+        </aura:if>
+        <aura:if isTrue="{!data.type == 'eni'}">
+            <c:ACET_ContractDetails data="{!data}" autodocUniqueId="{!v.autodocUniqueId}" contractSummary="{!v.eniTable}"
+                                    isPhysician="{!v.isPhysician}" contractId="{!v.contractId}"
+                                    contractApiParameters="{!v.contractApiParameters}"/>
+        </aura:if>
+        <aura:if isTrue="{!data.type == 'mnr'}">
+            <c:ACET_ContractDetails data="{!data}" autodocUniqueId="{!v.autodocUniqueId}" contractSummary="{!v.mnrTable}"
+                                    isPhysician="{!v.isPhysician}" contractId="{!v.contractId}"
+                                    contractApiParameters="{!v.contractApiParameters}"/>
+        </aura:if>
+        <aura:if isTrue="{!data.type == 'phs'}">
+            <!-- PHS is api gap -->
+        </aura:if>
+    </aura:iteration>
+</aura:component>

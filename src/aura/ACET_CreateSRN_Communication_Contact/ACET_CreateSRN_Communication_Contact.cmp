@@ -1,0 +1,143 @@
+<aura:component
+    implements="force:appHostable,flexipage:availableForAllPageTypes,lightning:isUrlAddressable,force:hasRecordId"
+    access="global">
+
+    <aura:handler name="init" value="{!this}" action="{!c.init}" />
+
+    <aura:attribute name="type" type="String" />
+    <aura:handler name="change" value="{!v.type}" action="{!c.handleTypeChange}" />
+
+    <aura:attribute name="lstSource" type="List" default="[
+    {'label': 'Phone', 'value': 'Phone'},
+    {'label': 'Email', 'value': 'Email'},
+    {'label': 'Fax', 'value': 'Fax'}]" />
+
+    <aura:attribute name="lstRole" type="List" default="[
+    {'label': 'Primary Physician', 'value': 'Primary Physician'},
+    {'label': 'Specialist', 'value': 'Specialist'},
+    {'label': 'Facility', 'value': 'Facility'},
+    {'label': 'Member', 'value': 'Member'},
+    {'label': 'Ancillary Provider', 'value': 'Ancillary Provider'},
+    {'label': 'Pharmacy', 'value': 'Pharmacy'},
+    {'label': 'Member Rep', 'value': 'Member Rep'}]" />
+
+    <aura:attribute name="lstDep" type="List" default="[
+    {'label': 'Admitting', 'value': 'Admitting'},
+    {'label': 'Business Office', 'value': 'Business Office'},
+    {'label': 'Discharge Planning', 'value': 'Discharge Planning'},
+    {'label': 'Emergency Room', 'value': 'Emergency Room'},
+    {'label': 'Medical Records', 'value': 'Medical Records'},
+    {'label': 'Social Services', 'value': 'Social Services'},
+    {'label': 'Utilization Review', 'value': 'Utilization Review'}]" />
+
+    <aura:attribute name="SRNData" type="Object" />
+
+    <aura:attribute name="uniqueId" type="String" />
+
+    <aura:attribute name="fieldsToValidate" type="List" default="connumber,conext,conname,selrole,seldep,medicalrecord" />
+    <!-- <aura:attribute name="errorsCC" type="Object" /> -->
+    <aura:handler event="c:ACET_CreateSRN_FireValidations" action="{!c.fireValidations}" />
+
+    <aura:attribute name="errors" type="Object" />
+
+    <!-- US3094699 -->
+    <aura:attribute name="srnTabId" type="String" />
+
+    <lightning:layout class="slds-card slds-m-top_x-small slds-p-around_medium" multipleRows="true">
+        <lightning:layoutItem size="12">
+            <h3 class="component_title slds-text-heading_small">Communication Contact</h3>
+        </lightning:layoutItem>
+        <lightning:layoutItem size="12">
+            <lightning:layout>
+                <lightning:layoutItem size="3">
+                    <div class="slds-form-element">
+                        <lightning:combobox required="true" aura:id="selsource" name="Source" label="Source"
+                            options="{!v.lstSource}" value="{! v.SRNData.CommContact.Source }"
+                            onchange="{!c.bindValues }" />
+                    </div>
+                </lightning:layoutItem>
+                <lightning:layoutItem class="slds-p-horizontal_medium" size="3">
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-size_2-of-3">
+                            <lightning:input value="{! v.SRNData.CommContact.ContactNumber }" type="text"
+                                aura:id="connumber" name="ContactNumber" label="Contact Number" minlength="10" maxlength="10" messageWhenTooShort="Enter 10 digits"
+                                class="slds-m-right_x-small" autocomplete="off" onchange="{!c.handleOnChange}" required="{! (v.SRNData.CommContact.Source == 'Phone') }" />
+                        </div>
+                        <div class="slds-size_1-of-3">
+                            <lightning:input type="text" aura:id="conext" name="Ext" label="Ext"
+                                onchange="{!c.handleOnChange}" autocomplete="off" maxlength="5"
+                                value="{! v.SRNData.CommContact.Ext }" />
+                        </div>
+                    </div>
+                </lightning:layoutItem>
+                <lightning:layoutItem class="slds-p-right_medium" size="3">
+                    <lightning:input aura:id="fax" type="text" name="Fax" label="Fax" autocomplete="off" minlength="10" maxlength="10" messageWhenTooShort="Enter 10 digits" 
+                        value="{! v.SRNData.CommContact.Fax }" onchange="{!c.handleOnChange }" required="{! (v.SRNData.CommContact.Source == 'Fax') }" />
+                </lightning:layoutItem>
+                <!-- US2950839 -->
+                <lightning:layoutItem size="3">
+                    <lightning:input aura:id="Email" type="email" name="Email" label="Email" autocomplete="off"
+                        value="{! v.SRNData.CommContact.Email }" onchange="{!c.bindValues }" required="{! (v.SRNData.CommContact.Source == 'Email') }" />
+                </lightning:layoutItem>
+            </lightning:layout>
+            <lightning:layout class="slds-m-top_xx-small" multipleRows="true">
+                <lightning:layoutItem size="3">
+                    <lightning:input required="true" aura:id="conname" type="text" name="Name" label="Name"
+                        autocomplete="off" value="{! v.SRNData.CommContact.Name }" onchange="{!c.handleOnChange}" />
+                </lightning:layoutItem>
+                <lightning:layoutItem size="3">
+                    <div class="slds-form-element slds-p-horizontal_medium">
+                        <lightning:layoutItem flexibility="grow" size="12">
+                            <lightning:combobox required="true" aura:id="selrole" name="Role" label="Role"
+                                options="{!v.lstRole}" value="{! v.SRNData.CommContact.Role }"
+                                onchange="{!c.bindValues }" />
+                        </lightning:layoutItem>
+                    </div>
+                </lightning:layoutItem>
+                <lightning:layoutItem class="slds-p-right_medium" size="3">
+                    <!-- US3050746 -->
+                    <lightning:combobox options="{! v.lstDep }"
+                        disabled="{! (v.SRNData.CommContact.Role != 'Facility') }" aura:id="seldep" name="Department"
+                        label="Department"
+                        value="{! (v.SRNData.CommContact.Role != 'Facility' ? '': v.SRNData.CommContact.Department) }"
+                        onchange="{!c.bindValues }" required="{! (v.SRNData.CommContact.Role == 'Facility') }" />
+                </lightning:layoutItem>
+                <lightning:layoutItem class="{! (v.type == 'Inpatient' ?  '' : '') }" size="3">
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-size_1-of-2">
+                            <div class="slds-grid slds-wrap slds-m-top_xxx-small">
+                                <div class="slds-size_1-of-2">
+                                    <div class="slds-form-element">
+                                        <label class="slds-form-element__label" for="text-input-id-1">Date</label>
+                                        <div class="slds-form-element__control slds-m-top_xx-small">
+                                            <label aura:id="date" name="Date">{! v.SRNData.CommContact.Date }</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="slds-size_1-of-2">
+                                    <div class="slds-form-element">
+                                        <label class="slds-form-element__label" for="text-input-id-1">Time</label>
+                                        <div class="slds-form-element__control slds-m-top_xx-small">
+                                            <label aura:id="time" name="Time">{! v.SRNData.CommContact.Time }</label>
+                                        </div>
+                                    </div> 
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-size_1-of-2">
+                            <span onkeypress="{! c.alphanumericAndNoSpecialCharacters }"
+                                onpaste="{! c.alphanumericAndNoSpecialCharacters }">
+                                <lightning:input
+                                    class="{!( and((v.type == 'Inpatient'), (v.SRNData.RequiredInfo.HasAdmitted == 'Yes')) ? ' highlight ' : '') }"
+                                    required="{! and((v.type == 'Inpatient'), (v.SRNData.RequiredInfo.HasAdmitted == 'Yes'))  }" type="text" aura:id="medicalrecord"
+                                    label="Medical Record" name="MedicalRecord" autocomplete="off"
+                                    value="{! v.SRNData.CommContact.MedicalRecord }" onchange="{!c.bindValues }" maxlength="25" />
+                            </span>
+                        </div>
+                    </div>
+                </lightning:layoutItem>
+            </lightning:layout>
+        </lightning:layoutItem>
+    </lightning:layout>
+
+</aura:component>

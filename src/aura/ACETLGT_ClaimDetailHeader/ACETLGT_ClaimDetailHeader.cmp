@@ -1,0 +1,152 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,lightning:isUrlAddressable">
+    <aura:attribute name="claimID" type="string" default="" />
+    <aura:attribute name="claimType" default="" type="string" />
+    <aura:attribute name="cirrClaimID" default="" type="string" />
+    <aura:attribute name="phi" default="" type="string" />
+    <aura:attribute name="taxID" default="" type="string" />
+    <aura:attribute name="provider" default="" type="string" />
+    <aura:attribute name="network" default="" type="string" />
+    <aura:attribute name="dosStart" default="" type="string" />
+    <aura:attribute name="dosEnd" default="" type="string" />
+    <aura:attribute name="charged" default="" type="string" />
+    <aura:attribute name="paid" default="" type="string" />
+    <aura:attribute name="deductible" default="" type="string" />
+    <aura:attribute name="patientResp" default="" type="string" />
+    <aura:attribute name="statusDate" default="" type="string" />
+    <aura:attribute name="status" default="" type="string" />
+    <aura:attribute name="eventType" default="" type="string" />
+    <aura:attribute name="primaryDX" default="" type="string" />
+    <aura:attribute name="tabSelected" default="" type="string" />
+    <aura:attribute name="detailServiceErrorMsg" default="" type="string" />
+    <aura:attribute name="paymentServiceErrorMsg" default="" type="string" />
+    <aura:attribute name="DOSErrorMessage" default="false" type="boolean" />
+    <aura:attribute name="AutodocKey" type="string" access="public" default="View Claims" />
+    <aura:attribute name="cseTopic" type="String" access="global" default="View Claims" />
+    <aura:attribute name="int" type="Interaction__c" access="global" />
+    <aura:attribute name="intId" type="String" access="global" />
+    <aura:attribute name="srk" type="String" access="global" />
+    <aura:attribute name="memId" type="String" access="global" />
+    <aura:attribute name="usInfo" type="user" access="public" />
+    <aura:attribute name="grpNum" type="String" access="public" />
+    <aura:attribute name="pageRef" type="Map" default="{}" />
+    <aura:attribute name="GUIkey" type="string" access="public"/>
+    <aura:attribute name="claimshistorytitle" type="string" access="public" />
+    <aura:attribute name="highlightPanel" type="ACETLGT_HighlightPanelInfo" access="global" />
+   <aura:attribute name="highlightPanelString" type="String" access="global" />
+    <aura:method name="childMethodForAlerts" action="{!c.fetchAlert}" access="public">
+        <aura:attribute name="param1" type="String" />
+        <aura:attribute name="param2" type="String" />
+        <aura:attribute name="param3" type="String" />
+        <aura:attribute name="param4" type="String" />
+    </aura:method>
+    <lightning:workspaceAPI aura:id="workspace" />
+    <lightning:card iconName="standard:record" variant="Narrow" title="{!'Claim ' + v.claimID}" class="slds-theme--default">
+        <aura:set attribute="actions">
+            <aura:if isTrue="{!v.claimshistorytitle == null}">
+            <div class="slds-grid slds-form-element slds-m-right_large">
+                <lightning:buttonGroup>
+                    <!--                     <c:ACETLGT_TTSModal aura:id="cComp" pagefeature="{!v.AutodocKey}" cseTopic="{!v.cseTopic}" int="{!v.int}" intId="{!v.intId}" srk="{!v.srk}" showCirrus="true" showMemAlerts="true" showSave="false" showMisdirect="false" comments="{!v.comments}" memberId="{!v.memId}" -->
+                    <!--                         groupId="{!v.grpNum}" userInfo="{!v.usInfo}" /> -->
+                   <c:ACETLGT_TTSModal aura:id="cComp" cseTopic="{!v.cseTopic}" int="{!v.int}" intId="{!v.intId}" srk="{!v.srk}" showCirrus="true" showMemAlerts="true" showSave="false" showMisdirect="false" comments="{!v.comments}" memberId="{!v.memId}" groupId="{!v.grpNum}"
+                        userInfo="{!v.usInfo}" />
+                        <c:ACETLGT_RepeatCallViewRelatedCases   highlightPanel_String="{!v.highlightPanelString}" InteractionId="{!v.intId}" SurrogateKey="{!v.srk}"  Calltopic="View Claims" interactiontype="Phone Call" ExternalIDs="{!v.claimID}"  />
+            	</lightning:buttonGroup>
+                </div>
+            </aura:if>
+        </aura:set>
+        <aura:if isTrue="{!v.claimshistorytitle == null}">
+            <c:ACETLGT_HighlightPanel highlightPanelValues="{!v.highlightPanel}" pageFeature="{!v.AutodocKey}" AutodocKey="{!v.AutodocKey + v.GUIkey}" />
+        </aura:if>
+    </lightning:card>
+    <div class="slds-box slds-p-around_none slds-theme_default slds-m-top_x-small slds-m-bottom_x-small ">
+        <aura:if isTrue="{!v.claimshistorytitle}">
+            <div class="claimsSubtilecls slds-m-left_x-small">{!v.claimshistorytitle}</div>
+        </aura:if>
+        <aura:if isTrue="{!v.status == 'In Process'}">
+            <ui:message severity="info">
+                This claim is in process. Do not communicate claim adjudication details until it is finalized.
+            </ui:message>
+        </aura:if>
+        <aura:if isTrue="{!v.claimshistorytitle}">
+            <aura:if isTrue="{!v.detailServiceErrorMsg}">
+                <ui:message title="Error" severity="error">
+                    {!v.detailServiceErrorMsg}
+                </ui:message>
+            </aura:if>
+            <aura:set attribute="else">
+                <aura:if isTrue="{!and(v.detailServiceErrorMsg.length > 0, v.tabSelected=='ClaimDetailsTab')}">
+                    <ui:message title="Error" severity="error">
+                        {!v.detailServiceErrorMsg}
+                    </ui:message>
+                </aura:if>
+                <aura:if isTrue="{!and(v.paymentServiceErrorMsg.length>0, v.tabSelected=='PaymentsTab')}">
+                    <ui:message title="Error" severity="error">
+                        {!v.paymentServiceErrorMsg}
+                    </ui:message>
+                </aura:if>
+            </aura:set>
+        </aura:if>
+        <aura:if isTrue="{!v.DOSErrorMessage}">
+            <ui:message severity="info">
+                Claim DOS is outside of the selected coverage period.
+            </ui:message>
+        </aura:if>
+        <lightning:card title="Claim Search Results" variant="Narrow">
+            <div class="slds-scrollable_x paddingTop">
+                <div class="autodocTableView" data-auto-doc="true" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-case-items="true" data-auto-doc-section-key="Claim Search Results">
+                    <table class="slds-table autodocPreselect slds-table_bordered  slds-table_cell-buffer slds-no-row-hover">
+                        <thead>
+                            <tr>
+                                <th>Claim Number</th>
+                                <th>Cirrus Claim ID</th>
+                                <th>PHI</th>
+                                <th>Tax ID</th>
+                                <th>Provider</th>
+                                <th>Network</th>
+                                <th>DOS Start</th>
+                                <th>DOS End</th>
+                                <th>Charged</th>
+                                <th>Paid</th>
+                                <th>Deductible</th>
+                                <th>Patient Resp</th>
+                                <th>Status Date</th>
+                                <th>Status</th>
+                                <th>Event Type</th>
+                                <th>Primary DX</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="slds-cell-wrap">{!v.claimID}</td>
+                                <td class="slds-cell-wrap">{!v.cirrClaimID}</td>
+                                <td class="slds-cell-wrap">{!v.phi}</td>
+                                <aura:if isTrue="{!v.claimshistorytitle}">
+                                    <td class="slds-cell-wrap">{!v.taxID}</td>
+                                    <td class="slds-cell-wrap">{!v.provider}</td>
+                                    <aura:set attribute="else">
+                                        <td class="slds-cell-wrap"><a href="javascript:void(0);" onclick="{!c.launchProviderLookup}">{!v.taxID}</a></td>
+                                        <td class="slds-cell-wrap">{!v.provider}</td>
+                                    </aura:set>
+                                </aura:if>
+                                <td class="slds-cell-wrap">{!v.network}</td>
+                                <td class="slds-cell-wrap">{!v.dosStart}</td>
+                                <td class="slds-cell-wrap">{!v.dosEnd}</td>
+                                <td class="slds-cell-wrap">{!v.charged}</td>
+                                <td class="slds-cell-wrap">{!v.paid}</td>
+                                <td class="slds-cell-wrap">{!v.deductible}</td>
+                                <td class="slds-cell-wrap">{!v.patientResp}</td>
+                                <td class="slds-cell-wrap">{!v.statusDate}</td>
+                                <td class="slds-cell-wrap">{!v.status}</td>
+                                <td class="slds-cell-wrap">{!v.eventType}</td>
+                                <td class="slds-cell-wrap encoder-pro-code">{!v.primaryDX}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <aura:if isTrue="{!v.claimshistorytitle == null}">
+
+            </aura:if>
+        </lightning:card>
+    </div>
+</aura:component>

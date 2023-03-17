@@ -1,0 +1,130 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction" 
+                access="global" 
+                controller="ACET_BenefitDetailsController">
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}" />
+    <aura:attribute name="asOfDate" type="Date" />
+    <aura:attribute name="SearchKeyWord" type="string"/>
+    <aura:attribute name="Message" type="string"/>
+    <aura:attribute name="disabled" type="Boolean" default="false"/>
+    
+    <aura:attribute name="isShowBenefitAccordian" type="Boolean" default="false" />
+    <!-- Attributes from Parent Component -->
+    <aura:attribute name="policyDetails" type="SAEPolicyDetailsResult" />
+	<aura:handler name="change" value="{!v.policyDetails}" action="{!c.policyDetailsChanged}" />
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0" />
+    <aura:attribute name="memberCardData" type="Object" />
+    <aura:attribute name="financialsData" type="SAEMemberProviderSearchCoveragesResult.FinancialsWrapper" access="public"/>
+    <aura:attribute name="memberTabId" type="string" access="public" />
+    <aura:attribute name="caseWrapper" type="SAETTSCaseWrapper" default="[]" />
+    <aura:attribute name="AutodocPageFeature" type="String"/>
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+    <aura:attribute name="AutodocKeyMemberDtl" type="String"/> 
+    <aura:attribute name="AutodocPageFeatureMemberDtl" type="String" />
+    <aura:attribute name="componentId" type="String"/>
+    <aura:attribute name="caseNotSavedTopics" type="String[]"/>
+    <aura:attribute name="autodocUniqueId" type="String" default="auto" />
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default="auto" />
+    <aura:attribute name="memberautodocUniqueId" type="String" default="auto" />
+    <aura:attribute name="autoDocToBeDeleted" type="Object"/>
+    <aura:attribute name="memberId" type="String" access="public" />
+    <aura:attribute name="interactionOverviewTabId" type="String" />
+    
+    <aura:attribute name="lstSelectedRecords" type="sObject[]" default="[]" description="Use,for store SELECTED sObject Records"/>
+    <aura:attribute name="listOfSearchRecords" type="List" description="Use,for store the list of search records which returns from apex class"/>
+    <aura:attribute name="lstSelectedRecordsToAccordian" type="sObject[]" default="[]" description="Use,for store SELECTED sObject Records"/>
+    
+    <aura:attribute name="icon" type="string" default="utility:chevrondown" />
+    
+    <aura:attribute name="transactionId" type="String"/>
+    <aura:attribute name="benefitRecords" type="Object[]"/>
+    <aura:attribute name="benefitRecordsFiltered" type="Object[]"/>
+    <aura:attribute name="benefitRecordsSelected" type="Object[]"/>
+    <aura:attribute name="benefitRecordsAccordian" type="Object[]"/>
+    <aura:handler name="oSelectedRecordEvent" event="c:ACET_BenefitComponentSelectedRecordEvent" action="{!c.handleComponentEvent}"/>
+	<aura:attribute name="componentOrder" type="Integer" default="4" />
+    <aura:attribute name="nonTherapyData" type="Object" />
+    <!-- US3248728: Plan Benefits: Benefit Accumulations UI -->
+    <aura:attribute name="toggleName" type="String" default="slds-show" />
+    
+    <!-- US3253559 - Sanka -->
+    <aura:attribute name="accuData" type="Object" default="[]"/>
+    <!-- DE422393: Krish -->
+    <aura:attribute name="dependentCode" type="String" />
+
+    <!-- DE448573: Non-Therapy Accumulation issue Mapping enhancement from Extended Coverage to Eligbility Service - Krish - 26th May 2021-->
+    <aura:handler name="change" value="{!v.policySelectedIndex}" action="{!c.selectedPolicyChanged}" />
+    <div class="slds-grid slds-wrap slds-grid_align-spread slds-grid_vertical-align-center">
+        <div class="slds-size_1-of-6">
+            <span class="component_title">Benefit Accumulations</span>
+        </div>
+        <div class="slds-size_5-of-6">
+            <div class="slds-grid slds-grid_align-end slds-grid_vertical-align-center">
+                <div>
+                    <div class="slds-grid slds-grid_vertical slds-text-align_center">
+                        <div class="slds-col">
+                            <span><p class="slds-m-right_small">As Of</p></span>
+                        </div>
+                        <div class="slds-col">
+                            <span><p class="slds-m-right_small">(mm/dd/yyyy)</p></span>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <lightning:input type="date" name="input1" variant="label-hidden" class="slds-m-right_medium asOfDateWidth" value="{! v.asOfDate }" dateStyle="short"/>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- US3248728: Plan Benefits: Benefit Accumulations UI -->
+    <div class="slds-section slds-is-close card_element_top_margin" aura:id="therapyAI" style="width: 100%">
+        <div>
+            <button aria-controls="activeAffs" class="slds-button slds-section__title-action">
+                <span onclick="{!c.chevToggle}">
+                    <lightning:icon class="slds-show slds-button__icon_left" aura:id="chevInactive" iconName="{!v.icon}"
+                                    size="x-small" alternativeText="Chevron Icon When Inactive" />
+                </span>
+                <span class="slds-truncate">
+                    Therapy
+                </span>
+            </button>
+        </div>
+    </div>
+    <div class="{!v.toggleName}">
+    <aura:If isTrue="{! v.isShowBenefitAccordian }">
+            <div class="subCategory slds-size_2-of-2 card_top_padding">
+                <aura:iteration items="{!v.accuData}" var="sr">
+                <c:ACET_BenefitAccumulationAccordian policyDetails="{!v.policyDetails}"
+                                                     policySelectedIndex="{!v.policySelectedIndex}" memberCardData="{!v.memberCardData}"
+                        titleLabel="{!sr.tableData.autodocHeaderName}"
+                        serviceTypeDescription_API="{!sr.serviceName}" AutodocKey="{!v.AutodocKey}"
+                                                     AutodocPageFeature="{!v.AutodocPageFeature}" AutodocKeyMemberDtl="{!v.AutodocKeyMemberDtl}"
+                                                     AutodocPageFeatureMemberDtl="{!v.AutodocPageFeatureMemberDtl}" 
+                        autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueId + v.policySelectedIndex}"
+                        componentOrder="{!v.componentOrder}" memberautodocUniqueId="{!v.memberautodocUniqueId}"
+                        isCombAcc="{!sr.combinedAcc}" objectData="{!sr}"/> 
+                        <!-- Change - autodoc duplicating -->
+                        <!-- US3308234 - Thanish - 1st Mar 2021, US3253559 - Sanka -->
+            </aura:iteration>
+        </div>
+    </aura:If>    
+    </div>
+    <div class="slds-section slds-is-close" aura:id="nonTherapy" style="width: 100%;">
+        <div>
+            <button aria-controls="activeAffs" class="slds-button slds-section__title-action">
+                <span data-auraId="nonTherapy" onclick="{!c.toggleSection}">
+                    <lightning:icon iconName="utility:switch" size="x-small"
+                                    class="slds-section__title-action-icon slds-button__icon_left" alternativeText="button icon" />
+                </span>
+                <span class="slds-truncate" title="Non-Therapy">
+                    <div>Non-Therapy</div>
+                </span>
+            </button>
+        </div>
+        <lightning:layout class="slds-section__content slds-is-relative">
+            <lightning:spinner class="slds-hide" variant="brand" size="small" aura:id="nonTherapySpinnerAI"/>
+            <c:ACET_AutoDocDataTable enablePagination="false" tableDetails="{!v.nonTherapyData}"
+                                     autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}" enableSearch="false"
+                                     enableSort="false" />
+        </lightning:layout>
+    </div>
+</aura:component>

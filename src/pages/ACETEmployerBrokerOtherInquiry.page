@@ -1,0 +1,115 @@
+<apex:page controller="ACETEmployerBrokerOtherInquiryController" sidebar="false">
+<script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+    <apex:includeScript value="{!$Resource.JQuery}" />
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    
+    <apex:form >
+        <apex:outputPanel id="hlPanel" layout="none">
+                <apex:inputHidden id="highlightPanelInfo" />
+                <c:ACETInteractionHighlightsPanel InteractionAtt="{!Interaction}" AdditionalInfoAtt="{!AdditionalInfo}" html-auto-doc="auto"/>
+        </apex:outputPanel>
+        <apex:sectionHeader title="Group Other Inquiry" id="sectionHeader" rendered="{!IF(calltopic == 'Group Other Inquiry', true,false) }" />
+        <apex:sectionHeader title="Producer Other Inquiry" id="ProdsectionHeader" rendered="{!IF(calltopic != 'Group Other Inquiry', true,false) }" />
+        <apex:pageMessages />
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveButton="true" attrShowMisdirectButton="true" 
+            attrSourceOriginator="{!wrapper.SourceOriginator}" attrInteractionId="{!wrapper.Interaction.Id}" attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="{!calltopic}"/>
+        
+        <apex:pageBlock id="mainBlock">  
+            <apex:pageBlockSection columns="1" html-auto-doc="auto" html-auto-doc-case-item="true">
+                 <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Resolved"></apex:outputLabel>
+                    <apex:outputPanel styleClass="autodoc-case-item-resolved">
+                        <input type="checkbox" checked="checked"></input>
+                    </apex:outputPanel>                                  
+                 </apex:pageBlockSectionItem>   
+            </apex:pageBlockSection>    
+            <c:ACETDynamicCallTypesDisplay attrCaseDataWrapper="{!wrapper}" 
+                    attrCallTopic="{!wrapper.caseobj.Topic__c}" attrShowPickListcallTypes="true" attrShowPickListLabel="Inquiry Type"/>
+            <apex:pageblockSection columns="1" html-auto-doc="auto">
+                <apex:pageBlockSectionItem html-auto-doc-item="false">
+                    <apex:outputLabel value="Comments"></apex:outputLabel>
+                    <apex:inputTextArea id="comments" cols="100" rows="5"
+                        value="{!wrapper.Comments}" />
+                </apex:pageBlockSectionItem>
+            </apex:pageblockSection>
+        </apex:pageBlock>
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveButton="true" attrShowMisdirectButton="true" 
+            attrSourceOriginator="{!wrapper.SourceOriginator}" attrInteractionId="{!wrapper.Interaction.Id}" attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="{!calltopic}" attrLocation="bottom"/>
+    </apex:form>
+    <style>
+    table[role="presentation"] {
+        background: #FFF;
+    }
+    
+    .detailList fieldset {
+        padding-left: 0;
+    }
+    
+    .detailList>tbody>tr:first-child td:last-child {
+        padding-left: 11px;
+    }
+    </style>
+    <script>
+      $(document).ready(function() { 
+          acet.autodoc.startAutodoc();           
+          addRequiredInputLine($("[id$='topic']"));
+          addRequiredInputLine($("[id$='comments']"));
+      });
+      
+      $("table[id*='callType'] input[type='checkbox']").on("change", function(){
+          if($(this).val() === "Other"){
+              if($(this).is(":checked")){
+                  addRequiredInputLine($("[id$='comments']"));
+              }
+          }
+         
+      });
+      
+      
+      var addRequiredInputLine = function(elem){
+          if(!$(elem).parent().hasClass(".requiredInput")){
+              $(elem).wrap('<div class="requiredInput" "></div>').parent().prepend('<div class="requiredBlock"></div>');
+          }
+      };
+      
+      var checkIfOtherIsSelected = function(allChecks){                     
+          var otherFound = false;
+          for(var i=0, iLen = allChecks.length; i < iLen; i++){    
+              if($(allChecks[i]).val() === "Other"){
+                  otherFound = true;
+                  break;
+              }
+          }
+          return otherFound;
+      };
+      
+      function validate(btnId){
+      var isOtherSelected = checkIfOtherIsSelected($("table[id*='callTypeSec\\:callType'] input[type='checkbox']:checked"));
+      
+      var checkedAccountTypes = $("[id*='callType:']:checked").map(function() {
+                                                          return this.value;
+                                                      }).get();
+                                                            
+              $(".errorMsg").remove();
+                       var errorMsg = "You must enter a value."; 
+                       var returnFlag  = true;
+                       
+                  if($("[id$='topic']").val() == '' || $("[id$='topic']").val()== null ){
+                      $("[id$='topic']").parent().append('<div class = "errorMsg" ><strong>Error:</strong> ' + errorMsg + '</div>');  
+                      returnFlag  = false;
+                  }
+            $("[id$='comments']").val($("[id$='comments']").val().trim());
+             if(($.trim($("[id$='comments']").val()) == '' || $("[id$='comments']").val().length < 1)
+             && $("[id$='topic']").val()!="Medical Loss Ratio")
+             {
+                  $("[id$='comments']").parent().append('<div class = "errorMsg" ><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                  returnFlag  = false;
+              }
+               if(returnFlag){                
+                  acet.autodoc.saveAutodoc();                        
+              } 
+              return returnFlag  ;
+          }
+   </script>
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+</apex:page>

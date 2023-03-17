@@ -1,0 +1,643 @@
+<apex:page showHeader="false" controller="ACETSearchEmployerGroupController" standardStylesheets="false" sidebar="false" title="Group Search" id="thePage" applyHtmlTag="false" applyBodyTag="false" docType="html-5.0">
+ <script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+
+<html xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" lang="en">
+<head>
+
+<!--apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>-->
+   
+       <apex:includeScript value="{!URLFOR($Resource.ACETUIResources, '/JS/jquery.min.js')}"/> 
+       <apex:includeScript value="{!URLFOR($Resource.ACETUIResources, '/JS/moment.js')}"/>
+       <apex:includeScript value="{!URLFOR($Resource.ACETUIResources, '/JS/jquery-ui.js')}"/>
+  <!-- <Script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></Script>
+    <Script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.js"></Script>
+    <Script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.js"></Script> -->
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.css"/>
+    <apex:includeScript value="/support/console/38.0/integration.js" />
+    <apex:includeScript value="https://js-cdn.dynatrace.com/jstag/145e12d594f/xob29014/1077eb28288ea333_bs.js"/>
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}"/>
+
+
+<Script>
+        $(function() {
+      var b = $("#adsearch");
+      var w = $("#wrapper");
+      var l = $("#list");
+      
+      w.height(l.outerHeight(true));
+      w.removeClass('open');
+      w.height(0);
+      b.click(function() {
+      
+        if(w.hasClass('open')) {
+          w.removeClass('open');
+          $("#adsearch").html("Show Advanced Search");
+          w.height(0);
+        } else {
+          w.addClass('open');
+         // w.height(l.outerHeight(true));
+         w.height("15pc");
+         $("#adsearch").html("Hide Advanced Search");
+        }
+      
+      });
+    });
+         
+</Script>
+<style>
+    
+    html, body {
+        margin: 0;
+        height: 100%;
+    }
+            
+    .header {
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.07);
+      z-index: 1;
+    }
+    .stage-left {
+      width: 4rem;
+      transition: width 0.2s ease-in-out 0.05s;
+    }
+    @media (min-width: 1024px) {
+      .stage-left.open {
+        width: 15rem;
+        transition: width 0.1s ease-in-out;
+      }
+      .stage-left.open .stage-left__text {
+        opacity: 1;
+        width: auto;
+        transition-delay: 0.2s;
+      }
+    }
+    .stage-left li + li {
+      margin-top: 0.02rem;
+    }
+    .stage-left a:not(.button) {
+      display: block;
+      text-decoration: none;
+      white-space: nowrap;
+      border-radius: 0.25rem;
+      background: transparent;
+      padding: 0.25rem;
+      transition: background 0.05s linear;
+    }
+    
+    
+    .stage-left .stage-left__text {
+      opacity: 0;
+      width: 0;
+      transition: all 0.05s linear;
+    }
+    .stage-left .slds-icon {
+      max-width: initial;
+    }
+    .stage-container {
+      max-height: 100%;
+      overflow: hidden;
+    }
+    .slds-grid--frame {
+      min-width: 767px;
+      overflow-y: auto;
+    }
+        
+    li{
+        margin: 10px 0;
+    }
+        
+    #wrapper {
+      background: #f7f9fb;
+      overflow: hidden;
+      transition: height 200ms;
+    }
+    
+    .pbError {
+        font-weight: bold;
+        color: #c00 !important;
+        text-align: center;
+    }
+    
+    .errorMsg {
+        color: #c00 !important;
+        
+    }
+    
+    .error
+    {
+        border-color: #c00 !important;
+        box-shadow: 0px 0px 3px #c00;
+    }
+    
+    .slds-scope .slds-size--1-of-2, .slds-scope .slds-size_1-of-2
+    {
+        width: 15rem;
+    }
+    
+    table.no-footer.dataTable
+    {
+        margin-left: 1px !important;
+    }
+    #datatable_wrapper
+    {    
+        max-width: 136%;
+        overflow: auto;
+    }
+    #datatable
+    {
+        width: 99.9% !important;
+    }
+    .slds-scope .slds-box
+    {
+        padding: 0.5rem;
+    }
+    
+    .slds-scope input[type=search]::-webkit-search-cancel-button,
+    .slds-scope input[type=search]::-webkit-search-decoration {
+    -webkit-appearance: searchfield !important;
+    }
+    
+</style>
+</head>
+<apex:form id="myform">
+  <div class="slds-scope">
+     
+    <apex:actionFunction name="subValAction" id="subValAction" action="{!search}" rerender="pbSearchResult" />
+                             
+    <apex:slds />
+    <div class="slds-grid slds-grid--frame slds-grid--vertical">
+       <!-- Stage Container -->
+       <div class="stage-container slds-grid slds-nowrap slds-size--1-of-1">
+    
+        <!-- Stage Left - Navigation -->
+        <nav class="stage-left slds-size--1-of-2 slds-shrink-none slds-scrollable--y slds-page-header slds-p-around--small open" style="display:block;height:92vh;overflow:scroll;">
+           <ul role="navigation" class="slds-has-block-links" >
+                <li >
+                    <div class="slds-form-element__row">  
+                    <div class="slds-col slds-has-flexi-truncate">
+                             <h1 class="slds-page-header__title slds-m-right--small slds-align-middle slds-truncate" >Find a Group</h1>
+                    </div>
+                    </div>
+               </li>
+           <li>     
+               <div id="pbSearch"></div>
+           </li>     
+           <li>     
+               <div class="slds-form-element__row">  
+                     <div class="slds-form-element">  
+                       <apex:outputLabel styleClass="slds-form-element__label">Interaction Type</apex:outputLabel>
+                       <apex:selectList id="sourceOriginator" value="{!SourceOriginator}"  styleClass="slds-form-element__control slds-select slds-select_container" size="1">  
+                            <apex:selectOptions value="{!SourceOriginators}"></apex:selectOptions>  
+                       </apex:selectList>  
+                     </div> 
+               </div>
+           </li>
+           <li>     
+               <div class="slds-form-element__row">  
+                     <div class="slds-form-element">  
+                        <apex:outputLabel value="Group Number"></apex:outputLabel>
+                         <apex:input type="search" styleClass="slds-input" id="groupId" html-autocomplete="off" value="{!GroupId}" />
+                     </div> 
+               </div>
+           </li>
+           <li>
+                <a href="#" id="adsearch">Show Advanced Search</a>  
+                <div id="wrapper" class="open" style="" >
+                  <ul id="list" style="margin-bottom:0;">
+                    <li>
+                      
+                      <div class="slds-form-element">  
+                        <apex:outputLabel value="Group Tax ID"></apex:outputLabel>
+                         <apex:input type="search" styleClass="slds-input" id="groupTaxId" html-autocomplete="off" value="{!groupTaxId}" />
+                     </div> 
+                    
+                    </li>
+                    <li>
+                        
+                     <div class="slds-form-element">  
+                        <apex:outputLabel value="Group Name"></apex:outputLabel>
+                         <apex:input type="search" styleClass="slds-input" id="groupName" html-autocomplete="off" value="{!GName}" />
+                     </div> 
+                    
+                    </li>
+                    <li>
+                       <div class="slds-form-element">
+                         <label class="slds-form-element__label" for="state">State</label>
+                           
+                           <apex:selectList id="searchstate" size="1" styleClass="slds-form-element__control slds-select slds-select_container" value="{!State}">
+                                <apex:selectOptions value="{!StateOptions}"></apex:selectOptions>
+                            </apex:selectList>
+
+                       </div>
+                    </li>
+                  </ul>
+               </div>    
+            </li>
+            <li>
+                 <div class="slds-form-element__row">  
+                     <div class="slds-form-element" > 
+                         <apex:actionFunction name="enterEvent" id="enterEvent" rerender="pbSearchResult"/>
+                         <apex:commandLink id="btnSearch" rerender="pbSearchResult"  styleClass="btn slds-button slds-button--brand slds-not-selected" style="text-decoration:white;padding:4px;height:2.5pc;width:5.5pc;background:#0070d2;float:left;" 
+                                onclick="return validate();" value="Search"/>
+                         <apex:commandButton id="btnClear" value="Clear" action="{!clear}" style="height:2.5pc;width:5.5pc; float:right;" styleClass="slds-button slds-button--brand slds-not-selected" onclick="return clearForm(); return false;"/>
+                     </div>
+                </div>
+            </li>
+           <li>
+                  <apex:outputPanel id="hlPanel"  style="display:block;margin-top:5rem">
+                      <hr style="margin:1rem"/>
+                            <apex:inputHidden id="highlightPanelInfo" value="{!hpAdditionInfoStr}" />     
+                           <c:ACETInteractionHighlightsPanel_LDS InteractionAtt="{!Interaction}" AdditionalInfoAtt="{!AdditionalInfo}" rendered="{!NOT(IsGroup)}"></c:ACETInteractionHighlightsPanel_LDS>
+                      </apex:outputPanel>
+         </li>
+          </ul>
+        </nav>
+        
+        <!-- Stage -->
+        <section class="stage slds-grid slds-grid--vertical slds-nowrap " style="overflow:hidden;height:87vh;">
+          
+          <div class="slds-box slds-theme--inverse">
+            <div class="">Results</div>
+          </div>
+          
+          <!-- Stage Main -->
+             <div class="stage-main slds-grid slds-wrap slds-grow slds-scrollable--y " id="stagemain" style="display:block;height:80vh;width:100%;" role="main">
+                <apex:outputPanel id="pbSearchResult" title="Group Search Results">
+                    <c:ACETDataTable attrDatatableWrapper="{!DTWrapper}"/>
+                 
+                     <apex:outputPanel id="buttons"> 
+                          <div class="slds-docked-form-footer " style="justify-content: flex-end;">
+                                
+                                 <input type="button" class="slds-button slds-button-small slds-button--neutral"  onclick="return GroupNotFound();" 
+                        value="Group Not Found" style="margin-left:1pc;display:{!IF(!NOT(ISNULL(DTWrapper)),'none','block')}" id="btnMisdirectCase" />
+                                
+                           
+                              <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrSourceOriginator="{!wrapper.SourceOriginator}" attrInteractionId="{!wrapper.Interaction.Id}" attrSubjectId="{!wrapper.Subject.Id}" attrShowMisdirectButtonLds="true" /> <!--displayReleatedCasesButton="false"-->
+                           </div>
+                      </apex:outputPanel>
+                  </apex:outputPanel>
+              </div>  
+        <script type="text/javascript">
+        
+        $(document).ready(function() {  
+            localStorage.removeItem("flashConsoleTab");
+            onloadSetTabTitle();
+            init();  
+            
+            $(document).keypress(
+                function(event){
+                    if (event.which == '13') {
+                        event.preventDefault();
+                        $("[id$='btnSearch']").trigger('click');
+                        
+                    }
+                });
+
+            var noAutoSearch = '{!JSENCODE($CurrentPage.parameters.noAutoSearch)}';
+            if(noAutoSearch != 'true' && '{!JSENCODE($CurrentPage.parameters.vccdParams)}' != '')
+                {
+                    if(noAutoSearch != 'true'){
+                       var vccdParams =  JSON.parse('{!$CurrentPage.parameters.vccdParams}');
+                       $("[id$='groupId']").val(vccdParams.groupId);
+                       if(vccdParams.groupId != '')
+                           $("[id$='groupId']").val(vccdParams.groupId);               
+                       $("[id$='btnSearch']").click();
+                    }
+                 }
+            //auto search from allifiations section
+            var groupnumber = '{!JSENCODE($CurrentPage.parameters.groupnumber)}';
+            if(groupnumber != ''&& groupnumber != null){
+              $("[id$='groupId']").val(groupnumber);
+             $("[id$='btnSearch']").click();		
+            }
+            if('{!Results.size}' == 1 && noAutoSearch == 'true'){
+              $("[id$='groupLink']").click();
+            }
+
+            
+        });
+
+
+            
+        var subjectTabArray = new Array();
+            function init() { 
+                        console.log('ready');
+                //To Allow only digits for Group Tax ID 
+                
+                    $("[id$='groupTaxId']").keypress(function (InputElement) {
+                    
+                        //Allow delete, tab, enter and escape keys through
+                        if (/^(8|9|13|27)$/.test("" + InputElement.keyCode))
+                        {
+                            return true;
+                        }
+                
+                        var regex = new RegExp("^[0-9]+$");
+                        var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+                        if (regex.test(str))
+                        {
+                            return true;
+                        }
+                
+                        InputElement.preventDefault();
+                        return false;
+                        });
+                //To Allow only digits for Group Number 
+                
+                    $("[id$='groupId']").keypress(function (InputElement) {
+                    
+                        //Allow delete, tab, enter and escape keys through
+                        if (/^(8|9|13|27)$/.test("" + InputElement.keyCode))
+                        {
+                            return true;
+                        }
+                
+                        var regex = new RegExp("^[0-9]+$");
+                        var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+                        if (regex.test(str))
+                        {
+                            return true;
+                        }
+                
+                        InputElement.preventDefault();
+                        return false;
+                        });
+        } 
+        
+        var pushSubjectToArray = function pushSubjectToArray(result) {
+            if (result.success == true) {
+                subjectTabArray.push(result.id);
+                subjectTabArrayStr = JSON.stringify(subjectTabArray);
+                localStorage.setItem('subjectTabArray', subjectTabArrayStr);
+            }
+        };
+         
+        function openSuccess(){}
+        
+        function testSetTabTitle() {
+            //Set the current tabs title
+            sforce.console.setTabTitle('Group Search');
+        }
+        var pageLoad = window.onload;
+        window.onload = function() {
+            if (pageLoad) {
+                    pageLoad();
+            }
+            testSetTabTitle();
+        }
+                
+        function setPriTabStyle(result) { 
+            if (result.success) {
+                sforce.console.setTabStyle('background: ;', result.id);
+            } 
+        }
+        function onloadSetTabTitle() {
+            //Set the current tabs title
+            sforce.console.getEnclosingPrimaryTabId(setPriTabStyle);
+            sforce.console.setTabTitle('Group Search');            
+        }
+        
+        function validate(){
+        
+        var $pbSearch = $("[id$='pbSearch']");
+            var $groupId = $("[id$='groupId']");
+            var $groupTaxId = $("[id$='groupTaxId']");
+            var $groupName = $("[id$='groupName']");
+            var $statecode = $("[id$='searchstate']");
+
+            $pbSearch.find(".pbError").remove();  
+            $groupId.removeClass("error").parent().find(".errorMsg").remove();
+            $groupTaxId.removeClass("error").parent().find(".errorMsg").remove();
+            $groupName.removeClass("error").parent().find(".errorMsg").remove();
+            $statecode.removeClass("error").parent().find(".errorMsg").remove();
+             
+            var ValidationResult = true;
+            console.log('Validation');
+            
+            
+            if($groupId.val() && $groupTaxId.val()) {
+                    console.log('Validation Entered both ID and Tax ID');
+                    var errorMsg = 'Please search by either Group Number or Group Tax ID';    
+                    $("[id$='pbSearch']").prepend('<div class="pbError">Error: Invalid Data. <br/>' + errorMsg + '</div>');
+                    //$groupId.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                    ValidationResult = false;
+            }
+            
+            else if($groupId.val()) {
+                if(($groupId.val().trim().length < 7 || $groupId.val().trim().length > 19)) 
+                {   
+                    console.log('Validation Invalid Group Number');              
+                    var errorMsg = 'Enter Valid Group Number';    
+                    $groupId.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                    ValidationResult = false;
+                }     
+                     
+            }
+            else if($groupTaxId.val()) {
+                if(($groupTaxId.val().trim().length != 9)) 
+                {
+                    console.log('Validation Invalid Group Tax ID');  
+                    var errorMsg = 'Enter Valid Group Tax ID';    
+                    $groupTaxId.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                    ValidationResult = false;
+                }     
+                     
+            }
+            else 
+            {
+                if(!$groupId.val() && !$groupTaxId.val() && !$groupName.val() && !$statecode.val()) 
+                {
+                        var errorMsg = 'Group Number or Group Tax ID or Group Name Search is Required';    
+                        $("[id$='pbSearch']").prepend('<div class="pbError">Error: Invalid Data. <br/>' + errorMsg + '</div>');
+                        ValidationResult = false;
+                              
+                }
+                else if(!$statecode.val() && $groupName.val() && $groupName.val().indexOf('*') > -1 && $groupName.val().length < 4) 
+                {   
+                    var errmsg1 = 'Name search requires Group Name and State.';
+                    var errorMsg = 'You must enter at least 3 characters with a wildcard search.';    
+                    $statecode.addClass("error"); 
+                    $groupName.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>');
+                    $("[id$='pbSearch']").prepend('<div class="pbError">Error: Invalid Data. <br/>' + errmsg1 + '</div>'); 
+                    ValidationResult = false;
+                } 
+                else if($groupName.val() && $groupName.val().indexOf('*') > -1 && $groupName.val().length < 4) 
+                {   
+                    var errmsg1 = 'Name search requires Group Name and State.';
+                    var errorMsg = 'You must enter at least 3 characters with a wildcard search.';    
+                   // $statecode.addClass("error"); 
+                    $groupName.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>');
+                    $("[id$='pbSearch']").prepend('<div class="pbError">Error: Invalid Data. <br/>' + errmsg1 + '</div>'); 
+                    ValidationResult = false;
+                }    
+                else if(!$statecode.val() && $groupName.val().length > 1 && !$groupId.val() && !$groupTaxId.val()) 
+                {   
+                    var errorMsg = 'Name Search requires Group Name and State';    
+                    $statecode.addClass("error"); 
+                    $("[id$='pbSearch']").prepend('<div class="pbError">Error: Invalid Data. <br/>' + errorMsg + '</div>'); 
+                    ValidationResult = false;
+                }                   
+                else if($groupName.val().length == 1 && !$groupId.val() && !$groupTaxId.val() )
+                {
+                    if(!$statecode.val())
+                    {
+                        var errorMsg1 = 'You must enter at least 2 characters';    
+                        var errorMsg2 = 'Name Search requires Group Name and State';    
+                        
+                        $statecode.addClass("error"); 
+                        $groupName.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg1 + '</div>'); 
+                        $("[id$='pbSearch']").prepend('<div class="pbError">Error: Invalid Data. <br/>' + errorMsg2 + '</div>'); 
+                        ValidationResult = false;
+                    }
+                    else 
+                    {
+                        var errorMsg1 = 'You must enter at least 2 characters';    
+                        
+                        $groupName.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg1 + '</div>'); 
+                        ValidationResult = false;
+    
+                    }      
+                }
+                else if(!$groupName.val() && !$groupId.val() && !$groupTaxId.val() && $statecode.val())
+                {
+                        var errorMsg = 'Name Search requires Group Name and State';    
+                        $groupName.addClass("error")
+                        $("[id$='pbSearch']").prepend('<div class="pbError">Error: Invalid Data. <br/>' + errorMsg + '</div>'); 
+                        ValidationResult = false;
+                         
+                }
+                
+            }
+            if(ValidationResult){
+               subValAction();
+               
+           }
+           return ValidationResult;
+            
+        }
+        
+        function clearForm(){
+            $("[id$='btnClear']").closest('form').find("input[type=text], select, input[type=hidden]").val(""); 
+            return true;    
+        }
+        var recLength ;
+       function initDatatableComplete(){
+
+           var vccdsearch =  '{!JSENCODE($CurrentPage.parameters.vccdsearch)}'; //US3666255 : Checkmarx fix
+            var noAutoSearch2 = '{!JSENCODE($CurrentPage.parameters.noAutoSearch)}';
+            if(recLength > 0 && noAutoSearch2 == 'true'){ 
+               $("[id$='lastNameLinkid']").click();
+            }
+            
+            setTimeout(function(){
+            var groupnumber = '{!JSENCODE($CurrentPage.parameters.groupnumber)}';
+            if(groupnumber != '' && groupnumber != null){  
+              $("[id$='groupLink']").click();
+            }
+	     if(recLength == '1' && vccdsearch == 'true'){ 
+               $("[id$='groupLink']").click();
+            }
+            }, 300);            
+        }
+        function processDatatable(row, data, dataIndex){
+            $(row).children().first().html("<a id='groupLink' href='#'>" + data.groupName + "</a>");           
+            var sourceOriginator = $("[id$='sourceOriginator']").val();
+            var interactionId = "{!Interaction.Id}";
+            var groupNumber = $("[id$='groupId']").val();          
+            recLength = $(row).length ;                                                        
+            $(row).children().first().on('click', function(e){ 
+                if(!interactionId){                             
+                    Visualforce.remoting.Manager.invokeAction(
+                       '{!$RemoteAction.ACETSearchEmployerGroupController.createInteraction}',
+                       sourceOriginator,
+                       interactionId,
+                       groupNumber,                   
+                       function(result, event){
+                          navigateToDetail(result,data);                                 
+                       }, 
+                       {escape: true}
+                   );
+               }else{
+                    navigateToDetail(interactionId,data); 
+               }
+               return false;
+            }); 
+                     
+        }
+               
+        function navigateToDetail(interactionId, memberResult){                     
+              var OriginatorType = '{!JSENCODE(Interaction.Originator_Type__c)}';              
+              var vccdParams =  '{!$CurrentPage.parameters.vccdParams}';//Added by Swetha   
+              console.log(memberResult);
+              console.log(memberResult.groupName);
+              console.log('check');
+              var decodeVal = decodeEntities(memberResult.groupName); 
+              var tabName = 'Detail - '+decodeVal;
+              var hightlightPanelInfo = $("[id$='highlightPanelInfo']").val(); 
+              var subject = memberResult.subjectid;
+              var url = '/apex/ACETViewEmployerGroup?groupName=' + encodeURIComponent(memberResult.groupName) + '&taxId=' + memberResult.taxid + '&Id=' + memberResult.groupId + '&sourceOriginator=' + $("[id$='sourceOriginator']").val() + '&InteractionId=' + interactionId +'&additionalInfo='+hightlightPanelInfo + '&tabName=' + tabName;                                        
+              var tabIdUsngClntId= memberResult.groupId;
+               if(vccdParams != null || vccdParams != undefined){
+                   url = url + '&vccdParams=' + vccdParams;
+               }
+               if(OriginatorType == 'Producer' || OriginatorType == 'Other' ) {
+                   sforce.console.getFocusedPrimaryTabId(function(result) {
+                       sforce.console.openSubtab(result.id, url, true, tabName,null,pushSubjectToArray);
+                   });
+               }
+               else{
+                    sforce.console.openPrimaryTab('', url, true, tabName, openSuccess, tabIdUsngClntId);                   
+               }
+               return false;                                             
+        } 
+        //To convert the HTML numbers into Symbols    
+        function decodeEntities(encodedString) {
+                    var textArea = document.createElement('textarea');
+                    textArea.innerHTML = encodedString;
+                    return textArea.value;
+              }
+              
+        function GroupNotFound()
+        {
+            var OriginatorType = '{!JSENCODE(Interaction.Originator_Type__c)}';
+            var interactionId = '{!JSENCODE(Interaction.id)}';
+            console.log('>>>>>int'+interactionId);
+            var InteractionType = '{!JSENCODE(SourceOriginator)}';
+            console.log('>>>>>type'+InteractionType);
+//            var GId = '{!groupId}';
+            var GName = $("[id$='groupName']").val();
+            var state = $("[id$='searchstate']").val();
+            var GId = $("[id$='groupId']").val();
+                
+
+            
+            
+            hightlightPanelInfo = $("[id$='highlightPanelInfo']").val();
+            console.log('!!!highlights'+hightlightPanelInfo); 
+            
+            var ProvTypeCode =   '{!JSENCODE($CurrentPage.parameters.ProvTypeCode)}';
+             
+            var dtNow = new Date();
+            var dtTime = dtNow.getTime();
+            var RedirectURL = '/apex/ACETGroupNotFoundForm?IT=' + InteractionType  + '&MID=' + GId  + '&ST=' + state + '&GN=' + GName + '&mnf=1'+ '&TS=' + dtTime+ '&InteractionId=' + interactionId + '&IsGroup = {!IsGroup}'+ '&ProviderId = {!JSENCODE($CurrentPage.parameters.Id)}'+ '&groupId = {!JSENCODE(groupId)}&additionalInfo='+hightlightPanelInfo + '&ProvTypeCode = ' + ProvTypeCode;
+           
+            console.log(RedirectURL); 
+             if (OriginatorType == 'Provider' || OriginatorType == 'Producer' || OriginatorType == 'Other' || OriginatorType == 'Broker' || OriginatorType == 'Group/Employer' || OriginatorType == 'General Agent' || OriginatorType == 'UHG' || OriginatorType == 'Third Party') {
+                 sforce.console.getFocusedPrimaryTabId(function(result) {
+                     sforce.console.openSubtab(result.id, RedirectURL, true, 'Enter Group Information', null, 'MNF' + dtTime);
+                 });
+             }
+             else {  
+                 sforce.console.openPrimaryTab(null, RedirectURL, true, 'Enter Group Information', openSuccess, 'MNF' + dtTime);
+             }
+            return false;     
+        }         
+        </script> 
+        </section>
+      </div> 
+   </div>
+</div>
+</apex:form>
+</html>
+
+
+</apex:page>

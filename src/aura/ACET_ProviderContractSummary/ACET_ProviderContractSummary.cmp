@@ -1,0 +1,927 @@
+<!-- US1938551 - Thanish - 19th Dec 2019 -->
+<aura:component controller="ACET_ProviderContractSummaryController"
+                implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,lightning:isUrlAddressable"
+                access="global">
+   
+    <!-- ATTRIBUTES -->
+    <aura:attribute name="contractApiParameters" type="Object" default="{ 'taxId' : '', 'providerId' : '', 'addressId' : ''}"/>
+    <aura:attribute name="filterParameters" type="Object"/> <!-- US2623985 - Thanish - 10th Jun 2020 -->
+    <aura:attribute name="isMemberFocused" type="boolean" default="false"/> <!-- US2623985 - Thanish - 10th Jun 2020 -->
+    <aura:attribute name="showSpinner" type="boolean" default="false"/>
+    <aura:attribute name="selectedTab" type="string" default="ENI"/>
+    <aura:attribute name="isCNSAll" type="boolean" default="false"/>
+    <aura:attribute name="isENIAll" type="boolean" default="false"/>
+    <aura:attribute name="isMNRAll" type="boolean" default="false"/>
+    <aura:attribute name="isPHSAll" type="boolean" default="false"/>
+    <aura:attribute name="cAndSContractData" type="Object" default="{'display' : '', 'processed' : '', 'filtered' : '', 'unfiltered' : ''}"/>
+    <aura:attribute name="eAndIContractData" type="Object" default="{'display' : '', 'processed' : '', 'filtered' : '', 'unfiltered' : ''}"/>
+    <aura:attribute name="mAndRContractData" type="Object" default="{'display' : '', 'processed' : '', 'filtered' : '', 'unfiltered' : ''}"/>
+    <aura:attribute name="cnsTableIsEmpty" type="boolean" default="true"/>
+    <aura:attribute name="eniTableIsEmpty" type="boolean" default="true"/>
+    <aura:attribute name="mnrTableIsEmpty" type="boolean" default="true"/>
+    <aura:attribute name="phsTableIsEmpty" type="boolean" default="true"/>
+    <aura:attribute name="contractDetailsList" type="List" default="[]"/>
+    <aura:attribute type="String" name="sortField" />
+    <aura:attribute type="Boolean" name="sortAsc" />
+    <aura:attribute name="sourceCode" type="String" default=""/>
+    <aura:attribute name="AutodocKey" type="string" access="public"/>
+    <aura:attribute name="autodocPageFeature" type="String"/>
+    <aura:attribute name="success_icon" type="String"/>
+    <aura:attribute name="fail_icon" type="String"/>
+    <aura:attribute name="caseItemStatus" type="string" default="auto"/>
+    <aura:attribute name="cnsAutodoc" type="List" default="[]"/>
+    <aura:attribute name="eniAutodoc" type="List" default="[]"/>
+    <aura:attribute name="mnrAutodoc" type="List" default="[]"/>
+    <!-- / ATTRIBUTES -->
+    
+    <!-- HANDLERS -->
+    <aura:handler name="change" value="{!v.sourceCode}" action="{!c.defaultTab}"/>
+    <aura:handler event="c:ACET_SendPolicyDetailsToCS" action="{!c.refreshContractSummary}"/>
+    <aura:handler name="change" value="{!v.contractApiParameters}" action="{!c.providerDetailsChanged}"/>
+    <aura:handler name="init" value="{!this}" action="{!c.onLoad}"/>
+    <aura:handler name="change" value="{!v.isCNSAll}" action="{!c.onCNSAllChange}"/>
+    <aura:handler name="change" value="{!v.isENIAll}" action="{!c.onENIAllChange}"/>
+    <aura:handler name="change" value="{!v.isMNRAll}" action="{!c.onMNRAllChange}"/>
+    <!-- / HANDLERS -->
+    
+    <!-- METHODS -->
+    <!-- US2263567 - Thanish - 29th Jan 2020 -->
+    <aura:method name="removeContractDetail" action="{!c.removeContractDetail}" description="Removes Contract Details object whose contractId is passed from 'contractDetailsList'">
+        <aura:attribute name="id" type="string"/>
+        <aura:attribute name="type" type="string"/>
+    </aura:method>
+    <!-- / METHODS -->
+
+
+    <div class="{!v.autodocPageFeature}">
+    <!-- Contract Summary -->
+    <div class="slds-card card_padding">
+        <aura:if isTrue="{!v.showSpinner}"> <lightning:spinner aura:id="spinner" variant="brand"/> </aura:if>
+
+        <div class="slds-grid slds-grid_align-spread">
+            <div class="slds-col component_title">Contract Summary</div>
+            <div class="slds-col"><lightning:input aura:id="searchBox" variant="label-hidden" placeholder="Search" onchange="{!c.onSearch}"/></div>
+        </div>
+
+        <!-- TABS -->
+        <div class="slds-tabs_default">
+            <ul class="slds-tabs_default__nav" role="tablist">
+                <li class="{!(v.selectedTab == 'CNS') ? 'slds-tabs_default__item slds-is-active' : 'slds-tabs_default__item'}" role="presentation">
+                    <a class="slds-tabs_default__link" data-tab="CNS" onclick="{!c.refreshTableData}" role="tab" id="tab-default-1__item">C&amp;S</a>
+                </li>
+                <li class="{!(v.selectedTab == 'ENI') ? 'slds-tabs_default__item slds-is-active' : 'slds-tabs_default__item'}" role="presentation">
+                    <a class="slds-tabs_default__link" data-tab="ENI" onclick="{!c.refreshTableData}" role="tab" id="tab-default-2__item">E&amp;I</a>
+                </li>
+                <li class="{!(v.selectedTab == 'MNR') ? 'slds-tabs_default__item slds-is-active' : 'slds-tabs_default__item'}" role="presentation">
+                    <a class="slds-tabs_default__link" data-tab="MNR" onclick="{!c.refreshTableData}" role="tab" id="tab-default-3__item">M&amp;R</a>
+                </li>
+                <li class="{!(v.selectedTab == 'PHS') ? 'slds-tabs_default__item slds-is-active' : 'slds-tabs_default__item'}" role="presentation">
+                    <a class="slds-tabs_default__link" data-tab="PHS" onclick="{!c.refreshTableData}" role="tab" id="tab-default-4__item">PHS</a>
+                </li>
+                <li style="float: right; width: 100%;">
+                    <div class="{!(v.selectedTab == 'CNS') ? '' : 'hide'}" style="float: right; margin-top: 10px;">
+                        <div style="float: right;">
+                            <c:ACET_ToggleButton width="55" checked="{!v.isCNSAll}" checkedText="On" uncheckedText="Off"/>
+                        </div>
+                        <div class="component_title" style="width: 30px; float: right;">
+                            All
+                        </div>
+                    </div>
+                    <div class="{!(v.selectedTab == 'ENI') ? '' : 'hide'}" style="float: right; margin-top: 10px;">
+                        <div style="float: right;">
+                            <c:ACET_ToggleButton width="55" checked="{!v.isENIAll}" checkedText="On" uncheckedText="Off"/>
+                        </div>
+                        <div class="component_title" style="width: 30px; float: right;">
+                            All
+                        </div>
+                    </div>
+                    <div class="{!(v.selectedTab == 'MNR') ? '' : 'hide'}" style="float: right; margin-top: 10px;">
+                        <div style="float: right;">
+                            <c:ACET_ToggleButton width="55" checked="{!v.isMNRAll}" checkedText="On" uncheckedText="Off"/>
+                        </div>
+                        <div class="component_title" style="width: 30px; float: right;">
+                            All
+                        </div>
+                    </div>
+                    <div class="{!(v.selectedTab == 'PHS') ? '' : 'hide'}" style="float: right; margin-top: 10px;">
+                        <div style="float: right;">
+                            <c:ACET_ToggleButton width="55" checked="{!v.isPHSAll}" checkedText="On" uncheckedText="Off"/>
+                        </div>
+                        <div class="component_title" style="width: 30px; float: right;">
+                            All
+                        </div>
+                    </div>
+                </li>
+            </ul>
+            <!-- C&S TAB -->
+            <div id="CNS" class="{!(v.selectedTab == 'CNS') ? 'slds-tabs_default__content' : 'slds-tabs_default__content hide'}" role="tabpanel">
+
+                <table class="slds-table slds-table_cell-buffer slds-table_bordered CNSTable">
+                    <thead>
+                        <tr class="slds-line-height_reset">
+                            <th style="width:45px" class="autodoc"></th>
+                            <th class="table_column_header" scope="col" style="width: 12%;cursor:pointer;" onclick="{!c.sortyByCNSContractID}">CONTRACT ID
+                                <aura:if isTrue="{!v.sortField=='contractId'}" >
+                                    <span>
+                                        <aura:if isTrue="{!v.sortAsc}">
+                                            &#8593;
+                                            <aura:set attribute="else">
+                                                &#8595;
+                                            </aura:set>
+                                        </aura:if>
+                                    </span>
+                                </aura:if>
+                            </th>
+                                <th class="table_column_header" scope="col" style="width: 7%; cursor: pointer; text-align: center;" onclick="{!c.sortyByCNSStatus}">STATUS
+                                <aura:if isTrue="{!v.sortField=='status'}">
+                                    <span>
+                                        <aura:if isTrue="{!v.sortAsc}">
+                                            &#8593;
+                                            <aura:set attribute="else">
+                                                &#8595;
+                                            </aura:set>
+                                        </aura:if>
+                                    </span>
+                                </aura:if>
+                            </th>
+                            <th class="table_column_header" scope="col" style="width: 12%;cursor:pointer;" onclick="{!c.sortyByCNSNetworkId}">NETWORK ID
+                                <aura:if isTrue="{!v.sortField=='networkId'}">
+                                    <span>
+                                        <aura:if isTrue="{!v.sortAsc}">
+                                            &#8593;
+                                            <aura:set attribute="else">
+                                                &#8595;
+                                            </aura:set>
+                                        </aura:if>
+                                    </span>
+                                </aura:if>
+                            </th>
+                            <th class="table_column_header" scope="col" style="width: 17%;cursor:pointer;" onclick="{!c.sortyByCNSNetworkPrefix}">NETWORK PREFIX
+                                <aura:if isTrue="{!v.sortField=='networkPrefix'}">
+                                    <span>
+                                        <aura:if isTrue="{!v.sortAsc}">
+                                            &#8593;
+                                            <aura:set attribute="else">
+                                                &#8595;
+                                            </aura:set>
+                                        </aura:if>
+                                    </span>
+                                </aura:if>
+                            </th>
+                            <th class="table_column_header" scope="col" style="width: 19%;cursor:pointer;" onclick="{!c.sortyByCNSEffective}">EFFECTIVE-CANCEL
+                                <aura:if isTrue="{!v.sortField=='effectiveAndCancel'}">
+                                    <span>
+                                        <aura:if isTrue="{!v.sortAsc}">
+                                            &#8593;
+                                            <aura:set attribute="else">
+                                                &#8595;
+                                            </aura:set>
+                                        </aura:if>
+                                    </span>
+                                </aura:if>
+                            </th>
+                            <th class="table_column_header" scope="col" style="width: 9%;cursor:pointer;" onclick="{!c.sortyByCNSType}">TYPE
+                                <aura:if isTrue="{!v.sortField=='contractType'}">
+                                    <span>
+                                        <aura:if isTrue="{!v.sortAsc}">
+                                            &#8593;
+                                            <aura:set attribute="else">
+                                                &#8595;
+                                            </aura:set>
+                                        </aura:if>
+                                    </span>
+                                </aura:if>
+                            </th>
+                            <th class="table_column_header" scope="col" style="cursor:pointer; width:13%;" onclick="{!c.sortyByCNSNewPatients}">
+                                <c:ACET_HoverPopup aura:id="CNSpopup" moveRight="-350" description="See below for description:" descriptionList="[ 'N - No new patients accepted', 'Y - New patients are being accepted', 'E - New patients accepted on exception basis only', 'R - Accepting new patients with restrictions (age, gender, etc).' ]" isNubbinLeft="false"/>
+                                <p data-popupId="CNSpopup" onmouseover="{!c.togglePopup}" onmouseout="{!c.togglePopup}"><span class="dashedLine">NEW PATIENTS?
+                                    <aura:if isTrue="{!v.sortField=='newPatients'}">
+                                    <span>
+                                        <aura:if isTrue="{!v.sortAsc}">
+                                            &#8593;
+                                            <aura:set attribute="else">
+                                                &#8595;
+                                            </aura:set>
+                                        </aura:if>
+                                    </span>
+                                </aura:if>
+                                    </span>
+                                </p>
+                            </th>
+                          
+                            <th class="autodoc-case-item-resolved table_column_header cnsResolve">RESOLVED</th>
+                        </tr>
+                    </thead>
+                    <tbody onscroll="{!c.cnsScrolled}">
+                        <aura:if isTrue="{!v.cnsTableIsEmpty}">
+                            <div style="text-align: center;" class="card_element_top_margin">
+                                <input type="checkbox" data-chkBxId="cnsEmptyChkBx" onclick="{!c.emptyChecked}" style="float: left; margin-left: 14px;"/>No Records Found.
+                            </div>
+                            <aura:set attribute="else">
+                                <aura:iteration items="{!v.cAndSContractData.display}" var="item" indexVar="index">
+                                    <tr class="slds-hint-parent">
+                                        <td style="width:45px" class="autodoc" data-index="{!index}" onclick="{!c.cnsCellClicked}">
+                                            <input class="autodoc" type="checkbox" checked="{!item.contractSummary.autodoc}"/>
+                                        </td>
+                                        <td class="slds-truncate" style="width: 12%;" data-index="{!index}" onclick="{!c.cnsCellClicked}">{!(item.contractSummary.contractId) ? item.contractSummary.contractId : '--'}</td>
+                                        <td class="slds-truncate" style="width: 7%; text-align: center;" data-index="{!index}" onclick="{!c.cnsCellClicked}">
+                                            <aura:if isTrue="{!item.contractSummary.status}">
+                                                <div class="slds-icon_container_circle slds-icon-action-approval slds-icon_container" style="background: #76b74e;padding: 0;">
+                                                    <img src="{!v.success_icon}" class="slds-icon slds-icon_xx-small"/>
+                                                </div>
+                                                <aura:set attribute="else">
+                                                    <div class="slds-icon_container_circle slds-icon-action-close slds-icon_container" style="background: #ef6e64;padding: 0;">
+                                                        <img src="{!v.fail_icon}" class="slds-icon slds-icon_xx-small"/>
+                                                    </div>
+                                                </aura:set>
+                                            </aura:if>
+                                        </td>
+                                        <td class="slds-truncate" style="width: 12%;" data-index="{!index}" onclick="{!c.cnsCellClicked}">{!(item.contractSummary.networkId) ? item.contractSummary.networkId : '--'}</td>
+                                        <td class="slds-truncate" style="width: 17%;" data-index="{!index}" onclick="{!c.cnsCellClicked}">{!(item.contractSummary.networkPrefix) ? item.contractSummary.networkPrefix : '--'}</td>
+                                        <td class="slds-truncate" style="width: 19%; cursor:pointer;" data-index="{!index}" onclick="{!c.cnsCellClicked}">
+                                            <a href="javascript:void(0)" class="{!(item.isLinkDisabled) ? 'disableLink' : ''}" data-index="{!index}" onclick="{!c.showCAndSContractDetails}">
+                                                {!(item.contractSummary.effectiveAndCancel) ? item.contractSummary.effectiveAndCancel : '--'}
+                                            </a>
+                                        </td>
+                                        <td class="slds-truncate" style="width: 9%;" data-index="{!index}" onclick="{!c.cnsCellClicked}">{!(item.contractSummary.contractType) ? item.contractSummary.contractType : '--'}</td>
+                                        <td class="slds-truncate" style="width: 13%;" data-index="{!index}" onclick="{!c.cnsCellClicked}">{!(item.contractSummary.newPatients) ? item.contractSummary.newPatients : '--'}</td>
+                                        
+                                        <td class="autodoc-case-item-resolved cnsResolve" data-index="{!index}" onclick="{!c.cnsCellClicked}">
+                                            <input class="autodoc-case-item-resolved" type="checkbox" onclick="{!c.resolveClicked}" checked="{!item.contractSummary.resolved}"/>
+                                        </td>
+                                    </tr>
+                                </aura:iteration>
+                            </aura:set>
+                        </aura:if>
+                    </tbody>
+                </table>
+
+                <!-- CNS AUTODOC SECTION -->
+                <div class="hide">
+                    <div class="autodocTableView" data-auto-doc="auto" data-auto-doc-feature="{!v.autodocPageFeature}" data-auto-doc-section-key="C and S Contract Summary"
+                        data-auto-doc-case-items="{!v.caseItemStatus}" autodoc-case-item-resolved="true">
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered CNSTable">
+                            <thead>
+                                <tr class="slds-line-height_reset">
+                                    <th style="width:45px" class="autodoc">
+                                        <input style="margin-left: 0px;" class="autodoc" type="checkbox"/>
+                                    </th>
+                                    <th class="table_column_header" scope="col">CONTRACT ID</th>
+                                    <th class="table_column_header" scope="col">STATUS</th>
+                                    <th class="table_column_header" scope="col">NETWORK ID</th>
+                                    <th class="table_column_header" scope="col">NETWORK PREFIX</th>
+                                    <th class="table_column_header" scope="col">EFFECTIVE-CANCEL</th>
+                                    <th class="table_column_header" scope="col">TYPE</th>
+                                    <th class="table_column_header" scope="col">NEW PATIENTS?</th>
+                                    
+                                    <th class="autodoc-case-item-resolved table_column_header">RESOLVED</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <aura:if isTrue="{!v.cnsAutodoc.length == 0}">
+                                    <!-- hide 'No Records Found.' in autodoc and show in component -->
+                                    <div style="text-align: center; display: none;" class="card_element_top_margin showImportant">
+                                        <input id="cnsEmptyChkBx" type="checkbox" style="float: left; margin-left: 14px;"/>No Records Found.
+                                    </div>
+                                    <aura:set attribute="else">
+                                        <aura:iteration items="{!v.cnsAutodoc}" var="item" indexVar="index">
+                                            <tr class="slds-hint-parent">
+                                                <td style="width:30px" class="autodoc">
+                                                    <input class="autodoc" type="checkbox" checked="{!item.contractSummary.autodoc}"/>
+                                                </td>
+                                                <td class="slds-truncate">{!(item.contractSummary.contractId) ? item.contractSummary.contractId : '--'}</td>
+                                                <td class="slds-truncate">
+                                                    <aura:if isTrue="{!item.contractSummary.status}">
+                                                        Active
+                                                        <aura:set attribute="else">
+                                                            Inactive
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </td>
+                                                <td class="slds-truncate">{!(item.contractSummary.networkId) ? item.contractSummary.networkId : '--'}</td>
+                                                <td class="slds-truncate">{!(item.contractSummary.networkPrefix) ? item.contractSummary.networkPrefix : '--'}</td>
+                                                <td class="slds-truncate">{!(item.contractSummary.effectiveAndCancel) ? item.contractSummary.effectiveAndCancel : '--'}</td>
+                                                <td class="slds-truncate">{!(item.contractSummary.contractType) ? item.contractSummary.contractType : '--'}</td>
+                                                <td class="slds-truncate">{!(item.contractSummary.newPatients) ? item.contractSummary.newPatients : '--'}</td>
+                                                
+                                                <td class="autodoc-case-item-resolved">
+                                                    <input class="autodoc-case-item-resolved" type="checkbox" checked="{!item.contractSummary.resolved}"/>
+                                                </td>
+                                            </tr>
+                                        </aura:iteration>
+                                    </aura:set>
+                                </aura:if>
+                            </tbody>
+                        </table>
+                        <aura:if isTrue="{!v.cnsAutodoc.length == 0}">
+                            <p style="text-align: center; padding-top: 20px;">No Records Found.</p>
+                        </aura:if>
+                    </div>
+                </div>
+                <!-- / CNS AUTODOC SECTION -->
+            </div>
+            <!-- / C&S TAB -->
+
+            <!-- E&I TAB -->
+            <div id="ENI" class="{!(v.selectedTab == 'ENI') ? 'slds-tabs_default__content' : 'slds-tabs_default__content hide'}" role="tabpanel">
+
+                <table class="slds-table slds-table_cell-buffer slds-table_bordered ENITable" id="EITableId">
+                <thead>
+                    <tr class="slds-line-height_reset">
+                        <th style="width:30px" class="autodoc"></th>
+                        <th class="table_column_header" scope="col" style="width: 9%;cursor:pointer;" onclick="{!c.sortByContractId}" >CONTRACT ID
+                            <aura:if isTrue="{!v.sortField=='contractId'}">
+                                <span>
+                                    <aura:if isTrue="{!v.sortAsc}">
+                                        &#8593;
+                                        <aura:set attribute="else">
+                                            &#8595;
+                                        </aura:set>
+                                    </aura:if>
+                                </span>
+                            </aura:if>
+                        </th>
+                        <th class="table_column_header" scope="col" style="width: 5%; text-align: center;">STATUS
+                        </th>
+                        <th class="table_column_header" scope="col" style=" cursor:pointer; width:5%;" onclick="{!c.sortyByEniOrg}">
+                            <c:ACET_HoverPopup aura:id="ENIORGpopup" description="See below for description:" descriptionList="[ 'HPHC = Harvard Pilgrim', 'UHN = UnitedHealthcare, CSP/GSP, NHP, River Valley, Beacon LBS, National Provider (Product code-CON), Nexus ACO, Charter/Navigate/Compass', 'UBH = United Behavioral Health', 'ACN = OptumHealth Physical Health (Formerly ACN [American Chiropractic Network] Group) American Chiropractic Network', 'MEDI = Medica' ]" isNubbinLeft="true"/>
+                            <p data-popupId="ENIORGpopup" onmouseover="{!c.togglePopup}" onmouseout="{!c.togglePopup}"><span class="dashedLine">ORG
+                                <aura:if isTrue="{!v.sortField=='org'}">
+                                    <span>
+                                        <aura:if isTrue="{!v.sortAsc}">
+                                            &#8593;
+                                            <aura:set attribute="else">
+                                                &#8595;
+                                            </aura:set>
+                                        </aura:if>
+                                    </span>
+                                </aura:if>
+                                </span>
+                            </p>
+                        </th>
+                        <th class="table_column_header" scope="col" style="width: 7%;cursor:pointer;" onclick="{!c.sortyByEniProduct}">PRODUCT
+                            <aura:if isTrue="{!v.sortField=='product'}">
+                                <span>
+                                    <aura:if isTrue="{!v.sortAsc}">
+                                        &#8593;
+                                        <aura:set attribute="else">
+                                            &#8595;
+                                        </aura:set>
+                                    </aura:if>
+                                </span>
+                            </aura:if>
+                        </th>
+                        <th class="table_column_header" scope="col" style="width:10%;cursor:pointer;" onclick="{!c.sortyByEniMarketType}">MARKET TYPE
+                            <aura:if isTrue="{!v.sortField=='marketType'}">
+                                <span>
+                                    <aura:if isTrue="{!v.sortAsc}">
+                                        &#8593;
+                                        <aura:set attribute="else">
+                                            &#8595;
+                                        </aura:set>
+                                    </aura:if>
+                                </span>
+                            </aura:if></th>
+                        <th class="table_column_header" scope="col" style="width: 8%;cursor:pointer;" onclick="{!c.sortyByEniMarketNo}">MARKET #
+                            <aura:if isTrue="{!v.sortField=='marketNumber'}">
+                                <span>
+                                    <aura:if isTrue="{!v.sortAsc}">
+                                        &#8593;
+                                        <aura:set attribute="else">
+                                            &#8595;
+                                        </aura:set>
+                                    </aura:if>
+                                </span>
+                            </aura:if>
+                        </th>
+                        <th class="table_column_header" scope="col" style="width: 18%;cursor:pointer;" onclick="{!c.sortyByEniIPA}">IPA
+                            <aura:if isTrue="{!v.sortField=='ipa'}">
+                                <span>
+                                    <aura:if isTrue="{!v.sortAsc}">
+                                        &#8593;
+                                        <aura:set attribute="else">
+                                            &#8595;
+                                        </aura:set>
+                                    </aura:if>
+                                </span>
+                            </aura:if>
+                        </th>
+                        <th class="table_column_header" scope="col" style="width: 13%;cursor:pointer;" onclick="{!c.sortyByEniEffective}">EFFECTIVE-CANCEL
+                            <aura:if isTrue="{!v.sortField=='effectiveAndCancel'}">
+                                <span>
+                                    <aura:if isTrue="{!v.sortAsc}">
+                                        &#8593;
+                                        <aura:set attribute="else">
+                                            &#8595;
+                                        </aura:set>
+                                    </aura:if>
+                                </span>
+                            </aura:if>
+                        </th>
+                        <th class="table_column_header" scope="col" style="width: 7%;cursor:pointer;" onclick="{!c.sortyByEniType}">TYPE
+                            <aura:if isTrue="{!v.sortField=='contractType'}">
+                                <span>
+                                    <aura:if isTrue="{!v.sortAsc}">
+                                        &#8593;
+                                        <aura:set attribute="else">
+                                            &#8595;
+                                        </aura:set>
+                                    </aura:if>
+                                </span>
+                            </aura:if>
+                        </th>
+                        <th class="table_column_header" scope="col" style="cursor:pointer; width:9%;" onclick="{!c.sortyByEniNewPatient}">
+                            <c:ACET_HoverPopup aura:id="ENIpopup" moveRight="-280" description="See below for description:" descriptionList="[ 'O - Open Panel, Accepting Patients', 'C - Closed Panel, Not Accepting Patients', 'X - Closed - No Override', 'G - Member chooses the group assoc record as PCP' ]" isNubbinLeft="false"/>
+                            <p data-popupId="ENIpopup" onmouseover="{!c.togglePopup}" onmouseout="{!c.togglePopup}"><span class="dashedLine">NEW PATIENTS?
+                                <aura:if isTrue="{!v.sortField=='newPatients'}">
+                                    <span>
+                                        <aura:if isTrue="{!v.sortAsc}">
+                                            &#8593;
+                                            <aura:set attribute="else">
+                                                &#8595;
+                                            </aura:set>
+                                        </aura:if>
+                                    </span>
+                                </aura:if>
+                                </span>
+                            </p>
+                        </th>
+                        <th class="autodoc-case-item-resolved table_column_header eniResolve">RESOLVED</th>
+                    </tr>
+                </thead>
+                <tbody onscroll="{!c.eniScrolled}">
+                    <aura:if isTrue="{!v.eniTableIsEmpty}">
+                        <!-- hide 'No Records Found.' in autodoc and show in component -->
+                        <div style="text-align: center; display: none;" class="card_element_top_margin showImportant">
+                            <input data-chkBxId="eniEmptyChkBx" onclick="{!c.emptyChecked}" type="checkbox" style="float: left; margin-left: 14px;"/>No Records Found.  <!-- US2543737 - Thanish - 5th Mar 2020 -->
+                        </div>
+                        <aura:set attribute="else">
+                            <aura:iteration items="{!v.eAndIContractData.display}" var="item" indexVar="index">
+                                <tr class="slds-hint-parent">
+                                    <td style="width:30px" class="autodoc" data-index="{!index}" onclick="{!c.eniCellClicked}">
+                                        <input class="autodoc" type="checkbox" onclick="{!c.autodocClicked}" checked="{!item.contractSummary.autodoc}"/>
+                                    </td>
+                                    <td class="slds-truncate" style="width: 9%;" data-index="{!index}" onclick="{!c.eniCellClicked}">{!(item.contractSummary.contractId) ? item.contractSummary.contractId : '--'}</td>
+                                    <td class="slds-truncate" style="width: 5%; text-align: center;" data-index="{!index}" onclick="{!c.eniCellClicked}">
+                                        <aura:if isTrue="{!item.contractSummary.status}">
+                                            <div class="slds-icon_container_circle slds-icon-action-approval slds-icon_container" style="background: #76b74e;padding: 0;">
+                                                <img src="{!v.success_icon}" class="slds-icon slds-icon_xx-small"/>
+                                            </div>
+                                            <aura:set attribute="else">
+                                                <div class="slds-icon_container_circle slds-icon-action-close slds-icon_container" style="background: #ef6e64;padding: 0;">
+                                                    <img src="{!v.fail_icon}" class="slds-icon slds-icon_xx-small"/>
+                                                </div>
+                                            </aura:set>
+                                        </aura:if>
+                                    </td>
+                                    <td class="slds-truncate" style="width: 5%;" data-index="{!index}" onclick="{!c.eniCellClicked}">{!(item.contractSummary.org) ? item.contractSummary.org : '--'}</td>
+                                    <td class="slds-truncate" style="width: 7%;" data-index="{!index}" onclick="{!c.eniCellClicked}">{!(item.contractSummary.product) ? item.contractSummary.product : '--'}</td>
+                                    <td class="slds-truncate" style="width: 10%;" data-index="{!index}" onclick="{!c.eniCellClicked}">{!(item.contractSummary.marketType) ? item.contractSummary.marketType : '--'}</td>
+                                    <td class="slds-truncate" style="width: 8%;" data-index="{!index}" onclick="{!c.eniCellClicked}">{!(item.contractSummary.marketNumber) ? item.contractSummary.marketNumber : '--'}</td>
+                                    <td class="slds-truncate" style="width: 18%;" data-index="{!index}" onclick="{!c.eniCellClicked}">{!(item.contractSummary.ipa) ? item.contractSummary.ipa : '--'}</td>
+                                    <td class="slds-truncate" style="width: 13%; cursor:pointer;" data-index="{!index}" onclick="{!c.eniCellClicked}">
+                                        <a href="javascript:void(0)" class="{!(item.isLinkDisabled) ? 'disableLink' : ''}" data-index="{!index}" onclick="{!c.showEAndIContractDetails}">
+                                            {!(item.contractSummary.effectiveAndCancel) ? item.contractSummary.effectiveAndCancel : '--'}
+                                        </a>
+                                    </td>
+                                    <td class="slds-truncate" style="width: 7%;" data-index="{!index}" onclick="{!c.eniCellClicked}">{!(item.contractSummary.contractType) ? item.contractSummary.contractType : '--'}</td>
+                                    <td class="slds-truncate" style="width: 9%;" data-index="{!index}" onclick="{!c.eniCellClicked}">{!(item.contractSummary.newPatients) ? item.contractSummary.newPatients : '--'}</td>
+                                    <td class="autodoc-case-item-resolved eniResolve" data-index="{!index}" onclick="{!c.eniCellClicked}">
+                                        <input class="autodoc-case-item-resolved" type="checkbox" onclick="{!c.resolveClicked}" checked="{!item.contractSummary.resolved}"/>
+                                    </td>
+                                </tr>
+                            </aura:iteration>
+                        </aura:set>
+                    </aura:if>
+                </tbody>
+                </table>
+
+                <!-- ENI AUTODOC SECTION -->
+                <div class="hide">
+                    <div class="autodocTableView" data-auto-doc="auto" data-auto-doc-feature="{!v.autodocPageFeature}" data-auto-doc-section-key="E and I Contract Summary"
+                        data-auto-doc-case-items="{!v.caseItemStatus}" autodoc-case-item-resolved="true">
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered ENITable">
+                            <thead>
+                                <tr class="slds-line-height_reset">
+                                    <th style="width:30px" class="autodoc">
+                                        <input style="margin-left: 0px;" class="autodoc" type="checkbox"/>
+                                    </th>
+                                    <th class="table_column_header">CONTRACT ID</th>
+                                    <th class="table_column_header">STATUS</th>
+                                    <th class="table_column_header">ORG</th>
+                                    <th class="table_column_header">PRODUCT</th>
+                                    <th class="table_column_header">MARKET TYPE</th>
+                                    <th class="table_column_header">MARKET #</th>
+                                    <th class="table_column_header">IPA</th>
+                                    <th class="table_column_header">EFFECTIVE-CANCEL</th>
+                                    <th class="table_column_header">TYPE</th>
+                                    <th class="table_column_header">NEW PATIENTS?</th>
+                                    <th class="autodoc-case-item-resolved table_column_header eniResolve">RESOLVED</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <aura:if isTrue="{!v.eniAutodoc.length == 0}">
+                                    <!-- hide 'No Records Found.' in autodoc and show in component -->
+                                    <div style="text-align: center; display: none;" class="card_element_top_margin showImportant">
+                                        <input id="eniEmptyChkBx" type="checkbox" style="float: left; margin-left: 14px;"/>No Records Found.
+                                    </div>
+                                    <aura:set attribute="else">
+                                        <aura:iteration items="{!v.eniAutodoc}" var="item" indexVar="index">
+                                            <tr class="slds-hint-parent">
+                                                <td style="width:30px" class="autodoc">
+                                                    <input class="autodoc" type="checkbox" checked="{!item.contractSummary.autodoc}"/>
+                                                </td>
+                                                <td class="slds-truncate">{!(item.contractSummary.contractId) ? item.contractSummary.contractId : '--'}</td>
+                                                <td class="slds-truncate">
+                                                    <aura:if isTrue="{!item.contractSummary.status}">
+                                                        Active
+                                                        <aura:set attribute="else">
+                                                            Inactive
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </td>
+                                                <td class="slds-truncate">{!(item.contractSummary.org) ? item.contractSummary.org : '--'}</td>
+                                                <td class="slds-truncate">{!(item.contractSummary.product) ? item.contractSummary.product : '--'}</td>
+                                                <td class="slds-truncate">{!(item.contractSummary.marketType) ? item.contractSummary.marketType : '--'}</td>
+                                                <td class="slds-truncate">{!(item.contractSummary.marketNumber) ? item.contractSummary.marketNumber : '--'}</td>
+                                                <td class="slds-truncate">{!(item.contractSummary.ipa) ? item.contractSummary.ipa : '--'}</td>
+                                                <td class="slds-truncate">{!(item.contractSummary.effectiveAndCancel) ? item.contractSummary.effectiveAndCancel : '--'}</td>
+                                                <td class="slds-truncate">{!(item.contractSummary.contractType) ? item.contractSummary.contractType : '--'}</td>
+                                                <td class="slds-truncate">{!(item.contractSummary.newPatients) ? item.contractSummary.newPatients : '--'}</td>
+                                                <td class="autodoc-case-item-resolved eniResolve">
+                                                    <input class="autodoc-case-item-resolved" type="checkbox" checked="{!item.contractSummary.resolved}"/>
+                                                </td>
+                                            </tr>
+                                        </aura:iteration>
+                                    </aura:set>
+                                </aura:if>
+                            </tbody>
+                        </table>
+                        <aura:if isTrue="{!v.eniAutodoc.length == 0}">
+                            <p style="text-align: center; padding-top: 20px;">No Records Found.</p>
+                        </aura:if>
+                    </div>
+                </div>
+                <!-- / ENI AUTODOC SECTION -->
+            </div>
+            <!-- / E&I TAB -->
+
+            <!-- M&R TAB -->
+            <div id="MNR" class="{!(v.selectedTab == 'MNR') ? 'slds-tabs_default__content' : 'slds-tabs_default__content hide'}" role="tabpanel">
+
+                <table class="slds-table slds-table_cell-buffer slds-table_bordered MNRTable">
+                    <thead>
+                        <tr class="slds-line-height_reset">
+                            <th style="width:30px" class="autodoc"></th>
+                            <th class="table_column_header" scope="col" style="width: 8%;cursor:pointer;" onclick="{!c.sortBYMNRContractId}">CONTRACT ID
+                                <aura:if isTrue="{!v.sortField=='contractId'}">
+                                    <span>
+                                        <aura:if isTrue="{!v.sortAsc}">
+                                            &#8593;
+                                            <aura:set attribute="else">
+                                                &#8595;
+                                            </aura:set>
+                                        </aura:if>
+                                    </span>
+                                </aura:if>
+                            </th>
+                            <th class="table_column_header" scope="col" style="width: 6%; cursor: pointer; text-align: center;" onclick="{!c.sortBYMNRStatus}">STATUS
+                                <aura:if isTrue="{!v.sortField=='status'}">
+                                    <span>
+                                        <aura:if isTrue="{!v.sortAsc}">
+                                            &#8593;
+                                            <aura:set attribute="else">
+                                                &#8595;
+                                            </aura:set>
+                                        </aura:if>
+                                    </span>
+                                </aura:if>
+                            </th>
+                            <th class="table_column_header" scope="col" style=" cursor:pointer; width:5%;" onclick="{!c.sortBYMNROrg}">
+                                <c:ACET_HoverPopup aura:id="MNRORGpopup" description="See below for description:" descriptionList="[ 'HPHC = Harvard Pilgrim', 'UHN = UnitedHealthcare, CSP/GSP, NHP, River Valley, Beacon LBS, National Provider (Product code-CON), Nexus ACO, Charter/Navigate/Compass', 'UBH = United Behavioral Health', 'ACN = OptumHealth Physical Health (Formerly ACN [American Chiropractic Network] Group) American Chiropractic Network', 'MEDI = Medica' ]" isNubbinLeft="true"/>
+                                <p data-popupId="MNRORGpopup" onmouseover="{!c.togglePopup}" onmouseout="{!c.togglePopup}"><span class="dashedLine">ORG
+                                    <aura:if isTrue="{!v.sortField=='org'}">
+                                        <span>
+                                            <aura:if isTrue="{!v.sortAsc}">
+                                                &#8593;
+                                                <aura:set attribute="else">
+                                                    &#8595;
+                                                </aura:set>
+                                            </aura:if>
+                                        </span>
+                                    </aura:if>
+                                    </span>
+                                </p>
+                            </th>
+                            <th class="table_column_header" scope="col" style="width: 5%;cursor:pointer;" onclick="{!c.sortBYMNRDiv}">DIV
+                                <aura:if isTrue="{!v.sortField=='div'}">
+                                    <span>
+                                        <aura:if isTrue="{!v.sortAsc}">
+                                            &#8593;
+                                            <aura:set attribute="else">
+                                                &#8595;
+                                            </aura:set>
+                                        </aura:if>
+                                    </span>
+                                </aura:if>
+                            </th>
+                            <th class="table_column_header" scope="col" style="width: 5%;cursor:pointer;" onclick="{!c.sortBYMNRPanel}">PANEL
+                                <aura:if isTrue="{!v.sortField=='panel'}">
+                                    <span>
+                                        <aura:if isTrue="{!v.sortAsc}">
+                                            &#8593;
+                                            <aura:set attribute="else">
+                                                &#8595;
+                                            </aura:set>
+                                        </aura:if>
+                                    </span>
+                                </aura:if>
+                            </th>
+                            <th class="table_column_header" scope="col" style="width: 19%;cursor:pointer;" onclick="{!c.sortBYMNRPanelDesc}">PANEL DESCRIPTION
+                                <aura:if isTrue="{!v.sortField=='panelDescription'}">
+                                    <span>
+                                        <aura:if isTrue="{!v.sortAsc}">
+                                            &#8593;
+                                            <aura:set attribute="else">
+                                                &#8595;
+                                            </aura:set>
+                                        </aura:if>
+                                    </span>
+                                </aura:if>
+                            </th>
+                            <th class="table_column_header" scope="col" style="width: 15%;cursor:pointer;" onclick="{!c.sortBYMNREffective}">EFFECTIVE-CANCEL
+                                <aura:if isTrue="{!v.sortField=='effectiveAndCancel'}">
+                                    <span>
+                                        <aura:if isTrue="{!v.sortAsc}">
+                                            &#8593;
+                                            <aura:set attribute="else">
+                                                &#8595;
+                                            </aura:set>
+                                        </aura:if>
+                                    </span>
+                                </aura:if>
+                            </th>
+                            <th class="table_column_header" scope="col" style="width: 8%;cursor:pointer;" onclick="{!c.sortBYMNRContractType}">TYPE
+                                <aura:if isTrue="{!v.sortField=='contractType'}">
+                                    <span>
+                                        <aura:if isTrue="{!v.sortAsc}">
+                                            &#8593;
+                                            <aura:set attribute="else">
+                                                &#8595;
+                                            </aura:set>
+                                        </aura:if>
+                                    </span>
+                                </aura:if>
+                            </th>
+                            <th class="table_column_header" scope="col" style="width: 10%;cursor:pointer;" onclick="{!c.sortBYMNRSpecialityType}">SPECIALTY TYPE
+                                <aura:if isTrue="{!v.sortField=='specialtyType'}">
+                                    <span>
+                                        <aura:if isTrue="{!v.sortAsc}">
+                                            &#8593;
+                                            <aura:set attribute="else">
+                                                &#8595;
+                                            </aura:set>
+                                        </aura:if>
+                                    </span>
+                                </aura:if>
+                            </th>
+                            <th class="table_column_header" scope="col" style="cursor:pointer; width:10%;" onclick="{!c.sortBYMNRNewPatients}">
+                                <c:ACET_HoverPopup aura:id="MNRpopup" moveRight="-350" description="See below for description:" descriptionList="[ 'N - No new patients accepted', 'Y - New patients are being accepted', 'E - New patients accepted on exception basis only', 'R - Accepting new patients with restrictions (age, gender, etc).' ]" isNubbinLeft="false"/>
+                                <p data-popupId="MNRpopup" onmouseover="{!c.togglePopup}" onmouseout="{!c.togglePopup}"><span class="dashedLine">NEW PATIENTS?
+                                    <aura:if isTrue="{!v.sortField=='newPatients'}">
+                                        <span>
+                                            <aura:if isTrue="{!v.sortAsc}">
+                                                &#8593;
+                                                <aura:set attribute="else">
+                                                    &#8595;
+                                                </aura:set>
+                                            </aura:if>
+                                        </span>
+                                    </aura:if>
+                                    </span>
+                                </p>
+                            </th>
+                            <th class="autodoc-case-item-resolved table_column_header mnrResolve">RESOLVED</th>
+                        </tr>
+                    </thead>
+                    <tbody onscroll="{!c.mnrScrolled}">
+                        <aura:if isTrue="{!v.mnrTableIsEmpty}">
+                            <!-- hide 'No Records Found.' in autodoc and show in component -->
+                            <div style="text-align: center; display: none;" class="card_element_top_margin showImportant">
+                                <input data-chkBxId="mnrEmptyChkBx" onclick="{!c.emptyChecked}" type="checkbox" style="float: left; margin-left: 14px;"/>No Records Found.
+                            </div>
+                            <aura:set attribute="else">
+                                <aura:iteration items="{!v.mAndRContractData.display}" var="item" indexVar="index">
+                                    <tr class="slds-hint-parent">
+                                        <td style="width:30px" class="autodoc" data-index="{!index}" onclick="{!c.mnrCellClicked}">
+                                            <input class="autodoc" type="checkbox" onclick="{!c.autodocClicked}" checked="{!item.contractSummary.autodoc}"/>
+                                        </td>
+                                        <td class="slds-truncate" style="width: 8%;" data-index="{!index}" onclick="{!c.mnrCellClicked}">{!(item.contractSummary.contractId) ? item.contractSummary.contractId : '--'}</td>
+                                        <td class="slds-truncate" style="width: 6%; text-align: center;" data-index="{!index}" onclick="{!c.mnrCellClicked}">
+                                            <aura:if isTrue="{!item.contractSummary.status}">
+                                                <div class="slds-icon_container_circle slds-icon-action-approval slds-icon_container" style="background: #76b74e;padding: 0;">
+                                                    <img src="{!v.success_icon}" class="slds-icon slds-icon_xx-small"/>
+                                                </div>
+                                                <aura:set attribute="else">
+                                                    <div class="slds-icon_container_circle slds-icon-action-close slds-icon_container" style="background: #ef6e64;padding: 0;">
+                                                        <img src="{!v.fail_icon}" class="slds-icon slds-icon_xx-small"/>
+                                                    </div>
+                                                </aura:set>
+                                            </aura:if>
+                                        </td>
+                                        <td class="slds-truncate" style="width: 5%;" data-index="{!index}" onclick="{!c.mnrCellClicked}">{!(item.contractSummary.org) ? item.contractSummary.org : '--'}</td>
+                                        <td class="slds-truncate" style="width: 5%;" data-index="{!index}" onclick="{!c.mnrCellClicked}">{!(item.contractSummary.div) ? item.contractSummary.div : '--'}</td>
+                                        <td class="slds-truncate" style="width: 5%;" data-index="{!index}" onclick="{!c.mnrCellClicked}">{!(item.contractSummary.panel) ? item.contractSummary.panel : '--'}</td>
+                                        <td class="slds-truncate" style="width: 19%;" data-index="{!index}" onclick="{!c.mnrCellClicked}">{!(item.contractSummary.panelDescription) ? item.contractSummary.panelDescription : '--'}</td>
+                                        <td class="slds-truncate" style="width: 15%; cursor:pointer;" data-index="{!index}" onclick="{!c.mnrCellClicked}">
+                                            <a href="javascript:void(0)" class="{!(item.isLinkDisabled) ? 'disableLink' : ''}" data-index="{!index}" onclick="{!c.showMAndRContractDetails}">
+                                                {!(item.contractSummary.effectiveAndCancel) ? item.contractSummary.effectiveAndCancel : '--'}
+                                            </a>
+                                        </td>
+                                        <td class="slds-truncate" style="width: 8%;" data-index="{!index}" onclick="{!c.mnrCellClicked}">{!(item.contractSummary.contractType) ? item.contractSummary.contractType : '--'}</td>
+                                        <td class="slds-truncate" style="width: 10%;" data-index="{!index}" onclick="{!c.mnrCellClicked}">{!(item.contractSummary.specialtyType) ? item.contractSummary.specialtyType : '--'}</td>
+                                        <td class="slds-truncate" style="width: 10%;" data-index="{!index}" onclick="{!c.mnrCellClicked}">{!(item.contractSummary.newPatients) ? item.contractSummary.newPatients : '--'}</td>
+                                        <td class="autodoc-case-item-resolved mnrResolve" data-index="{!index}" onclick="{!c.mnrCellClicked}">
+                                            <input class="autodoc-case-item-resolved" type="checkbox" onclick="{!c.resolveClicked}" checked="{!item.contractSummary.resolved}"/>
+                                        </td>
+                                    </tr>
+                                </aura:iteration>
+                            </aura:set>
+                        </aura:if>
+                    </tbody>
+                </table>
+                <!-- show 'No Records Found.' in autodoc and hide in component -->
+                <aura:if isTrue="{!v.mnrTableIsEmpty}">
+                    <p class="hide" style="text-align: center; padding-top: 20px;">No Records Found.</p>
+                </aura:if>
+
+                <!-- MNR AUTODOC SECTION -->
+                <div class="hide">
+                    <div class="autodocTableView" data-auto-doc="auto" data-auto-doc-feature="{!v.autodocPageFeature}" data-auto-doc-section-key="M and R Contract Summary"
+                        data-auto-doc-case-items="{!v.caseItemStatus}" autodoc-case-item-resolved="true">
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered MNRTable">
+                            <thead>
+                                <tr class="slds-line-height_reset">
+                                    <th style="width:30px" class="autodoc">
+                                        <input style="margin-left: 0px;" class="autodoc" type="checkbox"/>
+                                    </th>
+                                    <th class="table_column_header">CONTRACT ID</th>
+                                    <th class="table_column_header">STATUS</th>
+                                    <th class="table_column_header">ORG</th>
+                                    <th class="table_column_header">DIV</th>
+                                    <th class="table_column_header">PANEL</th>
+                                    <th class="table_column_header">PANEL DESCRIPTION</th>
+                                    <th class="table_column_header">EFFECTIVE-CANCEL</th>
+                                    <th class="table_column_header">TYPE</th>
+                                    <th class="table_column_header">SPECIALTY TYPE</th>
+                                    <th class="table_column_header">NEW PATIENTS?</th>
+                                    <th class="autodoc-case-item-resolved table_column_header mnrResolve">RESOLVED</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <aura:if isTrue="{!v.mnrAutodoc.length == 0}">
+                                    <!-- hide 'No Records Found.' in autodoc and show in component -->
+                                    <div style="text-align: center; display: none;" class="card_element_top_margin showImportant">
+                                        <input id="mnrEmptyChkBx" type="checkbox" style="float: left; margin-left: 14px;"/>No Records Found.
+                                    </div>
+                                    <aura:set attribute="else">
+                                        <aura:iteration items="{!v.mnrAutodoc}" var="item" indexVar="index">
+                                            <tr class="slds-hint-parent">
+                                                <td style="width:30px" class="autodoc">
+                                                    <input class="autodoc" type="checkbox" checked="{!item.contractSummary.autodoc}"/>
+                                                </td>
+                                                <td class="slds-truncate">{!(item.contractSummary.contractId) ? item.contractSummary.contractId : '--'}</td>
+                                                <td class="slds-truncate">
+                                                    <aura:if isTrue="{!item.contractSummary.status}">
+                                                        Active
+                                                        <aura:set attribute="else">
+                                                            Inactive
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </td>
+                                                <td class="slds-truncate">{!(item.contractSummary.org) ? item.contractSummary.org : '--'}</td>
+                                                <td class="slds-truncate">{!(item.contractSummary.div) ? item.contractSummary.div : '--'}</td>
+                                                <td class="slds-truncate">{!(item.contractSummary.panel) ? item.contractSummary.panel : '--'}</td>
+                                                <td class="slds-truncate">{!(item.contractSummary.panelDescription) ? item.contractSummary.panelDescription : '--'}</td>
+                                                <td class="slds-truncate">{!(item.contractSummary.effectiveAndCancel) ? item.contractSummary.effectiveAndCancel : '--'}</td>
+                                                <td class="slds-truncate">{!(item.contractSummary.contractType) ? item.contractSummary.contractType : '--'}</td>
+                                                <td class="slds-truncate">{!(item.contractSummary.specialtyType) ? item.contractSummary.specialtyType : '--'}</td>
+                                                <td class="slds-truncate">{!(item.contractSummary.newPatients) ? item.contractSummary.newPatients : '--'}</td>
+                                                <td class="autodoc-case-item-resolved mnrResolve">
+                                                    <input class="autodoc-case-item-resolved" type="checkbox" checked="{!item.contractSummary.resolved}"/>
+                                                </td>
+                                            </tr>
+                                        </aura:iteration>
+                                    </aura:set>
+                                </aura:if>
+                            </tbody>
+                        </table>
+                        <aura:if isTrue="{!v.mnrAutodoc.length == 0}">
+                            <p style="text-align: center; padding-top: 20px;">No Records Found.</p>
+                        </aura:if>
+                    </div>
+                </div>
+                <!-- / MNR AUTODOC SECTION -->
+            </div>
+            <!-- / M&R TAB -->
+
+            <!-- PHS TAB -->
+            <div id="PHS" class="{!(v.selectedTab == 'PHS') ? 'slds-tabs_default__content' : 'slds-tabs_default__content hide'}" role="tabpanel">
+
+                <div class="autodocTableView" data-auto-doc="auto" data-auto-doc-feature="{!v.autodocPageFeature}" data-auto-doc-section-key="PHS Contract Summary"
+                     data-auto-doc-case-items="{!v.caseItemStatus}" autodoc-case-item-resolved="true">
+                    <table class="slds-table slds-table_cell-buffer slds-table_bordered PHSTable">
+                        <thead>
+                            <tr>
+                                <th style="width:30px" class="autodoc"></th>
+                                <th class="table_column_header" style="cursor:pointer; width:8%;" scope="col">CONTRACT ID</th>
+                                <th class="table_column_header" style="cursor:pointer; width:6%;" scope="col">STATUS</th>
+                                <th class="table_column_header" style="cursor:pointer; width:5%;" scope="col">
+                                    <c:ACET_HoverPopup aura:id="PHSORGpopup" description="See below for description:" descriptionList="[ 'HPHC = Harvard Pilgrim', 'UHN = UnitedHealthcare, CSP/GSP, NHP, River Valley, Beacon LBS, National Provider (Product code-CON), Nexus ACO, Charter/Navigate/Compass', 'UBH = United Behavioral Health', 'ACN = OptumHealth Physical Health (Formerly ACN [American Chiropractic Network] Group) American Chiropractic Network', 'MEDI = Medica' ]" isNubbinLeft="true"/>
+                                    <p data-popupId="PHSORGpopup" onmouseover="{!c.togglePopup}" onmouseout="{!c.togglePopup}"><span class="dashedLine">ORG</span></p>
+                                </th>
+                                <th class="table_column_header" style="cursor:pointer; width:9%;" scope="col">NETWORK ID</th>
+                                <th class="table_column_header" style="cursor:pointer; width:7%;" scope="col">DEC #</th>
+                                <th class="table_column_header" style="cursor:pointer; width:6%;" scope="col">PMG</th>
+                                <th class="table_column_header" style="cursor:pointer; width:7%;" scope="col">RISK</th>
+                                <th class="table_column_header" style="cursor:pointer; width:10%;" scope="col">PMG CRITERIA</th>
+                                <th class="table_column_header" style="cursor:pointer; width:12%;" scope="col">EFFECTIVE-CANCEL</th>
+                                <th class="table_column_header" style="cursor:pointer; width:8%;" scope="col">TYPE</th>
+                                <th class="table_column_header" style="cursor:pointer; width:10%;" scope="col">
+                                    <c:ACET_HoverPopup aura:id="PHSpopup" moveRight="-350" description="See below for description:" descriptionList="[ 'N - No new patients accepted', 'Y - New patients are being accepted', 'E - New patients accepted on exception basis only', 'R - Accepting new patients with restrictions (age, gender, etc).' ]" isNubbinLeft="false"/>
+                                    <p data-popupId="PHSpopup" onmouseover="{!c.togglePopup}" onmouseout="{!c.togglePopup}"><span class="dashedLine">NEW PATIENTS?</span></p>
+                                </th>
+                                <th class="autodoc-case-item-resolved table_column_header">RESOLVED</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:if isTrue="{!v.phsTableIsEmpty}">
+                                <!-- hide 'No Records Found.' in autodoc and show in component -->
+                                <div style="text-align: center; display: none;" class="card_element_top_margin showImportant">
+                                    <input type="checkbox" style="float: left; margin-left: 14px;"/>No Records Found.  <!-- US2543737 - Thanish - 5th Mar 2020 -->
+                                </div>
+                                <aura:set attribute="else">
+                                    <tr>
+                                        <td style="width:30px" class="autodoc">
+                                            <input class="autodoc" type="checkbox" onclick="{!c.autodocClicked}"/>
+                                        </td>
+                                        <td>--</td>
+                                        <td>--</td>
+                                        <td>--</td>
+                                        <td>--</td>
+                                        <td>--</td>
+                                        <td>--</td>
+                                        <td>--</td>
+                                        <td>--</td>
+                                        <td style="cursor:pointer;"><a href="javascript:void(0)" onclick="{!c.showPHSContractDetails}">--</a></td>
+                                        <td>--</td>
+                                        <td>--</td>
+                                        <td class="autodoc-case-item-resolved">
+                                            <input class="autodoc-case-item-resolved" type="checkbox" onclick="{!c.resolveClicked}"/>
+                                        </td>
+                                    </tr>
+                                </aura:set>
+                            </aura:if>
+                        </tbody>
+                    </table>
+                    <!-- show 'No Records Found.' in autodoc and hide in component -->
+                    <aura:if isTrue="{!v.phsTableIsEmpty}">
+                        <p class="hide" style="text-align: center; padding-top: 20px;">No Records Found.</p>
+                    </aura:if>
+                </div>
+            </div>
+            <!-- / PHS TAB -->
+        </div>
+        <!-- / TABS -->
+    </div>
+    <!-- </div> -->
+    <!-- / Contract Summary -->
+    
+    <!-- Contract Details -->
+    <aura:iteration items="{!v.contractDetailsList}" var="item">
+        <div class="{!(item.hide) ? 'hideContractDetails' : ''}">
+            <!-- C and S Contract Details -->
+            <aura:if isTrue="{!item.type == 'CNS'}">
+                <div class="card_top_margin"><c:ACET_CAndSContractDetails id="{!item.id}" parent="{!this}" contractDetails="{!item.data}" contractId="{!item.contractId}" effectiveDate="{!item.effectiveDate}" AutodocKey="{!v.AutodocKey + item.id}" autodocPageFeature="{!v.autodocPageFeature}"/></div>
+            </aura:if>
+            
+            <!-- E and I Contract Details -->
+            <aura:if isTrue="{!item.type == 'ENI'}">
+                <div class="card_top_margin"><c:ACET_EAndIContractDetails id="{!item.id}" parent="{!this}" contractDetails="{!item.data}" contractId="{!item.contractId}" effectiveDate="{!item.effectiveDate}" AutodocKey="{!v.AutodocKey + item.id}" autodocPageFeature="{!v.autodocPageFeature}"/></div>
+            </aura:if>
+            
+            <!-- M and R Contract Details -->
+            <aura:if isTrue="{!item.type == 'MNR'}">
+                <div class="card_top_margin"><c:ACET_MAndRContractDetails id="{!item.id}" parent="{!this}" contractDetails="{!item.data}" contractId="{!item.contractId}" effectiveDate="{!item.effectiveDate}" AutodocKey="{!v.AutodocKey + item.id}" autodocPageFeature="{!v.autodocPageFeature}"/></div>
+            </aura:if>
+            
+            <!-- PHS Contract Details -->
+            <aura:if isTrue="{!item.type == 'PHS'}">
+                <div class="card_top_margin"><c:ACET_PHSContractDetails id="{!item.id}" contractId="{!item.contractId}"/></div>
+            </aura:if>
+        </div>
+    </aura:iteration>
+    <!-- / Contract Details -->
+    
+    </div>
+</aura:component>

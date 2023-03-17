@@ -1,0 +1,159 @@
+<apex:page controller="ACETProducerNotFoundController" sidebar="false" 
+tabStyle="Producer_Search__tab" docType="html-5.0">
+    <apex:includeScript value="/support/console/37.0/integration.js" />
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="{!$Resource.JqueryPhoneMask}"/>
+    <apex:sectionHeader title="Enter Producer Information" />
+
+    <apex:form >
+        <apex:pageMessages id="pmMessages" />
+        <apex:pageBlock Id="pbProducerNotFound">
+            <apex:pageblockSection columns="2">
+            
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Producer ID"></apex:outputLabel>
+                        <apex:outputPanel >                     
+                                <apex:inputText value="{!PID}" id="producerId"  />                       
+                        </apex:outputPanel>
+                </apex:pageBlockSectionItem>            
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Producer Name "></apex:outputLabel>
+                        <apex:outputPanel >
+                            <div class="requiredInput">
+                                <div class="requiredBlock" />
+                                <apex:inputText value="{!producerName}" id="producerName"  /> <!-- maxlength="10" -->
+                            </div> 
+                        </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Contact Name"></apex:outputLabel>
+                    <apex:outputPanel >
+                        <div class="requiredInput">
+                            <div class="requiredBlock" />
+                            <apex:inputText value="{!contactName}" id="contactName" maxlength="40" />
+                        </div>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Phone Number"></apex:outputLabel>
+                    <apex:outputPanel >
+                        <div class="requiredInput">
+                            <div class="requiredBlock" />
+                           <apex:inputText value="{!PhoneNumber}" id="phoneNumber" styleClass="phoneNumbMask" />
+                        </div>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>  
+                             
+
+            </apex:pageblockSection>
+             <apex:pageBlockButtons location="bottom" style="align:center;">            
+                <apex:commandButton value="Submit" onClick="return validate();" action="{!RedirectFromProducerNotFound}"/> 
+                <apex:commandButton value="Cancel" onClick=" testCloseTab();" />
+            </apex:pageBlockButtons>
+            
+        </apex:pageBlock>
+    </apex:form>
+    <script type="text/javascript">
+    var j$ = jQuery.noConflict(); 
+    var $phoneNumber = j$("[id$='phoneNumber']");
+    var $contactName = j$("[id$='contactName']");
+    var $producerName = j$("[id$='producerName']");
+    var $ProducerNotFound = j$("[id$='pbProducerNotFound']");
+    
+        
+    function validate() 
+    {  
+        $ProducerNotFound.find(".pbError").remove(); 
+        $phoneNumber.removeClass("error").parent().find(".errorMsg").remove();
+        $contactName.removeClass("error").parent().find(".errorMsg").remove();
+        $producerName.removeClass("error").parent().find(".errorMsg").remove();
+        
+        
+        var ValidationResult = true;
+        
+        if(!$contactName.val()) {
+         $contactName.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong>&nbsp;{!$Label.ACETProviderNotFoundFirstNameRequired}</div>'); 
+         ValidationResult = false;
+        }       
+        
+        if(!$producerName.val()) {
+         $producerName.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong>&nbsp;{!$Label.ACETProviderNotFoundFirstNameRequired}</div>'); 
+         ValidationResult = false;
+        }                   
+        
+        if($phoneNumber.val()) {
+         if($phoneNumber.val().length < 12) {                 
+             $phoneNumber.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong>&nbsp;{!$Label.ACETProviderNotFoundPhoneNumberMaxLength}</div>');  
+             ValidationResult = false;
+         }
+        }
+                
+        if(!$phoneNumber.val()) {
+         $phoneNumber.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong>&nbsp;{!$Label.ACETProviderNotFoundPhoneNumberRequired}</div>'); 
+         ValidationResult = false;
+        }    
+        
+        if (!ValidationResult)
+        {
+         $ProducerNotFound.prepend('<div class="pbError">{!$Label.ACETProviderSearchInvalidDataErrorMessage}<br/>{!$Label.ACETProviderSearchReviewErrorMessage}</div>');
+        }
+        
+        if(ValidationResult)
+        {
+            sforce.console.setTabTitle('Detail - ' + $producerName.val());
+
+        }         
+                
+        return ValidationResult;    
+        
+    }     
+    
+     function init()
+       {
+           $phoneNumber.keypress(AllowDigitsOnly); 
+                       
+       }
+       
+       function AllowDigitsOnly(InputElement) 
+       {
+           //Allow delete, tab, enter and escape keys through
+           if (/^(8|9|13|27)$/.test("" + InputElement.keyCode)) 
+           {
+               return true;
+           }
+           
+           var regex = new RegExp("^[0-9]+$");
+           var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+           if (regex.test(str)) 
+           {
+               return true;
+           }
+           
+           InputElement.preventDefault();
+           return false;
+       }    
+    
+    j$(document).ready(function() {       
+        init();   
+         j$('.phoneNumbMask').mask('000-000-0000',{
+                        translation : {
+                            'N' : {
+                                pattern : /[0-9]/,
+                                optional : false
+                            }
+                        }   
+         });               
+
+    });      
+    function testCloseTab() {
+        sforce.console.getEnclosingTabId(closeSubtab);
+    }
+    
+    var closeSubtab = function closeSubtab(result) {
+        //Now that we have the tab ID, we can close it
+        var tabId = result.id;
+        sforce.console.closeTab(tabId);
+    };
+
+    </script>
+</apex:page>

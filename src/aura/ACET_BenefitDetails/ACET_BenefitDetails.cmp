@@ -1,0 +1,266 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes" access="global"
+    controller="ACET_BenefitDetailsController">
+
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}" />
+    <aura:attribute name="financialsData" type="SAEMemberProviderSearchCoveragesResult.FinancialsWrapper"
+        access="public" />
+    <aura:attribute name="isCdhp" type="Boolean" default="false" />
+    <aura:attribute name="cdhpVal" type="string" access="public" />
+    <aura:attribute name="yearType" type="String" default="" />
+    <aura:attribute name="displayYear" type="String" default="" />
+    <aura:attribute name="isShowBenefitAccordian" type="Boolean" default="false" />
+    <aura:attribute name="asOfDate" type="Date" />
+    <aura:attribute name="policyDetails" type="SAEPolicyDetailsResult" />
+    <aura:attribute name="btnLabel" type="String" />
+    <aura:attribute name="btnUrl" type="String" />
+    <aura:attribute name="isComPlan" type="Boolean" default="false" />
+    <aura:attribute name="calFalg" type="Boolean" default="false" />
+    <aura:attribute name="UniqueIdMap" type="map" />
+    <aura:attribute name="AutodocPageFeature" type="String" />
+    <aura:attribute name="lstSelectedRecords" type="sObject[]" default="[]"
+        description="Use,for store SELECTED sObject Records" />
+    <aura:attribute name="listOfSearchRecords" type="List"
+        description="Use,for store the list of search records which returns from apex class" />
+    <aura:attribute name="lstSelectedRecordsToAccordian" type="sObject[]" default="[]"
+        description="Use,for store SELECTED sObject Records" />
+    <aura:attribute name="SearchKeyWord" type="string" />
+    <aura:attribute name="isModalOpen" type="boolean" default="false" />
+    <aura:attribute name="caseWrapper" type="SAETTSCaseWrapper" default="[]" />
+    <aura:handler name="closeModalBox" event="c:SAE_TtsModalCloseEvent" action="{!c.closeModal}" />
+    <!--aura:handler name="oSelectedRecordEvent" event="c:ACET_BenefitComponentSelectedRecordEvent"
+        action="{!c.handleComponentEvent}" /-->
+    <aura:attribute name="memberTabId" type="string" access="public" />
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0" />
+    <aura:attribute name="memberCardData" type="Object" />
+    <aura:attribute name="isMedicarePlan" type="Boolean" default="false" />
+    <aura:handler name="change" value="{!v.policyDetails}" action="{!c.policyDetailsChanged}" />
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+    <aura:attribute name="AutodocKeyMemberDtl" type="String" />
+    <aura:attribute name="AutodocPageFeatureMemberDtl" type="String" />
+    <aura:attribute name="isIbaagBtnClicked" type="boolean" default="false" />
+    <aura:attribute name="enableAutodocWarningMessage" type="boolean" default="true" />
+    <aura:attribute name="btnAutodocId" type="String" />
+    <!-- US2405173	Preview Auto Doc Before Save Case- Plan Benefits -->
+    <aura:attribute name="isPreviewOpen" type="boolean" default="false" />
+    <aura:attribute name="isCommentsBox" type="Boolean" default="false" />
+    <aura:attribute name="commentsValue" type="String" default="" />
+    <aura:attribute name="disableCommentButton" type="String" default="false" />
+    <aura:attribute name="componentId" type="String" />
+    <aura:attribute name="isAutoDocRefresh" type="String" default="auto" />
+    <aura:registerEvent name="ACET_CallTopicAutodoc" type="c:ACET_CallTopicAutodoc" />
+    <aura:attribute name="caseNotSavedTopics" type="String[]" />
+    <aura:handler name="ACETCaseCreated" event="c:ACET_ACETCaseCreated" action="{!c.handleACETCaseCreated}" />
+
+    <aura:attribute name="autodocUniqueId" type="String" default="auto" />
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default="auto" />
+    <aura:attribute name="showpreview" type="Boolean" default="false" />
+    <aura:attribute name="tableDetails_prev" type="Object" />
+    <aura:attribute name="selectedCalendarYear" type="Boolean" default="false" />
+    <aura:attribute name="selectedHSA" type="Boolean" default="false" />
+    <aura:attribute name="selectedEnrollment" type="Boolean" default="false" />
+    <aura:attribute name="componentOrder" type="Integer" default="4" />
+    <aura:attribute name="memberautodocUniqueId" type="String" default="auto" />
+    <!-- Thanish - Commented as benefit related changes as it will be pushed to prod later - 20th Nov 2020 -->
+    <!-- <aura:attribute name="selectedRadioBtnValue" type="String" default="allDesc"/> -->
+
+    <!--US3068299 - Sravan-->
+    <aura:attribute name="autoDocToBeDeleted" type="Object" />
+    <!--DE393490 - Sravan-->
+    <aura:attribute name="memberMap" type="Map" access="public" />
+    <!--US3117073 - Multiple Policies -  Creating Multiple Unique ORS Records Check In ISET - Sravan-->
+    <aura:attribute name="memberPolicyNumberMap" type="Map" default="" />
+
+    <!-- US2974811	Plan Benefits: Benefit Check with PA Button & PA Search Page UI - Sarma - 02/12/2020 -->
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute name="interactionOverviewTabId" type="String" />
+
+    <!-- Sanka - US3125207 -->
+    <aura:attribute name="transactionId" type="String" />
+    <aura:attribute name="benefitRecords" type="Object[]" />
+    <aura:attribute name="benefitRecordsFiltered" type="Object[]" />
+    <aura:attribute name="benefitRecordsSelected" type="Object[]" />
+    <aura:attribute name="benefitRecordsAccordian" type="Object[]" />
+
+    <!-- US3089189 -->
+    <aura:attribute name="memberCardSnap" type="Object" access="public" />
+
+    <aura:attribute name="yearTypeBenefits" type="string" access="public" />
+    <aura:attribute name="displayYearBenefits" type="string" access="public" />
+
+    <!-- DE456362 -->
+    <aura:attribute name="currentTabId" type="String" />
+
+    <!--US3583813 - Sravan-->
+    <aura:attribute name="delegationValue" type="String" default=" "/>
+    <aura:attribute name="patientInfo" type="Object" access="public"/>
+
+    <!-- US3804847 - Krish - 26th August 2021-->
+    <aura:attribute name="interactionCard" type="Object" access="public"/>
+
+    <!-- US3507751 - Save Case Consolidation -->
+    <aura:handler event="c:ACET_HandleCaseWrapperEvent" action="{!c.createCaseWrapper}" />
+    <aura:handler event="c:ACET_AutoDocRefreshEvent" action="{!c.handleAutodocRefresh}" />
+    
+    <!-- Add Free form Comments -->
+    <aura:if isTrue="{!v.isCommentsBox}">
+        <div class="slds-card card_left_padding card_top_padding card_right_padding card_bottom_padding">
+            <c:ACET_HoverPopup aura:id="commentsId" moveRight="" description="" isNubbinLeft="true"
+                descriptionList="[ 'Use the comments to include a brief','description of the issue, research performed,', 'and any attempts to resolve' ]" />
+            <p class="component_title slds-form-element__label field_label_padding"
+                style="border-bottom:1px dashed;padding:0px" data-popupId="commentsId" onmouseover="{!c.togglePopup}"
+                onmouseout="{!c.togglePopup}">
+                Comments:
+            </p>
+            <b class="component_title slds-p-left_small">Plan Benefits</b>
+            <lightning:textarea name="commentsTextArea" value="{!v.commentsValue}" label="Commets"
+                aura:id="commentsBoxId" variant="label-hidden" class="slds-p-top_small" onkeyup="{!c.handleKeyup }"
+                maxlength="2000" />
+            <span class="floatToRight valueCls slds-form-element__static">Characters remaining:
+                <lightning:formattedNumber value="{!2000-v.commentsValue.length}" /> </span>
+        </div>
+    </aura:if>
+
+    <!-- US2386356 - Thanish - 11th Nov 2020 - along with user story requirements, UI structure and stylings were also changed to follow consistensy across the app -->
+    <div style="width:100%;"
+        class="slds-is-relative slds-card card_left_padding card_top_padding card_right_padding card_bottom_padding">
+        <lightning:spinner class="slds-hide" variant="brand" aura:id="benefitDetailsSpinner" />
+        <!-- US3125215 - Thanish - 22nd Dec 2020 -->
+
+        <div class="slds-grid slds-wrap slds-grid_align-spread slds-grid_vertical-align-center">
+            <!-- US3125215 - Thanish - 22nd Dec 2020 -->
+            <div class="slds-size_1-of-6">
+                <span class="component_title">Benefit Details</span>
+            </div>
+            <div class="slds-size_5-of-6">
+                <div class="slds-grid slds-grid_align-end slds-grid_vertical-align-center">
+                    <div>
+                        <aura:If isTrue="{!v.isComPlan}">
+                            <a class="slds-m-right_medium" href="javascript:void(0);" onclick="{!c.openWebPage}">Open
+                                Enrollment</a>
+                        </aura:If>
+                    </div>
+                    <div>
+                        <div class="slds-grid slds-grid_vertical slds-text-align_center">
+                            <div class="slds-col">
+                                <span>
+                                    <p class="slds-m-right_small">As Of</p>
+                                </span>
+                            </div>
+                            <div class="slds-col">
+                                <span>
+                                    <p class="slds-m-right_small">(mm/dd/yyyy)</p>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <!--US3125189	Plan Benefits - Benefit Details As of Date Field UI Update - Gerying out -->
+                        <lightning:input type="date" name="input1" variant="label-hidden"
+                            class="slds-m-right_medium asOfDateWidth" value="{! v.asOfDate }" dateStyle="short"
+                            disabled="true" />
+                    </div>
+                    <div>
+                        <lightning:buttonGroup>
+                            <!-- US2974811	Plan Benefits: Benefit Check with PA Button & PA Search Page UI - Sarma - 02/12/2020 -->
+                            <lightning:button class="slds-button slds-button_neutral neutral_button" variant="neutral"
+                                label="Benefit/PA Check" onclick="{!c.openPaCheck}" />
+                        </lightning:buttonGroup>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slds-size_2-of-6 card_element_top_margin">
+                <!-- Thanish - Commented as benefit related changes as it will be pushed to prod later - 20th Nov 2020 
+                    Krishnanshu: Added US3014067 12/04/2020
+                    PLEASE DO NOT REMOVE THIS CODE 
+                -->
+                <!--fieldset class="slds-form-element">
+                    <div class="slds-form-element__control">
+                        <div class="slds-radio" style="float: left;" data-value="allDesc" onclick="{!c.onRadioBtnSelect}">
+                            <input type="radio" checked="{!v.selectedRadioBtnValue == 'allDesc'}"/>
+                            <label class="slds-radio__label">
+                                <span class="slds-radio_faux"></span>
+                                <span class="slds-form-element__label">All Benefit Descriptions</span>
+                            </label>
+                        </div>
+                        <div class="slds-radio" style="float: left;" data-value="specialty" onclick="{!c.onRadioBtnSelect}">
+                            <input type="radio" checked="{!v.selectedRadioBtnValue == 'specialty'}"/>
+                            <label class="slds-radio__label">
+                                <span class="slds-radio_faux"></span>
+                                <span class="slds-form-element__label">Specialty</span>
+                            </label>
+                        </div>
+                        <!- US3014067: Benefit and Coverage  -  Benefit Category Button UI START ->
+                        <div class="slds-radio" style="float: left;" data-value="benefitCategory" onclick="{!c.onRadioBtnSelect}">
+                            <input type="radio" checked="{!v.selectedRadioBtnValue == 'benefitCategory'}"/>
+                            <label class="slds-radio__label">
+                                <span class="slds-radio_faux"></span>
+                                <span class="slds-form-element__label">Benefit Category</span>
+                            </label>
+                        </div>
+                        <!- US3014067: Benefit and Coverage  -  Benefit Category Button UI END ->
+                    </div>
+                </fieldset -->
+                <!-- PLEASE DO NOT REMOVE THIS CODE -->
+            </div>
+
+            <div class="slds-size_4-of-6 card_element_top_margin">
+                <div class="slds-grid slds-grid_align-end">
+                    <div class="slds-col">
+                        <p id="{!v.policyDetails.resultWrapper.policyRes.policyNumber+'_Cyear'}">
+                            <lightning:input type="checkbox" name="" label="{!v.yearType+' : '+v.displayYear}"
+                                checked="{!v.selectedCalendarYear}" />
+                        </p>
+                    </div>
+
+                    <aura:if isTrue="{!v.isCdhp}">
+                        <div class="slds-col">
+                            <p id="{!v.policyDetails.resultWrapper.policyRes.policyNumber+'HSA'}">
+                                <lightning:input type="checkbox" name="" label="{!v.cdhpVal}" checked="{!v.selectedHSA}"
+                                    class="hsaLabelBackground" />
+                            </p>
+                        </div>
+                    </aura:if>
+                </div>
+            </div>
+
+            <div class="slds-size_3-of-6">
+                <!-- US3125215 - Thanish - 22nd Dec 2020 -->
+                <lightning:layout class="card_element_top_margin" verticalAlign="center">
+                    <lightning:layoutItem size="9">
+                        <!-- US3351083: Plan Benefits: Launch Benefit - Enter Key - Krish - 4/6/2021 -->
+                        <div onkeyup="{!c.onClickOfEnter}">
+                        <!-- US3125215 - Thanish - 22nd Dec 2020 -->
+                        <lightning:input aura:id="searchField" variant="label-hidden" placeholder="Select Benefits"
+                            messageWhenBadInput="You must say foo" />
+                        </div>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem>
+                        <lightning:button label="Launch" class="card_element_left_margin brand_button search_btn"
+                            variant="brand" onclick="{!c.onBenefitSearch}" />
+                    </lightning:layoutItem>
+                    <aura:If isTrue="{!or(v.isComPlan,v.isMedicarePlan)}">
+                        <lightning:layoutItem>
+                            <lightning:button label="{!v.btnLabel}"
+                                class="card_element_left_margin brand_button btn_ibaag" variant="brand"
+                                onclick="{! c.navigateToIbaag }" />
+                        </lightning:layoutItem>
+                    </aura:If>
+                </lightning:layout>
+            </div>
+        </div>
+
+        <aura:If isTrue="{! v.isShowBenefitAccordian }">
+            <div class="slds-size_2-of-2 card_top_padding">
+                <!-- US2925992 - Thanish - 23rd Dec 2020, US1741780	Tech Story: Benefit and Coverage Benefit Limits - Sarma - 13-03-2020 -->
+                <aura:iteration items="{!v.benefitRecordsAccordian}" var="sr">
+                    <c:ACET_BenefitAccordianChild policySelectedIndex="{!v.policySelectedIndex}"
+                        titleLabel="{!sr.categoryName}" serviceTypeDescription_API="{!sr.benefitId}"
+                        autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"
+                        componentOrder="{!v.componentOrder}" memberautodocUniqueId="{!v.memberautodocUniqueId}"
+                        transactionId="{!v.transactionId}" /> <!-- US3125215 - Thanish - 22nd Dec 2020 -->
+                </aura:iteration>
+            </div>
+        </aura:If>
+    </div>
+</aura:component>

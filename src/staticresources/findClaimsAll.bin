@@ -1,0 +1,90 @@
+{
+	"findClaims": {
+		"findClaimRequestMsg": {
+			"headerMsg": {},
+			"body": {
+				"claimTransaction": {
+					"otherIndividualId": [{
+						"code": "",
+						"sourceSysCode": "",
+						"id": "0805201401"
+					}],
+					"otherClaimId": [{
+						"sourceSysCode": "",
+						"id": ""
+					}],
+					"providerNPIId": [{
+						"nationalProviderId": {
+							"sourceSysCode": "",
+							"id": ""
+						},
+						"typeCode": {
+							"code": "",
+							"desc": ""
+						}
+					}],
+					"billingProvider": {
+						"organization": {
+							"tinOwner": [{
+								"tin": {
+									"taxIdNbr": "",
+									"typeCode": {}
+								}
+							}]
+						}
+					},
+					"claimServiceDateRange": {
+						"startDate": "2015-01-01",
+						"stopDate": "2015-01-02"
+					},
+					"patientIndividual": {
+						"name": {
+							"firstName": "",
+							"lastName": ""
+						},
+						"birthDate": {
+							"date": "2000-01-01"
+						},
+						"relationship": [{
+							"relationshipCode": {
+								"code": "",
+								"desc": ""
+							}
+						}]
+					},
+					"coverageTypeCode": [{
+						"code": "PH",
+						"desc": ""
+					}, {
+						"code": "MD",
+						"desc": ""
+					}, {
+						"code": "BH",
+						"desc": ""
+					}],
+					"subscriberIndividual": {
+						"individualId": [{
+							"sourceSysCode": "",
+							"id": ""
+						}]
+					},
+					"statusCode": {
+						"code": "A",
+						"desc": "APPROVED"
+					},
+					"customerAccountId": {
+						"sourceSysCode": "",
+						"id": ""
+					},
+					"callCode": {
+						"code": "M"
+					},
+					"institutionProfessionalCode": {
+						"code": "",
+						"desc": ""
+					}
+				}
+			}
+		}
+	}
+}

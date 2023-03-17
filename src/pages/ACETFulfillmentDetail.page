@@ -1,0 +1,188 @@
+<apex:page standardController="Create_Letter__c" extensions="ACETFulfillmentDetailController">
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    <apex:includeScript value="/support/console/20.0/integration.js" />
+    <apex:includeScript value="/support/console/25.0/integration.js" />
+    <script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+    
+    <script type="text/javascript">
+function SetTabTitle() {
+        sforce.console.setTabTitle('Letters');
+    }
+    var pageLoad = window.onload;
+    window.onload = function() {
+        if (pageLoad) {
+            pageLoad();
+        }
+        SetTabTitle();
+        var cancelres = "{!JSENCODE($CurrentPage.parameters.cancelresult)}";
+        var subRes = "{!JSENCODE($CurrentPage.parameters.submitresult)}";
+        var findRes = "{!JSENCODE($CurrentPage.parameters.findresult)}";
+        
+        if(cancelres == "true"){
+            RefreshandCloseTab();
+            
+        }
+        else if(subRes == "true" && findRes == "true"){
+            RefreshandCloseTab();
+        }
+    else if(subRes == "false" && findRes == "true")
+        {
+            displayerror('Letter template is incomplete. Select Review/Edit Letter to Finalize/Submit or Cancel Letter');
+        }
+        else if(cancelres=="false"){
+            displayerror('Encountered a Problem while canceling the Letter');
+            }
+    }
+    function testGetFocusedSubtabId() {
+        sforce.console.getFocusedSubtabId(showTabId);
+    }
+    var showTabId = function showTabId(result) {
+        
+    };
+    function RefreshandCloseTab() {
+        sforce.console.getEnclosingPrimaryTabId(RefreshPrimarytab);
+        sforce.console.getFocusedSubtabId(closeSubtab);
+        
+        
+    }
+    var RefreshPrimarytab = function RefreshPrimarytab(result) {
+        var tabId = result.id;
+        sforce.console.refreshPrimaryTabById(tabId, true,refreshSuccess);
+    };
+    var refreshSuccess = function refreshSuccess(result) {
+        
+    };
+    var closeSubtab = function closeSubtab(result) {
+        var tabId = result.id;
+        sforce.console.closeTab(tabId);
+    };    
+    function launchactivex(){ 
+        var url = '{!JSENCODE(getActiveXUrl)}';
+        window.open(url,'_blank', 'toolbars=0, width=1333, height=706 ,left=0 ,top=0 ,scrollbars=1 ,resizable=1');
+    }
+    </script>
+    
+    <apex:form id="TheForm">
+        <div>
+            <apex:image url="{!$Resource.ACETLetterIcon}" height="50"/> <apex:outputText value="Letters" style="margin-left: 11px;font-size: 200%;position: absolute;top: 11px;"/>
+        </div>
+        <apex:actionFunction name="displayerror" action="{!DisplayMessage}" reRender="TheForm" >
+            <apex:param name="myParam" value=""/>
+        </apex:actionFunction>
+        <apex:pageMessages id="pagemessage" />
+        <center>
+            <apex:commandButton action="{!LaunchActiveX}" onclick="launchactivex()" value="Review/Edit Letter" rendered="{!renderreviewletter}" />&nbsp;&nbsp;
+            <apex:commandButton value="Cancel Letter"  action="{!CancelLetter}" rendered="{!rendercancelletter}" />&nbsp;&nbsp;
+            <apex:commandButton value="Submit" action="{!SubmitLetter}" rendered="{!rendersubmitletter}" />
+        </center>
+    <apex:pageBlock >
+            <apex:pageBlockSection columns="1">
+              
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Template Name"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Letter_Name__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Delivery Method 1"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Delivery_Method_1__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>
+                
+                <!--<apex:pageBlockSectionItem id="theemailID1">
+                    <apex:outputLabel value="Email"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Email__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>-->
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Delivery Method 2"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Delivery_Method_2__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>
+                
+                <!--<apex:pageBlockSectionItem id="thefaxID1">
+                    <apex:outputLabel value="Fax"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Fax__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>-->
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="CC"></apex:outputLabel>
+                    <apex:outputText value="{!CC}" />
+                </apex:pageBlockSectionItem>
+                
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+        <apex:pageBlock >
+            <apex:pageBlockSection columns="2">
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Recipient Type"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Recipient_Type__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>    
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Created By"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.CreatedBy.Name}" />
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Subtype"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Recipient_Sub_Type__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>              
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Modified By"></apex:outputLabel>
+                    <apex:outputText value="{!strModifiedBy}" />
+                </apex:pageBlockSectionItem>
+                <!--<apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Provider Tax ID"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Provider_Tax_Id__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>-->
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="First Name"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Recipient_Name__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>
+
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Submitted By"></apex:outputLabel>
+                    <apex:outputText value="{!strSubmittedBy}" />
+                </apex:pageBlockSectionItem>
+                   <!--<apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Facility Name"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Recipient_Facility_Name__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>-->
+                 
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Middle Name"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Recipient_MI__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Work Item ID"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Work_Item_Id__c}" />
+                </apex:pageBlockSectionItem>
+                                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Last Name"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Recipient_Last_Name__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Status"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Letter_Status__c}" />
+                </apex:pageBlockSectionItem>
+                
+                                
+                
+                  <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Suffix"></apex:outputLabel>
+                    <apex:outputText value="{!newletter.Recipient_Suffix__c}"></apex:outputText>
+                </apex:pageBlockSectionItem>
+                
+                
+            </apex:pageBlockSection>
+            
+        </apex:pageBlock>
+        <center>
+            <apex:commandButton action="{!LaunchActiveX}" onclick="launchactivex()" value="Review/Edit Letter" rendered="{!renderreviewletter}" />&nbsp;&nbsp;
+            <apex:commandButton value="Cancel Letter"  action="{!CancelLetter}" rendered="{!rendercancelletter}" />&nbsp;&nbsp;
+            <apex:commandButton value="Submit" action="{!SubmitLetter}" rendered="{!rendersubmitletter}" />
+        </center>
+        </apex:form>
+</apex:page>

@@ -1,0 +1,170 @@
+<apex:page controller="ACETProviderOtherInquiryController" sidebar="false">
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="/support/console/38.0/integration.js"/>
+    <apex:pageMessages />
+    <apex:form >
+        <!--<input type = "button" value = "click me" onclick = "enableTab();"/>   -->
+        <c:ACETInteractionHighlightsPanel InteractionAtt="{!wrapper.interaction}"
+            SubjectAtt="{!wrapper.Subject}"
+            AdditionalInfoAtt="{!wrapper.AdditionalInfo}" html-auto-doc="auto"/>
+        <apex:sectionHeader title="Provider Other Inquiry" />
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveButton="true" attrShowMisdirectButton="true" attrInteractionObj="{!wrapper.interaction}"
+            attrSourceOriginator="{!wrapper.SourceOriginator}" attrInteractionId="{!wrapper.Interaction.Id}" attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="Provider Other Inquiry"/>
+        <apex:pageBlock >
+           <apex:pageBlockSection columns="1" html-auto-doc="auto" html-auto-doc-case-item="true">
+                 <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Resolved"></apex:outputLabel>
+                    <apex:outputPanel styleClass="autodoc-case-item-resolved">
+                        <input type="checkbox" checked="checked"></input>
+                    </apex:outputPanel>                                  
+                 </apex:pageBlockSectionItem>   
+            </apex:pageBlockSection>
+           <!-- Below Component added by Krishna for US564094-->
+            <c:ACETDynamicCallTypesDisplay attrCaseDataWrapper="{!wrapper}" 
+                                  attrCallTopic="{!wrapper.caseobj.Topic__c}"
+                                  attrShowPickListcallTypes="true"
+                                  attrShowCheckBoxCallTypes="false"
+                                  attrshowAccountType="false" attrShowPickListLabel="Inquiry Type"/>
+                                  
+            <apex:pageblockSection id="mainPBSection" columns="1"
+                html-auto-doc="auto">
+           <!--     <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Topic"></apex:outputLabel>
+                    <apex:selectList id="topic" size="1">
+                        <apex:selectOptions value="{!Topics}"></apex:selectOptions>
+                    </apex:selectList>
+                </apex:pageBlockSectionItem> -->
+                
+                <apex:pageBlockSectionItem html-auto-doc-item="false">
+                    <apex:outputLabel value="Comments"></apex:outputLabel>                    
+                    <apex:inputTextArea id="comments" cols="100" rows="5"
+                        value="{!wrapper.Comments}" />
+                </apex:pageBlockSectionItem>
+
+            </apex:pageblockSection>
+            <apex:pageBlockButtons location="bottom">
+                <apex:commandButton value="Clear" onclick="form.reset()" />
+            </apex:pageBlockButtons>
+        </apex:pageBlock>
+
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveButton="true" attrShowMisdirectButton="true" attrInteractionObj="{!wrapper.interaction}"
+            attrSourceOriginator="{!wrapper.SourceOriginator}" attrInteractionId="{!wrapper.Interaction.Id}" attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="Provider Other Inquiry"
+            attrLocation="bottom" />
+    </apex:form>
+    <script>
+   
+        $(document).ready(function() { 
+            //sforce.console.getEnclosingTabId(function(result){
+            //var tabId= result.id;
+            //sforce.console.disableTabClose(true,tabId,alert(result.id));
+
+           // });
+            $("[id$='topic']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+            $("[id$='comments']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+        
+            $("[id$='topic']").change(function(){
+            
+                if($(this).val() == ""){
+                 //remove tooltip
+                 $("#helpText").remove();
+                }else{
+                    if($("#helpText").length == 0){
+                    //tooltip not exist
+                    $("#errorTopicBlank").remove();
+                    $("[id$='topic']")
+                        $("[id$='topic']").parent().append('<img auto-doc-item="false" src="/img/alohaSkin/help_orange.png" style = "margin-left : 10px;" class = "helpIcon" id = "helpText" title="Instruction.">');
+                    }
+                    
+                }
+                //set help text for selected value
+             
+                 if($(this).val() == "Provider Credentialing" || $(this).val() == "Provider Education" || $(this).val() == "Provider Network Management" || $(this).val() == "Provider Portal Education/Support" || $(this).val() == "Other Provider Inquiry"){
+                    $("#helpText").attr("title","Refer to appropriate SOP/Job Aid based on the topic.");
+                    $("#helpText").tooltip();
+               }                              
+
+            });
+        });     
+        function enableTab(){
+            sforce.console.disableTabClose(false, 'scc-st-0', alert());
+                        sforce.console.disableTabClose(false, 'scc-st-1', alert());
+                                    sforce.console.disableTabClose(false, 'scc-st-2', alert());
+
+        }
+        var findPrimary = function findPrimary(result){
+        
+            var primaryTabId  = result.id;
+            sforce.console.getSubtabIds(primaryTabId , function(result){
+                alert(result.ids);
+            });
+        }
+        function closeCurrentTab(){
+            sforce.console.getFocusedPrimaryTabId(function(result){
+                var tabId = result.id;
+                sforce.console.closeTab(tabId);
+            });     
+        }
+        
+        function validate(){
+        $(".errorMsg").remove();
+            var $topic = $("[id$='topic']");
+            var $comments = $("[id$='comments']");
+            var returnFlag =true;
+            var errorMsg = "You must enter a value.";
+            if($("[id$='topic']").val() == ''){
+                $("[id$='topic']").parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                returnFlag  = false;
+            }
+            $("[id$='comments']").val($("[id$='comments']").val().trim());
+        if(($("[id$='comments']").val() == '' || $("[id$='comments']").val().length < 1 )){
+                $("[id$='comments']").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                returnFlag  = false;
+            }
+            
+            if(returnFlag){
+                acet.autodoc.saveAutodoc();    
+            }
+            
+            
+            return returnFlag ;
+        } 
+
+
+                           
+    </script>
+
+    <style type="text/css">
+.imgclass:hover {
+    background-image: url('/img/help/helpOrbs.gif');
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 15px;
+    background-position: right;
+ }
+ 
+.imgclass {
+    background-image: url('/img/help/helpOrbs.gif');
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 15px;
+}
+body .helpIcon {
+    background: transparent url(/img/alohaSkin/help_orange.png) no-repeat !important;
+}
+body .tooltip {
+    background: white !important;
+    opacity: 1 !important;
+    filter:alpha(opacity=100) !important;
+    left: 16% !important;
+    top: -25px !important;
+	position: absolute !important;
+    z-index: 3000 !important;
+    border: 1px solid #111 !important;
+    padding: 5px !important;
+	
+ }
+
+</style>
+
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+</apex:page>

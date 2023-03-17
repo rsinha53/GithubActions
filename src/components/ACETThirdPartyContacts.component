@@ -1,0 +1,483 @@
+<!-- 
+Description : A resusable component for displaying third parties on UI.
+              This component can also update existing third party, create new third party.
+author : Bhanu Jain
+ -->
+
+<apex:component controller="ACETThirdPartyContactsController" allowDML="true">
+<apex:attribute name="SubjectIdAttr" assignTo="{!SubjectId}" type="String" description="Current subject of interaction"/>
+<apex:attribute name="additionalInfoAtr" assignTo="{!additionalInfo}" type="ACETHighlightsPanelAdditionalInfo" description="Current subject of interaction"/>
+<apex:attribute name="additionalInfoStrAtr" assignTo="{!additionalInfoStr}" type="String" description="Additional Info serialized String"/>
+<apex:attribute name="InteractionAttr" assignTo="{!Interaction}" type="Interaction__c" description="current interaction object"/>
+<apex:attribute name="agentProfileAttr" assignTo="{!agentProfile}" type="String" description="current interaction object" required="false"/>
+<apex:actionFunction name="getThirdPartyList"
+  action="{!getThirdPartyList}" reRender="thirdPartyListTable,tempInt" oncomplete="updateUI();showAddPartyLink();"/>
+<apex:actionFunction name="updateHighlightPanel"
+  action="{!updatehighlightPanelStr}" reRender="originatorNameId,buttonPanel" oncomplete="console.log('done');" status="relationStatus"><!-- reRender="originatorNameId,buttonPanel" -->
+      <apex:param name="selectedRow" id="tpRowID" value="" assignTo="{!selectedThirdPartyId}" />
+ </apex:actionFunction>
+ <apex:actionFunction name="updateInteraction" action="{!updateInteraction}" reRender="hlPanel" oncomplete="console.log('interaction updated');hideMask();"/> 
+ <apex:actionFunction name="populateEditPopup" action="{!populateEditPopup}" rerender="thirdPartyPopUpPanel,tempInt" oncomplete="showThirdPartyEditForm();">
+  <apex:param name="selectedEditRow" id="tpEditRowID" value=""/>
+ </apex:actionFunction> 
+    <apex:actionFunction name="addNewThirdParty" action="{!addNewThirdParty}"  reRender="thirdPartyListTable,hlPanel" oncomplete="updateUI();showAddPartyLink();updateDetailPage();"/>
+    <apex:actionFunction name="updateThirdParty" action="{!updateThirdParty}" reRender="thirdPartyListTable,hlPanel" oncomplete="updateUI();hideTPForm();showAddPartyLink();updateDetailPage();">
+     <apex:param name="updatedTOP" id="updatedThird" value=""/>
+    </apex:actionFunction>
+ <input type = "hidden" id = "selectedTPName" name = "default" value = ""/>
+ 
+ <apex:includeScript value="{!$Resource.JqueryPhoneMask}"/>
+<style>
+.modal{
+            background-color: white;
+            border-width: 2px;
+            border-style: solid;
+            z-index: 9999;
+            left: 30%;
+            padding:10px;
+            position: absolute;
+            margin-left: -160px;
+            top:100px;
+            display:none;
+            min-width:800px;
+        }
+        .popupBackground-tp{
+            background-color:black;
+            opacity: 0.20;
+            filter: alpha(opacity = 20);
+            position: absolute;
+            width: 100%;
+            height: 1000%;
+            top: 0;
+            left: 0;
+            z-index: 9998;
+            display :none;
+        } 
+        .bPageBlock .requiredInput
+        {
+            position: relative;
+            height: 100%;
+        }
+
+        .bPageBlock .requiredInput .requiredBlock
+        {
+            background-color: #c00;
+            position: absolute;
+            left: -4px;
+            width: 3px;
+            top: 1px;
+            bottom: 1px;
+        }
+</style>
+    
+<div id ="someId" class ="modal slds-scope" style="background-color:white">
+    <apex:actionStatus id="relationStatus">
+        <apex:facet name="start">
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                        &nbsp;
+                    </div>
+                    <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 1001; margin: 15% 50%">
+                        <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                            <img src="/img/loading.gif" style="float: left; margin: 8px;" />
+                            <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                        </div>
+                    </div>
+        </apex:facet>
+    </apex:actionStatus>
+
+    <apex:outputPanel id="thirdPartyListTable">
+        <div class="slds-panel" title="Third Party" id="thirdPartyListPb">
+            <div class="slds-modal__header">
+                <h1 class="slds-text-heading--medium">Third Party</h1>
+            </div>
+            <input type = "hidden" value = "{!TPOriginatorList.size}" id = "thirdPartyListSizeId"/>
+            <input type = "hidden" value = "{!TPOriginator.third_party__c}" id = "newthirdPartyId"/>
+            <apex:outputPanel rendered="{!showNoThirdPartyError}">
+                <div class="slds-panel__section" columns="2">
+                    <apex:outputText value="No Third Party Contacts are found." id="tpErrorMsg"></apex:outputText>
+                </div> 
+            </apex:outputPanel>
+            <apex:outputPanel rendered="{!if((TPOriginatorList != null && TPOriginatorList.size  > 0) , true , false)}">
+                <div class="slds-panel__section slds-table slds-table_bordered slds-table_cell-buffer slds-text-title_caps" columns="1">
+                    <apex:dataTable value="{!TPOriginatorList}" var="thirdParty" >
+                        <apex:column headerValue="Select"><input type = "radio"  id = "{!thirdParty.third_party__c}" name = "tpRows" value = "{!thirdParty.third_party__r.first_name__c} {!thirdParty.third_party__r.LastName__c}" onCLick = "updateThirdPartyRelation(this,'{!thirdParty.Name}');" class= "thirdPartyRadioBtn"/></apex:column>
+                        <apex:column headerValue="First Name" >
+                            <apex:outputText style="text-transform:capitalize" value="{!thirdParty.third_party__r.First_Name__c}"></apex:outputText>
+                        </apex:column>
+                        <apex:column headerValue="Last Name" >
+                            <apex:outputText style="text-transform:capitalize" value="{!thirdParty.third_party__r.LastName__c}"></apex:outputText>
+                        </apex:column>
+                        <apex:column headerValue="Phone Number"  value="{!thirdParty.third_party__r.Phone_Number__c}"/>
+                        <apex:column headerValue="Other Originator"  >
+                            <apex:outputText style="text-transform:capitalize" value="{!thirdParty.Name}"></apex:outputText>
+                        </apex:column>
+                        <apex:column headerValue="Action" rendered="{!$Profile.Name != 'Research User'}" >
+                            <span style="text-transform:capitalize">
+                                <a href = "#" class = "thirdPartyEditLink" onClick = "populateEditPopupJs('{!JSENCODE(thirdParty.third_party__c)}');">Edit</a>
+                            </span>
+                        </apex:column>
+                    </apex:dataTable>
+                </div>
+            </apex:outputPanel>
+            <div class="slds-modal__footer slds-grid">
+                <table>
+                    <tbody>
+                        <tr>
+                            <td align="right">
+                                <apex:commandButton id="closeBtn" value="Close" onclick="return closeTPTable();" rerender="thirdPartyListTable,hlPanel,casedetailpopupPanel" style="float:right;height:2.5pc;width:9pc;margin-left:10px;background: rgb(0, 112, 210); padding: 4px;color:white;font-size:12px;" styleClass="slds-button slds-button--brand slds-not-selected">
+                                </apex:commandButton>
+                                <apex:commandButton id="addThirdPartyLink" value="Add New Third Party" onclick="showThirdPartyInputForm()" reRender="thirdPartyListTable" style="float:right;height:2.5pc;width:9pc;margin-left:10px;background: rgb(0, 112, 210); padding: 4px;color:white;font-size:12px;" styleClass="slds-button slds-button--brand slds-not-selected" rendered="{!$Profile.Name != 'Research User'}">
+                                </apex:commandButton>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>     
+        </div>    
+    </apex:outputPanel>
+</div>
+<div id="thirdPartyPopUp" class="modal">
+    <div class="slds-scope">
+    <apex:pageBlock id="thirdPartypopupTitle">
+        <apex:outputPanel id="thirdPartyPopUpPanel">
+            <div id="thirdPartyTitle" class="slds-modal__header">
+                <h1 class="slds-text-heading--medium">Add Third Party</h1>
+            </div>
+            <apex:outputPanel >
+                <div class="form-element__group slds-grid_align-center slds-modal__content slds-p-around_medium">
+                    <table class="slds-table">
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <apex:outputLabel value="First Name"></apex:outputLabel>
+                                </td>
+                                <td>
+                                    <apex:inputText value="{!TPOriginator.third_party__r.First_Name__c}" id="firstName"></apex:inputText>
+                                </td>
+                                <td>
+                                    <apex:outputLabel value="Last Name"></apex:outputLabel>
+                                </td>
+                                <td>
+                                    <apex:inputText value="{!TPOriginator.third_party__r.LastName__c}" id="lastName"></apex:inputText>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <apex:outputLabel value="Phone Number"></apex:outputLabel>
+                                </td>
+                                <td>
+                                    <apex:inputText value="{!TPOriginator.third_party__r.Phone_Number__c}" id="phoneNum" styleClass="phoneNumbMask"></apex:inputText>
+                                </td>
+                                <td>
+                                    <apex:outputLabel value="Group Name" ></apex:outputLabel>
+                                </td>
+                                <td>
+                                    <apex:inputText value="{!TPOriginator.third_party__r.Group_Name__c}" id="groupName"></apex:inputText>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <apex:outputLabel value="Other Originator"></apex:outputLabel>
+                                </td>
+                                <td>
+                                    <apex:inputField value="{!TPOriginatortRelContact.Other_Originator__c}" id="otherOriginator"></apex:inputField>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </apex:outputPanel>
+            <apex:outputPanel >
+                <div class="slds-modal__footer slds-grid">
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td align="right">
+                                    <apex:commandButton id="CloseButton" value="Close" onclick="return closeTP();" reRender="thirdPartyListTable,hlPanel,categorySection1" style="float:right;height:2.5pc;width:6pc;margin-left:10px;background: rgb(0, 112, 210); padding: 4px;color:white;font-size:12px;" styleClass="slds-button slds-button--brand slds-not-selected"></apex:commandButton>
+                                    <apex:commandButton id="addButton" value="Add"  onclick="return addTP(this);"  reRender="thirdPartyListTable,hlPanel" style="float:right;height:2.5pc;width:6pc;margin-left:10px;background: rgb(0, 112, 210); padding: 4px;color:white;font-size:12px;" styleClass="slds-button slds-button--brand slds-not-selected"></apex:commandButton>                            
+                                    <apex:commandButton id="updateButton" value="Save" onclick="return updateTP(this, '{!TPOriginator.third_party__r}');" style="float:right;height:2.5pc;width:6pc;margin-left:10px;background: rgb(0, 112, 210); padding: 4px;color:white;font-size:12px;" reRender="thirdPartyListTable,tempInt,hlPanel"></apex:commandButton>   
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </apex:outputPanel>
+        </apex:outputPanel>
+    </apex:pageBlock>
+    </div>
+</div>
+<div class = "popupBackground-tp">
+</div>
+<script>
+    var selectedTPOName;
+    var modal;
+    var selectedRecordId;
+    $(document).ready(function(){
+        $("[id$='otherOriginator']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+        $("[id$='firstName']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+        $("[id$='lastName']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+        $("[id$='phoneNum']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+        
+        $('.phoneNumbMask').mask('000-000-0000',{
+                        translation : {
+                            'N' : {
+                                pattern : /[0-9]/,
+                                optional : false
+                            }
+                        }   
+         });        
+    
+
+        
+        $("#someId").css("display","none");
+        $("#addThirdPartyLink").css("display","none");
+        var thirdPartyTileRowTab = $("[id$='thirdPartypopupTitle'] .pbHeader td:last");
+             $(thirdPartyTileRowTab).html("<a href = '#' style = 'float:right;'>Close</a>");
+             $(thirdPartyTileRowTab).click(function(){
+             if($("#tpForm-title").text() == 'Add Third Party'){
+                    $("[id$='otherOriginator']").val('');
+                    $("[id$='firstName']").val('');
+                    $("[id$='lastName']").val('');
+                    $("[id$='phoneNum']").val('');
+                     $("[id$='groupName']").val('');             
+             }
+
+              $("#thirdPartyPopUp").hide();
+               $("#someId").show();
+             });
+     });
+        function updateUI(){
+        $("#someId").css("display","block");
+        $("#selectedTPName").val('');
+             var thirdPartyListPopUpPb = $("#someId .pbHeader td:last");
+             $(thirdPartyListPopUpPb ).html("<a id='tpListClose' href = '#' style = 'float:right;'>Close</a>");
+             $(thirdPartyListPopUpPb).click(function(){
+               $("#someId").css("display","none");
+               $("#selectedTPName").attr("name","none");
+               
+                $("#selectedTPName").trigger('change');               
+               hideMask();             
+             });         
+        if($("#thirdPartyListSizeId").val() == 0 ){
+            $("[id$='tpErrorMsg']").css("color","red");
+        }else{
+            $("#thirdPartyPopUp").hide();
+            
+            $(".thirdPartyEditLink").click(function(){
+        $("[id$='thirdPartyTitle']").html("<h1 class = 'slds-text-heading--medium'>Modify Third Party</h1>");
+                showMask();
+            });
+
+        }
+        console.log('bhanu {!TPOriginatorList}');
+    }
+    function checkThirdPartyContacts(){
+        // get third party action function js
+        showMask();
+        getThirdPartyList();
+    }
+    function showMask(){
+        $(".popupBackground-tp").css("display","block");
+    }
+    function hideMask(){
+       $(".popupBackground-tp").css("display","none");
+        $("[id$='thirdPartyTitle']").html("<h1 class = 'slds-text-heading--medium'>Add Third Party</h1>");
+    }
+    function showThirdPartyInputForm(){
+                    $("[id$='otherOriginator']").val('');
+                    $("[id$='firstName']").val('');
+                    $("[id$='lastName']").val('');
+                    $("[id$='phoneNum']").val('');
+                     $("[id$='groupName']").val('');    
+        $("[id$='addButton']").css("display","block");
+        $("[id$='updateButton']").css("display","none");
+        $("[id$='thirdPartyTitle']").html("<h1 class = 'slds-text-heading--medium'>Add Third Party</h1>");
+       $("#thirdPartyPopUp").show();
+       //Added by Avish on 05082018 as a part of US1099714
+       $("[id$='addButton']").attr("disabled",false);
+       $("[id$='addButton']").val('Add');
+       $("[id$='addButton']").css("color","white");
+       // End US1099714
+        document.getElementById('someId').style.display = "block";
+        showMask();
+        $("#someId").hide();
+        return false;
+    }
+    function showThirdPartyEditForm(){
+      /* $("[id$='phoneNum']").keypress(function (e) {
+                        
+                        var regex = new RegExp("^[0-9]+$");
+                        var str = String.fromCharCode(!e.charCode ? e.which : e.charCode);
+                        console.log(regex.test(str) || (/^(8|9|13|27)$/.test("" + e.keyCode)));
+                        if (regex.test(str) || (/^(8|9|13|27)$/.test("" + e.keyCode))) {                    
+                            if($(this).val().length < 11 && $(this).val().length < 11 > 0){
+                                return true;
+                            }
+                         }                                    
+                        return false;
+                    }); */   
+        $("[id$='addButton']").css("display","none");
+        $("[id$='updateButton']").css("display","block");
+        $("[id$='thirdPartyTitle']").html("<h1 class = 'slds-text-heading--medium'>Update Third Party</h1>");
+        $("[id$='otherOriginator']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+        $("[id$='firstName']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+        $("[id$='lastName']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+        $("[id$='phoneNum']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');        
+        $("#thirdPartyPopUp").show();
+        showMask();
+        $("#someId").hide();
+    }    
+    function hideTPForm(){
+                 if($("#tpForm-title").text() == 'Add Third Party'){
+                    $("[id$='otherOriginator']").val('');
+                    $("[id$='firstName']").val('');
+                    $("[id$='lastName']").val('');
+                    $("[id$='phoneNum']").val('');
+                     $("[id$='groupName']").val('');             
+             }
+        
+        $("#thirdPartyPopUp").hide();
+    }    
+    function showAddPartyLink(){
+    console.log('enabling add link');
+        $("#addThirdPartyLink").css("display","block");
+    }
+    function updateThirdPartyRelation(currObj,thirdpartyname){
+    
+         selectedTPOName = $(currObj).val();
+         selectedTPOID = $(currObj).attr('id') ;
+         console.log(selectedTPOID);
+	 selectedRecordId = selectedTPOID;
+         $("#selectedTPName").val(selectedTPOName);
+         $("#selectedTPID").val(selectedTPOID);
+         $("#selectedTPO").val(thirdpartyname);
+         showMask();
+        updateHighlightPanel($(currObj).attr('id'));
+    }
+    function updateInteractionForThirdParty(){
+        showMask();
+    }
+    function populateEditPopupJs(currentRowId){
+        console.log('inside populateEditPopupJs :: '+currentRowId);
+        $("[id$='addButton']").css("display","none");
+        $("[id$='updateButton']").css("display","block");
+        $("[id$='thirdPartyTitle']").html("<h1 class = 'slds-text-heading--medium'>Update Third Party</h1>");
+        showMask();
+        populateEditPopup(currentRowId);
+    }
+    function validateTPForm(){
+    $(".errorMsg").remove();
+    var errorMsg = "You must enter a value.";
+    var returnFlag = true;
+        if($("[id$='firstName']").val() == ''){
+        $("[id$='firstName']").parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            returnFlag = false;
+        }
+        if($("[id$='lastName']").val() == ''){
+        $("[id$='lastName']").parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            returnFlag = false;
+        }
+        if($("[id$='phoneNum']").val() == ''){
+        $("[id$='phoneNum']").parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            returnFlag = false;
+        }
+        if($("[id$='otherOriginator']").val() == ''){
+        $("[id$='otherOriginator']").parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            returnFlag = false;
+        }
+        if($("[id$='phoneNum']").val() != '' && $("[id$='phoneNum']").val().length < 12){
+        	$("[id$='phoneNum']").parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + 'Enter a valid 10 digit number' + '</div>');
+        	returnFlag = false;
+        }
+         console.log(returnFlag);
+        return returnFlag;
+    }
+    function addTP(obj){
+    	console.log('obj@@@ ' + obj);	
+    
+       // if(validate_comp('') == true){
+        if(validateTPForm()){
+        
+        	//Added by Avish on 05082018 as a part of US1099714
+			if (obj) {
+				obj.disabled = true;
+				obj.style.color = '#C0C0C0';
+				obj.value = 'Saving...';
+			}   
+			//End US1099714  
+			     
+            addNewThirdParty();
+        }
+        return false;
+    }
+    function updateDetailPage()
+    {
+        var newThirdParty = $("#newthirdPartyId").val();
+        $("input[id=" + newThirdParty + "]").click();
+        //$("#+'newThirdPartyId'+").click();
+        $("#tpListClose").click();
+        
+        
+        
+    
+    }
+    function updateTP(obj, updatedRowId){ 
+    
+        if(validateTPForm()){
+    
+	    	//Added by Avish on 05082018 as a part of US1099714
+			if (obj) {
+				obj.disabled = true;
+				obj.style.color = '#C0C0C0';
+				obj.value = 'Saving...';
+			} 
+			//End US1099714        
+        
+            updateThirdParty(updatedRowId);
+        }  
+        return false;
+    }
+    
+     function closeTP(){
+
+         $("[id$='otherOriginator']").val('');
+         $("[id$='firstName']").val('');
+         $("[id$='lastName']").val('');
+         $("[id$='phoneNum']").val('');
+         $("[id$='groupName']").val('');             
+         $("#thirdPartyPopUp").hide();
+         $("#someId").show();
+         $(".errorMsg").remove();
+         
+         return false;
+     }
+
+    function closeTPTable() {
+        $("#someId").css("display","none");
+        console.log('$("#selectedTPName").val() :: ' + $("#selectedTPName").val());
+        console.log('detpagename Value----> ' +$("[id$='detpagename']").val());
+        var pageName = $("[id$='detpagename']").val();
+        if($("#selectedTPName").val() == ''){
+            if( pageName == 'MemberDetail')
+                $("[id$='originator']").val('None').change(); 
+            else
+                $("[id$='originator']").val('----None----').change();
+            console.log('originator :: ' + $("[id$='originator']").val());
+            $("[id$='ContactType']").html("<option value='----None----'>----None----</option>");
+            $("[id$='ContactName']").val('');
+            $("[id$='ContactName']").prop("disabled",false);
+            //update highlights panel back to no originator
+        }
+        else {
+            //if( pageName == 'MemberDetail')
+                addTPtoOriginator($("#selectedTPName").val(),selectedRecordId);
+            
+            $("#selectedTPName").attr("name","none");
+            $("#selectedTPName").trigger('change');
+        }
+        hideMask();
+        return false;
+    }
+
+</script>
+</apex:component>

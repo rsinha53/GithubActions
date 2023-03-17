@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>49.0</apiVersion>
+    <assignments>
+        <description>Assign the owner to Motion_Email_Web_Inquiries queue</description>
+        <name>AssignOwner</name>
+        <label>AssignOwner</label>
+        <locationX>893</locationX>
+        <locationY>227</locationY>
+        <assignmentItems>
+            <assignToReference>CaseRec.OwnerId</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>QueueID</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Update_Case_Record</targetReference>
+        </connector>
+    </assignments>
+    <assignments>
+        <description>Step to update the Entitlement ID</description>
+        <name>Update_Entitlement_ID</name>
+        <label>Update Entitlement ID</label>
+        <locationX>531</locationX>
+        <locationY>255</locationY>
+        <assignmentItems>
+            <assignToReference>CaseRec.EntitlementId</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>Entitlement_Id</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>IsCaseSourceWebType</targetReference>
+        </connector>
+    </assignments>
+    <decisions>
+        <name>IsCaseSourceWebType</name>
+        <label>IsCaseSourceWeb?</label>
+        <locationX>713</locationX>
+        <locationY>133</locationY>
+        <defaultConnector>
+            <targetReference>Update_Case_Record</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Default Outcome</defaultConnectorLabel>
+        <rules>
+            <name>CaseOriginWeb</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>CaseRec.Origin</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>Web</stringValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Get_Queue_Id</targetReference>
+            </connector>
+            <label>IsCaseSourceWeb</label>
+        </rules>
+    </decisions>
+    <formulas>
+        <description>Sets the entitlement name from the input boolean flag</description>
+        <name>EntitlementName</name>
+        <dataType>String</dataType>
+        <expression>IF ({!IsAdmin}, &quot;Motion Admin Email&quot;, &quot;Motion General Phone Email Web&quot;)</expression>
+    </formulas>
+    <interviewLabel>Motion Entitlement Update {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Motion Entitlement Update</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>FREE_FORM_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordLookups>
+        <description>Get the Entitlement ID</description>
+        <name>Get_Entitlement_ID</name>
+        <label>Get Entitlement ID</label>
+        <locationX>352</locationX>
+        <locationY>185</locationY>
+        <assignNullValuesIfNoRecordsFound>true</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Update_Entitlement_ID</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Name</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>EntitlementName</elementReference>
+            </value>
+        </filters>
+        <object>Entitlement</object>
+        <outputAssignments>
+            <assignToReference>Entitlement_Id</assignToReference>
+            <field>Id</field>
+        </outputAssignments>
+    </recordLookups>
+    <recordLookups>
+        <description>Get the Queue info to be assigned as the owner for the Web case origin</description>
+        <name>Get_Queue_Id</name>
+        <label>Get Queue Id</label>
+        <locationX>980</locationX>
+        <locationY>23</locationY>
+        <assignNullValuesIfNoRecordsFound>true</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>AssignOwner</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Type</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>Queue</stringValue>
+            </value>
+        </filters>
+        <filters>
+            <field>DeveloperName</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>Motion_Email_Web_Inquiries</stringValue>
+            </value>
+        </filters>
+        <object>Group</object>
+        <outputAssignments>
+            <assignToReference>QueueID</assignToReference>
+            <field>Id</field>
+        </outputAssignments>
+    </recordLookups>
+    <recordUpdates>
+        <description>Update the case record with Entitlement Id</description>
+        <name>Update_Case_Record</name>
+        <label>Update Case Record</label>
+        <locationX>734</locationX>
+        <locationY>357</locationY>
+        <inputReference>CaseRec</inputReference>
+    </recordUpdates>
+    <startElementReference>Get_Entitlement_ID</startElementReference>
+    <status>Active</status>
+    <variables>
+        <description>Variable to store the Case record</description>
+        <name>CaseRec</name>
+        <dataType>SObject</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>Case</objectType>
+    </variables>
+    <variables>
+        <description>Variable to store the retrieved Entitlement Id</description>
+        <name>Entitlement_Id</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <description>Variable which dictates which Entitlement ID needs to be assigned to the case</description>
+        <name>IsAdmin</name>
+        <dataType>Boolean</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <description>Variable to store the flag if the case source is web</description>
+        <name>IsWeb</name>
+        <dataType>Boolean</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <description>Stores the Queue Id of the Motion_Email_Web_Inquiries queue</description>
+        <name>QueueID</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+</Flow>

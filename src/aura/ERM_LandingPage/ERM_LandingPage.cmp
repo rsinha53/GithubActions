@@ -1,0 +1,189 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,lightning:availableForFlowScreens" access="global" controller="ERM_RequestController">
+    <aura:attribute name="userInfo" type="user"/>  
+    <aura:handler name="init" value="this" action="{!c.doInit}"/>
+    <aura:attribute name="showData" type="boolean" default="false"/>
+    <aura:attribute name="displaySearchBox" type="boolean" default="true"/>
+    <aura:attribute type="Boolean" name="ismodalClicked"/>
+    <aura:attribute name="searchVal" type="String"/>
+    <aura:attribute name="listToDiplay" type="List"/>
+    <aura:attribute name="ltngSelectedvalue" type="String"/>
+    <aura:attribute name="eServiceOptions" type="List" default="[{'value':'Broker', 'label':'Broker'},{'value':'Employer', 'label':'Employer'}]"/>
+    <aura:attribute name="eServicevalue" type="String"/>
+    <aura:attribute name="streamRecId" type="String"/>
+    <aura:attribute name="recordId" type="String"/>
+    <aura:attribute name="StreamGroupId" type="String"/> 
+    <aura:attribute name="nullResults" type="boolean" default="false"/>   
+    <aura:attribute name="text" type="String" default="Search by Customer Name, Policy Number, Customer Number, Account ID"/>
+    <lightning:workspaceAPI aura:id="workspace"/>
+    <ltng:require styles="{!$Resource.ACETLink_MasterStyle}" /> 
+    
+    <!--Section to Display Header for Stream flow-->
+    <div class="slds-is-relative">
+        <div class="slds-card card_padding" style="background: rgb(243, 242, 242);"> 
+            <div class="slds-grid">
+                <div class="slds-col slds-has-flexi-truncate">
+                    <div class="slds-media slds-no-space slds-grow">
+                        <div class="slds-media__figure">
+                            <span class="slds-icon_container slds-icon-standard-contact_list" title="Stream">
+                                <lightning:icon iconName="custom:custom39" alternativeText="Stream" />
+                            </span>
+                        </div>
+                        <div class="slds-media__body">
+                            <div class="slds-page-header__name">
+                                <div class="slds-page-header__name-title">
+                                    <h1 class="page_header_label slds-m-right_small slds-align-middle slds-truncate line-header" >Eligibility Reporting Management</h1>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>            
+            </div>
+        </div>
+    </div>
+    
+    <div class="slds-is-relative slds-card" style="background:white;width: 100%">   
+        <aura:if isTrue="{!!v.ismodalClicked}">  
+            <br/>
+            <div class="slds-grid linealign">
+                <div>
+                    <p style="padding-left: 15px;">Use the Below Search Tool to Find Your Customer and Start Your request</p><br/>
+                    <div class="slds-grid">
+                     <lightning:helptext content="{!v.text}"/>
+                    <!-- <span onkeypress="{!c.keyCheck}" >-->
+                    <lightning:input style='margin-right:10px' aura:id="valueText" placeholder="Search by" type="text" keydown.space="$event.preventDefault();" name="Search" value="{!v.searchVal}" variant="label-hidden" />                   
+                    <!--  </span> -->                    
+                    <lightning:select class="alignCls" variant="label-hidden" name="cStat" value="{!v.ltngSelectedvalue}" aura:id="sourcePickList" >
+                        <option value="">Choose Source...</option>
+                        <option value="PR">PR</option>
+                        <option value="AC">AC</option>
+                        <option value="NI">NI</option>
+                    </lightning:select>
+                    <lightning:button variant="brand"  label="Search"  title="Search" onclick="{!c.searchRequest}" class="btnCls"/>
+                     <button class="slds-button slds-button_brand" style="width:80px" onclick="{!c.clearSearch}">Clear</button>        
+                    </div>                             
+                </div>
+                <div class="eservce">
+                    <p style="padding-right: 300px;">For E-Services Only,Please Use the drop down below</p> <br/>
+                    <aura:if isTrue="{!v.displaySearchBox}"> 
+                        <!--<header class="slds-modal__header" style="padding: 1px;" > -->
+                            <!--<h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Find Customer</h2>-->                           
+                          <div class="slds-form-element slds-size_1-of-1 slds-grid" style="align-items: center;" >
+                              <!-- <lightning:helptext  content="Search by Policy Name,PeopleSOftID,AccountID,Policy Name,Customer Name"/>-->                        
+                              <!-- <h1 style="padding:8px">For E-Services Only ,Please Use the drop down below</h1> -->
+                             <lightning:select class="alignCls" label="" aura:id="eServ" value="{!v.eServicevalue}">
+                                <aura:iteration items="{!v.eServiceOptions}" var="option">
+                                    <option text="{!option.label}" value="{!option.id}" selected="{!option.selected}"/>
+                                  </aura:iteration>
+                             </lightning:select>
+                               <!--htning:button class="nxtbtn" variant="brand" label="Next" title="Next" onclick="{!c.startEServiceFlow}"/>  -->
+                               <button class="slds-button slds-button_brand" style="width:80px" onclick="{!c.startEServiceFlow}">Next</button>  
+                            </div>  
+                        <!--</header> -->
+                    </aura:if>  
+                </div>              
+            </div>          
+        </aura:if>       
+    </div>  
+    
+    <!-- Display group results -->
+    <aura:if isTrue="{!v.showData}">
+        <div class="slds-is-relative slds-card" style="background:white;width: 100%">   
+            <table class="slds-table slds-table_bordered slds-table_cell-buffer">
+                <thead>
+                    <tr class="slds-text-title_caps">
+                        <th scope="col">
+                            <div class="slds-truncate"  title="Select"></div>
+                        </th>
+                        
+                        <th scope="col">
+                            <div class="slds-truncate" title="Account Name">Customer Name</div>
+                        </th>
+                        <th scope="col">
+                            <div class="slds-truncate" title="Policy Name">Policy Number</div>
+                        </th>
+                        <th scope="col">
+                            <div class="slds-truncate" title="PeopleSoftID">Customer Number</div>
+                        </th>
+                        <!--<th scope="col">
+                            <div class="slds-truncate" title="PeopleSoftID">PeopleSoftID</div>
+                        </th>-->
+                        <th scope="col">
+                            <div class="slds-truncate" title="Source">Source</div>
+                        </th>
+                        <th scope="col">
+                            <div class="slds-truncate" title="AccountID">Account ID</div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody> 
+                    <aura:iteration items="{!v.listToDiplay}" var="stream" indexVar="index">
+                        <tr>
+                            <!-- <td >
+                            <div class="slds-truncate"><a data-source="{!stream.Source__c}" data-index="{!index}" onclick="{!c.newrequest}">Select</a></div>
+                        </td>-->
+                            <td >
+                                <div class="slds-truncate"><a data-value="{!stream.Id}" onclick="{!c.requestDetailsFlow}">Select</a></div>
+                            </td>
+                            <!--<td >
+                            <div class="slds-truncate"><a data-value="{!stream.Id}" onclick="{!c.caseFlow}">Create Case Flow</a></div>
+                        </td>-->
+                            <td>
+                                <div class="slds-truncate">{!stream.Customer_Name__c}</div>
+                            </td>
+                            <td>
+                                <div class="slds-truncate">{!stream.PolicyNumber__c}</div>
+                            </td>
+                            <td>
+                                <div class="slds-truncate">{!stream.Customer_Number__c}</div>
+                            </td>
+                            <!--<td>
+                                <div class="slds-truncate">{!stream.PeopleSoftID__c}</div>
+                            </td>-->
+                            <td>
+                                <div class="slds-truncate">{!stream.Source__c}</div>
+                            </td>
+                            <td>
+                                <div class="slds-truncate">{!stream.AccountID__c}</div>
+                            </td>
+                        </tr>
+                    </aura:iteration>
+                </tbody>
+            </table>
+        </div> 
+    </aura:if> 
+    
+    <!--Launch Flow when Group results found-->
+    <aura:if isTrue="{!v.ismodalClicked}"> 
+        <div class="flowCss">
+            <lightning:flow aura:id="flowData"/>
+        </div>           
+    </aura:if> 
+    
+    <!--Launch Flow when No Group results found-->  
+    <aura:if isTrue="{!v.nullResults}">
+        <div class="slds-is-relative slds-card" style="background:white;width: 100%;min-height:15rem;padding-bottom: 1.5%;">    
+            <br/>   
+            <p><b>No results</b></p>
+            <h1>  This should only be used for New Business in which their first bill has not yet run</h1>
+            <a href="javascript:void(0)" onclick="{!c.launchFlowWhenNogrpFound}"> Click Here  </a>          
+        </div>
+        
+    </aura:if> 
+    
+    <aura:if isTrue="{!v.ismodalClicked}"> 
+        <div class="flowCss">
+            <lightning:flow aura:id="flowNodata"/>
+        </div>           
+    </aura:if> 
+    
+    
+    <!-- Launch Flow when eService Platform is Selected--> 
+    
+    <aura:if isTrue="{!v.ismodalClicked}"> 
+        <div class="flowCss">
+            <lightning:flow aura:id="floweService"/>
+        </div>           
+    </aura:if> 
+    
+</aura:component>

@@ -1,0 +1,717 @@
+<apex:page controller="ACETCaseFastTrackController">
+    <script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="/support/console/38.0/integration.js" />
+    <apex:includeScript value="//ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js" />
+    <apex:includeScript value="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js" />
+    
+    <apex:stylesheet value="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css" />
+    <style>
+        .ui-dialog
+        {z-index:99999 !important}
+        
+        .ui-dialog-content
+        {height:auto !important}
+        
+    </style>
+    <div id="dialog" style="display: none;font-family: Arial,Helvetica,sans-serif;" title="Info"><p>Subject Detail functionality is not available for this Case.</p></div>
+    
+     <apex:pageBlock mode="maindetail">
+         <div style="margin-top:10px;">
+             <div id="msg"></div>            
+         </div>
+     </apex:pageBlock>
+       <apex:form >
+                  
+      <apex:messages />
+        <apex:actionFunction name="messageFunction" action="{!messageClass}" rerender="messageholder">       
+             <apex:param id="messagecode" name="messagecode" value="" />
+             </apex:actionFunction>  
+              <div id="messageholder" >
+
+               <apex:pageMessages id="messageholder" />
+</div>
+              </apex:form>
+    <script type="text/javascript">
+        var interactionId = '{!Interaction.Id}';
+        var caseId = '{!CaseObj.Id}';
+        var srk = '{!JSENCODE(CaseObj.Surrogate_Key__c)}';
+        var originatorType = '{!JSENCODE(CaseObj.Originator_Type__c)}';
+        var topic = '{!JSENCODE(CaseObj.Topic__c)}';
+        var subjectId = '{!JSENCODE(CaseObj.ID__c)}';
+        var taxId = '{!JSENCODE(CaseObj.TaxID__c)}';  
+        var contactName = '{!JSENCODE(CaseObj.Caller__c)}';  
+        var contactType = '{!JSENCODE(CaseObj.Originator_Relationship__c)}';
+        var sourceOriginator = '{!JSENCODE(Interaction.Interaction_Type__c)}';
+        var providerAddressPostalCode = '{!JSENCODE(Interaction.Provider_Address_Postal_Prefix__c)}';
+        var providerAddressId = '{!JSENCODE(Interaction.Provider_Address_Id__c)}';
+        var thirdPartyTaxId = '{!JSENCODE(ThirdParty.Tax_ID__c)}';
+        var ThirdPartyflowname = '{!JSENCODE(ThirdParty.Flow_Name__c)}';
+        var memberid;
+        if(srk != '')
+            {
+                memberid = '{!JSENCODE(CaseObj.ID__c)}';
+            }
+        var providerId = '{!JSENCODE(Interaction.Provider_ID__c)}';
+        var providerOriginatorLastName = '{!JSENCODE(CaseObj.Interaction__r.Originator__r.LastName)}';
+        var groupId = '{!JSENCODE(Interaction.Group_ID__c)}';
+        var producerId = '{!JSENCODE(Interaction.Producer_ID__c)}';
+        var hightlightPanelInfo = '{!JSENCODE(HpAdditionInfoStr)}';
+        
+        console.log('interactionId: ' + interactionId); 
+        console.log('caseId: ' + caseId);
+        console.log('srk: ' + srk);
+        console.log('topic: ' + topic);
+        console.log('originatorType: ' + originatorType);
+        console.log('subjectId: ' + subjectId);
+        console.log('taxId: ' + taxId);
+        console.log('contactName: ' + contactName);
+        console.log('contactType: ' + contactType);
+        console.log('sourceOriginator: ' + sourceOriginator);
+        console.log('providerAddressPostalCode: ' + providerAddressPostalCode);
+        console.log('providerAddressId: ' + providerAddressId);
+        console.log('providerId: ' + providerId);
+        console.log('providerOriginatorLastName: ' + providerOriginatorLastName);
+        console.log('groupId: ' + groupId);
+        console.log('producerId: ' + producerId);
+        console.log('hightlightPanelInfo -->'+hightlightPanelInfo);
+        
+        var flow = getFlowName(originatorType);
+        var isMemberInfocus = false;
+        var isGroupInfocus = false;   
+        var isGroupMemberInfocus = false;
+        
+        if(flow == 'Member'){
+            isMemberInfocus = true;
+        }else if(flow == 'Provider'){   
+            if(providerId != subjectId){
+                isMemberInfocus = true;
+            }   
+        }else if(flow == 'Group'){
+            if(groupId != subjectId){
+                isMemberInfocus = true;
+            }   
+        }else if(flow == 'Producer'){
+            if(producerId != subjectId){
+                //Producer Group in focus
+                if((groupId == subjectId && groupId != '' && srk == '')){
+                    isGroupInfocus = true;
+                    
+                }
+                //Producer Group Member in focus
+                else if((groupId != subjectId && groupId != '' && srk != '')){
+                    isGroupInfocus = true;
+                    isMemberInfocus = true;
+                    }
+                //Producer Member in focus
+                else if(memberid == subjectId && groupId == '' && srk != ''){
+                    isGroupMemberInfocus = true;
+                    isMemberInfocus = true;
+                }
+                
+            }
+        }else if(flow == 'Other'){
+        var SubGroupID = '{!JSENCODE(CaseObj.Subject_Group_ID__c)}';
+        if(subjectId != '' && subjectId != SubGroupID ){
+        isMemberInfocus = true;
+        } 
+        else if(subjectId != '' && subjectId == SubGroupID ){
+        isGroupInfocus = true;
+        }       
+        }  
+        
+        console.log('flow: ' + flow);
+        console.log('Is Member Infocus: ' + isMemberInfocus);
+        console.log('Is Group Infocus: ' + isGroupInfocus);
+        
+        if(validate()){
+            $("#msg").html('<span>Redirecting...</span>');
+            if(flow == 'Member'){                       
+                Visualforce.remoting.Manager.invokeAction(
+                    '{!$RemoteAction.ACETCaseFastTrackController.findMember}',
+                    subjectId,         
+                    function(result, event){
+                       console.log("find member result:");
+                       console.log(result);
+                       
+                       processFindMemberResult(result);
+                    }, 
+                    {escape: true}
+                );  
+            }else if(flow == 'Group'){
+                Visualforce.remoting.Manager.invokeAction(
+                    '{!$RemoteAction.ACETCaseFastTrackController.findGroup}',
+                    groupId,     
+                    function(result, event){
+                       console.log("find group result:");
+                       console.log(result);
+                       
+                       processFindGroupResult(result);
+                    }, 
+                    {escape: true}
+                );  
+            }else if(flow == 'Provider'){
+                Visualforce.remoting.Manager.invokeAction(
+                    '{!$RemoteAction.ACETCaseFastTrackController.findProvider}',
+                    providerId,  
+                    taxId,
+                    providerAddressPostalCode,            
+                    function(result, event){
+                       console.log("find provider result:");
+                       console.log(result);
+                       
+                       processFindProviderResult(result);
+                    }, 
+                    {escape: true}
+                );          
+            }else if(flow == 'Producer'){
+                Visualforce.remoting.Manager.invokeAction(
+                    '{!$RemoteAction.ACETCaseFastTrackController.findProducer}',
+                    producerId,     
+                    function(result, event){
+                       console.log("find producer result:");
+                       console.log(result);
+                       
+                       processFindProducerResult(result);
+                    }, 
+                    {escape: true}
+                );  
+            }
+            else if(flow == 'Other'){
+               notFoundFlow(); 
+            }
+        }
+             
+        var openSuccess = function(){};
+        
+        function getFlowName(ot){
+            if(ot == 'Member') return 'Member';
+            if(ot == 'Group/Employer' || ot == 'Broker' || ot == 'General Agent' || ot == 'UHG' || ot == 'Third Party') return 'Group';
+            if(ot == 'Producer') return 'Producer';
+            if(ot == 'Provider') return 'Provider';
+            if(ot == 'Other') return 'Other';
+            return '';
+        }
+        
+        function validate(){
+            if(flow == 'Group'){
+                if(!groupId){
+                    $("#msg").html('<div><span>' + 'group id is missing on interaction record.'  + '</span></div>');    
+                    return false;
+                }
+            }else if(flow == 'Provider'){
+                if(!providerId){
+                    $("#msg").html('<div><span>' + 'provider id is missing on interaction record.'  + '</span></div>'); 
+                    return false;
+                }
+            }else if(flow == 'Producer'){
+                if(!producerId){
+                    $("#msg").html('<div><span>' + 'producer id is missing on interaction record.'  + '</span></div>'); 
+                    return false;
+                }
+                
+                if(isGroupInfocus){
+                    if(!groupId){
+                        $("#msg").html('<div><span>' + 'group id is missing on interaction record.'  + '</span></div>');    
+                        return false;
+                    }   
+                }
+                if(isMemberInfocus){
+                    if(!memberid){
+                        $("#msg").html('<div><span>' + 'member id is missing on case record.'  + '</span></div>');  
+                        return false;
+                    }   
+                }
+            }
+            return true;    
+        }
+        
+        var unavaiableDialog;    
+        $(document).ready(function(){
+
+        if(!unavaiableDialog){
+            unavaiableDialog = $("#dialog").dialog({
+                   autoOpen: false,
+                   height: 160,
+                   width: 350,
+                   modal: true,
+                   closeOnEscape: true,
+                   buttons: {
+                    "OK" : function(){
+                        sforce.console.getEnclosingTabId(function closeSubtab(result) {
+                        var tabId = result.id;
+                        sforce.console.closeTab(tabId); 
+                    });
+                 }}
+            }); 
+        }
+    });
+
+        
+        function displayUnavailableMessage(){
+                 $("#msg").html('<div><span></span></div>');  
+                 unavaiableDialog.dialog("open");
+        }
+        
+        
+        
+        
+        function processFindMemberResult(result){
+                    console.log('status code --->'+result.statusCode);
+
+            if(result.statusCode == '200'){
+            console.log('entered member flow 1');
+                if(result.Response && result.Response.length > 0){
+                    //match member by srk
+                    var msr;
+                    for(var i = 0; i < result.Response.length; i++){
+                        if(result.Response[i].SurrogateKey == srk){
+                        console.log('entered member flow 2');
+                            msr = result.Response[i];
+                            break;
+                        }
+                    }
+                    console.log('member matched by srk:');
+                    console.log(msr);
+                    
+                    if(msr){
+                    var lastname = escape(msr.LastName);
+                     var FirstName = escape(msr.FirstName);
+                        var tabName = 'Detail' + ' - ' + htmlDecode(msr.LastName); 
+                        var url = '/apex/ACETMemberDetail?lastName=' + lastname   + '&firstName=' + FirstName  + '&Id=' + msr.Id +'&ssn=' + msr.SSNum +'&scr=' + msr.SCRId + '&SRK=' + (msr.SurrogateKey ? msr.SurrogateKey : '') + '&subjectdob=' + msr.DOB + '&sourceOriginator=' + sourceOriginator + '&InteractionId=' + interactionId + '&IsMember = true'+ '&ProviderId = '+ '&groupId = ' + '&ProvTypeCode = '  + '&vccdParams=' + '&individualIdentifier=' + msr.individualIdentifier + '&topic=' + topic + '&fastTrack=true'+'&fromGroupDetail='+'&groupFlowGroupName='+'&groupFlowGroupNumber=';   
+                        var tabIdUsngClntId = msr.Id ? msr.Id : msr.SurrogateKey;
+                        console.log(url);
+                        
+                        sforce.console.getEnclosingTabId(function(result) {
+                            sforce.console.closeTab(result.id);
+                            sforce.console.openPrimaryTab('', url, true, tabName, openSuccess, tabIdUsngClntId);
+                        }); 
+                    }else{
+                        displayUnavailableMessage();
+                        ////$("#msg").html('<div><span></span></div>');  
+                        //$("#msg").html('<div><span>' + 'No member found or no member matching the Surrogate Key.'  + '</span></div>');  
+                    }
+                }else{
+                    displayUnavailableMessage();
+                }
+            }else{
+             messageFunctionExt(result.statusCode,'findMember');
+
+              //  displayUnavailableMessage();
+            }
+        }
+        
+        function processFindGroupResult(result){
+          console.log('status code --->'+result.statusCode);
+
+            if(result.statusCode == '200'){
+            
+                if(result.Response && result.Response.length > 0){
+                    var gsr = result.Response[0];
+                    
+                    console.log('group found: ');
+                    console.log(gsr);
+                     var groupName= escape(gsr.groupName);
+
+                    if(gsr){
+                        var tabName = 'Detail' + ' - ' + htmlDecode(gsr.groupName); 
+                        var url = '/apex/ACETViewEmployerGroup?groupName=' + groupName + '&taxId=' + gsr.taxid + '&Id=' + gsr.groupId + '&sourceOriginator=' + sourceOriginator + '&InteractionId=' + interactionId + '&additionalInfo=' + hightlightPanelInfo + '&contactName=' + contactName +  (isMemberInfocus ? '' : ('&topic=' + topic)) + '&fastTrack=true';                                                           
+                        var tabIdUsngClntId = gsr.groupId;
+                        console.log(url);
+                        
+                        sforce.console.getEnclosingTabId(function(result) {
+                            var tabId = result.id;
+                            //sforce.console.closeTab(result.id);
+                            sforce.console.openPrimaryTab('', url, true, tabName, 
+                            function(result){
+                                if(isMemberInfocus){
+                                    var groupDetailTabId = result.id;
+                                    Visualforce.remoting.Manager.invokeAction(
+                                        '{!$RemoteAction.ACETCaseFastTrackController.findMember}',
+                                        subjectId,         
+                                        function(result, event){
+                                           console.log("find member result:");
+                                           console.log(result);
+                                           
+                                           processMemberResultMemberInFocus(result, groupDetailTabId, tabId, null, null, gsr);
+                                        }, 
+                                        {escape: true}
+                                    );  
+                                }else{
+                                    sforce.console.closeTab(tabId);
+                                }                               
+                            },
+                            tabIdUsngClntId)
+                        }); 
+                    }else{
+                        displayUnavailableMessage();
+                        //$("#msg").html('<div><span></span></div>');  
+                        //$("#msg").html('<div><span>' + 'No group found.'  + '</span></div>');  
+                    }
+                } else{
+                    displayUnavailableMessage();
+                    //$("#msg").html('<div><span></span></div>');  
+                        
+                }
+            }else{
+              //  displayUnavailableMessage();
+             messageFunctionExt(result.statusCode,'findGroup');
+             console.log('Result Message --->'+result.Message);
+                $("#msg").html('<div><span>'  + '</span></div>');
+            }
+        }
+        
+        function processFindProviderResult(result){   
+                            console.log('status code --->'+result.statusCode);
+     
+            if(result.statusCode == '200'){
+                if(result.Response && result.Response.length > 0){               
+                    //match provider by address id
+                    var psr;
+                    for(var i = 0; i < result.Response.length; i++){
+                       if(result.Response[i].addressId == providerAddressId){
+                            psr = result.Response[i];
+                            break;
+                        }
+                    }
+                    console.log('provider found: ');
+                    console.log(psr);
+                                        
+                    if(psr){
+                        
+                    
+                    var decodeVal = '{!JSENCODE(CaseObj.Interaction__r.Originator__r.LastName)}';                                                       
+                     
+                    if(decodeVal==''){
+                        decodeVal = providerOriginatorLastName;
+                        console.log('DECODE VAL WAS BLANK');
+                    }
+                    else{
+                        console.log('DECODE VAL WAS NOT BLANK');
+                    }
+                    console.log('DecodeVal:' + decodeVal);
+                    
+                        var tabName = 'Detail' + ' - ' + decodeVal;  
+                        var url = '/apex/ACETProviderDetail?Id=' + interactionId + '&Type=ProviderNotFound&vccdParams=' + '&ProviderTypeCode=' + psr.providerTypeCode;
+                        url += '&providerTINStatusCode=' + psr.providerTINStatusCode + '&ProvideraddressTypeCode=' + psr.addressTypeCode;
+                        url += '&providerTINOwner=' + psr.owner + '&addressId=' + psr.addressId + '&providerTINTypeCode=' + psr.providerTINTypeCode +'&ContactName=' +  '{!JSENCODE(AdditionalInfo.ContactName)}';
+                        url+= '&providerPhoneNumber=' + '{!JSENCODE(AdditionalInfo.providerPhoneNumber)}' + '&platinumProvider=' + '{!JSENCODE(AdditionalInfo.platinumProvider)}';
+                        url += '&providerState=' + psr.state + '&providerPostalPrefix=' + psr.zipCode + (isMemberInfocus ? '' : ('&topic=' + topic)) + '&fastTrack=true';                                                                
+                        console.log(url);
+                        
+                        sforce.console.getEnclosingTabId(function(result) {
+                            var tabId = result.id;
+                            sforce.console.openPrimaryTab(null, url, true, tabName, 
+                            function(result){
+                                if(isMemberInfocus){                                
+                                    var providerDetailTabId = result.id;
+                                    Visualforce.remoting.Manager.invokeAction(
+                                        '{!$RemoteAction.ACETCaseFastTrackController.findMember}',
+                                        subjectId,         
+                                        function(result, event){
+                                           console.log("find member result:");
+                                           console.log(result);
+                                           processMemberResultMemberInFocus(result, providerDetailTabId, tabId, psr, null, null);
+                                        }, 
+                                        {escape: true}
+                                    );
+                                }else{
+                                    sforce.console.closeTab(tabId);
+                                }                           
+                            }, 
+                            psr.providerId);                                              
+                        });
+                    }else{
+                        displayUnavailableMessage();
+                        //$("#msg").html('<div><span></span></div>');  
+                        //$("#msg").html('<div><span>' + 'No provider found or no provider matching the Address Id.'  + '</span></div>'); 
+                    }
+                }else{
+                    displayUnavailableMessage();
+                }
+            }else{
+              //  displayUnavailableMessage();
+                messageFunctionExt(result.statusCode,'findProvider');
+
+                //$("#msg").html('<div><span>' + '</span></div>');
+            }
+        }
+        
+        function processFindProducerResult(result){
+                            console.log('status code --->'+result.statusCode);
+
+            if(result.statusCode == '200'){
+                if(result.Response && result.Response.length > 0){
+                    var psr = result.Response[0];
+                    
+                    console.log('producer found: ');
+                    console.log('psr'+psr);
+                                        
+                    if(psr){
+                        var tabName = 'Detail' + ' - ' + (psr.CompanyName ? psr.CompanyName : psr.LastName); 
+                        var url = '/apex/ACETProducerDetail?' + (psr.CompanyName ? 'lastName='+psr.CompanyName+'&firstName=' : 'lastName='+psr.LastName+'&firstName=' + psr.FirstName) +'&ProducerId='+psr.ProducerID+'&InteractionId='+interactionId + '&additionalInfo=' + hightlightPanelInfo + '&contactName=' + contactName + '&contactType=' + contactType + '&subjectId=' +  ((isMemberInfocus || isGroupInfocus) ? '' : ('&topic=' + topic)) + '&fastTrack=true';                                                     
+                        var tabIdUsngClntId = psr.ProducerID;
+                        console.log(url);
+                        
+                        sforce.console.getEnclosingTabId(function(result) {
+                            var tabId = result.id;                            
+                            sforce.console.openPrimaryTab('', url, true, tabName, 
+                            function(result){
+                            console.log('Enter here ');
+                                if(isGroupInfocus || (isGroupInfocus && isMemberInfocus)){
+
+                                    var producerDetailTabId = result.id;
+                                    Visualforce.remoting.Manager.invokeAction(
+                                        '{!$RemoteAction.ACETCaseFastTrackController.findGroup}',
+                                        groupId,     
+                                        function(result, event){
+                                           console.log("find group result:");
+                                           console.log(result);
+                                           
+                                           processGroupResultGroupInFocus(result, producerDetailTabId, tabId, psr);
+                                        }, 
+                                        {escape: true}
+                                    );   
+                                }else if(isMemberInfocus && isGroupMemberInfocus){
+                                                            console.log('Enter here2 ');
+
+                                    var producerDetailTabId = result.id;
+                                    Visualforce.remoting.Manager.invokeAction(
+                                        '{!$RemoteAction.ACETCaseFastTrackController.findMember}',
+                                        subjectId,         
+                                        function(result, event){
+                                           console.log("find member result:");
+                                           console.log(result);
+                                           
+                                           processMemberResultMemberInFocus(result, producerDetailTabId, tabId, null, psr, null);
+                                        }, 
+                                        {escape: true}
+                                    );
+                                }
+                                else{
+                                                            console.log('Enter here3 ');
+
+                                    sforce.console.closeTab(tabId);
+                                }                               
+                            },
+                            tabIdUsngClntId)
+                        }); 
+                    }else{
+                        displayUnavailableMessage();
+                        //$("#msg").html('<div><span></span></div>');  
+                        //$("#msg").html('<div><span>' + 'No producer found.'  + '</span></div>');  
+                    }
+                }else{
+                    displayUnavailableMessage();
+                }
+            }else{
+                //displayUnavailableMessage();
+             messageFunctionExt(result.statusCode,'findProducer');
+
+            }
+        }
+                                  
+        function processMemberResultMemberInFocus(result, primaryTabId, fastTrackTabId, provider, producer, group){
+
+        console.log('responce on member search result'+result.Response);
+                            console.log('status code --->'+result.statusCode);
+
+            if(result.statusCode == '200'){
+                if(result.Response && result.Response.length > 0){
+                    //match member by srk
+                    var msr;
+                    for(var i = 0; i < result.Response.length; i++){
+                        if(result.Response[i].SurrogateKey == srk){
+                            msr = result.Response[i];
+                            break;
+                        }
+                    }
+                    console.log('member matched by srk:');
+                    console.log(msr);
+                    
+                    if(msr){
+                    var lastname = escape(msr.LastName);
+                     var FirstName = escape(msr.FirstName);
+
+                        var tabName = 'Detail' + ' - ' + htmlDecode(msr.LastName) ;   
+                         var url = '/apex/ACETMemberDetail?lastName=' + lastname  + '&firstName=' + FirstName  + '&Id=' + msr.Id +'&ssn=' + msr.SSNum +'&scr=' + msr.SCRId + '&SRK=' + (msr.SurrogateKey ? msr.SurrogateKey : '') + '&subjectdob=' + msr.DOB + '&sourceOriginator=' + sourceOriginator + '&InteractionId=' + interactionId + '&additionalInfo=' + hightlightPanelInfo + '&IsMember = false'+ '&ProviderId = ' + providerId + '&groupId = ' + groupId + '&ProvTypeCode = ' + (provider ? provider.providerTypeCode : '') +'&providerTINTypeCode=' +( provider? provider.providerTINTypeCode:'') + '&vccdParams=' + '&individualIdentifier=' + msr.individualIdentifier + '&topic=' + topic + '&fastTrack=true'+'&fromGroupDetail='+'&groupFlowGroupName='+'&groupFlowGroupNumber=';
+                         var tabIdUsngClntId = msr.Id ? msr.Id : msr.SurrogateKey;
+                        console.log(url);  
+                        sforce.console.openSubtab(primaryTabId, url, true, tabName);
+                        sforce.console.closeTab(fastTrackTabId);
+
+                    }else{
+                        displayUnavailableMessage();
+                        sforce.console.closeTab(primaryTabId);
+                        //$("#msg").html('<div><span></span></div>');  
+                        //$("#msg").html('<div><span>' + 'No member found or no member matching the Surrogate Key.'  + '</span></div>');  
+                    }
+                }else{
+                    displayUnavailableMessage();
+                    sforce.console.closeTab(primaryTabId);
+                }
+            }else{
+               // displayUnavailableMessage();
+               messageFunctionExt(result.statusCode,'findMember');
+                sforce.console.closeTab(primaryTabId);
+              $("#msg").html('<div><span>' +  '</span></div>');
+            }
+        }
+                
+        function processGroupResultGroupInFocus(result, primaryTabId, fastTrackTabId, r){
+            console.log('result is: '+result);
+            console.log('primaryTabId is: '+primaryTabId);
+            console.log('fastTrackTabId is: '+fastTrackTabId);
+            console.log('result.Success is: '+result.Success);
+                    console.log('status code --->'+result.statusCode);
+            if(result.statusCode == '200'){
+                console.log('result.Response is: '+result.Response);
+                console.log('result.Response.length is: '+result.Response.length);
+                if(result.Response && result.Response.length > 0){
+                    var gsr = result.Response[0];
+                    
+                    console.log('r is: '+r);
+                    console.log('group found: ');
+                    console.log(gsr);
+                    
+                    if(gsr){
+                        var groupName= escape(gsr.groupName);
+
+                        var tabName = 'Detail' + ' - ' + htmlDecode(gsr.groupName); 
+                        var url = '/apex/ACETViewEmployerGroup?groupName=' + groupName + '&taxId=' + gsr.taxid + '&Id=' + gsr.groupId + '&sourceOriginator=' + sourceOriginator + '&InteractionId=' + interactionId + '&additionalInfo=' + hightlightPanelInfo + '&contactName=' + contactName +  (isMemberInfocus ? '' : ('&topic=' + topic)) + '&fastTrack=true';                                                           
+                        var tabIdUsngClntId = gsr.groupId;
+                        console.log('test sam-->'+url);
+                        
+                        sforce.console.openSubtab(primaryTabId, url, true, tabName, null, 
+                        function(){
+                            if(isMemberInfocus){
+                                //var groupDetailTabId = result.id;
+                                Visualforce.remoting.Manager.invokeAction(
+                                    '{!$RemoteAction.ACETCaseFastTrackController.findMember}',
+                                    subjectId,         
+                                    function(result, event){
+                                       console.log("find member result:");
+                                       console.log(result);
+                                       
+                                       processMemberResultMemberInFocus(result, primaryTabId, fastTrackTabId, null, null, gsr);
+                                    }, 
+                                    {escape: true}
+                                );  
+                            }else{
+                                sforce.console.closeTab(fastTrackTabId);
+                            }
+                        },
+                        null);
+                        //sforce.console.closeTab(fastTrackTabId);
+                    }else{
+                        displayUnavailableMessage();
+                        sforce.console.closeTab(primaryTabId);
+                        //$("#msg").html('<div><span></span></div>');  
+                        //$("#msg").html('<div><span>' + 'No group found.'  + '</span></div>');  
+                    }
+                }else{
+                    displayUnavailableMessage();
+                    sforce.console.closeTab(primaryTabId);
+                }
+            }else{
+               // displayUnavailableMessage();
+               messageFunctionExt(result.statusCode,'findGroup');
+                sforce.console.closeTab(primaryTabId);
+                $("#msg").html('<div><span>' + result.Message + '</span></div>');
+            }
+        }
+
+           function notFoundFlow(){
+                      if(ThirdPartyflowname == 'ProviderNotFoundFlow'){
+                        var decodeVal = '{!JSENCODE(CaseObj.Interaction__r.Originator__r.LastName)}';                                                       
+                    if(decodeVal==''){
+                        decodeVal = providerOriginatorLastName;
+                        console.log('DECODE VAL WAS BLANK');
+                               }
+                       var tabName = 'Detail' + ' - '+ decodeVal ;  
+                        var url = '/apex/ACETProviderDetail?Id=' + interactionId + '&Type=ProviderNotFound&vccdParams=' ;
+                        url += '&PNFLastName=' + '{!JSENCODE(ThirdParty.LastName__c)}' + '&PNFTaxId=' +  '{!JSENCODE(ThirdParty.Tax_ID__c)}';
+                        url += '&PNFPhoneNumber=' + '{!JSENCODE(ThirdParty.Phone_Number__c)}' + '&PNFFirstName=' + '{!JSENCODE(ThirdParty.First_Name__c)}' + '&PNFNPI=' + '{!JSENCODE(ThirdParty.NPI__c)}';
+                        url += '&Type=' + 'ProviderNotFound1'+ (isMemberInfocus ? '' : ('&topic=' + topic)) + '&fastTrack=true';                                                                
+                        console.log('ACETProviderDetail url-->'+url);
+                        }
+                        else if(ThirdPartyflowname == 'GroupNotFoundFlow')
+                        {
+                          var OriginatorName = '{!JSENCODE(CaseObj.Originator_name__c)}';                        
+                         var tabName = 'Detail' + ' - ' +'{!JSENCODE(ThirdParty.First_Name__c)}';
+                        var url = '/apex/ACETViewEmployerGroup?contactName='+ contactName +  (isMemberInfocus ? '' : ('&topic=' + topic)) + '&fastTrack=true'+ '&gnfzipcode=' + '{!JSENCODE(ThirdParty.Mailing_PostalCode__c)}'+ '&gnfState=' + '{!JSENCODE(ThirdParty.Mailing_State__c)}'+ '&gnfPhoneNumber=' + '{!JSENCODE(ThirdParty.Phone_Number__c)}'+'&gnf=' +'1'+ '&InteractionId=' + interactionId+  '&gnfEmployerName=' + '{!JSENCODE(ThirdParty.Employer_Name__c)}'+ '&Id=' + '{!JSENCODE(ThirdParty.Group_Number__c)}'+ '&additionalInfo=' + hightlightPanelInfo+ '&gnf=' + '1'+ '&RelationshipType=' + contactType + '&sourceOriginator=' + sourceOriginator + '&InteractionId=' + interactionId+'&OriginatorName='+ OriginatorName;                                                           
+                        }
+                        else if(ThirdPartyflowname == 'ProducerNotFoundFlow'){
+                        var prodName = '{!JSENCODE(ThirdParty.Producer_Name__c)}';
+                        var tabName = 'Detail'   + ' - ' +prodName; 
+                        var url = '/apex/ACETProducerDetail?InteractionId='+interactionId + '&additionalInfo=' + hightlightPanelInfo + '&contactType=' + contactType + '&subjectId=' +  ((isMemberInfocus || isGroupInfocus) ? '' : ('&topic=' + topic)) + '&fastTrack=false'+ '&PNFContactName=' + '{!JSENCODE(ThirdParty.FullName__c )}' +'&pnf=' + '1' +'&PNFProducerId=' + '{!JSENCODE(ThirdParty.Producer_Id__c)}'+'&PNFProducerName=' + prodName +'&PNFPhoneNumber=' + '{!JSENCODE(ThirdParty.Phone_Number__c)}'+'&PNFState=' + '{!JSENCODE(ThirdParty.Mailing_State__c)}'+ '&isProducerNotFound=' + '1'; 
+                        }                       
+                        sforce.console.getEnclosingTabId(function(result) {
+                            var tabId = result.id;
+                            sforce.console.openPrimaryTab(null , url, true, tabName, 
+                            function(result){
+                                if(isMemberInfocus){
+                                    var DetailTabId = result.id;
+                                    Visualforce.remoting.Manager.invokeAction(
+                                        '{!$RemoteAction.ACETCaseFastTrackController.findMember}',
+                                        subjectId,         
+                                        function(result, event){
+                                           console.log("find member result:");
+                                           console.log(result);
+                                           processMemberResultMemberInFocus(result, DetailTabId , tabId, null, null, null);
+                                        }, 
+                                        {escape: true}
+                                    );
+                                }else if(isGroupInfocus){
+                                              if(groupId == ''){
+                                              groupId = subjectId;
+                                              }
+                                    var DetailTabId = result.id;
+                                    Visualforce.remoting.Manager.invokeAction(
+                                        '{!$RemoteAction.ACETCaseFastTrackController.findGroup}',
+                                        groupId,     
+                                        function(result, event){
+                                           console.log("find group result:");
+                                           console.log(result);
+                                           
+                                           processGroupResultGroupInFocus(result, DetailTabId , tabId, null);
+                                        }, 
+                                        {escape: true}
+                                    );   
+                                }
+                                else{
+                                    sforce.console.closeTab(tabId);
+                                }                           
+                            }, 
+                            null);                                              
+                        });
+            }    
+            function messageFunctionExt(stastuscode,servicename){
+            if(servicename == 'findMember'){
+            messageFunction('GN'+stastuscode);
+            }
+            else if(servicename == 'findGroup'){
+            messageFunction('GN'+stastuscode);
+            }
+            else if(servicename == 'findProducer'){
+            if(stastuscode == '001' || stastuscode == '1'){
+            messageFunction('GN400B');
+                        
+            }else if(stastuscode == '002' || stastuscode == '005' || stastuscode == '2' || stastuscode == '5'){
+            messageFunction('GN500');
+            }
+            else{
+            messageFunction('GN'+stastuscode);
+            }
+            }
+            else if(servicename == 'findProvider'){
+            messageFunction('GN'+stastuscode);
+
+            }
+            
+            }
+            function htmlDecode(value) {
+    return $('<div/>').html(value).text();
+}
+    </script>
+</apex:page>

@@ -1,0 +1,220 @@
+<aura:component implements="forceCommunity:themeLayout,forceCommunity:availableForAllPageTypes,forceCommunity:layout,force:lightningQuickAction,force:appHostable" access="global" controller="SNI_FL_ProviderMembersTabController">
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="sortDropdownOptions" type="List" default="[
+                                                                    {'label': 'All Members', 'value': 'allMembers'},
+                                                                    {'label': 'Active Members', 'value': 'activeMembers'},
+                                                                    {'label': 'Inactive Members', 'value': 'inactiveMembers'},
+                                                                    ]"/>
+    <aura:attribute name="sortByDropdown" type="String" default="allMembers" />
+    <aura:attribute name="sortToggleOptions" type="List" default="[
+                                                                  {'label': 'Sort by Name', 'value': 'nameSort'},
+                                                                  {'label': 'Sort by Status', 'value': 'statusSort'}
+                                                                  ]"/>
+    <aura:attribute name="sortToggleSelection" type="String" default="nameSort"/>
+    
+    <aura:attribute name="isModalOpen" type="boolean" default="false"/>
+    
+    <!--<aura:attribute name ="memberRecord" type="SNI_FL_ProviderMembersTabController.MemberDetailWrapper"/>  -->
+    <aura:attribute name ="memberRecord" type="Id"/>
+    <aura:attribute name="memberWrapperList" type="SNI_FL_ProviderMembersTabController.MemberDetailWrapper[]"/>
+    <aura:attribute name="isSmallScreen" type="Boolean" default="" />
+    <aura:attribute name="isTabletScreen" type="Boolean" default="" />
+    <aura:attribute name="providerProgram" type="String" />
+    <aura:attribute name="AllMemberRecords" type="SNI_FL_ProviderMembersTabController.MemberDetailWrapper[]"/>
+    <aura:attribute name="ActiveMemberRecords" type="SNI_FL_ProviderMembersTabController.MemberDetailWrapper[]"/>
+    <aura:attribute name="InactiveMemberRecords" type="SNI_FL_ProviderMembersTabController.MemberDetailWrapper[]"/>
+    <aura:attribute name="memberNamesFullList" type="List"/>
+    <aura:attribute name="memberNamesShortList" type="List"/>
+    <aura:attribute name="selectedMemberName" type="String"/>
+    <aura:attribute name="filterMembers" type="String" default=""/>
+    <aura:attribute name="displayNameList" type="boolean" default="false"/>
+    <aura:attribute name="progPopulation" type="String" default =""/>
+    <aura:handler name="change" value="{!v.providerProgram}" action="{!c.handleChange}"/>
+    <aura:handler name="SNI_FL_MemberModelCloseEvt" event="c:SNI_FL_MemberModelCloseEvt" action="{!c.handleSNI_FL_MemberModelCloseEvt}"/>
+    <aura:registerEvent name="SNI_FL_RedirectToViewMessagesEvt" type="c:SNI_FL_RedirectToViewMessagesEvt"/>
+    <div>
+        <div class="backgroundheight">
+            <aura:If isTrue="{!v.displayNameList}">
+                <div>
+                    <div class="dropdownBackdrop" onclick="{!c.closeMemberFilterDropdown}"></div>
+                </div>
+            </aura:If>
+            <aura:if isTrue="{!!v.isSmallScreen}">  
+                <br/><b style="font-family:Arial, Helvetica, sans-serif;margin-left:20px;font-size:24px;color:#000000;text-align: left;">Members</b><br/><br/>
+                <div class="button-container-div slds-grid slds-wrap">
+                    <lightning:combobox class="slds-size_2-of-12 combo-style comboBoxStyle grid-element-field"
+                                        varient="label-hidden"
+                                        value="{! v.sortByDropdown }"
+                                        options="{! v.sortDropdownOptions }"
+                                        onchange="{!c.statusChange}" />
+                   
+                    <div class="slds-size_1-of-3 slds-form-element grid-element-field">
+                        <div class=" slds-form-element__control slds-input-has-icon slds-input-has-icon_right filterMember">
+                            <lightning:input type="search" value="{!v.filterMembers}" onclick="{!c.displayMemberFilterList}" onchange="{!c.filterMemberList}" class="searchBox" placeholder="Search for member"/>
+                            <aura:If isTrue="{! greaterthan(v.filterMembers.length,0)}">
+                                <lightning:icon iconName="utility:clear" onclick="{!c.clearMemberFilter}" size="x-small" class="clearIcon"/>
+                            </aura:If>
+                        </div>
+                        <aura:If isTrue="{!v.displayNameList}">
+                            <div class="slds-card slds-card_boundary slds-p-horizontal_x-small dropdownTable" >
+                                <table class="slds-table slds-table_cell-buffer dataTable slds-m-top_xx-small slds-scrollable" >
+                                    <tbody> 
+                                        <aura:If isTrue="{! greaterthan(v.memberNamesShortList.length,0)}">
+                                            <aura:iteration items="{!v.memberNamesShortList}" var="obj" indexVar="index">
+                                                <tr onclick="{!c.selectMemberName}" data-value="{!obj}" >
+                                                    <td>
+                                                        <div class="slds-truncate">{!obj}</div>
+                                                    </td>
+                                                </tr>
+                                            </aura:iteration>
+                                            <aura:set attribute="else">
+                                                <div class="slds-truncate">No Results Found.</div>
+                                            </aura:set>
+                                        </aura:If>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </aura:If>
+                    </div>
+                    
+                    <div class="slds-size_1-of-3 radio-style grid-element-field">
+                        <lightning:radioGroup 
+                                              name="radioButtonGroup"
+                                              aura:id="changeMe"
+                                              label=""
+                                              options="{! v.sortToggleOptions }"
+                                              value="{! v.sortToggleSelection }"
+                                              onchange="{! c.sortToggle}"
+                                              type="button"/>
+                    </div>
+                </div>
+                <lightning:layout verticalAlign="center" multipleRows= "true">
+                    <aura:iteration items="{!v.memberWrapperList}" var="m" indexVar="index">
+                        <lightning:layoutItem size="12" padding="horizontal-large" >
+                            <div id="{!m.memberId + 'container'}" class="{!m.isActiveCSS +  ' slds-card slds-m-top_x-small slds-m-bottom_x-small slds-m-left_x-small slds-m-right_x-small slds-p-top_x-small slds-p-bottom_x-small slds-p-left_x-small slds-p-right_x-small'}">
+                                <p class="name">{!m.memberName}</p>
+                                <div class="slds-grid">
+                                    <div class="slds-col slds-size_1-of-1 slds-small-size_1-of-2 slds-medium-size_1-of-4">
+                                        <p class="labelText">Member ID</p>
+                                        <p class="text" id="{!m.memberId + 'subId'}">{!m.subscriberId}</p>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-small-size_1-of-2 slds-medium-size_1-of-4">
+                                        <p class="labelText">Status</p>
+                                        <aura:if isTrue="{!m.isActive}">
+                                            <p class="text" id="{!m.memberId + 'act'}"><img class="iconImage" src="{! $Resource.SNI_FL_MemberActiveIcon }" />  {!m.memberStatus}</p> 
+                                        </aura:if>
+                                        <aura:if isTrue="{!!m.isActive}">
+                                            <p class="text" id="{!m.memberId + 'inact'}"><img class="iconImage" src="{! $Resource.SNI_FL_MemberInactiveIcon }" /> {!m.memberStatus}</p> 
+                                        </aura:if>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-small-size_1-of-2 slds-medium-size_1-of-4"> 
+                                        <aura:if isTrue="{!m.isActive}">
+                                            <p class="labelText">Enrollment Date</p>
+                                            <p class="text" id="{!m.memberId + 'enroll'}">{!m.enrollmentDate}</p>
+                                        </aura:if>
+                                        <aura:if isTrue="{!!m.isActive}">
+                                            <p class="labelText">Inactive Date</p>
+                                            <p class="text" id="{!m.memberId + 'inactDate'}">{!m.inactiveDate}</p>
+                                        </aura:if>
+                                    </div>
+                                </div>
+                                <p><b><a class="link" id="{!m.memberId}" onclick="{! c.ShowPopUP}" >View Details &amp; Documents</a> &nbsp; <b style="color:#CACACA">|</b> <a class="link2" data-memberid="{!m.memberId}" id="{!m.memberName}" onclick="{!c.changeToMessages}"> View Messages</a></b></p>
+                            </div>
+                        </lightning:layoutItem>
+                    </aura:iteration> 
+                </lightning:layout>
+                <aura:set attribute = "else">
+                    <br/><b style="font-family:Arial, Helvetica, sans-serif;margin-left:24px;font-size:24px;color:#000000;text-align: left;">Members</b><br/>
+                    <span id = "progPop" style="font-family:Arial, Helvetica, sans-serif;margin-left:24px;font-size:17px;color:#000000;text-align: left;text-overflow: ellipsis;">{!v.progPopulation}</span><br/>
+                    <div class="mobile-div-top">
+                        <div class=" slds-form-element__control slds-input-has-icon slds-input-has-icon_right filterMember">
+                            <lightning:input type="search" value="{!v.filterMembers}" onclick="{!c.displayMemberFilterList}" onchange="{!c.filterMemberList}" class="searchBox" placeholder="Search for member"/>
+                            <aura:If isTrue="{! greaterthan(v.filterMembers.length,0)}">
+                                <lightning:icon iconName="utility:clear" onclick="{!c.clearMemberFilter}" size="x-small" class="clearIcon"/>
+                            </aura:If>
+                        </div>
+                        <aura:If isTrue="{!v.displayNameList}">
+                            <div class="slds-card slds-card_boundary slds-p-horizontal_x-small dropdownTable" >
+                                <table class="slds-table slds-table_cell-buffer dataTable slds-m-top_xx-small slds-scrollable" >
+                                    <tbody> 
+                                        <aura:If isTrue="{! greaterthan(v.memberNamesShortList.length,0)}">
+                                            <aura:iteration items="{!v.memberNamesShortList}" var="obj" indexVar="index">
+                                                <tr onclick="{!c.selectMemberName}" data-value="{!obj}" >
+                                                    <td>
+                                                        <div class="slds-truncate">{!obj}</div>
+                                                    </td>
+                                                </tr>
+                                            </aura:iteration>
+                                            <aura:set attribute="else">
+                                                <div class="slds-truncate">No Results Found.</div>
+                                            </aura:set>
+                                        </aura:If>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </aura:If>
+                    </div>
+                    <div class="mobile-div" >
+                        <lightning:combobox class="comboBoxStyle"
+                                            style="width: 100%; margin 0 auto !important;"
+                                            varient="label-hidden"
+                                            value="{! v.sortByDropdown }"
+                                            options="{! v.sortDropdownOptions }"
+                                            onchange="{!c.statusChange}" />
+                    </div>
+                    <div class="mobile-div-bottom" >
+                        <lightning:radioGroup name="radioButtonGroup"
+                                              aura:id="changeMe"
+                                              label=""
+                                              options="{! v.sortToggleOptions }"
+                                              value="{! v.sortToggleSelection }"
+                                              onchange="{! c.sortToggle}"
+                                              type="button"
+                                              class="radioButtonGroup-mobile"/>
+                    </div>
+                    <lightning:layout verticalAlign="center" multipleRows= "true">
+                        <aura:iteration items="{!v.memberWrapperList}" var="m" indexVar="index">
+                            <lightning:layoutItem size="12" padding="horizontal-large" >
+                                <div id="{!m.memberId + 'container-mobile'}" class="{!m.isActiveCSS +  ' slds-card slds-m-top_x-small slds-m-bottom_x-small slds-m-left_x-small slds-m-right_x-small slds-p-top_x-small slds-p-bottom_x-small slds-p-left_x-small slds-p-right_x-small'}">
+                                    <p class="name">{!m.memberName}</p>
+                                    <div class="slds-grid">
+                                        <div class="slds-col slds-size_1-of-1 slds-small-size_1-of-2">
+                                            <p class="labelText">Member ID</p>
+                                            <p class="text" id="{!m.memberId + 'subId-mobile'}" >{!m.subscriberId}</p>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-small-size_1-of-2">
+                                            <p class="labelText">Status</p>
+                                            <aura:if isTrue="{!m.isActive}">
+                                                <p id="{!m.memberId + 'act-mobile'}" class="text"> <img class="iconImage" src="{! $Resource.SNI_FL_MemberActiveIcon }"/> {!m.memberStatus}</p>
+                                            </aura:if>
+                                            <aura:if isTrue="{!!m.isActive}">
+                                                <p id="{!m.memberId + 'inact-mobile'}" class="text"><img class="iconImage" src="{! $Resource.SNI_FL_MemberInactiveIcon }" /> {!m.memberStatus}</p>
+                                            </aura:if> 
+                                        </div>
+                                    </div>
+                                    <div style="padding-bottom: 8px;"> 
+                                        <aura:if isTrue="{!m.isActive}">
+                                            <p class="labelText">Enrollment Date</p>
+                                            <p class="text" id="{!m.memberId + 'enroll'}">{!m.enrollmentDate}</p>
+                                        </aura:if>
+                                        <aura:if isTrue="{!!m.isActive}">
+                                            <p class="labelText">Inactive Date</p>
+                                            <p class="text" id="{!m.memberId + 'inactDate'}">{!m.inactiveDate}</p>
+                                        </aura:if>
+                                    </div>
+                                    <p><b><a class="link" id="{!m.memberId}" onclick="{! c.ShowPopUP}" >View Details &amp; Documents</a> &nbsp; <b style="colo{r:#CACACA">|</b> <a class="link2" data-memberid="{!m.memberId}" id="{!m.memberName}" onclick="{!c.changeToMessages}">View Messages</a></b></p>
+                                    
+                                </div>
+                            </lightning:layoutItem>
+                        </aura:iteration>
+                    </lightning:layout>
+                </aura:set> 
+            </aura:if>
+            
+            <!-- Modal/Popup Box starts here  -->
+            <aura:if isTrue="{!v.isModalOpen}" >
+                <c:SNI_FL_MemberDetails  recordId="{!v.memberRecord}"  />
+            </aura:if>
+        </div>
+    </div>
+</aura:component>

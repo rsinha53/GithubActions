@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workflow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fieldUpdates>
+        <fullName>ITE_UpdatePriorValue</fullName>
+        <description>Update prior date/time value of last ITE Status change date</description>
+        <field>Prior_Date_Value__c</field>
+        <formula>PRIORVALUE( Host_System_Date_and_Time__c )</formula>
+        <name>ITE_UpdatePriorValue</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Formula</operation>
+        <protected>false</protected>
+        <reevaluateOnChange>false</reevaluateOnChange>
+    </fieldUpdates>
+    <fieldUpdates>
+        <fullName>Update_Status</fullName>
+        <description>When Status Detail is changed update the date/time it was changed.</description>
+        <field>StatusLastModifiedDate__c</field>
+        <formula>LastModifiedDate</formula>
+        <name>Update StatusLastModifiedDate field</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Formula</operation>
+        <protected>false</protected>
+        <reevaluateOnChange>false</reevaluateOnChange>
+    </fieldUpdates>
+    <fieldUpdates>
+        <fullName>Update_Status_Last_Modified_for_new_WO</fullName>
+        <description>Updates the Status Last Modified date field to indicate when a work order is created.</description>
+        <field>StatusLastModifiedDate__c</field>
+        <formula>CreatedDate</formula>
+        <name>Update Status Last Modified for new WO</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Formula</operation>
+        <protected>false</protected>
+        <reevaluateOnChange>false</reevaluateOnChange>
+    </fieldUpdates>
+    <fieldUpdates>
+        <fullName>Violation</fullName>
+        <description>Checks if milestone is in violation</description>
+        <field>Violation__c</field>
+        <literalValue>1</literalValue>
+        <name>Violation</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Literal</operation>
+        <protected>false</protected>
+        <reevaluateOnChange>true</reevaluateOnChange>
+    </fieldUpdates>
+    <rules>
+        <fullName>ITE - Needing Additional Information</fullName>
+        <active>false</active>
+        <description>When Status Detail is changed to requested additional information an email is sent to Family Advisor.</description>
+        <formula>AND(Account.Owner.Username &lt;&gt;  &quot;unassigned_family_advisor@uhc.com.sniitedev&quot;,  ISPICKVAL(Status_Detail__c, &quot;Requested Missing Information&quot;))</formula>
+        <triggerType>onAllChanges</triggerType>
+    </rules>
+    <rules>
+        <fullName>ITE New update status modified date</fullName>
+        <actions>
+            <name>Update_Status_Last_Modified_for_new_WO</name>
+            <type>FieldUpdate</type>
+        </actions>
+        <active>true</active>
+        <criteriaItems>
+            <field>WorkOrder.CreatedDate</field>
+            <operation>notEqual</operation>
+        </criteriaItems>
+        <description>Updates the Status Last Modified date field to indicate for new work orders.</description>
+        <triggerType>onCreateOnly</triggerType>
+    </rules>
+    <rules>
+        <fullName>ITE update Status Modified Date</fullName>
+        <actions>
+            <name>Update_Status</name>
+            <type>FieldUpdate</type>
+        </actions>
+        <active>true</active>
+        <description>Updates the Status Last Modified date field to indicate when status detail field was last changed.</description>
+        <formula>ISCHANGED( Status_Detail__c )</formula>
+        <triggerType>onAllChanges</triggerType>
+    </rules>
+    <rules>
+        <fullName>ITE-PriorDateValue</fullName>
+        <actions>
+            <name>ITE_UpdatePriorValue</name>
+            <type>FieldUpdate</type>
+        </actions>
+        <active>false</active>
+        <description>When ITE status is changed copies the Host System Date Time field</description>
+        <formula>ISCHANGED(ITE_Status__c)</formula>
+        <triggerType>onAllChanges</triggerType>
+    </rules>
+</Workflow>

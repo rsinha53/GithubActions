@@ -1,0 +1,136 @@
+<apex:page sidebar="false" extensions="ECMAutoRouteCaseController" standardController="Case" showHeader="false"  >
+   <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+   <apex:includeScript value="/soap/ajax/38.0/connection.js"/>
+   <apex:includeScript value="/support/console/38.0/integration.js"/>
+    <script type="text/javascript">
+         var primaryTabId  = null;
+        window.onload = function(){
+           routeOpenSubtab();
+        };
+
+        function routeOpenSubtab() {
+            //First find the ID of the primary tab to put the new subtab in
+            sforce.console.getEnclosingPrimaryTabId(openSubtab);
+        };
+
+        var openSubtab = function openSubtab(result){
+             primaryTabId = result.id; 
+             sforce.console.setTabTitle('Route')
+        };
+        
+         function routeCloseSubtab() { 
+            //First find the ID of the current tab to close it
+            sforce.console.getEnclosingTabId(closeSubtab);
+        }
+        
+        var closeSubtab = function closeSubtab(result) {
+            //Now that we have the tab ID, we can close it
+            var tabId = result.id;
+            sforce.console.closeTab(tabId);
+        };
+
+        function refreshPrimaryTabById() {
+         sforce.console.getEnclosingPrimaryTabId(refershPrimTab());
+                    
+        };
+        var refershPrimTab = function refershPrimTab(result){
+          
+            //var primaryTabId = result.id;
+            sforce.console.refreshPrimaryTabById(primaryTabId, true, refreshSuccess);
+        }
+        var refreshSuccess = function refreshSuccess(result) {
+             if (result.success == true) {
+               routeCloseSubtab();
+             }
+        };
+       
+        
+        function openRefreshPrimarytab(){
+          setTimeout(function(){ refreshPrimaryTabById(); }, 5000);
+        }
+
+   </script>    
+   
+ <apex:form >
+  <apex:outputPanel id="pgmsg">
+   <apex:pageMessages />
+   <apex:outputPanel rendered="{!isSucess}">
+    <script type="text/javascript">
+       openRefreshPrimarytab();
+    </script>
+   </apex:outputPanel>
+   </apex:outputPanel>
+
+      <apex:pageBlock title="Route" rendered="{!isEditable}"> 
+          <apex:pageBlockSection columns="1" >
+          <apex:outputpanel style="display:none">
+                    <apex:inputField value="{!cas.Topic__c}" id="Topic" />
+           </apex:outputpanel>   
+          <apex:OutputText Label="Topic" value="{!topic}" >  </apex:OutputText>  
+                <apex:inputField value="{!cas.Type__c}" id="callTopicType"/>
+                <apex:inputField value="{!cas.Subtype__c}" id="callTopicSubType"/>
+             <apex:inputField value="{!cas.Priority}"/> 
+           
+          </apex:pageBlockSection>
+          
+             
+          <apex:pageBlockButtons >
+
+           <apex:commandLink action="{!invokeRoute}" value="Submit" styleClass="btn" style="font-size: 0.9em;font-weight: bold;vertical-align: middle;color:black;text-decoration:none;padding: 4px 3px;" rerender="pgmsg" rendered="{!isEditable}">
+                    
+           </apex:commandLink>
+            
+              <apex:commandButton onClick="routeCloseSubtab();return false" value="Cancel" style="font-size: 0.9em;font-weight: bold;vertical-align: middle;color:black;text-decoration:none;padding: 4px 3px;" />
+              
+          </apex:pageBlockButtons>   
+                         
+      </apex:pageBlock>
+      
+      <apex:pageBlock title="Insufficient Privileges" rendered="{!!isEditable}"> 
+          <apex:pageBlockSection columns="1" >
+                  <apex:outputText >You do not have the level of access necessary to perform the operation you requested. Please contact the owner of the record or your administrator if access is necessary. Close this tab to continue.</apex:outputText>
+           </apex:pageBlockSection>              
+      </apex:pageBlock>      
+      
+  </apex:form>
+  <script>
+   		var ttsFilterStr = '{!JSENCODE(TTSFilterStr)}'; 
+        var ttsFilter = JSON.parse(ttsFilterStr.replace('&#x27;', '\''));
+        
+        $(document).ready(function(){
+        	//wait salesforce picklist.js to update the dom for dependent picklist fields
+            setTimeout(function(){ 
+              filterTypes();
+              filterSubTypes($("[id$='callTopicType']").val());
+              
+              $("[id$='callTopicType']").change(function(){  
+              		console.log($(this).val());              	               		
+              		//var callTopicType = $(this).val();
+              		filterSubTypes($(this).val());             	          	               	 		 
+              });
+            }, 500);
+            
+            //type is not accessible
+            function filterTypes(){
+            	$("[id$='callTopicType'] option").each(function(){
+        			console.log($(this).val());              	               		
+             		if($(this).val() != '' && ttsFilter[$(this).val()] == undefined){
+             	 		$(this).remove();
+             		}              	 
+              });
+            }
+            
+            //subtype is not accessible
+            function filterSubTypes(type){ 
+            	//* means either there is no subtype under the type or all subtypes is accessible           	
+            	if(ttsFilter[type] != undefined && ttsFilter[type] != '*'){
+            		$("[id$='callTopicSubType'] option").each(function(){            			
+            	 		if($(this).val() != '' && ttsFilter[type].indexOf($(this).val())  == -1){
+            	 			$(this).remove();
+            	 		}
+            	 	}); 	
+            	} 			
+            }        		        
+        });
+   </script>
+</apex:page>

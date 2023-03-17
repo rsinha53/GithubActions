@@ -1,0 +1,169 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,lightning:isUrlAddressable"
+    access="global">
+
+    <!-- US2974833 -->
+    <aura:handler name="init" value="{!this}" action="{!c.init}" />
+
+    <!-- US3137722: Swapnil -->
+    <aura:attribute name="placeOfServiceList" type="List" default="[
+    {'label': '2 - Telehealth', 'value': '2 - Telehealth'},                                                              
+    {'label': '11 - Office', 'value': '11 - Office'},
+    {'label': '12 - Home', 'value': '12 - Home'},
+    {'label': '13 - Assisted Living Facility', 'value': '13 - Assisted Living Facility'},
+    {'label': '17 - Walk-in Retail Health Clinic', 'value': '17 - Walk-in Retail Health Clinic'},
+    {'label': '20 - Urgent Care Facility', 'value': '20 - Urgent Care Facility'},
+    {'label': '21 - Inpatient Hospital', 'value': '21 - Inpatient Hospital'},
+    {'label': '22 - On Campus - Outpatient Hospital', 'value': '22 - On Campus - Outpatient Hospital'},
+    {'label': '23 - Emergency Room Hospital', 'value': '23 - Emergency Room Hospital'},
+    {'label': '24 - Ambulatory Surgery Center', 'value': '24 - Ambulatory Surgery Center'},
+    {'label': '25 - Birthing Center', 'value': '25 - Birthing Center'},
+    {'label': '31 - Skilled Nursing Facility', 'value': '31 - Skilled Nursing Facility'},
+    {'label': '33 - Custodial Care Facility', 'value': '33 - Custodial Care Facility'},
+    {'label': '34 - Hospice', 'value': '34 - Hospice'},
+    {'label': '41 - Ambulance Land', 'value': '41 - Ambulance Land'},
+    {'label': '42 - Ambulance Air Or Water', 'value': '42 - Ambulance Air Or Water'},
+    {'label': '49 - Independent Clinic', 'value': '49 - Independent Clinic'},
+    {'label': '52 - Psychiatric Facility', 'value': '52 - Psychiatric Facility'},
+    {'label': '55 - Residual Substance Abuse Treatment', 'value': '55 - Residual Substance Abuse Treatment'},
+    {'label': '61 - Comprehensive Inpatient Rehabilitation Facility', 'value': '61 - Comprehensive Inpatient Rehabilitation Facility'},
+    {'label': '62 - Comprehensive Outpatient Rehabilitation Facility', 'value': '62 - Comprehensive Outpatient Rehabilitation Facility'},
+    {'label': '81 - Independent Laboratory', 'value': '81 - Independent Laboratory'},
+    {'label': '99 - Other Unlisted Facility', 'value': '99 - Other Unlisted Facility'} ]" />
+
+    <!-- US3089189 -->
+    <aura:attribute name="PACheckData" type="Object" />
+    <aura:attribute name="paCheckTabId" type="String" />
+    
+    <!-- Errors --> <!-- US2974833 -->
+    <aura:attribute name="fieldsToValidate" type="List" default="DateOfService,PlaceOfService" />
+    <aura:handler event="c:ACET_PaCheck_FireValidations" action="{!c.fireValidations}" />
+    <aura:attribute name="errors" type="Object" />
+
+    <aura:attribute name="autodocUniqueId" type="String" default="auto"/>
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default="auto"/>
+    <aura:attribute name="cardDetails" type="Object"/>
+    <aura:attribute name="isDateOfServiceCheckBox" type="Boolean" default="true"/>
+    <aura:attribute name="isPlaceOfServiceCheckBox" type="Boolean" default="true"/>
+    <aura:attribute name="isSelectAll" type="Boolean" default="true"/>
+
+    <!--US3584404 - Sravan-->
+    <aura:attribute name="delegationValue" type="String" default=" "/>
+    <aura:attribute name="showPostAcuteCareServices" type="Boolean" default="false"/>
+    <aura:attribute name="patientInfo" type="Object" access="public"/>
+    <aura:attribute name="showDateOfServiceFunc" type="Boolean" default="true"/>
+    <aura:attribute name="showDelegatedToIntake" type="Boolean" default="false"/>
+    <aura:method name="setDelegatedData" action="{!c.setDelegatedData}"/>
+    <!-- Rajesh DE469175 -->
+    <aura:attribute name="sourceCode" type="String" default=" "/>
+
+    <aura:handler name="change" value="{!v.delegationValue}" action="{!c.init}"/>
+
+
+    <aura:handler name="change" value="{!v.autodocUniqueId}" action="{!c.handleSelectCheckBox}"/>
+
+    <div aura:id="card" class="slds-card card_padding">
+
+        <lightning:layout class="slds-card slds-m-bottom_x-small" multipleRows="true">
+
+            <lightning:layoutItem size="3">
+                <h2 class="component_title">
+                    Date of Service and Place of Service
+                </h2>
+            </lightning:layoutItem>
+            <aura:if isTrue="{!and(v.delegationValue != 'No',v.sourceCode == 'CO')}">
+            <lightning:layoutItem size="6" padding="around-small"  class="slds-p-left_none">
+                <h2 style="color: red;">
+                    Delegated for Intake, misdirect the call appropriately if Prior Auth is required
+                </h2>
+            </lightning:layoutItem>
+        </aura:if>
+        </lightning:layout>
+
+       <!-- <lightning:layout>
+            <lightning:layoutItem class="slds-p-right_medium" size="2">
+                <div class="slds-form-element">
+                    <lightning:input aura:id="DateOfService" dateStyle="short" type="date" name="DateOfService" label="Date of Service"
+                        autocomplete="off" value="{!v.PACheckData.DOSAndPOS.DateOfService}" required="true"
+                        onchange="{!c.bindValues }" /> <!- - US3089189 - ->
+                </div>
+            </lightning:layoutItem>
+
+            <lightning:layoutItem size="3">
+                <lightning:combobox aura:id="PlaceOfService" name="PlaceOfService" label="Place of Service" options="{!v.placeOfServiceList}"
+                    value="{!v.PACheckData.DOSAndPOS.PlaceOfService}" required="true" onchange="{!c.bindValues }" />
+                <!- - US3089189 - ->
+            </lightning:layoutItem>
+        </lightning:layout>-->
+
+       <!-- <div style="">
+            <table style="">
+                <tr>
+                    <td style="width: 1px;vertical-align:top;">
+                        <lightning:input type="checkbox"
+                                         name="selectAllPACheck_Date"
+                                         checked="{!v.isSelectAll}"
+                                         variant="label-hidden"
+                                         onchange="{!c.selectAll}"
+                                         />
+                    </td>
+                    <td>
+                        <div class="component_title slds-text-heading_small">
+                            Date of Service and Place of Service
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>-->
+
+        <div class="slds-grid slds-gutters slds-wrap">
+            <!--US3584404 - Sravan-->
+            <aura:if isTrue="{!v.sourceCode == 'CO'}">
+            <aura:if isTrue="{!v.showPostAcuteCareServices}">
+            <div class="slds-size_12-of-12 slds-col">
+                <c:ACET_PostAcuteCareServices paCheckTabId="{!v.paCheckTabId}"  autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}" cardDetails="{!v.cardDetails}"  delegationValue="{!v.delegationValue}"  patientInfo="{!v.patientInfo}" showDateOfServiceFunc="{!v.showDateOfServiceFunc}"/>
+            </div>
+            </aura:if>
+        </aura:if>  
+
+            <aura:if isTrue="{!v.showDateOfServiceFunc}">
+            <div class="slds-size_2-of-12 slds-col">
+                <table>
+                    <tr>
+                        <td style="width: 25px;vertical-align:top;">
+                            <lightning:input type="checkbox"
+                                             name="Date of Service"
+                                             checked="{!v.isDateOfServiceCheckBox}"
+                                             onchange="{!c.handleSelectCheckBox}"
+                                             disabled="true"
+                                             />
+                        </td>
+                        <td>
+                            <lightning:input aura:id="DateOfService" dateStyle="short" type="date" name="DateOfService" label="Date of Service"
+                                             autocomplete="off" value="{!v.PACheckData.DOSAndPOS.DateOfService}" required="true"
+                                             onchange="{!c.bindValues }" />
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="slds-size_3-of-12 slds-col">
+                <table>
+                    <tr>
+                        <td style="width: 25px;vertical-align:top;">
+                            <lightning:input type="checkbox"
+                                             name="Place of Service"
+                                             checked="{!v.isPlaceOfServiceCheckBox}"
+                                             onchange="{!c.handleSelectCheckBox}"
+                                             disabled="true"
+                                             />
+                        </td>
+                        <td>
+                            <lightning:combobox aura:id="PlaceOfService" name="PlaceOfService"  options="{!v.placeOfServiceList}" label="Place of Service"
+                                                value="{!v.PACheckData.DOSAndPOS.PlaceOfService}" required="true" onchange="{!c.bindValues }" />
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            </aura:if>
+        </div>
+    </div>
+</aura:component>

@@ -1,0 +1,227 @@
+<aura:component implements="flexipage:availableForRecordHome,force:hasRecordId" access="global"
+  controller="ACET_CaseCommentsController">
+
+  <!-- GLOBAL STYLE SHEET -->
+  <ltng:require styles="{!$Resource.ACET_MasterStyle}" />
+
+  <!-- ATTRIBUTES -->
+  <lightning:workspaceAPI aura:id="workspace" />
+  <aura:attribute name="caseCommentsList" type="List" />
+  <aura:attribute name="cmpUniqueId" type="string" default="SAE_CaseServiceRequestInfo" />
+  <aura:attribute name="openedTabs" type="List" default="[]" />
+  <aura:attribute name="rowCount" type="integer" default="0" />
+  <aura:attribute name="tableData" type="Object" />
+  <aura:attribute name="tableColumns" type="List" />
+  <aura:attribute name="sortDirection" type="String" default="asc" />
+  <aura:attribute name="defaultSortDirection" type="String" default="asc" />
+  <aura:attribute name="sortedBy" type="String" />
+  <aura:attribute name="sortedColumnLabel" type="String" />
+  <aura:attribute name="timeInterval" type="Object" />
+  <aura:attribute name="dataLoaded" type="boolean" default="false" />
+  <aura:attribute name="selectedColumn" type="String" />
+  <aura:attribute name="selectedOption" type="String" default="CLIP" />
+  <aura:attribute name="columnOptions" type="String[]" default="['CLIP', 'CLIP', 'CLIP', 'CLIP']" />
+  <aura:attribute name="showNewPopup" type="boolean" default="false" />
+  <aura:attribute name="newCaseComment" type="Object" />
+  <aura:attribute name="showSpinner" type="boolean" default="false" />
+  <!-- /ATTRIBUTES -->
+
+  <!-- HANDLERS -->
+  <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+  <aura:handler name="change" value="{!v.selectedColumn}" action="{!c.columnOptionsChange}" />
+  <aura:handler name="change" value="{!v.selectedOption}" action="{!c.columnOptionsChange}" />
+  <!-- /HANDLERS -->
+
+
+  <div class="slds-card">
+
+    <aura:if isTrue="{!v.showSpinner}">
+      <lightning:spinner size="medium" variant="brand" />
+    </aura:if>
+
+    <!-- PAGE HEADER -->
+    <div class="slds-card card_padding" style="background: rgb(243, 242, 242);">
+      <div class="slds-grid">
+        <div class="slds-col slds-has-flexi-truncate">
+          <div class="slds-media slds-no-space slds-grow">
+            <div class="slds-media__figure">
+              <span class="slds-icon_container">
+                <lightning:icon iconName="custom:custom19" size="small" />
+              </span>
+            </div>
+            <div class="slds-media__body">
+              <div class="slds-page-header__name">
+                <div class="slds-page-header__name-title">
+                  <h1 class="component_title slds-m-right_small slds-align-middle slds-truncate slds-p-top_xx-small">
+                    Case Comments ({!v.rowCount})
+                  </h1>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- ACTION BUTTONS -->
+        <lightning:buttonIcon iconName="utility:refresh" variant="border-filled" alternativeText="Refresh"
+          title="Refresh" onclick="{!c.onRefresh}" />
+        <lightning:button variant="neutral" label="New" onclick="{!c.openModal}" />
+      </div>
+      <!-- PAGE HEADER DETAIL ROW -->
+      <span class="description">
+        {!v.rowCount} Items &bull; {! (v.sortedColumnLabel) ? 'Sorted by ' + v.sortedColumnLabel + ' &bull;' : '' }
+        Updated {!v.timeInterval.updatedDuration} ago
+      </span>
+    </div>
+    <!-- / PAGE HEADER -->
+
+    <!-- TABLE -->
+    <div class="card_bottom_padding"
+      style="border-top: 1px solid rgb(221,219,218);max-height: 175px; overflow-y: auto; margin-bottom: 10px; border-bottom: 1px solid rgb(221,219,218);">
+      <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+        <thead>
+          <tr class="">
+            <th scope="col">
+              <div title="index">
+                <span></span>
+              </div>
+            </th>
+            <th scope="col">
+              <div title="User">
+                <span>User</span>&nbsp;
+                <c:SAE_TableColumnButtonMenu columnMenuID="0" selectedColumn="{! v.selectedColumn }"
+                  selectedOption="{! v.selectedOption }" />
+              </div>
+            </th>
+            <th scope="col">
+              <div title="Public">
+                <span>Public</span>&nbsp;
+                <c:SAE_TableColumnButtonMenu columnMenuID="1" selectedColumn="{! v.selectedColumn }"
+                  selectedOption="{! v.selectedOption }" />
+              </div>
+            </th>
+            <th scope="col">
+              <div title="Created Date">
+                <span>Created Date</span>&nbsp;
+                <c:SAE_TableColumnButtonMenu columnMenuID="2" selectedColumn="{! v.selectedColumn }"
+                  selectedOption="{! v.selectedOption }" />
+              </div>
+            </th>
+            <th scope="col">
+              <div title="Comment">
+                <span>Comment</span>&nbsp;
+                <c:SAE_TableColumnButtonMenu columnMenuID="3" selectedColumn="{! v.selectedColumn }"
+                  selectedOption="{! v.selectedOption }" />
+              </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <aura:iteration items="{!v.tableData}" var="item" indexVar="index">
+            <tr class="slds-hint-parent">
+              <td class="table_cell_value" style="width: 5%; min-width: 5%; max-width: 5%;">
+                <div class="slds-truncate">{! index + 1 }</div>
+              </td>
+              <td class="table_cell_value" style="width: 20%; min-width: 20%; max-width: 20%;">
+                <aura:if isTrue="{!item.Com_UserName != ''}">
+                  <div class="{! ((equals(v.columnOptions[0], 'CLIP') ? ' truncate ' : '' )) }">
+                    <div class="{! ((equals(v.columnOptions[0], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }">
+                      {!item.Com_UserName}
+                    </div>
+                  </div>
+                  <aura:set attribute="else">
+                    <div class="slds-truncate">--</div>
+                  </aura:set>
+                </aura:if>
+              </td>
+              <td class="table_cell_value" style="width: 10%; min-width: 10%; max-width: 10%;">
+                <aura:if isTrue="{!item.IsPublic != ''}">
+                  <div class="{! ((equals(v.columnOptions[1], 'CLIP') ? ' truncate ' : '' )) }">
+                    <div class="{! ((equals(v.columnOptions[1], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }">
+                      <lightning:input checked="{!item.IsPublic}" type="checkbox" disabled="true" />
+                    </div>
+                  </div>
+                  <aura:set attribute="else">
+                    <div class="slds-truncate">--</div>
+                  </aura:set>
+                </aura:if>
+              </td>
+              <td class="table_cell_value" style="width: 20%; min-width: 20%; max-width: 20%;">
+                <aura:if isTrue="{!item.Com_CreatedDate != ''}">
+                  <div class="{! ((equals(v.columnOptions[2], 'CLIP') ? ' truncate ' : '' )) }">
+                    <div class="{! ((equals(v.columnOptions[2], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }">
+                      {!item.Com_CreatedDate}
+                    </div>
+                  </div>
+                  <aura:set attribute="else">
+                    <div class="slds-truncate">--</div>
+                  </aura:set>
+                </aura:if>
+              </td>
+              <td class="table_cell_value" style="width: 45%; min-width: 45%; max-width: 45%;">
+                <aura:if isTrue="{!item.CommentBody != ''}">
+                  <div class="{! ((equals(v.columnOptions[3], 'CLIP') ? ' truncate ' : '' )) }">
+                    <div class="{! ((equals(v.columnOptions[3], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }">
+                      {!item.CommentBody}
+                    </div>
+                  </div>
+                  <aura:set attribute="else">
+                    <div class="slds-truncate">--</div>
+                  </aura:set>
+                </aura:if>
+              </td>
+            </tr>
+          </aura:iteration>
+        </tbody>
+      </table>
+    </div>
+    <!-- /TABLE -->
+
+  </div>
+
+  <aura:if isTrue="{!v.showNewPopup}">
+    <!-- Modal/Popup Box starts here-->
+    <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true"
+      aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+      <div class="slds-modal__container">
+        <!-- Modal/Popup Box Header Starts here-->
+        <header class="slds-modal__header">
+          <lightning:buttonIcon iconName="utility:close" onclick="{! c.closeModel }" alternativeText="close"
+            variant="bare-inverse" class="slds-modal__close" />
+          <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">New Case Comment</h2>
+        </header>
+        <!--Modal/Popup Box Body Starts here-->
+        <div class="slds-modal__content slds-p-around_medium slds-is-relative" id="modal-content-id-1">
+          <aura:if isTrue="{!v.showSpinner}">
+          <lightning:spinner size="medium" variant="brand" />
+        </aura:if>
+          <p>
+            <form class="slds-form--stacked">
+              <div class="slds-form-element">
+                <div class="slds-form-element__control">
+                  <lightning:textarea aura:id="commentform" label="Body" name="expensename"
+                    value="{!v.newCaseComment.CommentBody}" required="true" maxlength="2000" />
+                  <span class="floatToRight" style="color: rgb(194, 57, 52);">
+                    Characters remaining : <lightning:formattedNumber value="{! 2000 - v.newCaseComment.CommentBody.length }"/>
+                  </span>
+                </div>
+              </div>
+
+              <div class="slds-form-element">
+                <label class="slds-form-element__label" for="form-element-01">Public</label>
+                <div class="slds-form-element__control">
+                  <lightning:input aura:id="commentform" checked="{!v.newCaseComment.IsPublic}" type="checkbox" />
+                </div>
+              </div>
+            </form>
+          </p>
+        </div>
+        <!--Modal/Popup Box Footer Starts here-->
+        <footer class="slds-modal__footer">
+          <lightning:button variant="neutral" label="Cancel" title="Cancel" onclick="{! c.closeModel }" />
+          <lightning:button variant="brand" label="Save" title="Save" onclick="{!c.submitDetails}" />
+        </footer>
+      </div>
+    </section>
+    <div class="slds-backdrop slds-backdrop_open"></div>
+  </aura:if>
+
+</aura:component>

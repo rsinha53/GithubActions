@@ -1,0 +1,320 @@
+<aura:component controller="ADBAllProgramController" >
+    
+    <!-- Component attributes - Values are coming from apex class-->
+    <aura:attribute name="isSaveButtonDisabled" type="Boolean" default="true" />
+    <aura:attribute name="listIndex" type="String"/> 
+    <aura:attribute name="hoverRow" type="Integer" default="-1" />
+    <aura:attribute name="selectedValue" type="String"/>
+    <aura:attribute name="listOfDisposition" type="List" /> 
+    <!-- attributes - Sunil : US2574137 - Read Population API -->
+    <aura:attribute name="decodedMemberId" type="String" />
+    <aura:attribute name="memberXrefId" type="String" />
+    <aura:attribute name="memberDOB" type="String" /> 
+    <aura:attribute name="memFirstName" type="String" />
+    <aura:attribute name="memLastName" type="String" />
+    <aura:attribute name="policy" type="String" />
+    <!-- attributes - Sunil : US2574137 - Read Population API -->
+    <aura:attribute name="PopulationDetails" type="Object"/>
+    <aura:attribute type="Boolean" name="showSpinner" default="false"/>
+    <aura:attribute type="Boolean" name="sortAsc"/>
+    <aura:attribute type="String" name="sortField" />
+    <aura:attribute type="Boolean" name="isHoverVisible" default="false"/>
+    <aura:attribute name="hoverCol" type="Integer" default="-1" />
+    <aura:attribute name="isCommentBoxVisible" type="boolean" default="false"/>
+    <aura:attribute name="isOkButtonDisabled" type="Boolean" default="true" />
+    <aura:attribute name="removeOpportunityComment" type="String"/>
+    <aura:attribute name="xrefPartitionID" type="String"/>
+    <aura:attribute name="userId" type="String"/>
+	<aura:attribute name="systemErrMsg" type="String"/>												   
+    <!-- / Component attributes --> 
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}" />
+    
+        <aura:if isTrue="{!v.showSpinner}">
+            <div class="slds-align--absolute-center">
+                <lightning:spinner aura:id="offers_spinner" variant="brand" size="large"/>
+            </div>
+        </aura:if>
+      
+            <div class="slds-table--header-fixed_container"  style="height:300px;">
+				<aura:if isTrue="{!not(empty(v.PopulationDetails))}"> 											 
+                <div class="slds-scrollable_y" style="height:100%;">
+                    <table class="slds-table slds-table_fixed-layout slds-table_bordered slds-m-left_medium slds-table--header-fixed">
+                        <thead>
+                            <tr class="slds-line-height_reset">
+                                <th style="width: 15%" class="thCustom" scope="col">
+                                    <div class="slds-truncate slds-cell-fixed" title="Program">Program</div>
+                                </th>
+                                <th style="width: 15%" class="thCustom" scope="col">
+                                    <div class="slds-truncate slds-cell-fixed"  title="Type">Type</div>
+                                </th>
+                                <th style="width: 8%" class="thCustom" scope="col">
+                                    <div class="slds-truncate slds-cell-fixed" title="Phone">Phone</div>
+                                </th>
+                                <th style="width: 10%" class="thCustom" scope="col">
+                                    <div class="slds-truncate slds-cell-fixed" title="Accepting Referrals">Accepting <br></br>Referrals</div>
+                                </th>
+                                <th style="width: 10%" class="thCustom" scope="col">
+                                    <div class="slds-truncate slds-cell-fixed" title="Hours of Operation">Hours of <br></br>Operation</div>
+                                </th>
+                                <th style="width: 10%" class="thCustom" scope="col">
+                                    <div class="slds-truncate slds-cell-fixed" title="ICUE Program">ICUE <br></br>Program</div>
+                                </th>
+                                <th style="width: 10%" class="thCustom" scope="col">
+                                    <div class="slds-truncate slds-cell-fixed" title="Vendor">Vendor</div>
+                                </th>
+                                <th style="width: 10%" class="thCustom" scope="col">
+                                    <div class="slds-truncate slds-cell-fixed" title="Status">Status</div>
+                                </th>
+                                <th style="width: 10%" class="thCustom" scope="col">
+                                    <div class="slds-truncate slds-cell-fixed" title="Disposition">Disposition</div>
+                                </th>
+                                <th style="width: 2%" class="thCustom" scope="col">
+                                    <div class="slds-truncate slds-cell-fixed" title="blank"></div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Update attributes from wrapper  - Sunil : US2574137 - Read Population API -->
+                            <aura:iteration items="{!v.PopulationDetails}" var="details" indexVar="index">
+                                <tr class="slds-hint-parent">
+                                    <td data-label="program" scope="row" width="15%" style="padding-left: 0px;">
+                                        <div class="slds-truncate event_word_wrap" data-index="{!index}" data-column="0" >
+                                            <a data-id = "{!details.programICUESSOURL}" onclick="{!c.viewRedirectUrl}" >{!details.programName}</a>
+                                        </div>
+                                    </td>
+                                    <td data-label="Type" scope="row" width="15%" style="padding-left: 0px;">
+                                        <div class="slds-truncate event_word_wrap" data-index="{!index}"  data-column="1" >
+                                            {!details.programType}
+                                        </div>
+                                    </td>
+                                    <td data-label="Phone" scope="row" width="10%" style="padding-left: 0px;">
+                                        <aura:if isTrue="{!not(empty(details.programPhone))}">
+                                            <div class="popover-wrapper" >
+                                                <div class="slds-truncate event_word_wrap"  >
+                                                    <img src="{!$Resource.ADBAllProgramsCardImages + '/phoneblue.png'}" style="height: 30px; width: 30px;"
+                                                         data-index="{!index}" data-column="2" onmouseover="{!c.showHover}" onmouseout="{!c.showHover}"/>
+                                                </div>
+                                                <aura:if isTrue="{!v.isHoverVisible}">
+                                                    <aura:if isTrue="{!and((v.hoverRow==index), (v.hoverCol==2))}">
+                                                        <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left popover-content" style="position:relative;top:-45px;left:0px;height:45px; width: 125px;" role="tooltip" >
+                                                            <div class="slds-popover__body">
+                                                                {!details.programPhone}
+                                                            </div>
+                                                        </div>
+                                                    </aura:if>
+                                                </aura:if>
+                                            </div>
+                                            <aura:set attribute="else">
+                                                <div class="popover-wrapper" >
+                                                    <div class="slds-truncate event_word_wrap" >
+                                                        <img src="{!$Resource.ADBAllProgramsCardImages + '/phonegrey.png'}" style="height: 30px; width: 30px;"
+                                                             data-index="{!index}" data-column="2" onmouseover="{!c.showHover}" onmouseout="{!c.showHover}"/>
+                                                    </div>   
+                                                    <aura:if isTrue="{!v.isHoverVisible}">
+                                                        <aura:if isTrue="{!and((v.hoverRow==index), (v.hoverCol==2))}">
+                                                            <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left popover-content" style="position:relative;top:-45px;left:0px;height:45px; width: 125px;" role="tooltip">
+                                                                <div class="slds-popover__body">
+                                                                    N/A
+                                                                </div>
+                                                            </div>
+                                                        </aura:if>
+                                                    </aura:if>
+                                                </div>
+                                            </aura:set>
+                                        </aura:if>
+                                        
+                                    </td>
+                                    <td data-label="Accepting Referrals" scope="row" width="10%" style="padding-left: 0px;">
+                                        <div class="slds-truncate event_word_wrap" data-index="{!index}" data-column="3" >
+                                            <aura:if isTrue="{!and(details.isAcceptingReferrals != '', details.isAcceptingReferrals != null)}">
+                                                <aura:if isTrue="{!details.isAcceptingReferrals == 'true'}">
+                                                    Yes
+                                                </aura:if>
+                                                <aura:if isTrue="{!details.isAcceptingReferrals == 'false'}">
+                                                    No
+                                                </aura:if>
+                                            </aura:if>
+                                        </div>
+                                    </td>
+                                    <td data-label="Hours of Operation" scope="row" width="10%" style="padding-left: 0px;">
+                                        <div class="slds-truncate event_word_wrap" data-index="{!index}" data-column="4" >
+                                            {!details.hoursOfOperation} 
+                                        </div>
+                                    </td>
+                                    <td data-label="ICUE Program" scope="row" width="10%" style="padding-left: 0px;">
+                                        <div class="slds-truncate event_word_wrap" data-index="{!index}" data-column="5" >
+                                            {!details.iCUEProgram}
+                                        </div>
+                                    </td>
+                                    <td data-label="Vendor" scope="row" width="10%" style="padding-left: 0px;">
+                                        <div class="slds-truncate event_word_wrap" data-index="{!index}" data-column="6" >
+                                            {!details.programVendor} 
+                                        </div>
+                                    </td>
+                                    <td data-label="Status" scope="row" width="10%" style="padding-left: 0px;">
+                                        <div class="slds-truncate event_word_wrap" data-index="{!index}" data-column="7" onmouseover="{!c.showHover}" onmouseout="{!c.showHover}">
+                                            {!details.programStatus}
+                                        </div> 
+                                        <aura:if isTrue="{!details.programStatus=='Program Referral' || details.programStatus=='Enrolled Program' || details.programStatus=='Closed Program' }">
+                                            <aura:if isTrue="{!v.isHoverVisible}">
+                                                <aura:if isTrue="{!and((v.hoverRow==index), (v.hoverCol==7))}">
+                                                    <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left popover-content" style="position:absolute;top:-60px;left:0px;height:75px; width: 300px;" role="tooltip">
+                                                        <div class="slds-popover__body">
+                                                            <aura:if isTrue="{!and(details.ownerName!=null, details.ownerName!='')}">
+                                                                Owner: {!details.ownerName}<br/>
+                                                                <aura:set attribute="else">
+                                                                    Owner: N/A<br/>
+                                                                </aura:set>
+                                                            </aura:if>
+                                                            <aura:if isTrue="{!and(details.ownerPhone!=null,details.ownerPhone!='')}">
+                                                                Phone: {!details.ownerPhone}<br/>
+                                                                <aura:set attribute="else">
+                                                                    Phone: N/A<br/>
+                                                                </aura:set>
+                                                            </aura:if>
+                                                            <aura:if isTrue="{!and(details.ownerEmail!=null,details.ownerEmail!='')}">
+                                                                Email: {!details.ownerEmail}<br/>
+                                                                <aura:set attribute="else">
+                                                                    Email: N/A<br/>
+                                                                </aura:set>
+                                                            </aura:if>
+                                                        </div>
+                                                    </div>
+                                                </aura:if>
+                                            </aura:if>
+                                        </aura:if>
+                                        <aura:if isTrue="{!details.programStatus=='Rejected Referral'}">
+                                            <aura:if isTrue="{!v.isHoverVisible}">
+                                                <aura:if isTrue="{!and((v.hoverRow==index), (v.hoverCol==7))}">
+                                                    <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left popover-content" style="position:absolute;top:-30px;left:0px;height:50px; width: 250px;" role="tooltip">
+                                                        <div class="slds-popover__body">
+                                                            <aura:if isTrue="{!and(details.rejectReason!=null, details.rejectReason!='')}">
+                                                                Reject Reason: {!details.rejectReason}
+                                                                <aura:set attribute="else">
+                                                                    Reject Reason: N/A<br/>
+                                                                </aura:set>
+                                                            </aura:if>
+                                                        </div>
+                                                    </div>
+                                                </aura:if>
+                                            </aura:if>
+                                        </aura:if>
+                                    </td>
+                                    
+                                    <td data-label="dropdownSelection" scope="row" width="10%" style="padding-left: 0px;">
+                                        <!--    Disposition dropdown-->
+                                        <aura:if isTrue="{!details.programStatus!='Enrolled Program'}">
+                                            <div class="slds-truncate event_word_wrap" data-index="{!index}" data-column="8" >
+                                                <div class="slds-form-element__control">
+                                                    <div class="slds-select_container">
+                                                        <select id="{!'allProgramDropdown' + index}"  
+                                                                data-list_item = "{!index}" 
+                                                                class="slds-select" 
+                                                                onfocus="{!c.getSelectedValue}"  
+                                                                onchange="{!c.dispositionHandler}">
+                                                            <option value=""></option>
+                                                            <option value="Accept">Accept</option>
+                                                            <option value="Maybe_Later">Maybe Later</option>
+                                                            <option value="Decline">Decline</option>
+                                                            <option value="Not_Appropriate">Not Appropriate</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </aura:if>
+                                        <!--   / Disposition dropdown-->
+                                    </td> 
+                                </tr>
+                                
+                                <!-- Row for Program discription-->
+                                <tr>
+                                    <td data-label="Description" colspan="8">
+                                        <div class="slds-truncate event_word_wrap"  >
+                                            <b>Program Description: </b> {!details.programDescription}
+                                        </div>
+                                    </td>
+                                </tr> 
+                            </aura:iteration>
+                        </tbody>
+                    </table> 
+                </div>
+				<aura:set attribute="else">
+               <aura:if isTrue="{!and(v.systemErrMsg != '', v.systemErrMsg != null)}">
+               		<div class="noDataMsg slds-p-left_large slds-size_5-of-12 slds-align_absolute-center ">
+                        {!v.systemErrMsg}
+                   </div>
+                   <aura:set attribute="else">
+                   		<div class="slds-p-left_large slds-size_5-of-12 slds-align_absolute-center">
+                        <ui:message title="" severity="info" closable="false" class="messageBold">
+                            {!$Label.c.ADB_NoProgramsAvlblMsg}
+                       </ui:message>
+                       </div>
+                   </aura:set>
+               </aura:if>
+               
+           </aura:set>
+				</aura:if>
+    </div>
+            <br/><br/>
+        
+        <!--	Comment Popup	-->
+        <aura:if isTrue="{!v.isCommentBoxVisible}">
+            <section role="dialog" class="slds-modal slds-fade-in-open" >
+                <div class="slds-modal__container slds-p-top_small">               
+                    <header class="slds-modal__header">
+                        
+                        <!-- Close Button-->
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{!c.closeCommentBox}"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>
+                        <!-- / Close Button-->
+                        
+                        <h2  class="slds-text-heading_medium slds-hyphenate" align="left">Comments</h2> 
+                        
+                        <!--	Textarea for enter comments -->
+                        <div class="slds-modal__body slds-p-bottom_large" style="background:white;" align="center"> 
+                            <lightning:textarea onchange="{!c.onChangeComment}" 
+                                                value="{!v.removeOpportunityComment}"
+                                                aura:id="commentBox" 
+                                                name="Comment" 
+                                                placeholder="" 
+                                                maxlength="256" 
+                                                messageWhenTooLong="A maximum of 256 characters are allowed." 
+                                                style="width:50%; height:90%">                                                                
+                            </lightning:textarea>
+                        </div>
+                        <!--	/ Textarea -->
+                        
+                        <!--	Ok button -->
+                        <div align="center">
+                            <lightning:button variant="brand" 
+                                              label="Ok"
+                                              title="Ok"
+                                              disabled= "{!v.isOkButtonDisabled}" 
+                                              onclick="{!c.okButton}"/>
+                        </div>
+                        <!--/ Ok button-->
+                        
+                    </header> 
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </aura:if>
+        <!--/ Comment Popup	for comment box -->
+        
+        <lightning:layoutItem size="12" >
+            <!--	Save button for save disposition -->
+            <div class="save-button" align="right">
+                <lightning:button variant="brand" 
+                                  label="Submit"
+                                  title="Submit"
+                                  disabled= "{!v.isSaveButtonDisabled}"
+                                  onclick="{!c.submitDisposition}"/>
+            </div>
+            <!--	/ Save button  -->
+        </lightning:layoutItem> 
+        
+   
+</aura:component>

@@ -1,0 +1,468 @@
+<apex:page controller="ACETContractDetailsController" sidebar="false" docType="html-5.0">
+   <script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+   <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+   <apex:includeScript value="{!$Resource.JQuery}" />
+    <apex:includeScript value="{!$Resource.JqueryTableSorter}"></apex:includeScript>
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    <apex:stylesheet value="{!URLFOR($Resource.ACETResources, '/css/m/memberdetail.css')}"/>
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"/>
+   <style>
+         .messageTable{
+            border:none;
+         }
+       body .bPageBlock .pbBody{
+           background-color:white;
+      }
+           .bPageBlock .detailList .dataCol {
+        width: 22%;
+    }
+    .apexp .bPageBlock.apexDefaultPageBlock .pbBody .pbSubheader {
+        border-top: 2px solid #cfeef8 !important;
+        color: #000;
+    }
+    .apexp .bPageBlock.apexDefaultPageBlock .pbBody .pbSubheader {
+       border-top: 2px solid #cfeef8 !important;
+        color: #000;
+    }
+
+    .homeTab .listViewport .subNav .linkBar, .homeTab .mComponent .cHeader, .homeTab .genericTable, .homeTab .bSubBlock, .homeTab .bPageBlock {
+        border-top: 3px none; 
+    }
+
+    .bPageBlock {
+        border-top: none;
+    }
+    .homeTab .secondaryPalette, .individualPalette .homeBlock .secondaryPalette
+        {
+        background-color: #fff;
+        border-color: #cfeef8;
+    }
+    .secondaryPalette.bPageBlock, body.popupTab .secondaryPalette.bPageBlock,
+        body.UserTagStatsPage .secondaryPalette.bPageBlock {
+        background-color: #fff;
+        border-bottom: none;
+        border-left: none;
+        border-right: none;
+        -moz-border-radius: 0px;
+        -webkit-border-radius: 0px;
+        border-radius: 0px;
+    }
+
+    .apexp .bPageBlock.apexDefaultPageBlock .pbBody .pbSubheader .showListButton
+        {
+        background-position: 1px -1px;
+    }
+
+    .apexp .bPageBlock.apexDefaultPageBlock .pbBody .pbSubheader .hideListButton
+        {
+        background-position: 1px -11px;
+    }
+
+    .homeTab .tertiaryPalette, .individualPalette .homeBlock .tertiaryPalette, .layoutEdit .individualPalette .homeBlock .tertiaryPalette {
+        background-color: #ffffff;
+        border-color: #cfeef8;
+    }
+    .pbSubheader {
+        background-color: #fff;
+        font-weight: bold;
+        font-size: 91%;
+        padding: 2px 2px 2px 5px;
+        margin-top: 15px;
+        overflow: hidden;
+        margin-bottom: 2px;
+    }
+
+
+    .apexp .bPageBlock.apexDefaultPageBlock .pbBody .pbSubheader {
+        border-top: 0;
+        color: #000;
+    }
+
+    .bPageBlock .detailList .labelCol {
+        width:13%;
+    }
+    body .pbBody table.list tr.dataRow th, body .pbBody table.list tr.dataRow td {
+                border-width: 0 0 1px 0;
+                vertical-align: top;
+    }
+
+
+    .color {
+        //background-color: #c00;
+        border-top: 5px solid #c00;
+    }
+    .errorClass{
+         border-color: #c00 !important;
+         border: 2px solid;
+        }
+    .changeTableWidth{
+            width:129% !important;
+            margin-left:-13px !important;
+     }
+    .pageDescription{
+          margin-top: 9px;
+          margin-bottom: 0px;
+     }
+    </style>
+    <script>
+       
+        function ShowLoader() {
+            $('.loader').fadeIn('fast');
+        }
+
+        function HideLoader() {
+            $('.loader').fadeOut('fast');
+        }
+        function decimalOnly(e){
+            e.value = e.value.replace(/[^0-9\.]/g,'');
+            if(e.value.split('.').length>2) e.value = e.value.replace(/\.+$/,"");
+        }     
+        
+        function clearForm(){
+        $("[id$='btnClearAll']").closest('form').find("input[type=text],select").val("");
+        clear();  
+        return true;
+      } 
+        function inputLimiter(e,allow) {
+            var AllowableCharacters = '';
+            
+            if (allow == 'Currency'){AllowableCharacters='1234567890.';}
+            
+            var k = document.all?parseInt(e.keyCode): parseInt(e.which);
+            if (k!=13 && k!=8 && k!=0){
+                if ((e.ctrlKey==false) && (e.altKey==false)) {
+                    return (AllowableCharacters.indexOf(String.fromCharCode(k))!=-1);
+                } else {
+                    return true;
+                }
+            } else {
+                return true;
+            }
+        }    
+    var pricingSetId = '{!pricingSetId}';
+    </script>
+    
+   <apex:form id="formHighLightPanel">
+    
+   <apex:actionFunction name="clear" status="AjaxLoader" rerender="pbsection,pgMsg" oncomplete="applyEventListner()"/>
+   
+   <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+        <apex:includeScript value="/support/console/30.0/integration.js" />
+        <apex:includeScript value="{!$Resource.JqueryTableSorter}"></apex:includeScript>
+        <apex:stylesheet value="{!URLFOR($Resource.ACETResources, '/css/m/memberdetail.css')}" />
+        <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+        <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+        <apex:includeScript value="/soap/ajax/30.0/connection.js" />
+            
+    <apex:actionFunction name="afOnPageLoad" action="{!CallWSOnPageLoad}" rerender="pbContactDetail,pbContactDetail1" status="AjaxLoader" onComplete="OpenDiagCodes_af(pricingSetId);acet.autodoc.startAutodoc();applyEventListner();"/>         
+      <apex:outputPanel id="hlPanel">
+            <apex:inputHidden id="highlightPanelInfo" value="{!hpAdditionInfoStr}" />
+            <c:ACETInteractionHighlightsPanel InteractionAtt="{!interaction}" SubjectAtt="{!conObj}" AdditionalInfoAtt="{!additionalInfo}" selectedOriginator="{!Interaction.Originator_Name__c}"></c:ACETInteractionHighlightsPanel>
+            <apex:outputPanel id="hippapopupPanel">
+                <c:ACETHIPPADisclosure InteractionIdAtt="{!interaction.id}" subjectDOB="{!AdditionalInfo.DOB}" originatorDOB="{!AdditionalInfo.OriginatorDOB}"/>
+            </apex:outputPanel>
+        </apex:outputPanel>
+       <apex:pageMessages id="errorMessageTop"/>
+        <apex:pageblock id="pbContactDetail" mode="detail">
+           <apex:sectionheader subTitle="Contract Details" title="" />
+           <apex:pageMessages id="contractMsges"></apex:pageMessages>
+           <!--  Active Contract Details  ----  -->
+           <apex:pageblockSection id="coverages" columns="1" html-auto-doc="auto" rendered="{!!isProviderLookupDetailsResult}" collapsible="false">
+             <!--  {!providertype}  -->
+             <apex:pageblocktable value="{!lstAgreementDetail}" var="objContrcat"  styleclass="applySort">
+                     <apex:column headerValue="Active">
+                         <img src="{!URLFOR($Resource.ACETResources, '/img/m/' +objContrcat.contractDetail.statusCode+'.jpg')}"/>
+                     </apex:column>
+                     <apex:column headerValue="Network ID">{!objContrcat.network.id}</apex:column>
+                    <apex:column headerValue="Network Name">{!objContrcat.network.name}</apex:column> 
+                    <apex:column headerValue="Process Order">{!objContrcat.contractDetail.processOrderNumber}</apex:column> 
+                    <apex:column headerValue="Pricing Set ID">{!objContrcat.PricingSet.id}</apex:column>
+                    <apex:column headerValue="Contract ID">{!objContrcat.Key.contractDetailId}</apex:column>
+                    <apex:column headerValue="Effective">{!objContrcat.contractDetail.effectiveDate}</apex:column>
+                    <apex:column headerValue="Cancel">{!objContrcat.contractDetail.cancelDate}</apex:column>                    
+                    <apex:column headerValue="Assignment Type" rendered="{!if(providerType== 'Physician',true,false)}">{!objContrcat.contractDetail.providerAssignmentTypeCode}</apex:column>
+             </apex:pageBlockTable>
+         </apex:pageblockSection> 
+              <script> twistSection(document.getElementById('{!$Component.networks}').getElementsByTagName('img')[0]) </script>
+                 <apex:pageblocksection title="Networks" columns="3" id="networks" html-auto-doc="true">
+                <apex:pageblocksectionItem >
+                   <apex:outputLabel value="Name" />
+                   <apex:outputtext value="{!AgreementDetail.network.name}"/>
+                </apex:pageblocksectionItem>
+                
+                <apex:pageblocksectionItem >
+                <apex:outputLabel value="Effective Date" />
+                   <apex:outputtext value="{!AgreementDetail.network.effectiveDate}"/>                  
+                </apex:pageblocksectionItem>
+                
+                <apex:pageblocksectionItem >
+                   <apex:outputLabel value="Cancel Date" />
+                   <apex:outputtext value="{!AgreementDetail.network.cancelDate}"/>
+                </apex:pageblocksectionItem>
+                
+                <apex:pageblocksectionItem >
+                   <apex:outputLabel value="ID" />
+                   <apex:outputtext value="{!AgreementDetail.network.id}"/>
+                </apex:pageblocksectionItem>
+                                              
+                               
+                <apex:pageblocksectionItem >
+                   <apex:outputLabel value="Type" />                 
+                    <apex:outputText value="{!NTypeList}"/>
+                </apex:pageblocksectionItem>
+         
+                  <!-- <apex:pageblocksectionItem >
+                   <apex:outputLabel value=" " />
+                   <apex:outputtext value=""/>
+                </apex:pageblocksectionItem> -->
+            </apex:pageblocksection>
+        </apex:pageblock>
+        <apex:pageblock >
+          
+            <apex:pageBlockSection title="Provider Fee Schedule" columns="1" id="pbSchedule" >
+                <script> twistSection(document.getElementById('{!$Component.pbSchedule}').getElementsByTagName('img')[0]) </script>
+             
+                <c:ACETDiagnosisAndPricingTable pricingSet="{!pricingSetId}" attrIsProviderLookupCallTopic="true" allignment="{!allignment}"/>
+                   
+            </apex:pageblocksection>
+         </apex:pageblock>
+         <apex:pageblock id="pbContactDetail1">
+                             
+            <apex:pageblockSection id="filingLimitDetails" columns="1" title="Filing Limit Details" html-auto-doc="true">
+            <apex:pageBlockSectionItem >
+                <apex:pageBlockTable value="{!AgreementDetail.filingLimit}" var="fl" columns="7">                                                           
+                    <apex:column value="{!fl.period}">
+                        <apex:facet name="header">
+                            <apex:outputLabel value="Period" />
+                   </apex:facet>                        
+                    </apex:column>
+                    <apex:column value="{!fl.effectiveDate}" >
+                        <apex:facet name="header">
+                            <apex:commandLink value="Effective Date ">                                                     
+                            </apex:commandLink>
+                        </apex:facet>                        
+                    </apex:column>
+                  <!--  <apex:column value="{!fl.penaltyAmount}" >
+                        <apex:facet name="header">
+                            <apex:commandLink value="Penalty Amount">                                                     
+                            </apex:commandLink>
+                        </apex:facet>                        
+                    </apex:column>  -->
+                    <apex:column value="{!fl.periodType}" >
+                        <apex:facet name="header">
+                            <apex:commandLink value="Period Type">                                                   
+                            </apex:commandLink>
+                        </apex:facet>                        
+                    </apex:column>
+                    <apex:column value="{!fl.typeCode}" >
+                        <apex:facet name="header">
+                            <apex:commandLink value="Type">                                                       
+                            </apex:commandLink>
+                        </apex:facet>                        
+                    </apex:column>
+                    <apex:column value="{!fl.cancelDate}" >
+                        <apex:facet name="header">
+                            <apex:commandLink value="Cancel Date">                                                      
+                            </apex:commandLink>
+                        </apex:facet>                        
+                    </apex:column>
+                    <apex:column value="{!fl.penaltyPercentage}" >
+                        <apex:facet name="header">
+                            <apex:commandLink value="Penalty Percentage">                                                      
+                            </apex:commandLink>
+                        </apex:facet>                        
+                         </apex:column>                                  
+                </apex:pageBlockTable>
+            </apex:pageBlockSectionItem>
+            </apex:pageblocksection>
+            <apex:pageblocksection title="Pricing Set" columns="3" id="pricingSet" html-auto-doc="true">
+              <apex:pageblocksectionItem >
+                   <apex:outputLabel value="Version Status" />
+                   <apex:outputtext value="{!AgreementDetail.pricingSet.statusCode}" />
+                </apex:pageblocksectionItem>
+                <apex:pageblocksectionItem >
+                   <apex:outputLabel value="ID" />
+                   <apex:outputtext value="{!AgreementDetail.pricingSet.id}" />
+                </apex:pageblocksectionItem>
+                <apex:pageblocksectionItem >
+                   <apex:outputLabel value="Description" />
+                   <apex:outputtext value="{!AgreementDetail.pricingSet.description}" />
+                </apex:pageblocksectionItem>
+                <apex:pageblocksectionItem >
+                   <apex:outputLabel value="Effective Date" />
+                   <apex:outputtext value="{!AgreementDetail.pricingSet.effectiveDate}" />
+                </apex:pageblocksectionItem>
+                <apex:pageblocksectionItem >
+                   <apex:outputLabel value="Version" />
+                    <apex:outputtext value="{!AgreementDetail.pricingSet.version}"/>
+                </apex:pageblocksectionItem>
+                <!-- <apex:pageblocksectionItem >
+                   <apex:outputLabel value=" " />
+                   <apex:outputtext value=""/>
+                </apex:pageblocksectionItem> -->
+          </apex:pageblocksection>  
+           
+           <apex:pageblockSection id="pricingSchedules" columns="1" title="Pricing Schedules" html-auto-doc="true">
+            <apex:pageBlockSectionItem >
+                <apex:pageBlockTable value="{!AgreementDetail.pricingSchedule}" var="ps" columns="7">                                                           
+                    <apex:column value="{!ps.assignmentStatusCode}">
+                        <apex:facet name="header">
+                            <apex:outputLabel value="Status" />
+                   </apex:facet>                        
+                    </apex:column>
+                    <apex:column value="{!ps.id}" >
+                        <apex:facet name="header">
+                            <apex:commandLink value="ID">                                                     
+                            </apex:commandLink>
+                        </apex:facet>                        
+                    </apex:column>
+                    <apex:column value="{!ps.description}" >
+                        <apex:facet name="header">
+                            <apex:commandLink value="Description">                                                     
+                            </apex:commandLink>
+                        </apex:facet>                        
+                    </apex:column>
+                    <apex:column value="{!ps.assignmentEffectiveDate}" >
+                        <apex:facet name="header">
+                            <apex:commandLink value="Effective Date">                                                   
+                            </apex:commandLink>
+                        </apex:facet>                        
+                    </apex:column>
+                    <apex:column value="{!ps.assignmentCancelDate}" >
+                        <apex:facet name="header">
+                            <apex:commandLink value="Cancel Date">                                                       
+                            </apex:commandLink>
+                        </apex:facet>                        
+                    </apex:column>
+                    <apex:column value="{!ps.paperTypeCode}" >
+                        <apex:facet name="header">
+                            <apex:commandLink value="Facility Paper Type ID">                                                      
+                            </apex:commandLink>
+                        </apex:facet>                        
+                    </apex:column>
+                    <apex:column value="{!ps.paperTypeDescription}" >
+                        <apex:facet name="header">
+                            <apex:commandLink value="Facility Paper Type Description">                                                      
+                            </apex:commandLink>
+                        </apex:facet>                        
+                         </apex:column>                                  
+                </apex:pageBlockTable>
+            </apex:pageBlockSectionItem>
+            </apex:pageblocksection>
+            <apex:pageblockSection id="lineOfBusiness" columns="1" title="Line Of Business" html-auto-doc="true">
+            <apex:pageBlockSectionItem >
+                <apex:pageBlockTable value="{!AgreementDetail.lineOfBusiness}" var="lb" columns="2">                                                           
+                    <apex:column value="{!lb.name}">
+                        <apex:facet name="header">
+                            <apex:outputLabel value="Name" />
+                   </apex:facet>                        
+                    </apex:column>
+                    <apex:column value="{!lb.medicalNecessityIndicator}" >
+                        <apex:facet name="header">
+                            <apex:commandLink value="Medical Necessity">                                                     
+                            </apex:commandLink>
+                        </apex:facet>                        
+                    </apex:column>
+                </apex:pageBlockTable>
+            </apex:pageBlockSectionItem>
+            </apex:pageblocksection>
+                        
+            <apex:pageblocksection title="Overpayment Recovery" columns="3" html-auto-doc="true">
+          
+            <apex:pageblocksectionItem >
+                   <apex:outputLabel value="Indicator" />
+                   <apex:outputtext value="{!AgreementDetail.recovery.overpaymentIndicator}"/>
+                </apex:pageblocksectionItem>
+                
+                <apex:pageblocksectionItem >
+                   <apex:outputLabel value="Deadline Period" />
+                   <apex:outputtext value="{!AgreementDetail.recovery.deadlinePeriod}"/>
+                </apex:pageblocksectionItem>
+                
+                <apex:pageblocksectionItem >
+                   <apex:outputLabel value="Deadline Period Type"/>
+                  <apex:outputtext value="{!AgreementDetail.recovery.deadlinePeriodTypeCode}"/>
+                </apex:pageblocksectionItem>
+                
+                  <apex:pageblocksectionItem >
+                   <apex:outputLabel value="Wait Period"/>
+                   <apex:outputtext value="{!AgreementDetail.recovery.waitPeriod}"/>
+                </apex:pageblocksectionItem>
+                
+                <apex:pageblocksectionItem >
+                   <apex:outputLabel value="Wait Period Type" /> 
+                   <apex:outputtext value="{!AgreementDetail.recovery.waitPeriodTypeCode}"/>
+                </apex:pageblocksectionItem>
+                <!-- <apex:pageblocksectionItem >
+                   <apex:outputLabel value=" "/>
+                   <apex:outputtext value=""/>
+                </apex:pageblocksectionItem> -->
+                 </apex:pageblocksection> 
+        </apex:pageblock>
+       
+        <apex:actionStatus id="AjaxLoader" onstart="ShowLoader()" onstop="HideLoader()"/>
+        <span class="loader" style=" display: none;">
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                &nbsp;
+            </div>
+            <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 1001; margin: 15% 50%">
+                <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                    <img src="/img/loading.gif" style="float: left; margin: 8px;"/>
+                    <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                </div>
+            </div>
+        </span>
+   </apex:form>
+   <script type="text/javascript">
+        //j$ = jQuery.noConflict();
+        $(document).ready( function () {
+            acet.autodoc.saveAutodoc();
+            afOnPageLoad();
+        });
+        
+        $(document).ready(function() { 
+             acet.autodoc.startAutodoc();
+            //acet.autodoc.createCommentsbox();
+            acet.autodoc.subTabIds = []; 
+            
+            var subjectId = '{!JSENCODE(conObj.Id)}';
+            sforce.console.addEventListener('RequestProviderDetail_'.concat(subjectId), function(r){ 
+                sforce.console.getEnclosingTabId(function(result){                                        
+                    var res = {};   
+                    res.subTabId = result.id;           
+                    res.doc = acet.autodoc.saveAutodoc();                                                  
+                    sforce.console.fireEvent('ReceiveProviderDetail_'.concat(subjectId), JSON.stringify(res)); 
+                }); 
+                                                       
+            });
+                                    
+            //sync comments between claim search and claim details tabs
+            //only fire at last keyup
+            var timer;
+            $("#autodocComments").keyup(function(){
+                clearTimeout(timer);  
+                timer = setTimeout(function(){
+                    sforce.console.fireEvent('ProviderCommentsUpdated_'.concat(subjectId), $("#autodocComments").val()); 
+                }, 500);   
+            });   
+            
+            sforce.console.addEventListener('ProviderCommentsUpdated_'.concat(subjectId), function(r){
+            if(r.message != $("#autodocComments").val()){
+                $("#autodocComments").val(r.message);
+                }
+            });                      
+                        
+            //sync comment from claim search when detail page is loaded
+            sforce.console.fireEvent('RequestProviderComments_'.concat(subjectId), subjectId);
+            
+            //close self when requested from claim Page
+            sforce.console.addEventListener('CloseProviderDetailSubTab_'.concat(subjectId), function(r){
+                sforce.console.getEnclosingTabId(function(result){
+                    sforce.console.closeTab(result.id);        
+                });
+
+            });
+        });
+    </script>
+   
+</apex:page>

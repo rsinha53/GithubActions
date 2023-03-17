@@ -1,0 +1,424 @@
+<aura:component controller="ACET_FeeScheduleController">
+    <!-- attributes -->
+    <aura:attribute name="cmpId" type="String" default="feeScheduleLookup" />
+    <aura:attribute name="contractData" type="Object" />
+    <aura:attribute name="radioSelection" type="String"/>
+    <aura:attribute name="table_header_data" type="List[]"
+                    default="['START','END','POS','CPT/HCPC CODE','MODIFIER','DX','TYPE','COUNT','BILLED AMOUNT']" />
+    <aura:attribute name="typeComboBoxValues" type="List[]"
+                    default="[{'label': 'Days', 'value': 'D'}, {'label': 'Units', 'value': 'U'}]" />
+    <aura:attribute name="posComboBoxValues" type="List[]" default="[]" />
+    <aura:attribute name="inputRows" type="List[]" default="[]" />
+    <aura:attribute name="excessRowsErrorLink" type="String" default="" />
+    <aura:attribute name="showExcessRowsError" type="Boolean" default="false" />
+    <aura:attribute name="showNoEmptyRowsError" type="Boolean" default="false" />
+    <!-- US3400693 -->
+    <aura:attribute name="showResults" type="Boolean" default="false" />
+    <aura:attribute name="showSpinner" type="Boolean" default="false" />
+    <aura:attribute name="autodocUniqueId" type="String" default=""/>
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default=""/>
+    <aura:attribute name="resultsData" type="Object"/>
+    
+    <!--US3394407 -->
+    <aura:attribute name="isClaims" type="Boolean" default="false"/>
+    <aura:attribute name="radioSelectionInpatientOutpatient" type="String" default="" />
+    <aura:attribute name="outpatient_table_headers" type="List[]" 
+                    default="['START','END','REV CODE','CPT/HCPC CODE','MODIFIER','PRIMARY DX', 'ADD\'L DX', 'RX NDC', 'TYPE','COUNT','BILLED AMOUNT']" />
+    <aura:attribute name="us04OutpatientInputRows" type="List[]" default="[]" />
+    
+    <!-- handlers -->
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}" />
+    
+    <!--US3468218 -->
+    <aura:attribute name="feeScheduleData" type="Object"/>
+    <aura:attribute name="existingData" type="Object"/>
+    
+    <!-- US3464932 27 April 2021 -->
+    <aura:attribute name="claimsFeeScheduleData" type="Object"/>
+    <aura:attribute name="consolidatedData" type="Object"/>
+    <aura:attribute name="providerId" type="String"/>
+    <aura:attribute name="taxId" type="String"/>
+    <aura:attribute name="policyData" type="Object"/>
+    <!-- US3472990 - Team Blinkers -Bala - 6th May 2021 -->
+    <aura:attribute name="claimType" type="String" default="" />
+    <aura:attribute name="networkStatus" type="String" default="" />
+    <aura:attribute name="billtype" type="String" default="" />
+    <aura:attribute name="outpPop" type="boolean" default="true" />
+    <aura:attribute name="claimnumber" type="String" default="" />
+    <!--<aura:attribute name="cardDetails" type="Object"/>-->
+    
+    <aura:attribute name="flnNbr" type="String"/>  <!-- Blinker change -->
+    
+    <aura:handler event="aura:doneWaiting" action="{!c.doneRendering}"/>
+    <aura:attribute name="isDoneRendering" type="Boolean" default="false"/>
+    <aura:attribute name="ub04CardDetails" type="Object" />
+    <aura:attribute name="isAllowedAmountChecked" type="Boolean" default="false"/>
+    <aura:attribute name="allowedAmountValue" type="String"  />
+    <aura:handler name="change" value="{!v.allowedAmountValue}" action="{!c.handleAllowedAmount}"/>    
+    <aura:attribute name="mouseHover" type="boolean" default="false" />
+    
+    <div style="visibility: hidden; height: 1px;">
+        <A id="ocr" HREF="file://nasgw013pn\National_Macro_Project\MasterCopies\Production Files\HTA\WEBTOOLS\Oci_IriP_Tool\Oci_IriP.hta">OCI MACRO</A>
+    </div>
+    <div class="slds-card" style="width:100%">
+        <div class="card_padding component_title">
+            <!-- Fee Schedule Lookup: {!(v.contractData.type == 'cns' ? 'C&amp;S' : (v.contractData.type == 'eni' ? 'E&amp;I'
+            : ((v.contractData.type == 'mnr' ? 'M&amp;R' : ((v.contractData.type == 'phs' ? 'PHS' : ''))))))} Contract
+            Details: {!v.contractData.contractId} -->
+            Fee Schedule Lookup: {!v.claimnumber}
+        </div>
+        
+        <!-- radio buttons -->
+        <div class="card_bottom_padding card_left_padding slds-p-top_small slds-p-bottom_medium">
+            <div class="slds-grid">
+                <div class="slds-col">
+                    <div class="slds-radio card_element_right_margin" style="float: left;">
+                        <input type="radio" id="{!v.cmpId + 'HCFA'}" value="{!v.cmpId + 'HCFA'}" name="default"
+                               checked="{!(v.radioSelection=='HCFA')}" onclick="{!c.onHCFASelected}" />
+                        <label class="slds-radio__label" for="{!v.cmpId + 'HCFA'}">
+                            <span class="slds-radio_faux"></span>
+                            <span class="slds-form-element__label">HCFA 1500</span>
+                        </label>
+                    </div>
+                    <div class="slds-radio" style="float: left;">
+                        <input type="radio" id="{!v.cmpId + 'UB04'}" value="{!v.cmpId + 'UB04'}" name="default"
+                               checked="{!(v.radioSelection=='UB04')}" onclick="{!c.onUB04Selected}" disabled="{!(v.isClaims == true) ? false : true}" />
+                        <label class="slds-radio__label" for="{!v.cmpId + 'UB04'}">
+                            <span class="slds-radio_faux"></span>
+                            <span class="slds-form-element__label">UB04</span>
+                        </label>
+                    </div>
+                    <div class="ub04HelpText">
+                        <!-- US3472990 -->
+                        <aura:if isTrue="{!v.networkStatus=='O'}">
+                            <lightning:helptext content="Fee Schedule not available for OON contracts.  Select OON Reimbursement hyperlink.” in Fee Schedule Lookup card." />
+                        </aura:if>
+                    </div>
+                    <div class="ub04HelpText">
+                        <!-- US3394407 -->
+                        <aura:if isTrue="{!not(v.isClaims)}">
+                            <lightning:helptext content="Fee Schedule Lookup for this type is unavailable for pre-service inquiries. If the provider is disputing the allowed amount on a specific claim, access the Fee Schedule link on the Claim Details page." />
+                        </aura:if>
+                    </div>
+                    
+                </div>
+                
+                <div class="{!(v.radioSelection=='UB04') ? 'slds-show slds-col' : 'slds-hide'}">
+                    <!-- US3394407 -->
+                    <!-- Inpatient -->
+                    <div class="slds-radio ">
+                        <input type="radio" id="{!v.cmpId + 'Inpatient'}" value="{!v.cmpId + 'Inpatient'}" name="inpatient"
+                               checked="{!(v.radioSelectionInpatientOutpatient=='Inpatient')}" onclick="{!c.onInpatient}" disabled="false" />
+                        <label class="slds-radio__label" for="{!v.cmpId + 'Inpatient'}">
+                            <span class="slds-radio_faux"></span>
+                            <span class="slds-form-element__label">Inpatient</span>
+                        </label>
+                    </div>
+                    <!-- Inpatient -->
+                    <div class="slds-radio">
+                        <input type="radio" id="{!v.cmpId + 'Outpatient'}" value="{!v.cmpId + 'Outpatient'}" name="outpatient"
+                               checked="{!(v.radioSelectionInpatientOutpatient=='Outpatient')}" onclick="{!c.onOutpatient}" disabled="false" />
+                        <label class="slds-radio__label" for="{!v.cmpId + 'Outpatient'}">
+                            <span class="slds-radio_faux"></span>
+                            <span class="slds-form-element__label">Outpatient</span>
+                        </label>
+                    </div>
+                </div> 
+                <div class="slds-col slds-size_6-of-12">
+                    
+                </div>
+            </div>
+        </div>
+        
+        <!-- HCFA -->
+        <div class="card_bottom_padding card_left_padding card_right_padding"><!-- Team Blinkers-->
+            <div class="{!(v.radioSelection=='HCFA') ? 'slds-show' : 'slds-hide'}">
+                <aura:if isTrue="{!v.networkStatus=='O'}">
+                    <span style="color: #c23934;">Fee Schedule not available for OON contracts.  Select OON Reimbursement hyperlink.</span>
+                    <aura:set attribute="else">
+                        <!--  <div>
+                        <lightning:input type="checkbox" name="" checked="true" variant="label-hidden" disabled="true"/>
+                        <input class="slds-m-right_small" type="checkbox" value="" name="inpatientCheckbox"
+                               checked="true" disabled="false" />
+                        <span style="color: #c23934;">Fee Schedule not available for OON contracts.  Select OON Reimbursement hyperlink.” in Fee Schedule Lookup card.</span>
+                    </div> -->
+                        
+                        <div class="card_bottom_padding card_left_padding card_right_padding">
+                            <table class="slds-table slds-table_bordered inputTable" style="width:100%;">
+                                <thead>
+                                    <tr class="slds-line-height_reset">
+                                        <aura:iteration items="{!v.table_header_data}" var="option">
+                                            <th class="table_headers" scope="col">
+                                                <div
+                                                     class="{!or(option=='MODIFIER', option=='DX') ? 'table_header_not_required' : 'table_header_required'}">
+                                                    {!option}</div>
+                                            </th>
+                                        </aura:iteration>
+                                        <th class="table_headers" scope="col" style="width: 50px;"></th>
+                                        <th class="table_headers" scope="col" style="width: 50px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.inputRows}" var="row" indexVar="index">
+                                        <tr aria-selected="false">
+                                            <td classcope="col">
+                                                <lightning:input aura:id="inputfields" type="date" dateStyle="short"
+                                                    name="{!index}" label="start" value="{!row.start}"
+                                                    variant="label-hidden" required="true" class="table_input"
+                                                    messageWhenBadInput="Invalid Date" onchange="{!c.onCommit}"/>
+                                            </td>
+                                            <td classcope="col">
+                                                <lightning:input aura:id="inputfields" type="date" dateStyle="short"
+                                                    name="{!index}" label="end" value="{!row.end}"
+                                                    variant="label-hidden" required="true" class="table_input"
+                                                    messageWhenBadInput="Invalid Date" onchange="{!c.onCommit}"/>
+                                            </td>
+                                            <td classcope="col">
+                                                <lightning:combobox aura:id="inputfields" name="{!index}" label="pos"
+                                                    value="{!row.pos}" variant="label-hidden" required="true"
+                                                    class="table_input" options="{!v.posComboBoxValues}"
+                                                    placeholder="Select" onchange="{!c.onCommit}"/>
+                                            </td>
+                                            <td classcope="col">
+                                                <lightning:input aura:id="inputfields" name="{!index}" label="cptOrHcpc"
+                                                                 value="{!row.cptOrHcpc}" variant="label-hidden" required="true"
+                                                    class="table_input" oncommit="{!c.onCommit}"/>
+                                            </td>
+                                            <td classcope="col">
+                                                <lightning:input aura:id="inputfields" name="{!index}" label="modifier"
+                                                    value="{!row.modifier}" variant="label-hidden"
+                                                    class="table_input" oncommit="{!c.onCommit}"/>
+                                            </td>
+                                            <td classcope="col">
+                                                <lightning:input aura:id="inputfields" name="{!index}" label="dx"
+                                                    value="{!row.dx}" variant="label-hidden" class="table_input" oncommit="{!c.onCommit}"/>
+                                            </td>
+                                            <td classcope="col">
+                                                <lightning:combobox aura:id="inputfields" name="{!index}" label="type"
+                                                    value="{!row.type}" variant="label-hidden" required="true"
+                                                    class="table_input" options="{!v.typeComboBoxValues}"
+                                                    placeholder="Select" onchange="{!c.onCommit}"/>
+                                            </td>
+                                            <td classcope="col">
+                                                <lightning:input pattern="^[0-9_ ]*$" messageWhenPatternMismatch="Invalid number."
+                                                                 aura:id="inputfields" name="{!index}" label="count" value="{!row.count}"
+                                                    variant="label-hidden" required="true" class="table_input" oncommit="{!c.onCommit}"/>
+                                            </td>
+                                            <td classcope="col">
+                                                <lightning:input pattern="^([0-9]*)(.[0-9][0-9])?$"
+                                                                 messageWhenPatternMismatch="Invalid amount." aura:id="inputfields"
+                                                                 name="{!index}" label="billedAmnt" value="{!row.billedAmnt}"
+                                                    variant="label-hidden" required="true" class="table_input" oncommit="{!c.onCommit}"/>
+                                            </td>
+                                            <td classcope="col" style="width: 50px; text-align: center;">
+                                                <a class="hyperlink" data-index="{!index}" onclick="{!c.onRowCopy}">Copy</a>
+                                            </td>
+                                            <td classcope="col" style="width: 50px; text-align: center;">
+                                                <a class="hyperlink" data-index="{!index}" onclick="{!c.onRowClear}">Clear</a>
+                                            </td>
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div
+                             class="slds-grid slds-grid_vertical-align-center card_bottom_padding card_left_padding card_right_padding">
+                            <div class="card_element_right_margin">
+                                How many rows to add?
+                            </div>
+                            <div class="card_element_right_margin" style="width: 90px; text-align: center;">
+                                <lightning:input pattern="^[0-9_ ]*$" messageWhenPatternMismatch="Invalid number."
+                                                 aura:id="noOfRows" variant="label-hidden" />
+                            </div>
+                            <div class="card_element_right_margin">
+                                <lightning:button variant="Brand" label="Add" class="brand_button" onclick="{!c.onAddRows}" />
+                            </div>
+                            <div>
+                                <lightning:button variant="Neutral" label="Reset" onclick="{!c.onReset}" />
+                            </div>
+                            <div class="slds-grid slds-grid_vertical-align-center">
+                                <div class="{!v.showExcessRowsError ? 'slds-show' : 'slds-hide'}">
+                                    <div class="card_bottom_padding card_left_padding">
+                                        <span style="color: #c23934;">For requests over 50, follow the process </span>
+                                        <lightning:formattedUrl label="here" value="{!v.excessRowsErrorLink}" />
+                                    </div>
+                                </div>
+                                
+                                <div class="{!v.showNoEmptyRowsError ? 'slds-show' : 'slds-hide'}">
+                                    <div class="card_left_padding card_right_padding">
+                                        <span style="color: #c23934;">Add additional rows and try again!</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-col_bump-left">
+                                <lightning:button variant="Brand" label="Search" class="brand_button" onclick="{!c.onSearch}" />
+                            </div>
+                            <div class="card_element_left_margin">
+                                <lightning:button variant="Neutral" label="Clear" onclick="{!c.onAllClear}" />
+                            </div>
+                        </div>
+                    </aura:set>
+                </aura:if>
+            </div></div>
+        <!-- UB04 -->
+        <div class="{!(v.radioSelection=='UB04') ? 'slds-show' : 'slds-hide'}">
+            <div class="card_bottom_padding card_left_padding card_right_padding">
+                <!-- UB04 Inpatient-->
+                <div class="{!(v.radioSelectionInpatientOutpatient=='Inpatient')  ? 'slds-show' : 'slds-hide'}">
+                    <aura:if isTrue="{!v.networkStatus=='O'}">
+                        <span style="color: #c23934;">Fee Schedule not available for OON contracts.  Select OON Reimbursement hyperlink.</span>
+                        <aura:set attribute="else">
+                            <div>
+                                <!--lightning:input type="checkbox" name="" checked="true" variant="label-hidden" disabled="true"/-->
+                                <input class="slds-m-right_small" type="checkbox" value="" name="inpatientCheckbox"
+                                       checked="true" disabled="false" />
+                                <span style="color: #c23934;">Fee Schedule Lookup for this type is unavailable. If the provider is disputing the allowed amount on a specific claim, route to claims for reconsideration using the Dispute Allowed Amount subtype.</span>
+                            </div>
+                        </aura:set>
+                    </aura:if>
+                </div>
+                <!-- UB04 Outpatient-->
+                <div class="{!(v.radioSelectionInpatientOutpatient=='Outpatient')  ? 'slds-show' : 'slds-hide'}">
+                    <aura:if isTrue="{!v.networkStatus=='O'}">
+                        <span style="color: #c23934;">Fee Schedule not available for OON contracts. Select OON Reimbursement hyperlink.</span>
+                        <aura:set attribute="else">
+                            <!-- UB04 Outpatient-->
+                            <!--Vishal Change- US355327 Start-->
+                            <lightning:layout >
+                                <lightning:layoutItem >
+                                    <div class="slds-size_1-of-1">
+                                        <p>Once your active UNET session is opened, enter the below information into the corresponding fields on the top left side of the OCI screen. </p>
+                                        
+                                    </div>
+                                </lightning:layoutItem>
+                                <lightning:layoutItem >
+                                    <div aura:id="div1" data-record="div1" onmouseover="{!c.mouseOver}" onmouseout="{!c.mouseOut}">
+                                
+                                        <lightning:icon iconName="utility:info" size="xx-small" />
+                                    
+                                    
+                                        <div aura:id="div11" class="hide tooltipdiv" role="tooltip" data-record="div11">
+                                            <div>
+                                                <img src="{!$Resource.OciEmul}" style="width: 100%; height:100%;"/>
+                                    	    </div>   
+                                        </div>
+                                    </div>
+                                </lightning:layoutItem>   
+                            </lightning:layout>
+                               
+                            <br/>
+                            <div class="demo-only demo-only--sizing slds-grid slds-wrap">
+                                <div class="slds-size_1-of-12">
+                                    <lightning:input name="input5" readonly="true" value="A" label="Emulator" />
+                                </div>&nbsp;&nbsp;
+                                <div class="slds-size_1-of-12">
+                                    <lightning:input name="input5" readonly="true" value="{!v.flnNbr}" label="FLNDC" />                                        
+                                </div>
+                            </div><br/>
+                            <div class="demo-only demo-only--sizing slds-grid slds-wrap">
+                                <div class="slds-size_1-of-1">
+                                    <p>Once entered, click the "Get Data from EDSS/DOC360 Only" Button
+                                        <lightning:helptext
+                                            content="If EDSS pulls up versus DOC360, go to Document folder and open Insight Software folder> Macro Express Folder>
+                                                                                                                                   Macro Files>VBS folder. Delete all the EDSS files and rerun the tool." />
+                                    </p><!-- US3607337: Provider Fee Schedule for Outpatient Facility In-Network Enhancement - Krish - 22nd June 2021 -->
+                                    
+                                </div>
+                            </div><br/>
+                            <div class="demo-only demo-only--sizing slds-grid slds-wrap">
+                                <div class="slds-size_1-of-1">
+                                    <p>Select "No" in the "Is there another interim bill" pop up and in the next pop-up select "OK"</p>
+                                </div>
+                            </div><br/>
+                            <lightning:layout >
+                                <lightning:layoutItem >
+                                    <div class="slds-size_1-of-1">
+                                        <p>Enter the below information into the corresponding fields in the OCI screen.</p>
+                                        
+                                    </div>
+                                </lightning:layoutItem>
+                                <lightning:layoutItem >
+                                    <div aura:id="div2" data-record="div2" class="show" onmouseover="{!c.mouseOver}">
+                                        
+                                        <lightning:icon iconName="utility:info" size="xx-small" variant=""/></div>
+                                    
+                                    
+                                    <div aura:id="div22" data-record="div22" class="hide tooltipdiv2" onmouseout="{!c.mouseOut}">
+                                        <img src="{!$Resource.OciManual}" />
+                                    </div>   
+                                </lightning:layoutItem>   
+                            </lightning:layout><br/>
+                            <div class="demo-only demo-only--sizing slds-grid slds-wrap">
+                                <div class="slds-size_1-of-12">
+                                    <lightning:input name="market" readonly="true" value="{!v.consolidatedData[0].market}" label="Market #" />
+                                </div>&nbsp;&nbsp;
+                                <div class="slds-size_1-of-12">
+                                    <lightning:input name="table" readonly="true" value="{!v.consolidatedData[0].tableNum}" label="Table" />                                        
+                                </div>&nbsp;&nbsp;
+                                <div class="slds-size_1-of-12">
+                                    <lightning:input name="facilityCode" readonly="true" value="{!v.consolidatedData[0].facilityCode}" label="FC" />
+                                </div>&nbsp;&nbsp;
+                                <div class="slds-size_1-of-12">
+                                    <lightning:input name="placeOfService" readonly="true" value="OH" label="POS" />                                        
+                                </div>
+                            </div><br/>
+                            <div class="demo-only demo-only--sizing slds-grid slds-wrap">
+                                <div class="slds-size_1-of-1">
+                                    <p>Next, click the "Write Data to OCI or IRI" button and complete the OCI macro process.</p>
+                                </div>
+                            </div>
+                            <div class="demo-only demo-only--sizing slds-grid slds-wrap">
+                                <div class="slds-size_1-of-1">
+                                    <p>Once your UNET OCC screen is populated, change OCC to OCN and click Enter.</p>
+                                </div>
+                            </div><br/>
+                            <div class="demo-only demo-only--sizing slds-grid slds-wrap">
+                                <div class="slds-size_1-of-1">
+                                    <p>View the total allowable located in the bottom right of the UNET screen. Enter the value in the Allowed Amount field below:</p>
+                                </div>
+                            </div><br/>
+                            <lightning:input type="checkbox" label="Allowed Amount" name="allowedAmount" checked="{!v.isAllowedAmountChecked}" value="{!v.isAllowedAmountChecked}"/>
+                            <div class="slds-size_2-of-12">
+                              <lightning:input name="allowedAmountValue" type="number" value="{!v.allowedAmountValue}" onchange="{!c.validateCheck}" step="0.01"/>
+                            </div>
+                            
+                            <aura:if isTrue="{!v.outpPop}">
+                                
+                                <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open modalnewcss">
+                                    
+                                    <div class="slds-modal__container">
+                                        <!--###### MODAL BOX BODY Part Start######-->
+                                        <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                                            <p><b>Select OK when you are actively logged into UNET Session A.</b>
+                                            </p>
+                                        </div>
+                                        <div class="slds-size_1-of-4 slds-align_absolute-center ">
+                                            <lightning:button variant="brand" 
+                                                              label="OK"
+                                                              title="OK"
+                                                              onclick="{! c.onClickOK }"/> 
+                                        </div>
+                                    </div>
+                                    <!--Vishal Change- US355327 End-->
+                                </section>
+                                <div class="slds-backdrop slds-backdrop_open"></div>
+                            </aura:if>
+                        </aura:set>
+                    </aura:if>
+                    
+                </div>
+            </div>
+        </div>
+        
+        <!-- US3400693 -->
+        <aura:if isTrue="{!v.showSpinner}">
+            <lightning:spinner alternativeText="Loading" size="medium" variant="brand"/>
+        </aura:if>
+        <aura:if isTrue="{!v.showResults}">            
+            <c:ACET_AutoDocDataTable autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"
+                                     enablePagination="false" tableDetails="{!v.resultsData}" />
+        </aura:if>
+    </div>
+    
+</aura:component>

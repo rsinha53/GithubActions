@@ -1,0 +1,164 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes"
+    controller="SAEProviderSearch" access="global">
+    <ltng:require styles="{!$Resource.multilineToastCSS}" />
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:attribute name="providerDetails" type="Object" />
+    <aura:attribute name="memberDetails" type="Object" />
+    <aura:attribute name="providerMembersSearched" type="Object[]" />
+    <aura:attribute name="isAdvancedSearch" type="Boolean" default="false" />
+    <aura:attribute name="isMemberSearchDisabled" type="Boolean" default="false" />
+    <aura:attribute name="responseMemberNotFound" type="Boolean" default="false" />
+    <!--<aura:attribute name="memberNotFound" type="Boolean" default="false" />-->
+    <aura:attribute name="memberFieldsToValidate" type="List"
+        default="memberIdAI,memberDOBAI,memberFirstNameAI,memberLastNameAI,memberGroupNumberAI,memberZipAI,memberPhoneNumberAI" />
+    <aura:attribute name="interactionCard" type="Object" />
+    <aura:attribute name="subjectCard" type="Object" />
+    <aura:attribute name="responseData" type="List" />
+    <aura:attribute name="interactionType" type="string" />
+    <aura:attribute name="stateOptions" type="List" />
+    <aura:attribute name="isMemSearchDisabledFromPrv" type="Boolean" default="false" />
+    <aura:attribute name="showMemberListSection" type="Boolean" default="false" />
+    <aura:handler name="change" value="{!v.isMemSearchDisabledFromPrv}" action="{!c.onMemSearchDisabledFromPrv}" />
+
+    <div class="slds-p-top_xx-small slds-p-left_xx-large slds-p-right_xx-large slds-p-bottom_xx-large">
+        <div class="slds-text-heading_medium sectionHeadings">Member
+            <lightning:button variant="neutral" label="Clear" class="clearButton"
+                disabled="{!v.isMemberSearchDisabled || v.isMemSearchDisabledFromPrv}"
+                onclick="{!c.clearFieldValidationsAndValues}" />
+        </div>
+
+        <label class="slds-form-element__label">
+            <aura:if isTrue="{!!v.isAdvancedSearch}">
+                <abbr class="slds-required" title="required">*</abbr>
+            </aura:if>
+            Member ID
+        </label>
+        <lightning:helptext iconName="utility:info" style="color:grey !important;"
+            content="Options include the following: Alt ID, Member ID, SSN, EE ID, Medicare ID, Medicaid ID, HCIN ID, MBI ID" />
+        <lightning:input aura:id="memberIdAI" type="search" name="memberId" value="{!v.memberDetails.memberId}"
+            variant="label-hidden" required="{!!v.isAdvancedSearch}"
+            disabled="{!v.isMemberSearchDisabled || v.isMemSearchDisabledFromPrv|| v.memberDetails.memberNotFound}" />
+        <lightning:input aura:id="memberDOBAI" type="date" name="memberDOB" label="DOB" value="{!v.memberDetails.dob}"
+            required="true" disabled="{!v.isMemberSearchDisabled || v.isMemSearchDisabledFromPrv}" dateStyle="short" />
+        <!--/^([0-9]{4})\-([0-9]{2})\-([0-9]{2})$/   pattern="MM/dd/yyyy"-->
+
+
+        <div class="slds-grid slds-gutters slds-p-top_large slds-p-buttom_large">
+            <div class="slds-col slds-size_1-of-2">
+                <a href="#" onclick="{!c.showOrHideAdvancedSearch}" class="showOrHideAdvancedSearch"
+                    name="memAdvanceSearchName"
+                    disabled="{!v.isMemberSearchDisabled || v.isMemSearchDisabledFromPrv}">Show Advanced Search</a>
+            </div>
+
+            <div class="slds-col slds-size_1-of-2">
+                <div class="slds-grid slds-grid_vertical">
+                    <div class="slds-col">
+                        <lightning:input type="checkbox" name="noMemberToSearch" label="No member to search"
+                            checked="{!v.isMemberSearchDisabled}" />
+                    </div>
+                    <div class="slds-col slds-p-top_xx-small">
+                        <aura:if isTrue="{!v.responseMemberNotFound}">
+                            <lightning:input aura:id="memNotFoundAI" type="checkbox" name="memberNotFound"
+                                label="Member not found" onchange="{!c.handleMemberNotFound}"
+                                checked="{!v.memberDetails.memberNotFound}" />
+
+                        </aura:if>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <aura:if isTrue="{!v.isAdvancedSearch}">
+            <lightning:input aura:id="memberFirstNameAI" name="memberFirstName" type="text" label="First Name"
+                value="{!v.memberDetails.firstName}" required="{!v.memberDetails.memberNotFound}"
+                disabled="{!v.isMemberSearchDisabled || v.isMemSearchDisabledFromPrv}" />
+            <lightning:input aura:id="memberLastNameAI" name="memberLastName" type="text" label="Last Name"
+                value="{!v.memberDetails.lastName}" required="{!v.memberDetails.memberNotFound}"
+                disabled="{!v.isMemberSearchDisabled || v.isMemSearchDisabledFromPrv}" />
+            <lightning:input aura:id="memberGroupNumberAI" name="memberGroupNumber" type="text" label="Group Number"
+                value="{!v.memberDetails.groupNumber}"
+                disabled="{!v.isMemberSearchDisabled || v.isMemSearchDisabledFromPrv || v.memberDetails.memberNotFound}" />
+            <lightning:combobox aura:id="StateAI" name="state" label="State"
+                required="{!v.memberDetails.memberNotFound}" value="{!v.memberDetails.state}" placeholder=""
+                options="{!v.stateOptions}" disabled="{!v.isMemberSearchDisabled || v.isMemSearchDisabledFromPrv}" />
+            <lightning:input aura:id="memberZipAI" name="memberZip" type="text" label="Zip"
+                value="{!v.memberDetails.zip}" required=""
+                disabled="{!v.isMemberSearchDisabled || v.isMemSearchDisabledFromPrv || v.memberDetails.memberNotFound}"
+                minlength="5" maxlength="5" messageWhenTooShort="To search by Zip Code, Enter 5 digits"
+                onchange="{!c.onChangeZip}" />
+            <lightning:input aura:id="memberPhoneNumberAI" name="memberPhoneNumber" type="text" label="Phone Number"
+                value="{!v.memberDetails.phone}" required="{!v.memberDetails.memberNotFound}"
+                disabled="{!v.isMemberSearchDisabled || v.isMemSearchDisabledFromPrv}" minlength="10" maxlength="10"
+                messageWhenTooShort="Enter 10 digits only" onchange="{!c.onChangePhone}" />
+        </aura:if>
+
+        <div class="slds-p-top_medium">
+            <div class="slds-grid slds-gutters">
+                <div class="slds-col slds-size_3-of-12">
+                    <aura:if isTrue="{!!v.memberDetails.memberNotFound}">
+                        <lightning:button variant="brand" label="Search" class="searchButton"
+                            disabled="{!v.isMemberSearchDisabled || v.isMemSearchDisabledFromPrv}"
+                            onclick="{!c.searchMember}" />
+                    </aura:if>
+                    <aura:if isTrue="{!v.memberDetails.memberNotFound}">
+                        <lightning:button variant="brand" label="Add Member" class="searchButton"
+                            disabled="{!v.isMemberSearchDisabled || v.isMemSearchDisabledFromPrv}"
+                            onclick="{!c.addMember}" />
+                    </aura:if>
+                </div>
+                <div aura:id="combinationErrorMsgAI" class="slds-col slds-size_9-of-12 slds-hide">
+                    <p class="combinationErrorMsg">This search requires one of the
+                        following search combinations : (Member ID + DOB) or
+                        (Member ID or DOB and First Name + Last Name) or
+                        (First Name or Last Name and Member ID + DOB)</p>
+
+                </div>
+            </div>
+        </div>
+
+        <aura:if isTrue="{!!v.memberDetails.memberNotFound}">
+            <div class="slds-form-element__control">
+                <div class="slds-input-has-icon slds-input-has-icon--right">
+                    <lightning:Icon iconName="utility:chevrondown" alternativeText="Search"
+                        class="slds-input__icon slds-input-has-icon--right downArrowCls" iconClass="slds-size_large" />
+                    <span onclick="{!c.openMemberRecords}">
+                        <lightning:input type="String" name="memberName" label="Member" value=""
+                            placeholder="{!$Label.c.ph_Member}" style="margin-top:5px;"
+                            disabled="{!or(v.memberDetails.isMemberSearchDisabled, v.memberDetails.memberNotFound)}">
+                        </lightning:input>
+                    </span>
+                </div>
+            </div>
+            <aura:if isTrue="{!v.showMemberListSection}">
+                <div class="memberList">
+                    <aura:iteration items="{!v.responseData.resultWrapper.memberProviderResultlst}" var="obj">
+                        <table
+                            class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_striped customBorders">
+                            <tbody>
+                                <tr class="slds-hint-parent" onclick="{!getRowValues}">
+                                    <td>
+                                        <div class="slds-truncate field-value">
+                                            {!obj.name}</div>
+                                    </td>
+                                    <td>
+                                        <div class="slds-truncate field-value">
+                                            {!obj.dob}</div>
+                                    </td>
+                                    <td>
+                                        <div class="slds-truncate field-value"
+                                            style="text-transform:capitalize;">
+                                            {!obj.relationship}</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </aura:iteration>
+                </div>
+            </aura:if>
+        </aura:if>
+
+
+
+    </div>
+</aura:component>

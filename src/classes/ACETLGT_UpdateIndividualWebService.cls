@@ -1,0 +1,220 @@
+/**
+ * Will be used as the service class for update member detail
+ * Used to update member detail from ACETLGT_UpdateMemberDetail component
+ * Created as part of US2176720
+ * 
+ **/
+public class ACETLGT_UpdateIndividualWebService extends ACETWebService {
+
+    public override void getEndpoint(){
+        GetEndpointDetail('UpdateIndividualMemberEndpoint');         
+    }
+    public ACETLGT_UpdateIndividualWebService() {
+        super('Stargate');
+    }
+    public override void GetMethod(){
+       Method = 'PUT';          
+    }
+    public void getRequestBody(String memberId, String scrId, String groupNumber, String lastName,string firstname,string middleName, string nameSuffix,string ssn,string gender,string dob,string relationshipcode, String emlindicator, String emailId,String commCode, List<ACETLGT_MemberSearchCoveragesResult.Phone> PhoneList,String pcpId,String pcpAssignmentType,String pcpStartDate,String pcpEffectiveEndDate, String npiType,String npiVal,String existpatientindicator){
+        
+        if(phoneList != null && phoneList.size() > 0){
+                RequestBody =   '{"updateIndividualMembershipRequest": {'
+                                        +'"individualMembership": {'
+                                        +'"groupNumber":'+ groupNumber +' ,'
+                                        +'"subscriberIDCardSerialNumber": "'+ scrId+'",'
+                                        +'"memberIDCardSerialNumber":'+ memberId +' ,'
+                                        +'"name": {'
+                                                +'"lastName": "'+ lastName +'",'
+                                                +'"firstName": "'+ firstname +'",'
+                                                +'"middleName": "'+ middleName +'",'
+                                                +'"nameSuffix": "'+ nameSuffix +'"'
+                                        +'},'
+                                        +'"socialSecurityNumber":"'+ ssn +'" ,'                                            
+                                        +'"gender": "'+ gender +'",'
+                                        +'"birthDate": "'+ formatDate(dob) +'",'                                            
+                                        +'"phone": [';
+                 for(ACETLGT_MemberSearchCoveragesResult.Phone phn : phoneList) {                          
+                     RequestBody =          RequestBody +'{'
+                                                    +'"phoneType": "'+ phn.PhoneNumberType +'",'
+                                                    +'"phoneNumber": "'+ phn.PhoneNumber +'",'
+                                                    +'"phoneExt": "'+ phn.WorkExt +'",'
+                                                    +'"primaryIndicator": "'+ phn.primaryIndicator +'"'
+                                                +'},' ;
+                 } 
+                 RequestBody = RequestBody.substring(0,RequestBody.length()-1); 
+                 RequestBody =          RequestBody +'],';
+                 if(emailId != ''){    
+                 RequestBody =          RequestBody +'"email": [{'
+                                                +'"communicationTypeCode": "'+ commCode +'",'
+                                                +'"electronicAddress": "'+ emailId +'",'
+                                                +'"primaryIndicator": "'+ emlindicator +'"'
+                                            +'}],';
+                 }
+                 RequestBody =              RequestBody +'"relationShipCode":"'+ relationshipcode +'"'
+                                        +' }'
+                                    +'}'
+                                +'}';           
+            
+        }else if(emailId != null && emailId != '' && commCode != '' && emlindicator != ''){
+                RequestBody =   '{"updateIndividualMembershipRequest": {'
+                                        +'"individualMembership": {'
+                                            +'"groupNumber":'+ groupNumber +' ,'
+                                            +'"subscriberIDCardSerialNumber": "'+ scrId+'",'
+                                            +'"memberIDCardSerialNumber":'+ memberId +' ,'
+                                            +'"name": {'
+                                                +'"lastName": "'+ lastName +'",'
+                                                +'"firstName": "'+ firstname +'",'
+                                                +'"middleName": "'+ middleName +'",'
+                                                +'"nameSuffix": "'+ nameSuffix +'"'
+                                            +'},'
+                                            +'"socialSecurityNumber":"'+ ssn +'" ,'                                            
+                                            +'"gender": "'+ gender +'",'
+                                            +'"birthDate": "'+ formatDate(dob) +'",' ; 
+                 
+                 RequestBody =              RequestBody +'"email": [{'                                           
+                                                +'"communicationTypeCode": "'+ commCode +'",'
+                                                +'"electronicAddress": "'+ emailId +'",'
+                                                +'"primaryIndicator": "'+ emlindicator +'"'
+                                            +'}],'
+                                            +'"relationShipCode":"'+ relationshipcode +'"'
+                                        +' }'
+                                    +'}'
+                                +'}';           
+            
+        }
+        else if(!String.isEmpty(pcpId)){
+            
+                if(relationshipcode == 'null'){
+                    relationshipcode = '';
+                }           
+                RequestBody =   '{"updateIndividualMembershipRequest": {'
+                                        +'"individualMembership": {'
+                                            +'"groupNumber":"'+ groupNumber +'" ,'
+                                            +'"subscriberIDCardSerialNumber": "'+ scrId+'",'
+                                            +'"memberIDCardSerialNumber":"'+ memberId +'" ,'
+                                            +'"name": {'
+                                                +'"lastName": "'+ lastName +'",'
+                                                +'"firstName": "'+ firstname +'",'
+                                                +'"middleName": "'+ middleName +'",'
+                                                +'"nameSuffix": "'+ nameSuffix +'"'
+                                            +'},'
+                                            +'"socialSecurityNumber":"'+ ssn +'" ,'                                            
+                                            +'"gender": "'+ gender +'",'
+                                            +'"birthDate": "'+ formatdate(dob) +'",'                                            
+                                            +'"relationShipCode":"'+ relationshipcode +'",'
+                                            +'"providers": [{'
+                                                +'"providerIdentifiers":[ {' 
+                                                    +'"id":"'+ npiVal +'",'
+                                                    +'"type":"'+ npiType +'"'
+                                                +'}],'
+                                                +'"assignmentType": "'+ pcpAssignmentType +'",'
+                                                +'"effectiveStartDate": "'+ pcpStartDate +'",'
+                                                +'"effectiveEndDate": "",' 
+                                                +'"locationAffiliationID": "'+ pcpId +'",'
+                                                +'"existingPatientIndicator": "'+existpatientindicator+'"'
+                                            +'}],'
+                                            +'"relationShipCode":"'+ relationshipcode +'"'
+                                        +' }'
+                                    +'}'
+                                +'}'; 
+
+       system.debug('Request body' + RequestBody);                                     
+    }    
+    }
+    
+    public ACETLGT_WSCalloutResult updateMembers(String memberId,String scrId, String groupNumber, String lastName,string firstname,string middleName, string nameSuffix,string ssn,string gender,string dob,string relationshipcode, String emlindicator, String emailId,String commCode, List<ACETLGT_MemberSearchCoveragesResult.Phone> PhoneList,String pcpId,String pcpAssignmentType,String pcpStartDate,String pcpEffectiveEndDate,String npiType,String npiVal, String existpatientindicator){
+        
+        ACETLGT_WSCalloutResult UpdateResult = new ACETLGT_WSCalloutResult();
+           
+        try {
+            ServiceName = 'updateIndividualMembershipService';
+            GetEndpoint();                       
+            GetRequestBody( memberId,  scrId, groupNumber, lastName, firstname, middleName, nameSuffix, ssn, gender, dob, relationshipcode, emlindicator, emailId, commCode, PhoneList, pcpId, pcpAssignmentType, pcpStartDate, pcpEffectiveEndDate,npiType,npiVal,existpatientindicator);
+            GetMethod();
+            HttpResponse response;  
+            if(RequestBody != null )
+                response = Send(OAuthConfig);          
+            system.debug('----------->'+ response);    
+            
+            UpdateResult.statusCode=response!=null?response.getStatusCode():null;       
+            if(response != null && response.getStatusCode() == 200){
+                if(response.getBody() != null){
+                        
+                        //replace date with date2 as date is preserved keyword
+                            String responseBody = response.getBody().replace('\"date\":', '\"date2\":');
+                            system.debug('responseBody'+ responseBody);
+                            responseBody = response.getBody().replace('\"type\":', '\"type_Z\":');  
+                            Type resultType = Type.forName('ACETLGT_UpdateIndividualJSON2APEX');
+                            ACETLGT_UpdateIndividualJSON2APEX memberUpdateResult = (ACETLGT_UpdateIndividualJSON2APEX)JSON.deserialize(responseBody , resultType);                      
+                            ACETLGT_UpdateIndividualJSON2APEX.cls_response res = memberUpdateResult.UpdateIndividualMembershipResponse.response; 
+                            if(responseBody.contains('responseCode') && res.responseCode == '200'){
+                          String rescode = res.responseCode;
+                          String resdesc = res.responseDesc;
+                          UpdateResult.Success = true;
+                          UpdateResult.Message = '';
+                          UpdateResult.Response = memberUpdateResult;                           
+                        } else if(responseBody.contains('responseCode') && res.responseCode != '200' && String.isNotBlank(pcpId)){
+                        UpdateResult.MessageSeverity = ApexPages.Severity.INFO;
+                        UpdateResult.message = Label.ACETPCPCannotBeAssigned;  
+                        UpdateResult.Success = false;   
+                        UpdateResult.statusCode=207;
+                        } else if(responseBody.contains('responseCode') && res.responseCode != '200' && !String.isNotBlank(pcpId)){
+                        UpdateResult.MessageSeverity = ApexPages.Severity.INFO;
+                        UpdateResult.message =  Label.ACET_UpdateFailed;  
+                        UpdateResult.Success = false;   
+                        UpdateResult.statusCode=208;
+                        }else{
+                          String rescode = res.responseCode;
+                          String resdesc = res.responseDesc;
+                          UpdateResult.Success = true;
+                          UpdateResult.Message = '';
+                          UpdateResult.Response = memberUpdateResult;
+                        }                    
+                    }                                      
+                }else if(response.getStatusCode() == 500){
+                    //currently servce returns 500 if no records found
+                    UpdateResult.MessageSeverity = ApexPages.Severity.INFO;
+                    //UpdateResult.message = 'System Unavailable'; 
+                    UpdateResult.message =ACETWebserviceHelper.getErrorMessageFromCode(response.getStatusCode());
+                    System.debug('UpdateResult.message ='+UpdateResult.message);  
+                    UpdateResult.Success = false;                              
+                }else if(response.getStatusCode() == 404){                
+                    //currently servce returns 404 if no records found (Adapters)
+                    UpdateResult.MessageSeverity = ApexPages.Severity.INFO;
+                    UpdateResult.Success = false;
+                    UpdateResult.message = Label.ACET_UpdateFailed;               
+                }
+                else if(response.getStatusCode() == 400){                
+                    UpdateResult.MessageSeverity = ApexPages.Severity.INFO;
+                    UpdateResult.Success = false;
+                    UpdateResult.message = Label.ACET_UpdateFailed;                
+                }
+            }
+            catch(Exception e){
+                    system.debug(e);
+                    UpdateResult.MessageSeverity = ApexPages.Severity.ERROR;
+                    UpdateResult.Success = false;
+                    UpdateResult.Message = 'Web Service or External System is temporarily unavailable.';
+                    UpdateResult.statusCode=999;       
+
+            }
+        
+        return UpdateResult;    
+    } 
+    public String formatDate(String dateString){
+        if(dateString == null) return null;
+        
+        List<String> dateParts = dateString.split('/');
+        if(dateParts.size() == 3){
+            String mm = dateParts[0];
+            String dd = dateParts[1];
+            String yyyy = dateParts[2];            
+            mm = mm.length() == 1 ? '0'+mm : mm ; 
+            dd = dd.length() == 1?  '0'+dd  : dd; 
+                                   
+            return yyyy  + '-' + mm + '-' + dd;
+        }else{
+            return dateString;
+        }
+    }
+}

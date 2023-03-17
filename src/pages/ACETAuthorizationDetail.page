@@ -1,0 +1,1065 @@
+<apex:page docType="html-5.0" sidebar="false"
+     extensions="ACETAuthorizationDetailController" controller="ACETCallTopicCreateCaseItem"
+    action="{!CallGetAuthorizationWS}" id="AuthDetail">
+    <script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+    <apex:includeScript value="{!$Resource.JQuery}" />
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+    <apex:includeScript value="{!$Resource.JqueryTableSorter}"></apex:includeScript>
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    <style>
+td.dataCol.first.last {
+    width: 100%;
+}
+.homeTab .bPageBlock {
+   border-top: none;
+}
+
+.bPageBlock .detailList .labelCol {
+    width: 9%; //
+    text-align: left;
+}
+
+.bPageBlock .detailList .dataCol {
+    width: 17%;
+}
+
+body .pbBody table.list tr.headerRow td, body .pbBody table.list tr.headerRow th
+    {
+    background: #f2f3f3;
+    border-width: 0 0 1px 1px;
+    border-color: #e0e3e5;
+    color: #000;
+    font-size: .79em;
+    font-weight: bold;
+    padding: 5px 2px 4px 5px;
+}
+
+.apexp .bPageBlock.apexDefaultPageBlock .pbBody .pbSubheader {
+    color: black;
+    border-top: 2px solid #8370C5;
+}
+
+.apexp .bPageBlock.apexDefaultPageBlock .pbBody .pbSubheader .hideListButton
+    {
+    background-position: 1px -11px;
+}
+
+.apexp .bPageBlock.apexDefaultPageBlock .pbBody .pbSubheader .showListButton
+    {
+    background-position: 1px 0px;
+}
+
+body .bPageBlock, body #bodyCell .bResource .secondaryPalette, body .secondaryPalette.bPageBlock,
+    body .individualPalette .secondaryPalette.bPageBlock, body .bodyDiv .genericTable,
+    body .genericPageBlockTable, body .bodyDiv .bSubBlock, body .bComponentBlock .bPageBlock,
+    body .bMyDashboard .bPageBlock, body.rlHoverFrame .bPageBlock, body.subjectSelectionPopup div.choicesBox,
+    body.lookupTab .secondaryPalette.bPageBlock, body.popupTab .secondaryPalette.bPageBlock,
+    body.UserTagStatsPage .secondaryPalette.bPageBlock {
+    background-color: #ffffff;
+}
+
+.homeTab .tertiaryPalette, .individualPalette .homeBlock .tertiaryPalette,
+    .layoutEdit .individualPalette .homeBlock .tertiaryPalette {
+    background-color: #ffffff;
+    border-color: #ffffff;
+}
+
+.apexp .bPageBlock.apexDefaultPageBlock .pbBody .pbSubheader {
+    color: black;
+}
+ .messageTable {
+        border: none !important;
+        }
+</style>
+    <script>
+
+</script>
+
+    <!-- Added for Notes detail -->
+    <script type="text/javascript">
+$(document).ready(function(){
+showAllFn();    
+$('.showallClass').click(function(e) {
+    $('.showallClass').hide();
+    $('.showlessClass').show();
+    e.preventDefault();
+    });
+$('.showlessClass').click(function(e) {
+    $(this).hide();
+    $('.showallClass').show();
+    e.preventDefault();
+});
+$('.showlessClass').hide();
+ <!-- Added by Prakash- Auto Doc Feature-->
+            acet.autodoc.startAutodoc();
+            acet.autodoc.createCommentsbox();
+            
+            var primaryCalltopicTabId = '{!JSENCODE($CurrentPage.parameters.primaryCalltopicTabId)}';
+            
+            //when claim result tab is focused, send over claim detail autodoc
+            var subjectId = '{!Subject.Id}';
+            sforce.console.addEventListener('RequestAuthorizationDetail_'.concat(subjectId), function(r){ 
+            console.log("Event caught in detail page RequestAuthorizationDetail_"); 
+                sforce.console.getEnclosingTabId(function(result){                                        
+                    var res = {};   
+                    res.subTabId = result.id;           
+                    res.doc = acet.autodoc.saveAutodoc();                                                  
+                    sforce.console.fireEvent('ReceiveAuthorizationDetail_'.concat(subjectId), JSON.stringify(res)); 
+                }); 
+                                                       
+            });     
+            
+            //send over auth detail autodoc to primary call topic page      
+            sforce.console.addEventListener('RequestSubTabAutodoc', function(r) {
+                sforce.console.getEnclosingTabId(function(result) {
+                    if(r.message == primaryCalltopicTabId){
+                        var res = {};
+                        res.primaryCalltopicTabId = primaryCalltopicTabId;
+                        res.subTabId = result.id;
+                        res.doc = acet.autodoc.saveAutodoc();
+                        sforce.console.fireEvent('ReceiveSubTabAutodoc', JSON.stringify(res));
+                    }
+                });
+            });
+            
+            
+             //sync comments between claim search and claim details tabs
+        //only fire at last keyup
+        var timer;
+        $("#autodocComments").keyup(function() {
+            clearTimeout(timer);
+            timer = setTimeout(function() {
+                sforce.console.fireEvent('AuthCommentsUpdated_'.concat(subjectId), $("#autodocComments").val());
+            }, 500);
+        });
+        
+        //receive comments from search page    
+        sforce.console.addEventListener('AuthCommentsUpdated_'.concat(subjectId), function(r) {
+        if(r.message != $("#autodocComments").val()){
+            $("#autodocComments").val(r.message);
+            }
+        });
+            
+        //sync comment from claim search when detail page is loaded
+        sforce.console.fireEvent('RequestAuthComments_'.concat(subjectId), subjectId);
+                    
+            
+      //close self when requested from view auth page
+            sforce.console.addEventListener('CloseAuthorizationDetailSubTab_'.concat(subjectId), function(r){
+                sforce.console.getEnclosingTabId(function(result){
+                    sforce.console.closeTab(result.id);        
+                });
+            });
+       
+ //added by Ranjit : work in progress
+             $("[id$='btnSaveNClose']").on('click', function(){                  
+                   closeSubtabs();
+                 //  return false;
+             });
+             $("[id$='btnSaveCase']").on('click', function(){                  
+                   closeSubtabs();
+                  // return false;
+             }); 
+             $("[id$='btnCancelCase']").on('click', function(){                  
+                 closeSubtabs();
+                 //return false;
+             }); 
+             $("[id$='btnMisdirectCase']").on('click', function(){                  
+                 closeSubtabs();
+                 //return false;
+             });
+                       
+});
+
+
+$('.showlessClass').click(function(e) {
+  $(this).hide();
+    $('.showallClass').show();
+      e.preventDefault();
+});
+
+var showAllFn = function(){
+    var minimized_elements = $('p.minimize');
+    
+    minimized_elements.each(function(){    
+        var t = $(this).text();        
+        if(t.length < 100) return;
+        
+        $(this).html(
+            t.slice(0,100)+'<span>...</span><a href="#" class="more">More</a>'+
+            '<span style="display:none;">'+ t.slice(116,t.length)+' <a href="#" class="less">Less</a></span>'
+        );
+        
+    }); 
+    
+    $('a.more', minimized_elements).click(function(event){    
+        event.preventDefault();
+        $(this).hide().prev().hide();
+        $(this).next().show();  
+       
+    });
+    
+    $('a.less', minimized_elements).click(function(event){
+        event.preventDefault();
+        $(this).parent().hide().prev().show().prev().show();    
+    });
+       
+};
+
+var showAllButtonFn = function(){ 
+    $(".minimize > span:first-child").hide();
+    $(".minimize > a").hide();
+    $(".minimize > span:last-child").show();
+    $(this).hide();
+   
+};
+var hideAllButtonFn = function(){
+    $(".minimize > a").show();
+    $(".minimize > span:last-child").hide();
+};
+   
+    function ProviderId_OnClick(ProviderId) {    
+    
+                 
+        var urlParam = 'interactionId={!Interaction.Id}' +'&' +'contactId={!Subject.Id}'+ '&' + 'sourceOriginator={!sourceOriginator}' + '&' + 'additionalInfo=' + hightlightPanelInfo + ProviderId;
+        var url= '/apex/ACETProviderLookUpDetails?' + urlParam;               
+        sforce.console.getEnclosingPrimaryTabId(function(result) {
+        sforce.console.openSubtab(result.id, url, true, 'Prov - ' + 'Cruise', null, null, 'Provider -' + ProviderId); 
+    
+        });
+
+        return false;         
+    }  
+        //Added by Ranjit : Work in Progress 
+        //Start of code
+        //Function to track the number of subtabs opened from the current page
+        var openedTabs = function openedTabs(result) {
+        console.log(">>>>>> "+result.success);
+            //Report whether we succeeded in opening the subtab
+            if (result.success) {
+                subtabIds.push(result.id);
+                //alert('subtab opened'+ subtabIds);
+            } else {
+    
+            }
+        };
+         
+        //Function to close all subtabs
+        function closeSubtabs(){
+            for(i = 0 ; i < subtabIds.length ; i++){
+                sforce.console.closeTab(subtabIds[i]);
+            }
+        } 
+        
+        function openUpdateAuth(baseLink){
+            console.log('baseLink'+baseLink);
+            window.open(baseLink,'_blank', 'location=yes,menubar=yes,titlebar=yes,toolbar=yes, width=1200, height=800 ,left=0 ,top=0 ,scrollbars=1 ,resizable=1');  
+        }  
+        console.log('---wrapper--->{!wrapper}');   
+</script>
+    <apex:form id="TheForm">
+   <c:ACETInteractionHighlightsPanel InteractionAtt="{!wrapper.interaction}"
+            SubjectAtt="{!wrapper.Subject}"
+            AdditionalInfoAtt="{!wrapper.AdditionalInfo}" selectedOriginator="{!wrapper.interaction.Originator_Name__c}"></c:ACETInteractionHighlightsPanel>
+            <apex:outputPanel id="hippapopupPanel">
+                       <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+            </apex:outputPanel>
+        <apex:inputHidden id="highlightPanelInfo" value="{!hpAdditionInfoStr}" />                     
+        <apex:pageMessages id="pmMessages" />
+        <apex:pageBlock rendered="{!InpatientDisplay}" id="InpatientBlock">
+            <apex:sectionHeader subtitle="Inpatient Authorizations"
+                rendered="{!InpatientDisplay}" />
+             <apex:outputPanel rendered="{!allowedUser}">
+                    <input id="updateAuth" type="button" value="Update Authorization" class="btn" style="margin-left:43%;margin-bottom:1%;"
+                        onclick="return openUpdateAuth('{!baseURL}');" />
+                </apex:outputPanel>
+                <apex:outputPanel rendered="{!isResearchUser}">
+                    <input id="updateAuthResearch" class="btnDisabled" type="button" value="Update Authorization" style="margin-left:43%;margin-bottom:1%;"
+                         disabled="{!isResearchUser}" />
+                </apex:outputPanel>    
+       <c:ACETRepeatCallViewRelatedCases CalltopicAtt="View Authorizations" ExternalIDAtt="{!AuthorizationNumber}" PagenameAtt="ACETAuthorizationDetail" attrCaseDataWrapper="{!wrapper}"/>     
+                
+            <apex:pageblocksection title="Inpatient Cases" collapsible="false"
+                rendered="{! If(strType =='InpatientCases' ,true,false) }"
+                html-auto-doc="auto" html-auto-doc-case-items="true">
+                <apex:pageblocktable value="{!lstAcetAuthorization}"
+                    var="objAuthWrap" rendered="{!lstAcetAuthorization.size!=0}">
+                    <apex:column headerValue="Authorization Number">
+            {!objAuthWrap.Authorization_Number}
+            </apex:column>
+              <!--      <apex:column headerValue="Case Status"
+                        value="{!objAuthWrap.Case_Status}" style="white-space: nowrap;" /> -->
+                    <apex:column headerValue="Pre Determination"
+                        value="{!objAuthWrap.Pre_Determination }" />
+                    <apex:column headerValue="Create Date"
+                        value="{!objAuthWrap.Create_Date }" />
+                    <apex:column headerValue="Expected Admit Date"
+                        value="{!objAuthWrap.Expected_Admit_Date }" />
+                    <apex:column headerValue="Actual Admit Date"
+                        value="{!objAuthWrap.Actual_Admit_Date }" />
+                    <apex:column headerValue="Expected Discharge Date"
+                        value="{!objAuthWrap.Expected_Dscharg_Date}" />
+                    <apex:column headerValue="Actual Discharge Date"
+                        value="{!objAuthWrap.Actual_Dscharg_Date}" />
+                    <apex:column headerValue="Facility/Status"
+                        value="{!objAuthWrap.Facility_Status}" />
+                    <apex:column headerValue="Primary Diagnosis"
+                        value="{!objAuthWrap.Primary_Diagnosis}" />
+                    <apex:column headerValue="POS" value="{!objAuthWrap.POS}" />
+                    <apex:column headerValue="Service Desc/Detail"
+                        value="{!objAuthWrap.ServiceDescDetail}" />
+                    <apex:column headerValue="LOS" value="{!objAuthWrap.LOS}" />
+                </apex:pageblocktable>
+            </apex:pageblocksection>
+
+            <apex:pageBlockSection columns="3" title="Authorization Details"
+                html-auto-doc="true">
+                <apex:pageBlockSectionItem dataStyle="width:15%"
+                    labelStyle="width:17%">
+                    <apex:outputLabel >Authorization Number
+        </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationNumber}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem dataStyle="width:15%"
+                    labelStyle="width:17%">
+                    <apex:outputLabel >Authorization Type
+        </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.Authorization_Type}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem dataStyle="width:15%"
+                    labelStyle="width:17%">
+                    <apex:outputLabel >Review Priority
+        </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.Review_Priority}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem dataStyle="width:15%"
+                    labelStyle="width:17%">
+                    <apex:outputLabel >Case Status
+        </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.Case_Status}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem dataStyle="width:15%"
+                    labelStyle="width:17%">
+                    <apex:outputLabel >Case Status Reason
+        </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.Case_Reason_Desc}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem dataStyle="width:15%"
+                    labelStyle="width:17%">
+                    <apex:outputLabel >PreDetermination
+        </apex:outputLabel>
+                    <apex:outputText value="{!PreDetermination}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem dataStyle="width:15%"
+                    labelStyle="width:17%">
+                    <apex:outputLabel >Expected Admission Date
+        </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.Expected_Admission_Date}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+         <apex:pageBlockSectionItem dataStyle="width:15%"
+                    labelStyle="width:17%">
+
+                    <apex:outputLabel >Expected Discharge Date
+        </apex:outputLabel>
+                    <apex:outPutText value="{!AuthorizationDetail.Expected_Discharge_Date}">
+                     </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem dataStyle="width:15%"
+                    labelStyle="width:17%">
+                    <apex:outputLabel >Manager/Queue
+        </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.caseOwner}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem dataStyle="width:15%"
+                    labelStyle="width:17%">
+                    <apex:outputLabel >Actual Admission Date 
+        </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.Actual_Admission_Date}"></apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem dataStyle="width:15%"
+                    labelStyle="width:17%">
+                    <apex:outputLabel >Actual Discharge Date
+        </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.Actual_Discharge_Date}"></apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem dataStyle="width:15%"
+                    labelStyle="width:17%">
+                    <apex:outputLabel >Discharge Location
+        </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.Discharge_Location}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem dataStyle="width:15%"
+                    labelStyle="width:17%">
+                    <apex:outputLabel >Coverage Type
+        </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.Coverage_Type}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+            </apex:pageBlockSection>
+
+            <apex:pageblockSection title="Providers" columns="1"
+                html-auto-doc="true">
+                <apex:pageblocktable value="{!AuthorizationDetail.authProviderDetails}"
+                    var="objProvider">
+                    <apex:column headerValue="Provider Role">{!objProvider.Provider_Facility_Role}</apex:column>
+                    <apex:column headerValue="Provider ID">{!objProvider.Provider_ID}</apex:column>
+                     <apex:column headerValue="Srvc Provider / Status">{!objProvider.Facility_Service_Provider_Status}</apex:column>
+                    <apex:column headerValue="TIN">{!objProvider.TIN}</apex:column>
+                    <apex:column headerValue="Address 1">{!objProvider.Address_1}</apex:column>
+                    <apex:column headerValue="City">{!objProvider.City}</apex:column>
+                    <apex:column headerValue="State">{!objProvider.State}</apex:column>
+                    <apex:column headerValue="Zip">{!objProvider.Zip}</apex:column>
+                    <apex:column headerValue="Speciality">{!objProvider.Speciality}</apex:column>
+                </apex:pageblocktable>
+            </apex:pageblockSection>
+            <apex:pageblockSection title="Notification Type" columns="1"
+                html-auto-doc="true">
+                <apex:pageblocktable value="{!AuthorizationDetail.notifications}"
+                    var="objNotification" style="width:100%">
+                    <apex:column headerValue="Notification Type">{!objNotification.Notification_Type}</apex:column>
+                    <apex:column headerValue="Notified Date/Time">{!objNotification.Notified_Date_Time}</apex:column>
+                </apex:pageblocktable>
+            </apex:pageblockSection>
+            <apex:pageblockSection title="Facility Line" columns="1"
+                html-auto-doc="true">
+                <apex:pageblocktable value="{!lstInnerFacilityLine}"
+                    var="objFacilityLine">
+                    <apex:column headerValue="Authorization Number">{!objFacilityLine.strAuthorizationNumber}</apex:column>
+                    <apex:column headerValue="POS">{!objFacilityLine.strPos}</apex:column>
+                    <apex:column headerValue="Srvc Detail">{!objFacilityLine.strSrvcDetail}</apex:column>
+                    <apex:column headerValue="Srvc Desc">{!objFacilityLine.strSrvcDesc}</apex:column>
+                    <apex:column headerValue="Provider/Status">{!objFacilityLine.strProviderStatus}</apex:column>
+                    <apex:column headerValue="Decision Outcome">{!objFacilityLine.strDecisionOutcome}</apex:column>
+                    <apex:column headerValue="Decision Sub Type">{!objFacilityLine.strDecisionSubType}</apex:column>
+                    <apex:column headerValue="Decision Rendered Date">{!objFacilityLine.strDecisionRenderedDate}</apex:column>
+                    <apex:column headerValue="Claim Remark Code">{!objFacilityLine.strCliamRemarkCode}</apex:column>
+                    <apex:column headerValue="Gap Outcome">{!objFacilityLine.strGapOutCome}</apex:column>
+                    <apex:column headerValue="Decision Reason">{!objFacilityLine.strDecisionReason}</apex:column>
+                    <apex:column headerValue="Decision Comment">{!objFacilityLine.strDecisionComment}</apex:column>
+                </apex:pageblocktable>
+                </apex:pageblocksection>
+                <apex:pageblocksection title="Service Line" columns="1"
+                    html-auto-doc="true">
+                    <apex:pageblocktable value="{!AuthorizationDetail.authServiceDetails}"
+                        var="objServiceLine">
+                        <apex:column headerValue="Authorization Number">{!objServiceLine.Service_Authorization_Number}</apex:column>
+                        <apex:column headerValue="Procedure Code">{!objServiceLine.Procedure_Code}</apex:column>
+                        <apex:column headerValue="Description ">{!objServiceLine.Procedure_Description}</apex:column>
+                        <apex:column headerValue="Proc Text">{!objServiceLine.Proc_Text}</apex:column>
+                        <apex:column headerValue="Expected Procedure Date">{!objServiceLine.Expected_Procedure_Date}</apex:column>
+                        <apex:column headerValue="Actual Procedure Date">{!objServiceLine.Actual_Procedure_Date}</apex:column>
+                        <apex:column headerValue="Provider/Status">{!objServiceLine.Service_Provider_Status}</apex:column>
+                        <apex:column headerValue="Decision Outcome">{!objServiceLine.Service_Decision_Outcome}</apex:column>
+                        <apex:column headerValue="Decision Subtype">{!objServiceLine.Service_Decision_Sub_Type}</apex:column>
+                        <apex:column headerValue="Decision Rendered Date">{!objServiceLine.Service_Decision_Rendered_Date}</apex:column>
+                        <apex:column headerValue="Claim Remark Code">{!objServiceLine.Service_Claim_Remark_Code}</apex:column>
+                        <apex:column headerValue="Gap Outcome">{!objServiceLine.Service_Gap_Outcome}</apex:column>
+                        <apex:column headerValue="Decision Reason">{!objServiceLine.Service_Decision_Reason}</apex:column>
+                        <apex:column headerValue="Decision Comment">{!objServiceLine.Service_Decision_Comment}</apex:column>
+                    </apex:pageblocktable>
+                </apex:pageblocksection>
+                <apex:pageblocksection title="Diagnosis" columns="1"
+                    html-auto-doc="true">
+                    <apex:pageblocktable value="{!AuthorizationDetail.diagnosisList}"
+                        var="objDiagnosisList" style="width:100%">
+                        <apex:column headerValue="Dx Code">{!objDiagnosisList.Dx_Code}</apex:column>
+                        <apex:column headerValue="Description">{!objDiagnosisList.Dx_Description}</apex:column>
+                    </apex:pageblocktable>
+                </apex:pageblocksection>
+                <apex:pageblocksection title="Bed Day Decision" columns="1"
+                    html-auto-doc="true">
+                    <apex:pageblocktable value="{!AuthorizationDetail.bedDayDecision}"
+                        var="bedDayDecList" style="width:100%">
+                        <apex:column headerValue="Begin Date">{!bedDayDecList.bedDatesStart}</apex:column>
+                        <apex:column headerValue="End Date">{!bedDayDecList.bedDatesStop}</apex:column>
+                        <apex:column headerValue="Decision Update">{!bedDayDecList.decisionUpdateDateTime}</apex:column>
+                        <apex:column headerValue="Decision">{!bedDayDecList.decisionOutcomeDescription}</apex:column>
+                        <apex:column headerValue="Reason">{!bedDayDecList.decisionReasonDescription}</apex:column>
+                        <apex:column headerValue="Bed Type">{!bedDayDecList.bedTypeDescription}</apex:column>
+                        <apex:column headerValue="Claim Remark Code">{!bedDayDecList.systemClaimRemarkCode}</apex:column>
+                    </apex:pageblocktable>
+                </apex:pageblocksection>
+                <apex:pageBlockSection title="Notes" id="CollapseDefault"
+                    collapsible="true" columns="1" html-auto-doc="true">
+                    <div id="test" style="float: right">
+                        <div class="showallClass">
+                            <a href="#" style="width: 50%"
+                                onclick="showAllButtonFn();return false;">Show All</a>
+                        </div>
+                        <div class="showlessClass">
+                            <a href="#" style="width: 50%"
+                                onclick="hideAllButtonFn();return false;">Show Less</a>
+                        </div>
+                    </div>
+                    <!-- changed the href from return false to # as links were not available while autodocking.-->
+                    <apex:pageblockTable value="{!AuthorizationDetail.notesList}"
+                        var="objNoteList" id="pbShowMore">
+                        <apex:column headerValue="Create Date">{!objNoteList.Create_Date}</apex:column>
+                        <apex:column headerValue="Created By">{!objNoteList.Created_By}</apex:column>
+                        <apex:column headerValue="Department">{!objNoteList.Department}</apex:column>
+                        <apex:column headerValue="Note Type">{!objNoteList.Note_Type}</apex:column>
+                        <apex:column headerValue="Subject Type">{!objNoteList.Subject_Type}</apex:column>
+                        <apex:column headerValue="Note Details" style="width:45%">
+                            <p id="AuthNoteDetail" style="margin: 0cm 0cm 0cm 0cm;" class="minimize">
+                                {!objNoteList.Note_details}</p>
+                        </apex:column>
+                    </apex:pageblockTable>
+
+                </apex:pageBlockSection>
+                <script> twistSection(document.getElementById('{!$Component.InpatientBlock.CollapseDefault}').getElementsByTagName('img')[0]) </script>
+                <apex:pageBlockSection title="Follow Up Contact" columns="3"
+                    html-auto-doc="true">
+                    <apex:pageBlockSectionItem labelStyle="width:15%"
+                        dataStyle="width:15%">
+                        <apex:outputLabel style="margin-left: 10px;">Name 
+    </apex:outputLabel>
+                        <apex:outputText value="{!AuthorizationDetail.Name}">
+                        </apex:outputText>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem labelStyle="width:15%"
+                        dataStyle="width:15%">
+                        <apex:outputLabel >Department 
+    </apex:outputLabel>
+                        <apex:outputText value="{!AuthorizationDetail.Contact_Department}">
+                        </apex:outputText>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem labelStyle="width:15%"
+                        dataStyle="width:15%">
+                        <apex:outputLabel >Fax 
+    </apex:outputLabel>
+                        <apex:outputText value="{!AuthorizationDetail.fax}">
+                        </apex:outputText>
+                    </apex:pageBlockSectionItem>
+
+                    <apex:pageBlockSectionItem labelStyle="width:15%"
+                        dataStyle="width:15%">
+                        <apex:outputLabel style="margin-left: 10px;">Role
+    </apex:outputLabel>
+                        <apex:outputText value="{!AuthorizationDetail.role}">
+                        </apex:outputText>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem labelStyle="width:15%"
+                        dataStyle="width:15%">
+                        <apex:outputLabel >Primary Phone
+    </apex:outputLabel>
+                        <apex:outputText value="{!AuthorizationDetail.Primary_Phone}">
+                        </apex:outputText>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem labelStyle="width:15%"
+                        dataStyle="width:15%">
+                        <apex:outputLabel >E-mail address 
+    </apex:outputLabel>
+                        <apex:outputText value="{!AuthorizationDetail.Email_Address}">
+                        </apex:outputText>
+
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem labelStyle="width:15%"
+                        dataStyle="width:15%">
+                        <apex:outputLabel style="margin-left: 10px;">Medical Record Number
+    </apex:outputLabel>
+                        <apex:outputText value="{!AuthorizationDetail.Medical_Record_Number}">
+                        </apex:outputText>
+
+                    </apex:pageBlockSectionItem>
+                </apex:pageBlockSection>
+              <!--  <apex:pageBlockSection title="Letter Requests" columns="3"
+                    html-auto-doc="true">
+                    <apex:pageBlockTable value="{!AuthorizationDetail.notesList}"
+                        var="objInnerNote">
+                        <apex:column headerValue="Authorization Number" />
+                        <apex:column headerValue="Seq #" />
+                        <apex:column headerValue="Letter Gen ID" />
+                        <apex:column headerValue="Create Dt" />
+                        <apex:column headerValue="Subject" />
+                        <apex:column headerValue="Recipient" />
+                        <apex:column headerValue="Status" />
+                    </apex:pageBlockTable>
+                </apex:pageBlockSection>  -->
+        </apex:pageBlock>
+        <apex:pageBlock rendered="{!OutpatientFacilityDisplay}"
+            id="OutpatientFacilityBlock">
+            <apex:sectionHeader subtitle="Outpatient Facility Authorizations"
+                rendered="{!OutpatientFacilityDisplay}" />
+                <apex:outputPanel rendered="{!allowedUser}">
+                    <input id="updateAuth" type="button" value="Update Authorization" class="btn" style="margin-left:43%;margin-bottom:1%;"
+                        onclick="return openUpdateAuth('{!baseURL}');" />
+                </apex:outputPanel>
+                <apex:outputPanel rendered="{!isResearchUser}">
+                    <input id="updateAuthResearch" class="btnDisabled" type="button" value="Update Authorization" style="margin-left:43%;margin-bottom:1%;"
+                         disabled="{!isResearchUser}" />
+                </apex:outputPanel>
+               <apex:outputPanel >
+       <c:ACETRepeatCallViewRelatedCases CalltopicAtt="View Authorizations" ExternalIDAtt="{!AuthorizationNumber}"/>       
+                 </apex:outputPanel>
+            <apex:pageblocksection title="Outpatient Facility Cases"
+                collapsible="false"
+                rendered="{! If(strType =='OutpatientFacilityCases' ,true,false) }"
+                html-auto-doc="auto" html-auto-doc-case-items="true">
+                <apex:pageblocktable value="{!lstAcetAuthorization}"
+                    var="objAuthWrap" rendered="{!lstAcetAuthorization.size!=0}">
+                    <apex:column headerValue="Authorization Number">
+             {!objAuthWrap.Authorization_Number}
+         </apex:column>
+            <!--        <apex:column headerValue="Case Status"
+                        value="{!objAuthWrap.Case_Status}" />  -->
+                    <apex:column headerValue="Pre Determination"
+                        value="{!objAuthWrap.Pre_Determination}" />
+                    <apex:column headerValue="Service Provider/Status"
+                        value="{!objAuthWrap.ServiceProvider}" />
+                    <apex:column headerValue="Primary Diagnosis"
+                        value="{!objAuthWrap.Primary_Diagnosis}" />
+                    <apex:column headerValue="Procedure Code"
+                        value="{!objAuthWrap.Procedure_Code}" />
+                    <apex:column headerValue="POS" value="{!objAuthWrap.POS}" />
+                    <apex:column headerValue="Service Desc/Detail"
+                        value="{!objAuthWrap.ServiceDescDetail}" />
+                </apex:pageblocktable>
+            </apex:pageblocksection>
+            <apex:pageBlockSection title="Authorization Details" columns="3"
+                html-auto-doc="true">
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel style="margin-left: 10px;">Authorization Number
+    </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationNumber}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >Authorization Type
+    </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.Authorization_Type}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >Review Priority
+    </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.Review_Priority}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel style="margin-left: 10px;">Case Status
+    </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.Case_Status}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >Case Status Reason
+    </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.Case_Reason_Desc}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >PreDetermination
+    </apex:outputLabel>
+                    <apex:outputText value="{!PreDetermination}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel style="margin-left: 10px;">Service Start Date
+    </apex:outputLabel>
+                    <apex:outputText >{!AuthorizationDetail.Expected_Admission_Date}</apex:outputText>
+
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >Service End Date
+    </apex:outputLabel>
+                    <apex:outputText >{!AuthorizationDetail.Expected_Discharge_Date}</apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem dataStyle="width:15%"
+                    labelStyle="width:17%">
+                    <apex:outputLabel >Manager/Queue
+        </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.caseOwner}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem labelStyle="width:15%" dataStyle="width:15%">
+                    <apex:outputLabel >Expiration Date
+    </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.Expiration_Date}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel style="margin-left: 10px;">Coverage Type
+    </apex:outputLabel>
+                    <apex:outputText >{!AuthorizationDetail.Coverage_Type}</apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem labelStyle="width:15%" dataStyle="width:15%">
+                    <apex:outputLabel style="margin-left: 10px;">Medical Record Number</apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.Medical_Record_Number}"></apex:outputText>
+                </apex:pageBlockSectionItem>
+            </apex:pageBlockSection>
+            <apex:pageblockSection title="Providers" html-auto-doc="true">
+                <apex:pageblocktable value="{!AuthorizationDetail.authProviderDetails}"
+                    var="objProvider">
+                    <apex:column headerValue="Provider Role">{!objProvider.Provider_Facility_Role}</apex:column>
+                    <apex:column headerValue="Provider ID"> {!objProvider.Provider_ID} </apex:column>
+                    <apex:column headerValue="Srvc Provider / Status">{!objProvider.Facility_Service_Provider_Status}</apex:column>
+                    <apex:column headerValue="TIN">{!objProvider.TIN}</apex:column>
+                    <apex:column headerValue="Address 1">{!objProvider.Address_1}</apex:column>
+                    <apex:column headerValue="City">{!objProvider.City}</apex:column>
+                    <apex:column headerValue="State">{!objProvider.State}</apex:column>
+                    <apex:column headerValue="Zip">{!objProvider.Zip}</apex:column>
+                    <apex:column headerValue="Speciality">{!objProvider.Speciality}</apex:column>
+                </apex:pageblocktable>
+            </apex:pageblockSection>
+            <apex:pageblockSection title="Notification Type" html-auto-doc="true">
+                <apex:pageblocktable value="{!AuthorizationDetail.notifications}"
+                    var="objNotification" style="width:100%">
+                    <apex:column headerValue="Notification Type">{!objNotification.Notification_Type}</apex:column>
+                    <apex:column headerValue="Notified Date/Time">{!objNotification.Notified_Date_Time}</apex:column>
+                </apex:pageblocktable>
+            </apex:pageblockSection>
+            <apex:pageblockSection title="Facility Line" html-auto-doc="true">
+                <apex:pageblocktable value="{!lstInnerFacilityLine}"
+                    var="objFacilityLine">
+                    <apex:column headerValue="Authorization Number">{!objFacilityLine.strAuthorizationNumber}</apex:column>
+                    <apex:column headerValue="POS">{!objFacilityLine.strPos}</apex:column>
+                    <apex:column headerValue="Srvc Detail">{!objFacilityLine.strSrvcDetail}</apex:column>
+                    <apex:column headerValue="Srvc Desc">{!objFacilityLine.strSrvcDesc}</apex:column>
+                    <apex:column headerValue="Provider/Status">{!objFacilityLine.strProviderStatus}</apex:column>
+                    <apex:column headerValue="Decision Outcome">{!objFacilityLine.strDecisionOutcome}</apex:column>
+                    <apex:column headerValue="Decision Sub Type">{!objFacilityLine.strDecisionSubType}</apex:column>
+                    <apex:column headerValue="Decision Rendered Date">{!objFacilityLine.strDecisionRenderedDate}</apex:column>
+                    <apex:column headerValue="Claim Remark Code">{!objFacilityLine.strCliamRemarkCode}</apex:column>
+                    <apex:column headerValue="Gap Outcome">{!objFacilityLine.strGapOutCome}</apex:column>
+                    <apex:column headerValue="Decision Reason">{!objFacilityLine.strDecisionReason}</apex:column>
+                    <apex:column headerValue="Decision Comment">{!objFacilityLine.strDecisionComment}</apex:column>
+                </apex:pageblocktable>
+                </apex:pageblocksection>
+                <apex:pageblocksection title="Service Line" html-auto-doc="true">
+                    <apex:pageblocktable value="{!AuthorizationDetail.authServiceDetails}"
+                        var="objServiceLine">
+                        <apex:column headerValue="Authorization Number">{!objServiceLine.Service_Authorization_Number}</apex:column>
+                        <apex:column headerValue="Procedure Code">{!objServiceLine.Procedure_Code}</apex:column>
+                        <apex:column headerValue="Description ">{!objServiceLine.Procedure_Description}</apex:column>
+                        <apex:column headerValue="Proc Text">{!objServiceLine.Proc_Text}</apex:column>
+                        <apex:column headerValue="Expected Procedure Date">{!objServiceLine.Expected_Procedure_Date}</apex:column>
+                        <apex:column headerValue="Actual Procedure Date">{!objServiceLine.Actual_Procedure_Date}</apex:column>
+                        <apex:column headerValue="Provider/Status">{!objServiceLine.Service_Provider_Status}</apex:column>
+                        <apex:column headerValue="Decision Outcome">{!objServiceLine.Service_Decision_Outcome}</apex:column>
+                        <apex:column headerValue="Decision Subtype">{!objServiceLine.Service_Decision_Sub_Type}</apex:column>
+                        <apex:column headerValue="Decision Rendered Date">{!objServiceLine.Service_Decision_Rendered_Date}</apex:column>
+                        <apex:column headerValue="Claim Remark Code">{!objServiceLine.Service_Claim_Remark_Code}</apex:column>
+                        <apex:column headerValue="Gap Outcome">{!objServiceLine.Service_Gap_Outcome}</apex:column>
+                        <apex:column headerValue="Decision Reason">{!objServiceLine.Service_Decision_Reason}</apex:column>
+                        <apex:column headerValue="Decision Comment">{!objServiceLine.Service_Decision_Comment}</apex:column>
+                    </apex:pageblocktable>
+                </apex:pageblocksection>
+                <apex:pageblocksection title="Diagnosis" html-auto-doc="true">
+                    <apex:pageblocktable value="{!AuthorizationDetail.diagnosisList}"
+                        var="objDiagnosisList" style="width:100%">
+                        <apex:column headerValue="Dx Code">{!objDiagnosisList.Dx_Code}</apex:column>
+                        <apex:column headerValue="Description">{!objDiagnosisList.Dx_Description}</apex:column>
+                    </apex:pageblocktable>
+                </apex:pageblocksection>
+                <apex:pageBlockSection title="Notes" id="CollapseDefault"
+                    collapsible="true" columns="1" html-auto-doc="true">
+                    <div id="test" style="float: right">
+                        <div class="showallClass">
+                            <a href="#" style="width: 50%"
+                                onclick="showAllButtonFn();return false;">Show All</a>
+                        </div>
+                        <div class="showlessClass">
+                            <a href="#" style="width: 50%"
+                                onclick="hideAllButtonFn();return false;">Show Less</a>
+                        </div>
+                    </div>
+                    <!--changed the href from return false to # as the link was not available while autodocking.-->
+                    <apex:pageblockTable value="{!AuthorizationDetail.notesList}"
+                        var="objNoteList">
+                        <apex:column headerValue="Create Date">{!objNoteList.Create_Date}</apex:column>
+                        <apex:column headerValue="Created By">{!objNoteList.Created_By}</apex:column>
+                        <apex:column headerValue="Department">{!objNoteList.Department}</apex:column>
+                        <apex:column headerValue="Note Type">{!objNoteList.Note_Type}</apex:column>
+                        <apex:column headerValue="Subject Type">{!objNoteList.Subject_Type}</apex:column>
+                        <apex:column headerValue="Note Details" style="width:45%">
+
+                            <p id="AuthNoteDetail" style="margin: 0cm 0cm 0cm 0cm;" class="minimize">
+                                <apex:outputText value="{!objNoteList.Note_details}" />
+                            </p>
+
+                        </apex:column>
+                    </apex:pageblockTable>
+                </apex:pageBlockSection>
+                <script> twistSection(document.getElementById('{!$Component.OutpatientFacilityBlock.CollapseDefault}').getElementsByTagName('img')[0]) </script>
+                <apex:pageBlockSection title="Follow Up Contact" columns="3"
+                    html-auto-doc="true">
+                    <apex:pageBlockSectionItem labelStyle="width:15%"
+                        dataStyle="width:15%">
+                        <apex:outputLabel >Name 
+    </apex:outputLabel>
+                        <apex:outputText value="{!AuthorizationDetail.Name}">
+                        </apex:outputText>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem labelStyle="width:15%"
+                        dataStyle="width:15%">
+                        <apex:outputLabel >Department 
+    </apex:outputLabel>
+                        <apex:outputText value="{!AuthorizationDetail.Contact_Department}">
+                        </apex:outputText>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem labelStyle="width:15%"
+                        dataStyle="width:15%">
+                        <apex:outputLabel >Fax 
+    </apex:outputLabel>
+                        <apex:outputText value="{!AuthorizationDetail.fax}">
+                        </apex:outputText>
+                    </apex:pageBlockSectionItem>
+
+                    <apex:pageBlockSectionItem labelStyle="width:15%"
+                        dataStyle="width:15%">
+                        <apex:outputLabel >Role
+    </apex:outputLabel>
+                        <apex:outputText value="{!AuthorizationDetail.role}">
+                        </apex:outputText>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem labelStyle="width:15%"
+                        dataStyle="width:15%">
+                        <apex:outputLabel >Primary Phone
+    </apex:outputLabel>
+                        <apex:outputText value="{!AuthorizationDetail.Primary_Phone}">
+                        </apex:outputText>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem labelStyle="width:15%"
+                        dataStyle="width:15%">
+                        <apex:outputLabel >E-mail address 
+    </apex:outputLabel>
+                        <apex:outputText value="{!AuthorizationDetail.Email_Address}">
+                        </apex:outputText>
+
+                    </apex:pageBlockSectionItem>
+
+                </apex:pageBlockSection>
+             <!--   <apex:pageBlockSection title="Letter Requests" html-auto-doc="true">
+                    <apex:pageBlockTable value="{!AuthorizationDetail.notesList}}"
+                        var="objInnerNote">
+                        <apex:column headerValue="Authorization Number" />
+                        <apex:column headerValue="Seq #" />
+                        <apex:column headerValue="Letter Gen ID" />
+                        <apex:column headerValue="Create Dt" />
+                        <apex:column headerValue="Subject" />
+                        <apex:column headerValue="Recipient" />
+                        <apex:column headerValue="Status" />
+                    </apex:pageBlockTable>
+                </apex:pageBlockSection> -->
+        </apex:pageBlock>
+        <apex:pageblock rendered="{!OutpatientDisplay}" id="OutpatientBlock">
+
+            <apex:sectionHeader subtitle="Outpatient Authorizations"
+                rendered="{!OutpatientDisplay}" />
+                <apex:outputPanel rendered="{!allowedUser}">
+                    <input id="updateAuth" type="button" value="Update Authorization" class="btn" style="margin-left:43%;margin-bottom:1%;"
+                        onclick="return openUpdateAuth('{!baseURL}');" />
+                </apex:outputPanel>
+                <apex:outputPanel rendered="{!isResearchUser}">
+                    <input id="updateAuthResearch" class="btnDisabled" type="button" value="Update Authorization" style="margin-left:43%;margin-bottom:1%;"
+                         disabled="{!isResearchUser}" />
+                </apex:outputPanel>
+            
+        <c:ACETRepeatCallViewRelatedCases CalltopicAtt="View Authorizations" PagenameAtt="ACETAuthorizationDetail" ExternalIDAtt="{!AuthorizationNumber}"  />    
+                
+            <apex:pageblocksection title="Outpatient Cases" collapsible="false"
+                rendered="{! If(strType =='OutpatientCases' ,true,false) }"
+                html-auto-doc="auto" html-auto-doc-case-items="true">
+                <apex:pageblocktable value="{!lstAcetAuthorization}"
+                    var="objAuthWrap" rendered="{!lstAcetAuthorization.size!=0}">
+                    <apex:column headerValue="Authorization Number">
+             {!objAuthWrap.Authorization_Number}
+         </apex:column>
+           <!--         <apex:column headerValue="Case Status"
+                        value="{!objAuthWrap.Case_Status}" />   -->
+                    <apex:column headerValue="Pre Determination"
+                        value="{!objAuthWrap.Pre_Determination}" />
+                    <apex:column headerValue="Create Date"
+                        value="{!objAuthWrap.Create_Date}" />
+                    <apex:column headerValue="Start Date"
+                        value="{!objAuthWrap.Start_Date}" />
+                    <apex:column headerValue="End Date" value="{!objAuthWrap.End_Date}" />
+                    <apex:column headerValue="Service Provider/Status"
+                        value="{!objAuthWrap.ServiceProviderStatus}" />
+                    <apex:column headerValue="Primary Diagnosis"
+                        value="{!objAuthWrap.Primary_Diagnosis}" />
+                    <apex:column headerValue="Procedure Code"
+                        value="{!objAuthWrap.Procedure_Code}" />
+                    <apex:column headerValue="Count" value="{!objAuthWrap.Count}" />
+                    <apex:column headerValue="POS" value="{!objAuthWrap.POS}" />
+                    <apex:column headerValue="Service Desc/Detail"
+                        value="{!objAuthWrap.ServiceDescDetail}" />
+                </apex:pageblocktable>
+            </apex:pageblocksection>
+
+            <apex:pageblocksection title="Authorization Details"
+                html-auto-doc="true">
+                <apex:pageblocksectionItem >
+                    <apex:outputLabel style="margin-left: 10px;">Authorization Number</apex:outputLabel>
+                    <apex:outputtext value="{!AuthorizationNumber}" />
+                </apex:pageblocksectionItem>
+                <apex:pageblocksectionItem >
+                    <apex:outputLabel >Authorization Type</apex:outputLabel>
+                    <apex:outputtext value="{!AuthorizationDetail.Authorization_Type}" />
+                </apex:pageblocksectionItem>
+                <apex:pageblocksectionItem >
+                    <apex:outputLabel style="margin-left: 10px;">Case Status</apex:outputLabel>
+                    <apex:outputtext value="{!AuthorizationDetail.Case_Status}" />
+                </apex:pageblocksectionItem>
+                <apex:pageblocksectionItem >
+                    <apex:outputLabel style="margin-left: 0px;">Case Status Reason</apex:outputLabel>
+                    <apex:outputtext value="{!AuthorizationDetail.Case_Reason_Desc}" />
+                </apex:pageblocksectionItem>
+                <apex:pageblocksectionItem >
+                    <apex:outputLabel style="margin-left: 10px;">Review Priority </apex:outputLabel>
+                    <apex:outputtext value="{!AuthorizationDetail.Review_Priority}" />
+                </apex:pageblocksectionItem>
+                <apex:pageblocksectionItem >
+                    <apex:outputLabel style="margin-left: 10px;">PreDetermination</apex:outputLabel>
+                    <apex:outputtext value="{!PreDetermination}" />
+                </apex:pageblocksectionItem>
+                <apex:pageblocksectionItem >
+                    <apex:outputLabel >Coverage Type</apex:outputLabel>
+                    <apex:outputtext value="{!AuthorizationDetail.Coverage_Type}" />
+                </apex:pageblocksectionItem>
+                <apex:pageBlockSectionItem >
+                        <apex:outputLabel style="margin-left: 10px;">Manager/Queue</apex:outputLabel>
+                        <apex:outputText value="{!AuthorizationDetail.caseOwner}"></apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                        <apex:outputLabel style="margin-left: 10px;">Medical Record Number</apex:outputLabel>
+                        <apex:outputText value="{!AuthorizationDetail.Medical_Record_Number}"></apex:outputText>
+                </apex:pageBlockSectionItem>
+            </apex:pageblocksection>
+            <apex:pageblocksection title="Providers" html-auto-doc="true">
+                <apex:pageblocktable value="{!AuthorizationDetail.authProviderDetails}"
+                    var="objProvider">
+                    <apex:column headerValue="Provider Role">{!objProvider.Provider_Facility_Role}</apex:column>
+                    <apex:column headerValue="Provider ID">{!objProvider.Provider_ID}</apex:column>
+                    <apex:column headerValue="Srvc Provider / Status">{!objProvider.Facility_Service_Provider_Status}</apex:column>
+                    <apex:column headerValue="TIN">{!objProvider.TIN}</apex:column>
+                    <apex:column headerValue="Address 1">{!objProvider.Address_1}</apex:column>
+                    <apex:column headerValue="City">{!objProvider.City}</apex:column>
+                    <apex:column headerValue="State">{!objProvider.State}</apex:column>
+                    <apex:column headerValue="Zip">{!objProvider.Zip}</apex:column>
+                    <apex:column headerValue="Speciality">{!objProvider.Speciality}</apex:column>
+                </apex:pageblocktable>
+            </apex:pageblocksection>
+            <apex:pageblocksection title="Service Line" html-auto-doc="true">
+                <apex:pageblocktable value="{!AuthorizationDetail.authServiceDetails}"
+                    var="objServiceLine">
+                    <apex:column headerValue="Authorization Number">{!objServiceLine.Service_Authorization_Number}</apex:column>
+                    <apex:column headerValue="Procedure Code">{!objServiceLine.Procedure_Code}</apex:column>
+                    <apex:column headerValue="Description ">{!objServiceLine.Procedure_Description}</apex:column>
+                    <apex:column headerValue="Proc Text">{!objServiceLine.Proc_Text}</apex:column>
+                    <apex:column headerValue="Service Start Date">{!objServiceLine.Service_StartDate}</apex:column>
+                    <apex:column headerValue="Service End Date">{!objServiceLine.Service_StopDate}</apex:column>
+                    <apex:column headerValue="Decision Outcome">{!objServiceLine.Service_Decision_Outcome}</apex:column>
+                    <apex:column headerValue="Decision Subtype">{!objServiceLine.Service_Decision_Sub_Type}</apex:column>
+                    <apex:column headerValue="Decision Rendered Date">{!objServiceLine.Service_Decision_Rendered_Date}</apex:column>
+                    <apex:column headerValue="Claim Remark Code">{!objServiceLine.Service_Claim_Remark_Code}</apex:column>
+                    <apex:column headerValue="Gap Outcome">{!objServiceLine.Service_Gap_Outcome}</apex:column>
+                    <apex:column headerValue="Decision Reason">{!objServiceLine.Service_Decision_Reason}</apex:column>
+                    <apex:column headerValue="Decision Comment">{!objServiceLine.Service_Decision_Comment}</apex:column>
+                </apex:pageblocktable>
+            </apex:pageblocksection>
+            <apex:pageblocksection title="Diagnosis" html-auto-doc="true">
+                <apex:pageblocktable value="{!AuthorizationDetail.diagnosisList}"
+                    var="objDiagnosisList" style="width:100%">
+                    <apex:column headerValue="Dx Code">{!objDiagnosisList.Dx_Code}</apex:column>
+                    <apex:column headerValue="Description">{!objDiagnosisList.Dx_Description}</apex:column>
+                </apex:pageblocktable>
+            </apex:pageblocksection>
+            <apex:pageBlockSection title="Notes" id="CollapseDefault"
+                collapsible="true" columns="1" html-auto-doc="true">
+                <div id="test" style="float: right">
+                    <div class="showallClass">
+                        <a href="#" style="width: 50%"
+                            onclick="showAllButtonFn();return false;">Show All</a>
+                    </div>
+                    <div class="showlessClass">
+                        <a href="#" style="width: 50%"
+                            onclick="hideAllButtonFn();return false;">Show Less</a>
+                    </div>
+                </div>
+                <!-- changed the href from return false to # as the link was not available while autodocking.-->
+                <apex:pageblockTable value="{!AuthorizationDetail.notesList}"
+                    var="objNoteList">
+                    <apex:column headerValue="Create Date">{!objNoteList.Create_Date}</apex:column>
+                    <apex:column headerValue="Created By">{!objNoteList.Created_By}</apex:column>
+                    <apex:column headerValue="Department">{!objNoteList.Department}</apex:column>
+                    <apex:column headerValue="Note Type">{!objNoteList.Note_Type}</apex:column>
+                    <apex:column headerValue="Subject Type">{!objNoteList.Subject_Type}</apex:column>
+                    <apex:column headerValue="Note Details" style="width:45%">
+
+                        <p id="AuthNoteDetail" style="margin: 0cm 0cm 0cm 0cm;" class="minimize">
+                            <apex:outputText value="{!objNoteList.Note_details}" />
+                        </p>
+
+                    </apex:column>
+                </apex:pageblockTable>
+            </apex:pageBlockSection>
+            <script> twistSection(document.getElementById('{!$Component.OutpatientBlock.CollapseDefault}').getElementsByTagName('img')[0]) </script>
+            <apex:pageBlockSection title="Follow Up Contact" columns="3"
+                html-auto-doc="true">
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel style="margin-left: 10px;">Name 
+    </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.Name}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >Department 
+    </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.Contact_Department}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >Fax 
+    </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.fax}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel style="margin-left: 10px;">Role
+    </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.role}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >Primary Phone
+    </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.Primary_Phone}">
+                    </apex:outputText>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >E-mail address 
+    </apex:outputLabel>
+                    <apex:outputText value="{!AuthorizationDetail.Email_Address}">
+                    </apex:outputText>
+
+                </apex:pageBlockSectionItem>
+
+            </apex:pageBlockSection>
+        <!--    <apex:pageBlockSection title="Letter Requests" html-auto-doc="true">
+                <apex:pageBlockTable value="{!AuthorizationDetail.notesList}"
+                    var="objInnerNote">
+                    <apex:column headerValue="Authorization Number" />
+                    <apex:column headerValue="Seq #" />
+                    <apex:column headerValue="Letter Gen ID" />
+                    <apex:column headerValue="Create Dt" />
+                    <apex:column headerValue="Subject" />
+                    <apex:column headerValue="Recipient" />
+                    <apex:column headerValue="Status" />
+                </apex:pageBlockTable>
+            </apex:pageBlockSection> -->
+        </apex:pageblock>
+    </apex:form>
+        <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+</apex:page>

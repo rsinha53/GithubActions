@@ -1,0 +1,375 @@
+<aura:component implements="lightning:isUrlAddressable" controller="ACETLGT_UpdateMemberDetailController" >
+    <!--    Attributes  -->
+    <aura:attribute name="enrollmentMethod" type="String" default="Paper Only" />
+    <aura:attribute name="phones" type="List" default="[]"/>
+    <aura:attribute name="email" type="String" access="public"/>
+    <aura:attribute name="emailType" type="String" default="Primary" /> 
+    <aura:attribute name="newEmailClicked" type="Boolean" default="false" />
+    <aura:attribute name="additionalUpdates" type="Object[]" />
+    <aura:attribute name="phoneOptionsAll" type="List" default="['Home','Work','Fax','Mobile']" />
+    <aura:attribute name="phoneOptionsCurrent" type="List" />
+	<aura:attribute name="AutodocKey" type="string" access="public" />
+    <aura:attribute name="isValidEmail" type="Boolean" default="true" />
+    <aura:attribute name="isValidPhoneSet" type="Boolean" default="true" />
+    <aura:attribute name="isEmailFromService" type="Boolean" default="false" />
+    <aura:attribute name="timeStamp" type="String" />
+    <aura:attribute name="MemberdetailInd" type="Object" />
+    <aura:attribute name="isSuccessUpdate" type="Boolean" default="false" />
+    <aura:attribute name="isFailedUpdate" type="Boolean" default="false" />
+    <aura:attribute name="isUpdating" type="Boolean" default="false" />
+    <aura:attribute name="bookOfBusinessTypeCode" type="String" />
+    <aura:attribute name="firstname" type="String" />
+    <aura:attribute name="middlename" type="String" />
+    <aura:attribute name="lastname" type="String" />
+    <aura:attribute name="suffix" type="String" />
+    <aura:attribute name="ssn" type="String" default=""/>
+    <aura:attribute name="fullssn" type="String" default=""/>
+    <aura:attribute name="gender" type="String" />
+    <aura:attribute name="dob" type="String" />
+    <aura:attribute name="addresslist" type="list" default="[]"/>
+    <aura:attribute name="disabledemographics" type="boolean" default="false"/>
+    <aura:attribute name="openconfirmmodal" type="boolean" default="false"/>
+    <aura:attribute name="stateOptions" type="List" default="[]" />
+    <aura:attribute name="CurrentUser" type="Object"/>
+    <!-- US2100280 -->
+    <!-- init method loads the data attribute values -->
+    <aura:handler name="init" action="{!c.doInit}" value="{!this}" />
+
+    
+    <!-- TTS Attributes-->
+	<!-- isCSRFVisible triggers "Document the CSRF Number" -->
+	<!--<aura:attribute name="isCSRFVisible" type="boolean" access="global" />
+	<aura:attribute name="callTypes" type="Object" access="global" />
+	<aura:attribute name="csrfurl" type="String" access="global" />
+    -->
+	<aura:attribute name="cseTopic" type="String" access="global" default="{!$Label.c.ACETCallTopicUpdateMemberDetail}"/>
+	<aura:attribute name="srk" type="String" access="global" />
+    <aura:attribute name="int" type="Interaction__c" access="global" />
+	<aura:attribute name="intId" type="String" access="global" />
+
+    <aura:attribute name="grpNum" type="String" access="public"/>
+    <aura:attribute name="memId" type="String" access="public"/>    
+    <!-- /TTS Attributes-->
+
+    <!-- Highlight Panel -->
+    <aura:attribute name="highlightPanel" type="ACETLGT_HighlightPanelInfo" access="global"/>
+    <aura:attribute name="hgltPanelDataString" type="String" access="global"/>
+    <!--  /  Attributes  -->
+
+
+    <!-- Autodock Attributes -->
+    <div id="{!v.AutodocKey}">
+    <c:ACETLGT_AutoDoc></c:ACETLGT_AutoDoc>
+		<force:recordData recordId="{!$SObjectType.CurrentUser.Id}" fields="Profile.Name" targetFields="{!v.CurrentUser}" recordUpdated="{!c.handleRecordChanged}"/>
+ 		
+        <!--    top panel with title and actions    -->
+        <lightning:card variant="Narrow" iconName="standard:contact" class="umd-card">
+            <aura:set attribute="title">
+                <div class="slds-border--left slds-p-left--small">
+                    <p class=" slds-m-right--small slds-align-middle">
+                        Update Member Detail
+                    </p>
+                    <p style="font-size: small">
+                        <p class="slds-form-element__label">Enrollment Method:</p>&nbsp;
+                        <p class="slds-form-element__static">{!v.enrollmentMethod}</p>
+                    </p>
+                </div>
+            </aura:set>
+            <!--    Action button group for the card    -->
+            <aura:set attribute="actions">
+                <div class="slds-grid slds-form-element slds-m-right_large">
+                    <lightning:buttonGroup>
+                        <c:ACETLGT_TTSModal aura:id = "cComp"
+                                            cseTopic="{!$Label.c.ACETCallTopicUpdateMemberDetail}"
+                                            int="{!v.int}" 
+                                            intId="{!v.intId}" 
+                                            srk="{!v.srk}" 
+                                            showCirrus="true"                                        
+                                            memberId="{!v.memId}"
+                                            groupId="{!v.grpNum}" 
+                                            highlightPanel="{!v.highlightPanel}"
+                                            bookOfBusinessTypeCode="{!v.bookOfBusinessTypeCode}"
+                                            AutodocKey="{!v.AutodocKey}"
+                                            pagefeature="{!v.AutodocKey}"
+                                            />
+                    </lightning:buttonGroup>
+                </div>
+            </aura:set>
+            <p class="slds-p-horizontal_small">
+                <!--<lightning:card title=""><c:ACETLGT_HighlightPanel highlightPanelValues="{!v.highlightPanel}"/> </lightning:card>-->
+            </p>
+    
+            <c:ACETLGT_HighlightPanel highlightPanelValues="{!v.highlightPanel}" pageFeature="{!v.AutodocKey}" AutodocKey="{!v.AutodocKey}"/>
+            <!--    /   Action button group for the card    -->
+        </lightning:card>
+        <!--    /   top panel with title and actions    -->
+    
+        <!--    Main Content    -->
+        <div>
+            <div class="slds-is-relative">
+                <!--    Spinner -->
+                <aura:if isTrue="{!v.isUpdating}">
+                    <lightning:spinner alternativeText="" variant="brand" size="medium" />
+                </aura:if>
+                <!--    Spinner -->
+                <div class="slds-grid slds-wrap" style="margin-top: .35rem !important">         
+                    <!--    Left 1/3 Section   -->
+                    <div class="slds-col slds-size_1-of-3" >             
+                        <!--    Additional Updates Made in CIRRUS Section   -->        
+                        <div id="{!v.AutodocKey + 'AU'}">
+                            <div class="slds-box slds-p-around_none slds-theme_default slds-m-top_x-small slds-m-right_x-small">
+                                <!--    Update CIRRUS table section with full width -->                   
+                                <h2 class="slds-card__header-title slds-p-around_small">Additional Updates Made in Cirrus Card</h2>
+                                <div class="autodocTableView" data-auto-doc="true" data-auto-doc-case-items="true" data-auto-doc-feature="{!v.AutodocKey}"  data-auto-doc-section-key="Additional Updates Made in Cirrus Card">
+                                    <div class="slds-p-around_x-small">
+                                        <table class="slds-table slds-table_bordered slds-no-row-hover" role="grid">                          
+                                            <thead>
+                                                <tr class="slds-line-height_reset">
+                                                    <th class="slds-p-around_xxx-small" scope="col">
+                                                        <div class="" title="Update Type">Update Type</div>
+                                                    </th>     
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <aura:iteration items="{!v.additionalUpdates}" var="update" indexVar="index">
+                                                  <tr class="slds-hint-parent">
+                                                    <td data-label="Update Type">
+                                                        <div class="">
+                                                           {!update.updateType}
+                                                        </div>
+                                                    </td>
+                                                  </tr>
+                                                </aura:iteration>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                   
+                            </div>
+                        </div>
+                        <!--    /   Additional Updates Made in CIRRUS Section   -->              
+                    </div>
+                    <!--    / Left 1/3 Section   -->
+
+                    <div class="slds-col slds-size_2-of-3 slds-card slds-m-top_x-small" >
+                        <div id="{!v.AutodocKey + 'DMG'}">
+                        	<div class="slds-wrap slds-p-around_none slds-theme_default">
+                            <!-- Start of Demographics -->
+                            <div class="autodocTableView deductibles" data-auto-doc="true" data-auto-doc-case-items="false" data-auto-doc-feature="{!v.AutodocKey}" >   
+                                <div data-auto-doc-feature="{!v.AutodocKey}" >
+                                    <h2 class="slds-card__header-title slds-p-around_small">Member Demographics</h2>
+                                	<table class="slds-table slds-no-row-hover">
+                                        <tbody>
+                                            <tr class="slds-hint-parent" style="vertical-align: top;">
+                                                <td>
+                                                    <div class="slds-grid">
+                                                        <div class="slds-size_6-of-12 slds-p-left_small slds-p-bottom_small">
+                                                        </div>
+                    									<div class="slds-size_6-of-12 slds-p-right_small slds-p-bottom_small updatebuttoncss">
+                                                            <aura:if isTrue="{!!v.disabledemographics}">
+                                                            	<lightning:button variant="brand" label="Update" title="Update" onclick="{!c.updatememberdetails}"></lightning:button>
+                                                            </aura:if>
+                                                        </div>
+                                                    </div>
+                                                    <div class="slds-grid">
+                                                        <div class="slds-size_5-of-12 slds-p-left_small slds-p-right_small">
+                                                            <div class="slds-form-element">
+                                                              <label class="slds-form-element__label" for="form-element-01">First Name</label>
+                                                              <div class="slds-form-element__control">
+                                                            	<input class="slds-input" value="{!v.firstname}" disabled="{!v.disabledemographics}" onchange="{!c.updatefirstname}"/>
+                                                              </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="slds-size_2-of-12 slds-p-left_small slds-p-right_small">   
+                                                        </div>
+                    									<div class="slds-size_5-of-12 slds-p-left_small slds-p-right_small">
+                                                            <div class="slds-form-element">
+                                                              <label class="slds-form-element__label" for="form-element-01">Gender</label>
+                                                              <div class="slds-form-element__control">
+                                                            	  <select class="slds-select" name="{!'updatesdemog' + v.timeStamp}" id="{!'updatesdemog' + v.timeStamp}" value="{!v.gender}" disabled="{!v.disabledemographics}" onchange="{!c.updategender}">
+                                                                	<option value="M" selected="{!v.gender=='M'}">Male</option>
+                                                                	<option value="F" selected="{!v.gender=='F'}">Female</option>
+                                                                    <option value="U" selected="{!v.gender=='U'}">Unknown</option>
+                                                                  </select>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="slds-grid">
+                                                        <div class="slds-size_5-of-12 slds-p-left_small slds-p-right_small">
+                                                            <div class="slds-form-element">
+                                                              <label class="slds-form-element__label" for="form-element-01">Middle Name</label>
+                                                              <div class="slds-form-element__control">
+                                                            	<input class="slds-input" value="{!v.middlename}" disabled="{!v.disabledemographics}" onchange="{!c.updatemiddlename}"/>
+                                                              </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="slds-size_2-of-12 slds-p-left_small slds-p-right_small">   
+                                                        </div>
+                    									<div class="slds-size_5-of-12 slds-p-left_small slds-p-right_small">
+                                                            <div class="slds-form-element">
+                                                              <label class="slds-form-element__label" for="form-element-01">Date of Birth</label>
+                                                              <div class="slds-form-element__control">
+                                                            	<input displayDatePicker="true" class="slds-input" type="date" value="{!v.dob}" dateStyle="short" disabled="{!v.disabledemographics}" onchange="{!c.updatedob}"/>
+                                                              </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="slds-grid">
+                                                        <div class="slds-size_5-of-12 slds-p-left_small slds-p-right_small">
+                                                            <div class="slds-form-element">
+                                                              <label class="slds-form-element__label" for="form-element-01">Last Name</label>
+                                                              <div class="slds-form-element__control">
+                                                            	<input class="slds-input" value="{!v.lastname}" disabled="{!v.disabledemographics}" onchange="{!c.updatelastname}"/>
+                                                              </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="slds-size_2-of-12 slds-p-left_small slds-p-right_small">   
+                                                        </div>
+                    									<div class="slds-size_5-of-12 slds-p-left_small slds-p-right_small">
+                                                            <div class="slds-form-element">
+                                                              <label class="slds-form-element__label" for="form-element-01">Social Security Number</label>
+                                                              <!--<div class="slds-form-element__control">
+                                                            	<input class="slds-input" value="{!v.ssn}" disabled="{!v.disabledemographics}" onchange="{!c.updatessn}"/>
+                                                              </div>-->
+                                                                <aura:if isTrue="{!!empty(v.fullssn)}">
+                                                                  <aura:if isTrue="{!!v.disabledemographics}">
+                                                                    <div class="slds-form-element__control">
+                                                                	 <c:ACETLGT_MaskSSNComponent memberId="{!v.memId}" Type="Update Member Detail" SSNValue="{!v.fullssn}" UpdatedSSNValue="{!v.ssn}" ShowEdit="true" ShowLabel="false" Showcopy="false"></c:ACETLGT_MaskSSNComponent>
+                                                                    </div>
+                                                                  </aura:if>
+                                                                  <aura:if isTrue="{!v.disabledemographics}">
+                                                                    <div class="slds-form-element__control">
+                                                                	 <c:ACETLGT_MaskSSNComponent memberId="{!v.memId}" Type="Update Member Detail" SSNValue="{!v.fullssn}" UpdatedSSNValue="{!v.ssn}" ShowEdit="false" ShowLabel="false" Showcopy="false"></c:ACETLGT_MaskSSNComponent>
+                                                                    </div>
+                                                                  </aura:if>
+                                                                </aura:if>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="slds-grid">
+                                                        <div class="slds-size_5-of-12 slds-p-left_small slds-p-right_small">
+                                                            <div class="slds-form-element">
+                                                              <label class="slds-form-element__label" for="form-element-01">Suffix</label>
+                                                              <div class="slds-form-element__control">
+                                                                 <select class="slds-select" name="{!'updatesdemogsuff' + v.timeStamp}" id="{!'updatesdemogsuff' + v.timeStamp}" value="{!v.suffix}" disabled="{!v.disabledemographics}" onchange="{!c.updatesuffix}">
+                                                                	<option value="I" selected="{!v.suffix=='I'}">I</option>
+                                                                	<option value="II" selected="{!v.suffix=='II'}">II</option>
+                                                                    <option value="III" selected="{!v.suffix=='III'}">III</option>
+                                                                    <option value="IV" selected="{!v.suffix=='IV'}">IV</option>
+                                                                    <option value="Jr" selected="{!v.suffix=='Jr'}">Jr</option>
+                                                                    <option value="Sr" selected="{!v.suffix=='Sr'}">Sr</option>
+                                                                    <option value="V" selected="{!v.suffix=='V'}">V</option>
+                                                                    <option value="VI" selected="{!v.suffix=='VI'}">VI</option>
+                                                                    <option value="VII" selected="{!v.suffix=='VII'}">VII</option>
+                                                                    <option value="VIII" selected="{!v.suffix=='VIII'}">VIII</option>
+                                                                 </select>
+                                                              </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="slds-size_2-of-12 slds-p-left_small slds-p-right_small">   
+                                                        </div>
+                    									<div class="slds-size_5-of-12 slds-p-left_small slds-p-right_small">
+                                                            
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+							<div class="autodocTableView" data-auto-doc="true" data-auto-doc-case-items="true" data-auto-doc-feature="{!v.AutodocKey}"  data-auto-doc-section-key="Address">
+                                    <div class="slds-p-around_x-small">
+                                        <table class="slds-table slds-table_bordered slds-no-row-hover" role="grid">                          
+                                            <thead>
+                                                <tr class="slds-line-height_reset">
+                                                    <th class="slds-p-around_xxx-small" scope="col">
+                                                        <div class="" title="Address Type">Address Type</div>
+                                                    </th>
+                                                    <th class="slds-p-around_xxx-small" scope="col">
+                                                        <div class="" title="Address Line1">Address Line1</div>
+                                                    </th>
+                                                    <th class="slds-p-around_xxx-small" scope="col">
+                                                        <div class="" title="Address Line2">Address Line2</div>
+                                                    </th>
+                                                    <th class="slds-p-around_xxx-small" scope="col">
+                                                        <div class="" title="City">City</div>
+                                                    </th>
+                                                    <th class="slds-p-around_xxx-small" scope="col">
+                                                        <div class="" title="State">State</div>
+                                                    </th>
+                                                    <th class="slds-p-around_xxx-small" scope="col">
+                                                        <div class="" title="Postal Code">Postal Code</div>
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <aura:iteration items="{!v.addresslist}" var="address" indexVar="index">
+                                                  <tr class="slds-hint-parent">
+                                                    <td data-label="Address Type">
+                                                        <div class="">
+                                                            {!address.addressTypeCode}
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="Address Line1">
+                                                        <div class="">
+                                                            <input label="" data-ansIndex="{!index}" data-id="add1" class="slds-input" value="{!address.addressLine1}" disabled="{!v.disabledemographics}" onchange="{!c.updateaddress}"/>
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="Address Line2">
+                                                        <div class="">
+                                                            <input label="" data-ansIndex="{!index}" data-id="add2" class="slds-input" value="{!address.addressLine2}" disabled="{!v.disabledemographics}" onchange="{!c.updateaddress}"/>
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="City">
+                                                        <div class="">
+                                                            <input label="" data-ansIndex="{!index}" data-id="city" class="slds-input" value="{!address.city}" disabled="{!v.disabledemographics}" onchange="{!c.updateaddress}"/>
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="State">
+                                                        <div class="">
+                                                            <select data-ansIndex="{!index}" data-id="state" class="slds-select" value="{!address.stateCode}" disabled="{!v.disabledemographics}" onchange="{!c.updateaddress}" name="{! 'updatesadd' + index + v.timeStamp}" id="{! 'updatesadd' + index + v.timeStamp}">
+                                                                <aura:iteration items="{!v.stateOptions}" var="state">
+                                                                    <option value="{!state.value}" selected="{!(address.stateCode==state.value)}">{!state.label}</option>
+                                                                </aura:iteration> 
+                                                            </select>
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="Postal Code">
+                                                        <div class="">
+                                                            <input label="" data-ansIndex="{!index}" data-id="zip" class="slds-input" value="{!address.postalCode}" maxlength="5" disabled="{!v.disabledemographics}" onchange="{!c.updateaddress}"/>
+                                                        </div>
+                                                    </td>
+                                                  </tr>
+                                                </aura:iteration>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <br/><br/><br/>
+                			
+                			<!-- End of Demographics -->
+                        </div>
+                        </div>
+                    </div>  
+                </div>                             
+            </div>
+        </div>
+        <!--    /   Main Content    -->
+	</div>
+    <aura:if isTrue="{!v.openconfirmmodal}">
+         <section role="dialog" tabindex="-1" aria-label="Meaningful description of the modal content" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+          <div class="slds-modal__container">
+            <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+              <p>Please verify that the Member Demographic changes are valid.</p>
+            </div>
+            <footer class="slds-modal__footer">
+              <lightning:button label="Cancel" title="Cancel" onclick="{!c.cancelupdate}"/>
+              <lightning:button variant="brand" label="OK" title="OK" onclick="{!c.updatedetails}" />
+            </footer>
+          </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+</aura:component>

@@ -1,0 +1,392 @@
+<aura:component>
+    
+	<aura:attribute name="tableTimestampId" type="String"/>
+	<aura:attribute name="tableID" type="String"/>
+    <aura:attribute name="autodocUniqueId" type="String" default="demoid" />
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default="demoid" />
+    <aura:attribute name="tableDetails" type="Object" />
+    <aura:attribute name="tableBody" type="Object[]" />
+    <aura:attribute name="tempTableBody" type="Object[]" />
+    <aura:attribute name="tableBodyOriginal" type="Object[]" />
+    <aura:attribute name="selectedRows" type="Object[]" />
+    <aura:attribute name="selectAllCheckBox" type="Boolean" />
+    <aura:method name="refreshTable" action="{!c.refreshTable}" />
+    <aura:method name="clearAuotoDoc" action="{!c.selectAll}" />
+    <aura:attribute name="hasCaseItems" type="Boolean" default="false" />
+
+    <aura:attribute name="headerSize" type="Integer" />
+    <aura:attribute name="bodySize" type="Integer" />
+
+    <!-- Pagination start -->
+    <aura:attribute name="enablePagination" type="Boolean" />
+    <aura:attribute name="noOfRecordPerPage" type="Integer" default="50" />
+    <aura:attribute name="pageNumber" type="Integer" default="1" />
+    <aura:attribute name="maxPageNumber" type="Integer" default="0" />
+    <aura:attribute name="currentStartNumber" type="Integer" default="0" />
+    <aura:attribute name="currentEndNumber" type="Integer" />
+    <!-- US3254524 Autodoc Account Activity -->
+    <aura:attribute name = "showFirst" type= "Boolean" default="true"/>
+    <aura:attribute name = "showLast" type= "Boolean" default="true"/>
+    <!-- Pagination end -->
+
+    <!--Send the selected row data to Components-->
+    <aura:registerEvent name="selectedRowData" type="c:ACET_AutoDocSelectedRow" />
+     <aura:registerEvent name="selectedRowLink" type="c:ACET_AutoDocSelectedRow" />
+     <!-- <aura:handler  event="c:ACET_EnableAutoDocLink" action="{!c.enableLink}"/> -->
+
+    <aura:registerEvent name="changePageEvent" type="c:ACET_ChangePageEvt" />
+
+    <!--US2573718 - Auto Doc When No Results Are Displayed - Sravan-->
+    <aura:attribute name="autoCheck" type="Boolean" default="false"/>
+    <aura:attribute name="allowAutoCheck" type="Boolean" default="false"/>
+    <aura:handler name="change" value="{!v.autoCheck}" action="{!c.autoCheckCall}"/>
+
+    <aura:handler name="init" value="{!this}" action="{!c.doinit}" /> <!-- US3786086 - Thanish - 20th Aug 2021 -->
+    <aura:handler name="change" value="{!v.tableDetails}" action="{!c.dataLoaded}" />
+
+    <!--Searching sorting-->
+    <aura:attribute name="showSearchBox" type="boolean" default="true"/>
+    <aura:attribute name="enableSearch" type="boolean" default="false"/>
+    <aura:attribute name="enableSort" type="boolean" default="false"/>
+
+    <!--Sort Implementation Nikhil-->
+    <aura:attribute name="arrowDirection" type="string" />
+    <aura:attribute name="isAsc" type="boolean" />
+    <aura:attribute name="selectedTabsoft" type="string" />
+
+    <!-- Date Sorting -->
+    <aura:attribute name="dateFields" type="Array" default="[]"/>
+    <aura:attribute name="dateRangeFields" type="Array" default="[]"/>
+
+    <!-- Currency Sorting :- US3562758 Tech Story: AutoDoc framework update for sorting (amount with decimal)-->
+    <aura:attribute name="currencySort" type="Array" default="[]"/>
+    <aura:attribute name="dateFieldWithYear" type="Array" default="[]"/>
+
+     <!--Highlight Logic - Sarma-->
+        <aura:attribute name="isSingleRowHighlight" type="boolean" default="false"/>
+        <aura:attribute name="isCreateSrnComponent" type="boolean" default="false"/>
+        <aura:attribute name="noRowHover" type="string" default=""/>
+
+   <aura:attribute name="isCheckboxDisabled" type="boolean" default="false"/>
+
+    <!--Default Sorting Logic - Sarma-->
+    <aura:attribute name="isDefaultSorting" type="boolean" default="false"/>
+    <aura:attribute name="defaultSortingColIndex" type="string" default=""/>
+    <aura:attribute name="defaultSortingColName" type="string" default=""/>
+    <aura:attribute name="defaultSortingDirection" type="string" default=""/>  <!-- pass either 'asc' or 'desc' -->
+
+    <!-- table header hover Thanish -->
+    <aura:attribute name="headerHoverEnabled" type="boolean" default="false"/>
+
+    <!-- check autodoc on td click -->
+    <aura:attribute name="isCheckAutodocOnRowClick" type="boolean" default="false"/>
+    <aura:attribute name="fixLayout" type="String" default=""/>
+
+    <aura:attribute name="heightStyle" type="string" default=""/>
+
+    <!--US3477022-->
+    <aura:attribute name="defaultSearchVal" type="string" default=""/>
+    <aura:attribute name="isClaimServiceAuth" type="boolean" default="false"/>
+    <aura:attribute name="overrideLinkDisabled" type="boolean" default="true"/>
+
+    <!--For Create Referral-->
+    <aura:attribute name="isCreateReferral" type="boolean" default="false"/>
+    <aura:attribute name="isOnlyActive" type="Boolean" default="false"/>
+
+    <aura:attribute name="hasUnresolvedRows" type="Boolean" default="false" />
+
+    <!-- US2931847 -->
+    <aura:method name="invokeOnClick" action="{!c.invokeOnclick}" description="method to invoke onclick">
+        <aura:attribute name="currentRowIndex" type="Integer" />
+    </aura:method>
+
+    <!-- US3125332 - Thanish - 7th Jan 2021 -->
+    <aura:handler event="c:ACET_AutoDocRefreshEvent" action="{!c.handleAutodocRefresh}" />
+    <aura:attribute name="enableRefreshAutodoc" type="Boolean" default="true"/>
+
+    <aura:method name="invokeSearch" action="{!c.search}" description="Used for PCP Referral Search">
+        <aura:attribute name="strInput" type="string"/>
+    </aura:method>
+
+
+
+
+    <!-- US2917434, US3208169 -->
+    <aura:attribute name="overrideDefaultBehaviour" type="Boolean" default="false"/>
+	<!--US3243475 Motion - to skip the auto selet Resolve the cheeck boxes -->
+    <aura:attribute name="isResolvedChecked" type="Boolean" default="false"/>
+    <!-- DE438149 -->
+    <aura:attribute name="isAutodocHidden" type="Boolean" default="false"/>
+    <aura:attribute name="isResolvedHidden" type="Boolean" default="false"/>
+
+    <aura:if isTrue="{!not(empty(v.tableDetails))}"><!-- Vinay - Hiding Table Until Data Found to Avoid UI Issues -->
+        <div style="height:100%;width:100%" class="{!if(v.tableDetails.showCardStyle,'slds-box slds-card','')}">
+            <aura:if isTrue="{!v.tableDetails.showComponentName}">
+                <div style="">
+                    <table style="">
+                        <tr>
+                            <td style="width: 1px;" class="sorting_disabled"></td>
+                            <td>
+                                <div class="component_title slds-text-heading_small card_bottom_margin">
+                                    {!v.tableDetails.componentName}</div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </aura:if>
+           <aura:if isTrue="{!(v.enableSearch &amp;&amp;v.showSearchBox &amp;&amp; !v.isCreateReferral)}">
+                <div class="searchBox">
+                    <lightning:input name="input1" label="" placeholder="Search" variant="label-hidden"
+                                     onchange="{!c.search}" class="" value="{! v.defaultSearchVal }"/>
+                </div>
+            </aura:if>
+            <div class="FixedHeader" style="{!v.heightStyle}">
+                <table style="{!v.fixLayout}" class="{! 'slds-table slds-table_cell-buffer slds-table_bordered customWidth ' + v.noRowHover}">
+                    <thead>
+                        <tr class="slds-line-height_reset">
+                            <aura:if isTrue="{!not(v.isAutodocHidden)}">
+                            <th style="width: 45px;" scope="col" class="check-box-th">
+                                <lightning:input type="checkbox" name="{!v.tableDetails.componentName}" checked="{!v.selectAllCheckBox}"
+                                                 variant="label-hidden" onchange="{!c.selectAll}" disabled="{!v.isCheckboxDisabled}"/>
+                            </th>
+                            </aura:if>
+
+                            <!-- header with hover -->
+                            <aura:if isTrue="{!v.headerHoverEnabled}">
+                                <aura:iteration items="{!v.tableDetails.tableHoverHeaders}" var="i" indexVar="index">
+                                    <aura:if isTrue="{!v.enableSort}">
+                                        <th class="{!('slds-is-sortable slds-text-title_caps ') + ('_' + index)}" scope="col" data-index="{!index}" data-colname="{!i.headerValue}" onclick="{!c.sortColumn}">
+
+                                            <div class="{!(i.hasHover ? 'tooltip ' : '') + (i.alignRight ? ' tooltipAlignRight ' : ' tooltipAlignLeft ')}">
+                                                <a href="javascript:void(0);" class="slds-th__action slds-text-link_reset">
+                                                    <span class="slds-assistive-text">Sort</span>
+                                                    <span class="slds-truncate" style="{!(i.hasHover ? 'cursor:pointer;border-bottom: 1px dashed;' : '')}">{!i.headerValue}</span>
+                                                    <aura:if isTrue="{! and(v.arrowDirection == 'arrowdown', v.selectedTabsoft == i) }">
+                                                        &nbsp; &#9660;
+                                                    </aura:if>
+                                                    <aura:if isTrue="{! and(v.arrowDirection != 'arrowdown', v.selectedTabsoft == i) }">
+                                                        &nbsp; &#9650;
+                                                    </aura:if>
+                                                </a>
+                                                <aura:if isTrue="{!i.hasHover}">
+                                                    <div class="{!'tooltiptext ' + (i.alignRight ? ' tooltiptextAlignRight ' : ' tooltiptextAlignLeft ')}" style="{!((i.hoverWidth) != '' ? 'width:' + i.hoverWidth + ';' : '' ) + ('white-space: pre-line;')}">
+                                                        <ul style="{! ('text-align: left;') + ((i.hoverDescription) != '' ? 'list-style-type:disc;margin-left: 20px;' : '' )}">
+                                                            <span>{!i.hoverDescription}</span>
+                                                            <aura:iteration items="{!i.hoverDescriptionList}" var="listItem">
+                                                                <li>{!listItem}</li>
+                                                            </aura:iteration>
+                                                        </ul>
+                                                    </div>
+                                                </aura:if>
+                                            </div>
+                                        </th>
+                                        <aura:set attribute="else">
+                                            <th class="{!('_' + index)}" scope="col">
+                                                <div class="{!(i.hasHover ? 'tooltip ' : '') + (i.alignRight ? ' tooltipAlignRight ' : ' tooltipAlignLeft ')}">
+                                                    <div class="slds-truncate" style="{!(i.hasHover ? 'cursor:pointer;border-bottom: 1px dashed;' : '')}">{!i.headerValue}</div>
+                                                    <aura:if isTrue="{!i.hasHover}">
+                                                        <div class="{!'tooltiptext ' + (i.alignRight ? ' tooltiptextAlignRight ' : ' tooltiptextAlignLeft ')}" style="{!((i.hoverWidth) != '' ? 'width:' + i.hoverWidth + ';' : '' ) + ('white-space: pre-line;')}">
+                                                            <ul style="{! ('text-align: left;') + ((i.hoverDescription) != '' ? 'list-style-type:disc;margin-left: 20px;' : '' )}">
+                                                                <span>{!i.hoverDescription}</span>
+                                                                <aura:iteration items="{!i.hoverDescriptionList}" var="listItem">
+                                                                    <li>{!listItem}</li>
+                                                                </aura:iteration>
+                                                            </ul>
+                                                        </div>
+                                                    </aura:if>
+                                                </div>
+                                            </th>
+                                        </aura:set>
+                                    </aura:if>
+                                </aura:iteration>
+
+                                <!-- header without hover -->
+                                <aura:set attribute="else">
+                            <aura:iteration items="{!v.tableDetails.tableHeaders}" var="i" indexVar="index">
+                                <aura:if isTrue="{!v.enableSort}">
+                                    <th class="{!('slds-is-sortable slds-text-title_caps ') + ('_' + index)}" scope="col" data-index="{!index}"
+                                        data-colname="{!i}" onclick="{!c.sortColumn}" title="{!v.tableDetails.showHeaderTitle ? i : ''}"> <!-- US3786086 - Thanish - 20th Aug 2021 -->
+                                        <a href="javascript:void(0);" class="slds-th__action slds-text-link_reset">
+                                            <span class="slds-assistive-text">Sort</span>
+                                            <span class="slds-truncate">{!i}</span>
+                                            <aura:if
+                                                     isTrue="{! and(v.arrowDirection == 'arrowdown', v.selectedTabsoft == i) }">
+                                                &nbsp; &#9660;</aura:if>
+                                            <aura:if
+                                                     isTrue="{! and(v.arrowDirection != 'arrowdown', v.selectedTabsoft == i) }">
+                                                &nbsp; &#9650;</aura:if>
+                                        </a>
+                                    </th>
+                                    <aura:set attribute="else">
+                                        <th class="{!('_' + index)}" data-thId="{!v.tableTimestampId + 'th' + index}" scope="col" data-thTitle="{!i}" onmouseover="{!c.checkHeaderOverflow}"> <!-- US3786086 - Thanish - 20th Aug 2021 -->
+                                            <div class="slds-truncate" id="{!v.tableTimestampId + 'th' + index}">{!i}</div>
+                                        </th>
+                                    </aura:set>
+                                </aura:if>
+                            </aura:iteration>
+                                </aura:set>
+                            </aura:if>
+                            <aura:if isTrue="{!not(v.isResolvedHidden)}">
+                            <aura:if isTrue="{!v.hasCaseItems}">
+                                <th scope="col">
+                                    <div class="slds-truncate">RESOLVED</div>
+                                </th>
+                            </aura:if>
+                            </aura:if>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <aura:iteration items="{!v.tableBody}" var="i" indexVar="index">
+                            <tr class="{!i.hideChildRow ? 'slds-hide' : ''}" data-index="{!index}" onclick="{!c.onRowClick}">
+                                <aura:if isTrue="{!not(v.isAutodocHidden)}">
+                                <td style="width: 45px;">
+                                    <lightning:input type="checkbox" name="{!index}" checked="{!i.checked}"
+                                                     disabled="{!i.checkBoxDisabled}"
+                                                     variant="label-hidden" onchange="{!c.selectRow}" />
+                                </td>
+                                </aura:if>
+                                <aura:iteration items="{!i.rowColumnData}" var="j" indexVar="indexCell"><!-- US2917434 -->
+                                    <aura:if isTrue="{!j.isLink}">
+                                        <td style="{!empty(j.tdStyle) ? '' : j.tdStyle }">
+                                            <a href="javascript:void(0);" class="{!(i.linkDisabled) ? 'disableLink slds-text-link_reset' : 'slds-text-link_reset'}"
+                                               onclick="{!c.fireAutodocEvent}" data-cell-index="{!indexCell}"><!-- US2917434 -->
+                                                <span class="{!(i.linkDisabled) ? 'disableLink slds-text-linkt' : 'slds-text-link'}">{!j.fieldValue}</span>
+                                            </a>
+                                        </td>
+                                    </aura:if>
+									<!-- US3116638 Tool tip attribute for Plan Waivers Motion -->
+
+									<aura:if isTrue="{!j.isToolTipIcon}">
+
+                                            <td style="{!empty(j.tdStyle) ? '' : j.tdStyle }" data-index="{!index}" onclick="{!(v.isCheckAutodocOnRowClick) ? c.checkAutodocOnRowClick : ''}">
+
+
+
+                                           		<div id="idActive" class="progressRing">
+                                                    <a data-index="{!i.uniqueKey}" onmouseover="{!c.showToolTipActive}" onmouseout="{!c.HideToolTipActive}">
+
+
+                                                           <img src="{!j.iconName}" style="padding-left:4px;" />
+
+                                                             <div id="{!i.uniqueKey}" class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left tooltipText" role="tooltip" >
+                                                                <div class="slds-popover__body">{!j.fieldValue}</div>
+                                                            </div>
+                                                        </a>
+                                                    </div>
+                                            </td>
+                                        </aura:if>
+                                    <!-- Tool tip attribute for Plan Waivers Motion -->
+                                    <aura:if isTrue="{!j.isOutputText}">
+                                        <td style="{!empty(j.tdStyle) ? '' : j.tdStyle }" data-index="{!index}" onclick="{!(v.isCheckAutodocOnRowClick) ? c.checkAutodocOnRowClick : ''}">
+                                            <div title="{!j.titleName}" class="slds-truncate">
+                                                {!j.fieldValue}
+                                            </div>
+                                        </td>
+                                    </aura:if>
+                                    <aura:if isTrue="{!j.isAccordian}">
+                                        <td style="{!empty(j.tdStyle) ? '' : j.tdStyle }" data-index="{!index}" onclick="{!(v.isCheckAutodocOnRowClick) ? c.checkAutodocOnRowClick : ''}">
+                                            <aura:if isTrue="{!i.isChildRow}">
+                                                <div title="{!j.titleName}" class="slds-truncate">
+                                                    {!j.fieldValue}
+                                                </div>
+                                                <aura:set attribute="else">
+                                                    <button aria-controls="accordianctrls" class="slds-button">
+                                                        <span class="slds-section slds-is-close" onclick="{!c.toggleSection}" data-index="{!index}">
+                                                            <lightning:icon iconName="utility:switch" size="xx-small"
+                                                                            class="slds-section__title-action-icon slds-button__icon_left"
+                                                                            alternativeText="button icon" />
+                                                        </span>
+                                                        <span class="slds-truncate" title="{!j.titleName}">
+                                                            {!j.fieldValue}
+                                                        </span>
+                                                    </button>
+                                                </aura:set>
+                                            </aura:if>
+                                        </td>
+                                    </aura:if>
+                                    <aura:if isTrue="{!j.isIcon}">
+                                        <td style="{!empty(j.tdStyle) ? '' : j.tdStyle }" data-index="{!index}" onclick="{!(v.isCheckAutodocOnRowClick) ? c.checkAutodocOnRowClick : ''}">
+                                            <div class="statusIcon">
+                                                <lightning:icon iconName="{! empty(j.iconName) ? j.fieldValue : j.iconName }" alternativeText="{!j.fieldValue}" size="x-small"/>
+                                            </div>
+                                        </td>
+                                    </aura:if>
+                                    <aura:if isTrue="{!j.isNoRecords}">
+                                        <td style="{!empty(j.tdStyle) ? '' : j.tdStyle }" colspan="{!v.tableDetails.tableHeaders.length}" data-index="{!index}" onclick="{!(v.isCheckAutodocOnRowClick) ? c.checkAutodocOnRowClick : ''}">
+                                            <div style="text-align: center;">{!j.fieldValue}</div>
+                                        </td>
+                                    </aura:if>
+                                    <aura:if isTrue="{!j.isCurrencyOutputText}">
+                                        <td style="{!empty(j.tdStyle) ? '' : j.tdStyle }" data-index="{!index}" onclick="{!(v.isCheckAutodocOnRowClick) ? c.checkAutodocOnRowClick : ''}">
+                                            <div title="{!j.titleName}" class="slds-truncate">
+                                                <aura:if isTrue="{!j.fieldValue == '--'}">
+                                                    	--
+                                                    <aura:set attribute="else">
+                                                        <span style="font-family:arial;font-size: 12px;">&#36;&nbsp;</span> {!j.fieldValue}
+                                                    </aura:set>
+                                                </aura:if>
+
+                                            </div>
+                                        </td>
+                                    </aura:if>
+                                </aura:iteration>
+                                <aura:if isTrue="{!not(v.isResolvedHidden)}">
+                                <aura:if isTrue="{!v.hasCaseItems}">
+                                    <td style="width: 1px;">
+                                        <aura:if isTrue="{!!or(v.isCheckboxDisabled,i.isResolvedDisabled)}">
+                                            <lightning:input type="checkbox" name="{!index + '_resolved'}"
+                                                             checked="{!i.resolved}"
+                                                             variant="label-hidden"
+                                                             onchange="{!c.checkResolved}"
+                                                             />
+                                            <aura:set attribute="else">
+                                                <lightning:input type="checkbox" name="{!index + '_resolved'}"
+                                                                 checked="{!i.resolved}"
+                                                                 variant="label-hidden"
+                                                                 onchange="{!c.checkResolved}"
+                                                                 disabled="{!or(v.isCheckboxDisabled,i.isResolvedDisabled)}"/>
+                                            </aura:set>
+                                        </aura:if>
+
+                                    </td>
+                                </aura:if>
+                                </aura:if>
+                            </tr>
+                        </aura:iteration>
+                    </tbody>
+                </table>
+            </div>
+            <aura:if isTrue="{!v.enablePagination}">
+                <!-- Pagination Start -->
+                <div class="slds-p-top_xx-small">
+                    Showing {!v.currentStartNumber} to
+                    {!v.currentEndNumber} of {!v.tableDetails.recordCount}
+                    entries
+                </div>
+                <lightning:layout class="slds-align_absolute-center">
+                    <lightning:buttonGroup>
+                        <aura:if isTrue="{!v.showFirst}">
+                        <lightning:button variant="neutral" class="slds-button" label="First" iconName="utility:left"
+                                          iconPosition="left" onclick="{!c.firstPage}" disabled="{!v.pageNumber == 1}" />
+                       
+                        </aura:if>
+                        <lightning:button variant="neutral" class="slds-button" iconName="utility:chevronleft"
+                                          iconPosition="left" onclick="{!c.prevPage}" disabled="{!v.pageNumber == 1}" />
+                        <lightning:button variant="neutral" class="paginationbutton">
+                            <lightning:input name="" label="" style="width: 30%;" value="{!v.pageNumber}"
+                                             onblur="{!c.enterPage}" variant="label-hidden" />&nbsp;of {!v.tableDetails.noOfPages}
+                        </lightning:button>
+                        
+                        <lightning:button variant="neutral" iconName="utility:chevronright" iconPosition="right"
+                                          onclick="{!c.nextPage}" class="slds-button" disabled="{!v.maxPageNumber == v.pageNumber}" />
+                        <aura:if isTrue="{!v.showLast}">
+                       <lightning:button variant="neutral" label="Last" iconName="utility:right" iconPosition="right"
+                                          onclick="{!c.lastPage}" class="slds-button" disabled="{!v.maxPageNumber == v.pageNumber}" />
+                    </aura:if>
+                    </lightning:buttonGroup>
+                </lightning:layout>
+                <!-- Pagination end -->
+            </aura:if>
+        </div>
+    </aura:if>
+</aura:component>

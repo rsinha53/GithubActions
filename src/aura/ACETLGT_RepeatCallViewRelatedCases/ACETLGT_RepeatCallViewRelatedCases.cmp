@@ -1,0 +1,183 @@
+<aura:component  controller="ACETLGT_RelatedCasesController" implements="flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,lightning:isUrlAddressable" access="global" >
+    <aura:attribute name="isModalOpen" type="boolean" default="false"/>
+    <aura:attribute name="togglecasepopup" type="string" />
+    <aura:attribute name="interactiontype" type="string" />
+    <aura:attribute name="caseobj" type="object" />
+    <aura:attribute name="CaseCommentslst" type="list[]" />
+    <aura:attribute name="dataTblId" type="string" />
+    <aura:attribute name="AllRelatedCases" type="list[]" />
+    <aura:attribute name="AllRelatedCaseComments" type="list[]" />
+    <aura:attribute name="Calltopic" type="string" />
+    <aura:attribute name="ExternalIDs" type="list[]" />
+    <aura:attribute name="InteractionId" type="string" />
+   <aura:attribute name="SurrogateKey" type="string" />
+    <aura:attribute name="Spinner" type="boolean" default="false"/>
+   <aura:attribute name="highlightPanel_String" type="string" />
+    <aura:attribute name="showrelatedcases" type="boolean" />
+    <lightning:workspaceAPI aura:id="workspace" />
+  <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <ltng:require styles="{! $Resource.datatable + '/DataTables-1.10.16/media/css/jquery.dataTables.min.css'}" 
+                  scripts="{!join(',', 
+                           $Resource.jquery224 , 
+                           $Resource.datatable + '/DataTables-1.10.16/media/js/jquery.dataTables.min.js')
+                           }"/>
+ <lightning:button label="Related Cases" onclick="{!c.onClickRelatedCases}"  /> 
+ 
+    
+     <aura:if isTrue="{!v.isModalOpen}">
+        <section aura:id="modalSection1" role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" style="position: fixed !important; width:90px;left: 30%;" class="slds-modal slds-fade-in-open" >
+            <div  class="slds-modal__container">
+                <!-- Modal/Popup Box Header Starts here-->
+                <header class="slds-modal__header">
+                    <lightning:buttonIcon iconName="utility:close"
+                                          onclick="{! c.closeModal }"
+                                          alternativeText="close"
+                                          variant="bare-inverse"
+                                          class="slds-modal__close"/>
+                    <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Related Cases</h2>
+                </header>
+                <!--Modal/Popup Box Body Starts here-->
+                <div class="slds-modal__content slds-p-around_medium slds-is-relative modal-body" id="modal-content-id-1" >
+                  <div class="slds-form-element ">
+       <lightning:card  >
+         <aura:if isTrue="{!v.Spinner}">
+                    <div class="">
+                        <lightning:spinner alternativeText="Loading" size="small" variant="brand" />
+                    </div>
+      </aura:if>      
+       <aura:if isTrue="{!and(v.AllRelatedCases.length != 0, v.showrelatedcases)}">
+           <div class="slds-m-around_medium " width="100%" style="overflow: auto;">
+            <table id="{!v.dataTblId}" class="slds-table slds-table_bordered slds-table_cell-buffer slds-no-row-hover" cellspacing="0" width="100%">
+                            <thead  >
+                                <tr  >
+                                 <th  class="slds-cell-wrap" width="13%">Case Number</th>
+                                 <th class="slds-cell-wrap" width="13%">Subject Name</th>
+                                 <th class="slds-cell-wrap" width="23%"> <div>Created Date and Time</div></th>
+                                 <th  class="slds-cell-wrap" width="15%">Topic</th>
+                                  <th class="slds-cell-wrap" width="13%" >Status</th>
+                                  <th class="slds-cell-wrap" width="13%">Originator Type</th>
+                                  <th class="slds-cell-wrap" width="10%">Parent Case</th>
+                                </tr>
+                            </thead>
+                       <tbody>
+                       <aura:iteration items="{!v.AllRelatedCases}" var="caselst">
+                               <tr  >
+                                <td class="slds-cell-wrap" width="13%" >
+                                 <span class="spnDetails">
+                                  <div style="display:inline-block;">
+                                        <a href="#"  id="casenumbertag" data-CaseId="{!caselst.Id}"   onclick="{!c.opencase}" onmouseover="{!c.handleMouseOveroncasenumber}">{!caselst.CaseNumber} </a> 
+                                  </div>
+                                  <div style="display:inline-block;margin-top: -4px !important;" data-CaseId="{!caselst.Id}" onclick="{!c.OpencasenumberModel}">
+                                      <lightning:helptext content=""/>
+                                  </div>
+                                 </span>
+                                </td>
+                                <td class="slds-cell-wrap" width="13%">
+                                  {!caselst.Subject_Name__c}
+                                </td>
+                                 <td class="slds-cell-wrap" width="23%">
+                                   {!caselst.CreatedDate}
+                                </td>
+                              <td class="slds-cell-wrap" width="15%">
+                                   {!caselst.Topic__c}
+                               </td>
+                              <td class="slds-cell-wrap" width="15%">
+                                   {!caselst.Status}
+                            </td>
+                             <td class="slds-cell-wrap" width="13%">
+                                   {!caselst.Originator_Type__c}
+                             </td>
+                            <td class="slds-cell-wrap" width="10%">
+                               <a href="#"  id="casenumbertag" data-CaseId="{!caselst.Parent.Id}" onclick="{!c.opencase}"  >{!caselst.Parent.CaseNumber}</a>  
+                             </td>
+                         </tr>
+                      </aura:iteration>
+                    </tbody>
+                  </table>
+             </div>
+            <aura:set attribute="else">
+             <div style="text-align:center;">No Related Cases found.</div> 
+            </aura:set>
+        </aura:if>
+    </lightning:card>
+    
+     <aura:if isTrue="{!v.togglecasepopup == 'true'}">
+        
+          <span style="display: inline;
+                     width:32%;
+                    word-wrap: break-word !important;
+                    color: #111;
+                    background: white;
+                    z-index: 3000 !important;
+                    border: 1.5px solid black;
+                    position: fixed;
+                    padding: 14px 15px;
+                    top: 30%;
+                    left: 21%;">
+           <div class="slds-truncate break-word-container">
+               <a href="#" style="text-align: right;position: absolute;right: 30px;" id="casepopupcloase" onclick="{!c.CloseCasepopup}">Close</a>  <br/>
+
+            <label class="slds-form-element__label" >&nbsp;Case Number : &nbsp;&nbsp;&nbsp;</label> 
+            <ui:outputText value="{!v.caseobj.CaseNumber}" class="valueFont"/><br/>
+            <label class="slds-form-element__label">&nbsp;Original Type : &nbsp;&nbsp;&nbsp;</label>
+            <ui:outputText value="{!v.caseobj.Original_Type__c}" class="valueFont"/><br/>
+            <label class="slds-form-element__label">&nbsp;Original Subtype : &nbsp;&nbsp;&nbsp;</label>
+            <ui:outputText value="{!v.caseobj.Original_Subtype__c}" class="valueFont"/><br/>
+            <label class="slds-form-element__label">&nbsp;Case Owner : &nbsp;&nbsp;&nbsp;</label> 
+            <ui:outputText value="{!v.caseobj.Owner.Name}" class="valueFont"/><br/>
+            
+          <label class="slds-form-element__label">&nbsp;Case Comments : &nbsp;&nbsp;&nbsp;</label>
+            <div>    
+            <aura:iteration items="{!v.CaseCommentslst}" var="cc" indexVar="index">
+                <label class="slds-form-element__label">&nbsp;Created By: {!cc.CreatedBy.Name} </label>
+                <b> <ui:outputText class="break-word-text" value="("/>
+                <ui:outputDateTime value="{!cc.CreatedDate}"  timezone="America/Mexico_City"/>
+                 <ui:outputText class="break-word-text" value=")"/>&nbsp;
+                <ui:outputText class="bodyalgn"  value="{!cc.CommentBody}"/></b><br/>
+            </aura:iteration>
+               </div>   <div class="slds-table--header-fixed_container" style="background: white;height:150px;width:350px;">
+                <div class="slds-scrollable_y" style="height:100%;">
+           <table id="relatedcasestable" style="width: 95% !important;margin-left:1px;border:1.5px solid #c5c5c5 !important; " class="slds-table1 slds-table--header-fixed" >
+                           <thead style="border: 1.5px solid #c5c5c5 !important;">
+                                <tr bgcolor="#f8f8f8">
+                                    <th  scope="col" class="slds-cell-wrap" width="65%" style="font-family: Arial;font-weight:bold !important;font-size: 12px !important; ">Case Item External ID</th>
+                                     <th  scope="col" class="slds-cell-wrap" style="font-family: Arial;font-weight:bold !important;font-size: 12px !important;border-left: 1.5px solid #c5c5c5 !important;" width="28%">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <aura:iteration items="{!v.caseobj.Work_Items__r}" var="caseitemslist">
+                                  <tr >
+                                        <td class="slds-cell-wrap" width="65%" style=" padding-left: 0px;" >
+                                           {!caseitemslist.ExternalID__c}
+
+                                        </td>
+                                         <td class="slds-cell-wrap" width="28%" style=" padding-left: 0px;" >
+                                              <aura:if isTrue="{!caseitemslist.Resolved__c == true}">
+                                                Resolved
+                                               <aura:set attribute="else">
+                                                 Unresolved
+                                             </aura:set>
+                                           </aura:if>                                                      
+                                        </td>
+                                  </tr>
+                                </aura:iteration>
+                            </tbody>
+                        </table>
+                    </div>
+               </div>
+                 </div>
+            </span>
+          
+    </aura:if>
+
+                   </div>
+                 
+                </div>
+                <!--Modal/Popup Box Footer Starts here-->
+                
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" style="position: fixed !important;"></div>
+    </aura:if>
+ 
+</aura:component>

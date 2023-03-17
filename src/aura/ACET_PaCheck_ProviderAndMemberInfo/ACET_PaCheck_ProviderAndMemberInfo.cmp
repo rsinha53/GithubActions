@@ -1,0 +1,127 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,lightning:isUrlAddressable" access="global" controller="ACET_BenefitCheckController">
+
+    <ltng:require scripts="{!$Resource.ACET_SAESessionData}" />
+    
+    <aura:attribute name="providerInfo" type="Object" />
+    <aura:attribute name="interactionOverviewTabId" type="String" />
+    <!-- US3089172	Plan Benefits: Benefit Check with PA Button Search DataPopulation - Sarma - 16/12/2020 -->
+    <aura:attribute name="isDataPopulated" type="Boolean" default="false" />
+    <aura:attribute name="memberInfo" type="Object" />
+    <aura:attribute name="descriptionList" type="List" default="['Not Applicable']" />
+
+    <aura:attribute name="healthServiceProductCode" type="String" />
+    <aura:attribute name="vendorBenefitOptionTypeCode" type="String" />
+    <aura:attribute name="isParticipating" type="Boolean"/>
+    <aura:attribute name="currenttabId" type="String" default="" />
+    <aura:attribute name="OptumHealthReq" type="String" default="--" />
+     <!--US3487597 - Sravan-->
+     <aura:attribute name="providerNotificationTool" type="String"/>
+     <aura:attribute name="showSupportText" type="Boolean" default="false"/>
+
+    <aura:attribute name="autodocUniqueId" type="String" default="auto"/>
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default="auto"/>
+    <aura:attribute name="cardDetails" type="Object"/>
+    <aura:attribute name="paCheckTabId" type="String" />
+
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+
+
+	<aura:handler name="change" value="{!v.memberInfo}" action="{!c.onMemberInfoChange}"/>
+    <aura:handler name="change" value="{!v.interactionOverviewTabId}" action="{!c.generateSessionData}"/>
+
+
+
+    <div aura:id="card" class="slds-card card_padding">
+
+        <lightning:layout class="slds-card slds-m-bottom_x-small" multipleRows="true">
+            <lightning:layoutItem size="9">
+                <h2 class="component_title">
+                    Provider and Member Information
+                </h2>
+            </lightning:layoutItem>
+            <!--US3487597 - Sravan-->
+            <lightning:layoutItem size="3">
+	     	<aura:if isTrue="{!v.showSupportText}">
+	     	    <span style="color: red;">For Step Therapy Drugs, access NGT for Instructions</span>
+	     	</aura:if>
+                    <lightning:button class="slds-float_right" variant="neutral" label="Provider NGT" onclick="{!c.handleProvideNGT}"/>
+            </lightning:layoutItem>
+        </lightning:layout>
+        <!--
+            <div class="slds-grid slds-wrap slds-form-element leftMargin">
+                <div style="padding:0px;" class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                    <div class="header-column">
+                        <p class="field-title slds-form-element__label ">Servicing Provider</p>
+                        <p style="margin-left: 16px;" class="valueCls"></p>
+                        <div class="slds-form-element__static">{!v.providerInfo.servicingProvider}</div>
+                    </div>
+                </div>
+                <div style="padding:0px;" class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                    <div class="header-column">
+                            <p class="field-title slds-form-element__label ">Provider NPI/TIN</p>
+                            <p style="margin-left: 16px;" class="valueCls"></p>
+                            <div class="slds-form-element__static">{!v.providerInfo.npi}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slds-grid slds-wrap slds-form-element leftMargin">
+                <div style="padding:0px;" class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                    <div class="header-column">
+                        <p class="field-title slds-form-element__label">Member ID</p>
+                        <p style="margin-left: 16px;" class="valueCls"></p>
+                        <div class="slds-form-element__static">{!v.memberInfo.memberId}</div>
+                    </div>
+                </div>
+                <div style="padding:0px;" class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                    <div class="header-column">
+                            <p class="field-title slds-form-element__label">Member Plan</p>
+                            <p style="margin-left: 16px;" class="valueCls"></p>
+                            <div class="slds-form-element__static">{!v.memberInfo.memberPlan}</div>
+                    </div>
+                </div>
+                <div style="padding:0px;" class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                    <div class="header-column">
+                            <p class="field-title slds-form-element__label">Member Name</p>
+                            <p style="margin-left: 16px;" class="valueCls"></p>
+                            <div class="slds-form-element__static">{!v.memberInfo.memberName}</div>
+                    </div>
+                </div>
+                <div style="padding:0px;" class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                    <div class="header-column">
+                            <p class="field-title slds-form-element__label">Relationship Type</p>
+                            <p style="margin-left: 16px;" class="valueCls"></p>
+                            <div class="slds-form-element__static">{!v.memberInfo.relationshipType}</div>
+                    </div>
+                </div>
+                <aura:if isTrue= "{!v.memberInfo.sourceCode == 'CS'}">
+                    <div style="padding:0px;" class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label">OPTUMHEALTH AUTH</p>
+                            <p style="margin-left: 16px;" class="valueCls"></p>
+                            <div class="slds-form-element__static">{!v.OptumHealthReq}</div>
+                        </div>
+                    </div>
+                </aura:if>
+
+                 <div style="padding:0px;" class="slds-p-around_xx-small slds-size_2-of-12 card_bottom_margin">
+                    <div class="tooltip">
+                        <span style="cursor:pointer;border-bottom: 1px dashed;" data-popupId="memberPopup" onmouseover="{!c.togglePopup}" onmouseout="{!c.togglePopup}"  class="slds-form-element__label" >
+                            <span class="tooltiptext" id="memberPopup">
+                                <ul style="text-align: left;list-style-type:disc;margin-left: 20px;width:200px;">
+                                    <aura:iteration items="{!v.descriptionList}" var="listItem">
+                                        <li>{!listItem}</li>
+                                    </aura:iteration>
+                                </ul>
+                            </span>
+                            <div class="triangle-down" style=""></div>
+                            Med Nec Indicator
+                        </span>
+                    </div>
+                </div> -->
+
+      <c:ACET_AutoDocCard autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}" cardDetails="{!v.cardDetails}" defaultAutodoc="true" aura:id="defaultAutodocPACheck" enableRefreshAutodoc="true" showComponentName="false"/>
+
+    </div>
+	
+</aura:component>

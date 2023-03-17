@@ -1,0 +1,138 @@
+<aura:component
+    implements="force:appHostable,flexipage:availableForAllPageTypes,lightning:isUrlAddressable,force:hasRecordId"
+    access="global">
+
+    <!-- US2894783 -->
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}" />
+
+    <aura:attribute name="RequiredInfo" type="Object" />
+    <!-- US3222360 -->
+    <aura:handler name="change" value="{!v.RequiredInfo}" action="{!c.onChangeRequiredInfo}" />
+
+    <aura:attribute name="ServiceDetail" type="String" />
+    <aura:handler name="change" value="{!v.ServiceDetail}" action="{!c.onChangeServiceDetailAttr}" />
+
+    <!-- US3507481 Swapnil -->
+    <aura:attribute name="placeOfService" type="String" />
+    <aura:handler name="change" value="{!v.placeOfService}" action="{!c.onChangePlaceOfServiceAttr}" />
+
+    <aura:attribute name="Procedure" type="Object" />
+    <aura:attribute name="index" type="Integer" />
+    <aura:attribute name="type" type="String" />
+
+    <!-- US3222360 -->
+    <aura:attribute name="fieldsToValidate" type="List"
+        default="ProcedureCode,ProcedureType,StandardOfMeasures,Count,Frequency,Total,DMEProcurementType,DMETotalCost" />
+    <aura:attribute name="errorsRI" type="Object" />
+    <aura:handler event="c:ACET_CreateSRN_FireValidations" action="{!c.fireValidations}" />
+
+    <!-- US2950839 -->
+    <aura:attribute name="lstProTypes" type="List" default="[
+    {'label': 'CPT', 'value': 'CPT'},
+    {'label': 'HCPCS', 'value': 'HCPCS'}]" />
+
+    <!-- US3050746 -->
+    <aura:registerEvent name="ACET_CreateSRN_AdditionalCodesRemoveEvent"
+        type="c:ACET_CreateSRN_AdditionalCodesRemoveEvent" />
+
+    <!-- US3094699 -->
+    <aura:attribute name="srnTabId" type="String" />
+    <aura:handler name="sendData" event="c:ACET_SendKLDataToParentCmp" action="{!c.handleKLData}" />
+
+    <!-- US3222360 -->
+    <aura:attribute name="lstDME" type="List" default="[
+    {'label': 'Rental', 'value': 'Rental'},
+    {'label': 'Purchase', 'value': 'Purchase'}
+    ]" />
+
+    <aura:attribute name="lstMeas" type="List" default="[
+    {'label': 'Days', 'value': 'Days'},
+    {'label': 'Hours', 'value': 'Hours'},
+    {'label': 'Units', 'value': 'Units'},
+    {'label': 'Visits', 'value': 'Visits'}
+    ]" />
+
+    <aura:attribute name="lstFreq" type="List" default="[
+    {'label': 'Daily', 'value': 'Daily'},
+    {'label': 'Weekly', 'value': 'Weekly'},
+    {'label': 'Monthly', 'value': 'Monthly'},
+    {'label': 'Yearly', 'value': 'Yearly'},
+    {'label': 'Every other Day', 'value': 'Every other Day'},
+    {'label': 'Every other Week', 'value': 'Every other Week'},
+    {'label': 'Time(s)', 'value': 'Time(s)'}
+    ]" />
+
+    <!-- US3507481 To auto populate value of Procedure Code -->
+    <aura:attribute name="autoPopulateString" type="String" default="" />
+    <aura:attribute name="autoSelect" type="Boolean" default="false" />
+
+    <lightning:layout class="">
+        <lightning:layoutItem size="3">
+            <!-- US2974952 -->
+            <c:ACET_KLExtract aura:id="ProcedureCode" codeType="ProcedureCode" value="{!v.Procedure.ProcedureCode}"
+                label="Procedure Code" required="{! !(v.type == 'Inpatient') }"
+                autoPopulateString="{! v.autoPopulateString }" autoSelect ="{! v.autoSelect }" Procedure= "{!v.Procedure}" /> <!-- US3507481 -->
+        </lightning:layoutItem>
+        <lightning:layoutItem class="slds-p-horizontal_medium" size="3">
+            <lightning:input type="text" label="Procedure Description" autocomplete="off"
+                value="{! v.Procedure.ProcedureDesc }" title="{! v.Procedure.ProcedureDesc }" onchange="{!c.bindValues }" disabled="true" />
+        </lightning:layoutItem>
+        <lightning:layoutItem size="3">
+            <!-- US3026437 -->
+            <lightning:combobox class="slds-p-right_medium" options="{! v.lstProTypes }" aura:id="ProcedureType"
+                name="ProcedureType" label="Procedure Type" title="{! v.Procedure.ProcedureType }"
+                value="{! v.Procedure.ProcedureType }"
+                required="{! or(and(v.type == 'Inpatient', v.Procedure.ProcedureCode.length > 0), !(v.type == 'Inpatient')) }"
+                autocomplete="off" disabled="true"/>
+        </lightning:layoutItem>
+        <!-- DE449740 -->
+        <aura:If isTrue="{! greaterthan(v.index, 0) }">
+            <lightning:layoutItem size="1">
+                <div title="Delete Secondary Procedure Code" style="margin-top: 18%; cursor: pointer;"
+                    onclick="{!c.deleteAdditionalRow}">
+                    <img src="{!$Resource.SLDS_Close_Icon+'/icons/close_60_black.png'}" style="background: white;"
+                        class="slds-icon">
+                    </img>
+                </div>
+            </lightning:layoutItem>
+        </aura:If>
+    </lightning:layout>
+
+    <!-- US3222360 -->
+    <aura:If isTrue="{! (v.type == 'Outpatient') }">
+        <!-- DE387912 Swapnil-->
+        <lightning:layout class="slds-m-top_small">
+            <lightning:layoutItem size="3">
+                <lightning:combobox name="StandardOfMeasures" label="Standard Of Measures" options="{!v.lstMeas}"
+                    value="{! v.Procedure.StandardOfMeasures }" onchange="{!c.bindValues }" required="true"
+                    aura:id="StandardOfMeasures" autocomplete="off" />
+            </lightning:layoutItem>
+            <lightning:layoutItem class="slds-p-horizontal_medium" size="3">
+                <lightning:input dateStyle="short" type="text" name="Count" label="Count" autocomplete="off"
+                    value="{! v.Procedure.Count }" onchange="{!c.keepOnlyDigits }" required="true" aura:id="Count" />
+            </lightning:layoutItem>
+            <lightning:layoutItem class="slds-p-right_medium" size="3">
+                <lightning:combobox name="Frequency" label="Frequency" options="{!v.lstFreq}"
+                    value="{! v.Procedure.Frequency }" onchange="{!c.bindValues }" required="true" aura:id="Frequency"
+                    autocomplete="off" />
+            </lightning:layoutItem>
+            <lightning:layoutItem size="3">
+                <lightning:input dateStyle="short" type="number" name="Total" label="Total" autocomplete="off"
+                    value="{! v.Procedure.Total }" onchange="{!c.keepOnlyDigits }" required="true" aura:id="Total" />
+            </lightning:layoutItem>
+        </lightning:layout>
+        <lightning:layout class="slds-m-top_xx-small slds-m-bottom_small">
+            <lightning:layoutItem size="3">
+                <lightning:combobox aura:id="DMEProcurementType" name="DMEProcurementType" label="DME Procurement Type"
+                    options="{!v.lstDME}" value="{! v.Procedure.DMEProcurementType }" onchange="{!c.bindValues }"
+                    required="{! (v.RequiredInfo.ServiceDetail == 'Durable Medical Equipment') }" autocomplete="off" />
+            </lightning:layoutItem>
+            <lightning:layoutItem class="slds-p-horizontal_medium" size="3">
+                <lightning:input type="number" aura:id="DMETotalCost" name="DMETotalCost" label="DME Total Cost"
+                    value="{! v.Procedure.DMETotalCost }" onchange="{!c.bindValues }" formatter="currency" step="0.01"
+                    required="{! (v.Procedure.DMEProcurementType.length > 0) ? true : false }" autocomplete="off" />
+            </lightning:layoutItem>
+        </lightning:layout>
+    </aura:If>
+
+</aura:component>

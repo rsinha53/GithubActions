@@ -1,0 +1,1109 @@
+<apex:page sidebar="False" controller="ACETCommunicationSearchController" id="pageid" action="{!init}"  tabStyle="ClaimSearch__tab" docType="html-5.0"> 
+    <script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+        <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+        <apex:includeScript value="/support/console/30.0/integration.js" />  
+            <apex:stylesheet value="{!URLFOR($Resource.ACETResources, '/css/m/memberdetail.css')}"/>
+                
+                <style>
+                .errorMsg {
+                    color: #c00;
+                    margin-left: 2px;
+                }
+    .Required {
+        border: 2px solid #c00;
+    }
+    .messageTable {
+        border: none !important;
+    }
+    .myclass {
+        background-color: black; //
+        position: absolute;
+        left: 245px;
+        width: 3px;
+        top: 120px;
+        bottom: 95px;
+    }
+    .custPopupAdd {
+        background-color: white;
+        border-width: 2px;
+        border-style: solid;
+        z-index: 9999;
+        left: 30%;
+        padding: 10px;
+        position: absolute;
+        margin-left: -250px;
+        top: 300px;
+    }
+    
+    .popupBackgroundAdd {
+        background-color: black;
+        opacity: 0.20;
+        filter: alpha(opacity = 20);
+        position: absolute;
+        width: 100%;
+        height: 1000%;
+        top: 0;
+        left: 0;
+        z-index: 9998;
+    }
+    
+    .bPageBlock .detailList .labelCol {
+        width: 12%;
+    }
+    
+    .imgclass {
+            background-image: url('/img/help/helpOrbs.gif');
+            background-repeat: no-repeat;
+            width: 16px;
+            height: 15px;
+            background-position: right;
+        }
+    </style>
+    <style>
+        tr.selected {
+            background-color: yellow !important;
+        } 
+    </style>
+    <script>
+        var retFlag;          
+    function isValidDate(date){
+        var matches = /^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/.exec(date);
+        if (matches == null) return false;
+        var d = matches[2];
+        var m = matches[1] - 1;
+        var y = matches[3];
+        var composedDate = new Date(y, m, d);
+        return composedDate.getDate() == d &&composedDate.getMonth() == m &&composedDate.getFullYear() == y;
+    }
+    
+    
+    $(document).ready(function(){  
+        localStorage.removeItem("table");
+        localStorage.removeItem("rowCheckHold");
+        
+        sforce.console.addEventListener('ReceiveDocumentStatus_', function(r){
+            var res = JSON.parse(r.message);               
+            
+            sforce.console.getEnclosingTabId(function(result) {
+                if(result.id == res.parentTabId){
+                    sforce.console.closeTab(res.subTabId);
+                    showAddressWindow(res.selectedDocId);
+                }
+            });
+        }); 
+        
+    });
+    
+    /*function updateSearchFields(){
+        acfupdateSearchFields();*/
+        //updateCalendarFields();
+        //document.getElementById("pageid:formid:showResult").style.display = "none";
+        //document.getElementById("pageid:formid:showCommHistory").style.display = "none";
+        //}
+    
+    function clearFields(){
+        $("input[name*='pb3'][class!='btn'][class!='btnDisabled']:not([disabled])").each(function(){
+            $(this).val('');
+        });
+        var docTypeSelected = $("select[id$='documentType'] :selected").text();
+        if(docTypeSelected=="IRS 1095 Form"){
+            //          alert('IRS 1095 Form selected');
+            //SuffixMessage();
+        }
+        $("[field-type='Picklist']").each(function(){
+            if($(this).attr('name')!=null && $(this).attr('name')!='undefined' && $(this).attr('name')!=''){
+                if($(this).attr('ws-default')!=null && $(this).attr('ws-default')!='undefined' && $(this).attr('ws-default')!=''){
+                    //select default value
+                    $(this).find('option[value="' + $(this).attr('ws-default') + '"]').attr('selected','selected');
+                }
+            }
+        });
+    }
+    
+    function disableMemberId(){
+        $("input[hp-field-name*='MemberId']").each(function(){
+            $(this).prop('disabled',true);
+        });   
+    }
+    
+    function disableGroupNum(){
+        $("input[hp-field-name*='GroupNumber']").each(function(){
+            $(this).prop('disabled',true);
+        });   
+    }
+    
+    function updateCalendarFields(){
+        var docType = $("select[id$='documentType'] :selected").text();
+        
+        /*$("label").each(function(){
+        });*/
+        
+        if(docType=='Member EOB' || docType=='Provider PRA'){
+            $("input[field-type*='Date']").each(function(){
+                $(this).attr('id', 'datefield');
+                //$(this).attr('onfocus', 'DatePicker.pickDate(true, "datefield", false);');
+                
+            });
+        }  
+    }
+    
+    function validatePopUpForm(){
+        //console.log('insert the validation'+$("[id$='documentType']").val());
+        /* $("[id$='organization']").parent().find(".errorMsg").remove();
+        $("[id$='firstName']").parent().find(".errorMsg").remove();
+        $("[id$='lastName']").parent().find(".errorMsg").remove();
+        $("[id$='Address1']").parent().find(".errorMsg").remove();
+        $("[id$='Address2']").parent().find(".errorMsg").remove();
+        $("[id$='City']").parent().find(".errorMsg").remove();
+        $("[id$='State']").parent().find(".errorMsg").remove();
+        $("[id$='organization']").parent().find(".errorMsg").remove();
+        $("[id$='ZipCode']").parent().find(".errorMsg").remove();                
+        var errorMsg = "You must enter a value.";
+        
+        var returnFlag = true;
+        if($("[id$='organization']").val() == '' && ($("[id$='firstName']").val() == '' || 
+
+$("[id$='lastName']").val() == '' )){
+            if($("[id$='documentType']").val() != 'Member EOB'){
+                $("[id$='firstName']").parent().append('<div class="errorMsg" id = 
+
+"errorTopicBlank"><strong>Error:</strong> ' + errorMsg + '</div>');
+                $("[id$='lastName']").parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + errorMsg + '</div>');
+            }
+            $("[id$='organization']").parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + errorMsg + '</div>');
+            
+            returnFlag = false;
+        }
+        if($("[id$='Address1']").val() == ''){
+            $("[id$='Address1']").parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            returnFlag = false;
+        }
+        if($("[id$='City']").val() == ''){
+            $("[id$='City']").parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            returnFlag = false;
+        }
+        if($("[id$='State']").val() == ''){
+            $("[id$='State']").parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            returnFlag = false;
+        }
+        if($("[id$='ZipCode']").val() == ''){
+            $("[id$='ZipCode']").parent().append('<div class="errorMsg" id = "errorTopicBlank"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+            returnFlag = false;
+        }
+        
+        return returnFlag;*/
+        
+    }
+    
+    function resendform(){
+        /* if($("[id$='selectAdd']").val() != 'AddressOnFile'){
+            if(validatePopUpForm()){
+                btnSubmit();
+            }
+       }
+       else if($("[id$='selectAdd']").val() == 'AddressOnFile'){
+            btnSubmit();
+       }*/
+    }
+    
+    function OpenReferralDetail(selectedDoc,personWrapper,recepientId,showOriginatorMsg,docType, docContentType, isDocSizeMoreThanOneMB) {
+        
+        /*console.log('selectedDoc-->'+recepientId);
+        var url = '/apex/ACETDocument?DocId='+selectedDoc+'&personWrap='+personWrapper
+
++'&InteractionID={!JSENCODE(Interaction.Id)}'+'&recepientId='+recepientId
+
++'&showOriginatorMsg='+showOriginatorMsg+'&docType='+docType + '&docContentType=' + 
+
+docContentType + '&isDocSizeMoreThanOneMB=' + isDocSizeMoreThanOneMB; 
+        console.log('url--->'+url);
+        
+        sforce.console.getFocusedPrimaryTabId(function(result){
+            sforce.console.openSubtab(result.id, url, true, 'Document - ' + selectedDoc, 
+
+null, null, 'Document - ' + selectedDoc);
+            
+        });
+        return false;*/
+    }
+    function openSuccess(){
+        
+    }
+    function removecheck(){
+        //$("[id$='headerCheckbox']").removeAttr('checked');
+    }    
+    </script>
+    <apex:form id="formid"> 
+       <!-- <apex:actionFunction action="{!Search}" name="afSearch" oncomplete="acet.datatables['datatable'].initDatatable();disableBulkResendButton();acfupdateAddressFields();" status="refreshCommunicationStatus" rerender="DocRes, commHistory,showCommHistory" >-->
+                  <apex:actionFunction action="{!Search}" name="afSearch" oncomplete="acet.datatables['datatable'].initDatatable();disableBulkResendButton();" status="refreshCommunicationStatus" rerender="DocRes, commHistory,showCommHistory" >
+
+            <apex:param name="params" value="" assignTo="{!DynamicParams}"/>
+        </apex:actionFunction> 
+        <apex:actionFunction name="acfupdateAddressFields" action="{!UpdateAddressFields}" reRender="popup,AddressView" status="refreshCommunicationStatus"/>
+        <apex:actionFunction name="acfupdateSearchFields" action="{!updateSearchField}" reRender="messages,pb2,commHistory,showResult,btnResend,DocRes" status="refreshCommunicationStatus" oncomplete="onDocumentTypeChanged();updateCalendarFields();"/>
+        <apex:actionFunction name="acfgetCommunicationHistory" action="{!GetCommuicationHistoryResults}" reRender="commHistory,btnResend,messages" status="refreshCommunicationStatus" >
+            <apex:param name="docId" value=""/> 
+        </apex:actionFunction>
+        <apex:actionFunction name="acfbulkResend" action="{!resendSelectedDocs}" Rerender="popup,AddressView,messages" status="redStatusId" oncomplete="window.scrollTo(0,0);">
+            <apex:param name="docIds" value=""/>
+        </apex:actionFunction>
+        <apex:actionFunction name="acfresend" action="{!resend}" Rerender="popup,AddressView" status="refreshCommunicationStatus" oncomplete="acfupdateAddressFields();">
+            <apex:param name="docId" value=""/>
+        </apex:actionFunction>
+        <apex:actionFunction name="SuffixMessage" action="{!suffixMessage}" reRender="messages" />
+        <!-- <apex:actionFunction name="btnSubmit" action="{!btnSubmit}" 
+
+reRender="popup,showResult" status="redStatusId" oncomplete="acet.autodoc.startAutodoc
+
+();selectedDocRes();"/>-->       
+        <apex:actionStatus id="refreshCommunicationStatus">
+            <apex:facet name="start">
+                <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                    &nbsp;
+                </div>
+                <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 9999; margin: 15% 50%">
+                    <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                        <img src="/img/loading.gif" style="float: left; margin: 8px;" />
+                        <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                    </div>
+                </div>
+            </apex:facet>
+        </apex:actionStatus>
+        
+        <c:ACETInteractionHighlightsPanel InteractionAtt="{!wrapper.interaction}" SubjectAtt="{!wrapper.Subject}" AdditionalInfoAtt="{!wrapper.AdditionalInfo}" html-auto-doc="auto" selectedOriginator="{!wrapper.interaction.Originator_Name__c}"/>    
+        <apex:outputPanel id="hippapopupPanel">
+            <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+        </apex:outputPanel>
+        <apex:sectionHeader title="Communications"/>
+        <apex:pageMessages id="messages"></apex:pageMessages>            
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+                           attrShowSaveAndCloseButton="false" attrShowSaveButton="true"
+                           attrShowMisdirectButton="true" 
+                           attrSourceOriginator="{!wrapper.SourceOriginator}"
+                           attrInteractionId="{!wrapper.Interaction.Id}"
+                           attrSubjectId="{!wrapper.Subject.Id}"
+                           attrLocation=" "
+                           attrCallTopic="Communications" attrInteractionObj="{!wrapper.interaction}"/>
+        
+        
+        <apex:pageBlock id="pb2">            
+            <apex:pageBlockSection columns="2" id="pb3">
+                <apex:selectList label="Document Type" value="{!documentType}" size="1" onChange="acfupdateSearchFields()" id="documentType">
+                    <apex:selectOptions value="{!documentTypeOptions}"/>
+                </apex:selectList>
+                <apex:outputText />                
+                <apex:repeat value="{!listSearchFilter}" var="sf">
+                    <apex:pageBlockSectionItem rendered="{!AND(NOT(ISBLANK(sf.Display_Order__c)),sf.Display_Order__c>=0)}">
+                        <apex:outputLabel value="{!sf.Document_Type_Field__r.Label}"/>
+                        <apex:outputPanel >
+                            <apex:input type="search" html-field-type="{!sf.Document_Type_Field__r.Field_Type__c}" 
+                                            html-field-length="{!sf.Document_Type_Field__r.Length__c}" 
+                                            html-hp-field-name="{!sf.Document_Type_Field__r.HP_Field_Name__c}"
+                                            html-field-required="{!sf.Required__c}" html-ws-name="{!sf.Document_Type_Field__r.WS_Field_Name__c}"
+                                            html-Data-Type="{!sf.Document_Type_Field__r.Data_Type__c}"
+                                            html-Operator="{!sf.Document_Type_Field__r.Operator__c}"
+                                            html-developer-name="{!sf.DeveloperName}" rendered="{!sf.Document_Type_Field__r.Field_Type__c != 'Picklist'}"/>  
+                            <apex:selectList html-field-type="{!sf.Document_Type_Field__r.Field_Type__c}" 
+                                            html-field-length="{!sf.Document_Type_Field__r.Length__c}" 
+                                            html-hp-field-name="{!sf.Document_Type_Field__r.HP_Field_Name__c}"
+                                            html-field-required="{!sf.Required__c}" html-ws-name="{!sf.Document_Type_Field__r.WS_Field_Name__c}"
+                                            html-Data-Type="{!sf.Document_Type_Field__r.Data_Type__c}"
+                                            html-Operator="{!sf.Document_Type_Field__r.Operator__c}"
+                                            html-developer-name="{!sf.DeveloperName}" rendered="{!sf.Document_Type_Field__r.Field_Type__c == 'Picklist'}" 
+                                            size="1" html-dev-name="{!sf.DeveloperName}" html-ws-default="{!sf.WS_Default_Value__c}">
+                                            <apex:selectOptions value="{!searchByFieldSelectOptions}"/>
+                            </apex:selectList>
+                                              
+                            
+                            <apex:outputPanel layout="none" rendered="{!sf.Document_Type_Field__r.Field_Type__c == 'Date'}">
+                                [<apex:outputLink styleClass="formattedTodayDate" >
+                                <apex:outputText value="{0,date,MM/dd/yyyy}" >
+                                    <apex:param value="{!TODAY()}" />
+                                </apex:outputText>
+                                </apex:outputLink>]                                    
+                            </apex:outputPanel>                        
+                        </apex:outputPanel>                       
+                    </apex:pageBlockSectionItem>                                     
+                </apex:repeat>
+            </apex:pageBlockSection>
+            
+            <apex:pageBlockButtons location="bottom" rendered="{!showSearchField}"  >
+                <apex:commandButton value="Search" onclick="validateSearchField();return false;"/>
+                <apex:commandButton value="Clear" action="{!Clear}" rerender="DocRes,commHistory,messages" oncomplete="clearFields()" />
+            </apex:pageBlockButtons>
+        </apex:pageBlock>
+        
+        
+        
+        <apex:outputPanel id="DocRes" >
+            <apex:pageBlock title="Document Search Results" rendered="{!ShowSearchResult}" html-auto-doc-section-key="pbSearchResults" html-auto-doc-section-column-indexes="1,2,3,4,5,6,7,8,9,10,11"> 
+                <apex:pageBlockButtons location="top" id="btnResend">
+                    <apex:commandButton id="btnBulkResend" value="Bulk Resend" rendered="{!documentTypeName != 'Renewal Letter' && documentTypeName != 'Renewal Package' && documentTypeName != 'Summary Plan Description'}" action="{!resend}" Rerender="popup,AddressView"  oncomplete="acfupdateAddressFields();" status="refreshCommunicationStatus"/>
+                </apex:pageBlockButtons>                             
+                <apex:pageBlockSection id="DocResSection" columns="1" html-auto-doc="true" html-auto-doc-case-items="true" html-auto-doc-pagination="true" collapsible="false" rendered="{!NOT(ISNULL(DTWrapper))}">
+                    <apex:outputPanel html-auto-doc-pagination="true" styleClass="enablePagination" html-auto-doc-section-combinedkey="pbSearchResults" >
+                        
+                        <c:ACETDataTable attrDatatableWrapper="{!DTWrapper}"/>                  
+                    </apex:outputpanel>
+                    
+                </apex:pageBlockSection>              
+            </apex:pageBlock>
+        </apex:outputPanel>
+        
+        
+        
+        <!-- communication history section start [SECTION REMOVED 1/16/18 US921395]-->  
+        <!--<apex:outputPanel layout="block" id="commHistory" >   
+<apex:outputPanel rendered="{!NOT(ISNULL(Commhistory))}"> 
+<apex:pageBlock title="Communication History Results" rendered="{!Commhistory.size == 0}">  
+<apex:pageBlocksection columns="1"> 
+<apex:outputText value="{!Commhistorytitle}" />
+</apex:pageBlocksection>        
+</apex:pageBlock>                 
+<apex:pageBlock id="showCommHistory" title="Communication History Results" rendered="{!Commhistory.size > 0}">                 
+<apex:pageBlocksection html-auto-doc="true" columns="1" id="pb5">       
+
+
+<apex:pageBlockTable style="border:none" value="{!Commhistory}" var="r" id="pb6" >
+<apex:column headerValue="Request Date/Time" >
+<apex:outputText value="{!r.requestdate}"></apex:outputText>                                 
+</apex:column>
+<apex:column headerValue="Sent Date/Time" >
+<apex:outputText value="{!r.sntdate}"></apex:outputText>    
+
+
+</apex:column>
+<apex:column headerValue="Status">
+<apex:outputText value="{!r.status}"></apex:outputText>
+</apex:column>                             
+<apex:column headerValue="Delivery Method" >                    
+
+
+<apex:outputText value="{!r.dmethod}"></apex:outputText>
+</apex:column>                             
+<apex:column headerValue="Source" >                             
+
+
+<apex:outputText value="{!r.source}"></apex:outputText>
+</apex:column>
+<apex:column headerValue="Name" >                               
+
+
+<apex:outputText value="{!r.name}"></apex:outputText>
+</apex:column>
+<apex:column headerValue="Address 1" >
+<apex:outputText value="{!r.add1}"></apex:outputText>       
+
+
+</apex:column>                                
+<apex:column headerValue="Address 2" >
+<apex:outputText value="{!r.add2}"></apex:outputText>       
+
+
+</apex:column> 
+<apex:column headerValue="City" >
+<apex:outputText value="{!r.city}"></apex:outputText>       
+
+
+</apex:column> 
+<apex:column headerValue="State" >
+<apex:outputText value="{!r.state}"></apex:outputText>      
+
+
+</apex:column> 
+<apex:column headerValue="Zip">
+<apex:outputText value="{!r.zip}"></apex:outputText>        
+
+
+</apex:column> 
+<apex:column headerValue="Email" >
+<apex:outputText value="{!r.email}"></apex:outputText>      
+
+
+</apex:column> 
+<apex:column headerValue="Fax" >
+<apex:outputText value="{!r.fax}"></apex:outputText>        
+
+
+</apex:column>                              
+</apex:pageBlockTable>                         
+</apex:pageBlocksection>                                                
+
+
+</apex:pageBlock>
+</apex:outputPanel>
+</apex:outputPanel>--> 
+        <!-- communication history section End-->  
+        <br/>
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+                           attrShowSaveAndCloseButton="false" attrShowSaveButton="true"
+                           attrShowMisdirectButton="true" 
+                           attrSourceOriginator="{!wrapper.SourceOriginator}"
+                           attrInteractionId="{!wrapper.Interaction.Id}"
+                           attrSubjectId="{!wrapper.Subject.Id}"
+                           attrCallTopic="Communications"                           
+                           attrInteractionObj="{!wrapper.interaction}" attrLocation="bottom"/>
+        
+        <!-- pop Aleternate Adress Start --> 
+        <apex:outputPanel id="popup">   
+              
+            <apex:outputPanel styleClass="popupBackgroundAdd" layout="block" rendered="{!showPopUPAddress}"/>
+            <apex:outputPanel styleClass="custPopupAdd" layout="block" rendered="{!showPopUPAddress}">                
+                <apex:outputPanel rendered="{!chooseAddress}" id="AddressView">
+                    <apex:inputHidden value="{!selectAddress}" id="selectAdd"/>
+                    <div style="height: 400px; width: 1000px">
+                        <apex:PageBlock id="AddressBlock" >
+                                                   <apex:pageBlockSection columns="1">
+                                                   
+                                <b>Deliver to :</b><apex:outputLabel rendered="{!showSubmitBtnAOF && selectAddress=='AddressOnFile' }" style="font-weight:bold;color:red" value="Select Alternate Address to resend."/>
+                                <apex:outputLabel rendered="{!showOriginatorMsg &&selectAddress=='AddressOnFile' }" style="font-weight:bold;color:red" value="Originator 
+                                                                                                                                                              
+                                                                                                                                                              cannot receive this document type."/>
+                                <apex:outputPanel >
+                                    <apex:selectRadio id="addRadio" value="{!selectAddress}">
+                                        <apex:selectOption itemValue="AddressOnFile" itemLabel="Address on File" />
+                                        <apex:selectOption itemValue="AlternateAddress" itemLabel="Alternate Address" />
+                                        <apex:actionSupport event="onchange" reRender="AddressView,buttonBlock" />
+                                    </apex:selectRadio>
+                                </apex:outputPanel>
+                            </apex:pageBlockSection>
+                            <apex:pageBlockSection >
+                                <apex:outputPanel >
+                                    <apex:outputPanel rendered="{!IF(selectAddress == 'AddressOnFile' , true, false)}">
+                                        <apex:pageBlockSection columns="2">
+                                            <apex:pageBlockSection columns="2">
+                                                
+                                                <apex:pageBlockSectionItem >
+                                                    <apex:outputLabel value="First Name"/>
+                                                    <apex:inputText value="{!AddOnFilePersonWrap.personFirstName}"  disabled="True"/>
+                                                </apex:pageBlockSectionItem>
+                                                
+                                                <apex:pageBlockSectionItem >
+                                                    <apex:outputLabel value="Middle Initial"/>
+                                                    <apex:inputText value="{!AddOnFilePersonWrap.personMiddleName}" disabled="True"/>
+                                                </apex:pageBlockSectionItem>  
+                                                
+                                            </apex:pageBlockSection>
+                                            
+                                            <apex:pageBlockSection columns="2">
+                                                
+                                                <apex:pageBlockSectionItem >
+                                                    <apex:outputLabel value="Last Name"/>
+                                                    <apex:inputText value="{!AddOnFilePersonWrap.personLastName}"  disabled="True"/>
+                                                </apex:pageBlockSectionItem>
+                                                
+                                                <apex:pageBlockSectionItem >
+                                                   <apex:outputLabel value="Suffix">
+                                                    <img src="/s.gif" class="imgclass" title="{!$Label.ACETSuffixHelpText}" alt="HelpTextIcon.png" width="50" height="50"/>  
+                                                        </apex:outputLabel>
+                                                    <apex:inputText value="{!AddOnFilePersonWrap.personSuffix}"  disabled="True"/>
+                                                </apex:pageBlockSectionItem> 
+                                            </apex:pageBlockSection>
+                                        </apex:pageBlockSection>
+                                        <apex:pageBlockSection columns="1">
+                                            
+                                            <apex:pageBlockSectionItem >
+                                                <apex:outputLabel value="Organization"/>
+                                                <apex:inputText value="{!AddOnFilePersonWrap.personOrganization}"  disabled="True" style="width:300px"/>
+                                            </apex:pageBlockSectionItem>
+                                            
+                                            
+                                            <apex:pageBlockSectionItem >
+                                                <apex:outputLabel value="Address 1"/>
+                                                <apex:inputText value="{!AddOnFilePersonWrap.personAddone}"  disabled="True" style="width:300px"/>
+                                            </apex:pageBlockSectionItem>
+                                            
+                                            <apex:pageBlockSectionItem >
+                                                <apex:outputLabel value="Address 2"/>
+                                                <apex:inputText value="{!AddOnFilePersonWrap.personAddtwo}"  disabled="True" style="width:300px"/>
+                                            </apex:pageBlockSectionItem>
+                                            
+                                            <apex:pageBlockSectionItem >
+                                                <apex:outputLabel value="City"/>
+                                                <apex:inputText value="{!AddOnFilePersonWrap.personCity}"  disabled="True" style="width:300px"/>
+                                            </apex:pageBlockSectionItem>
+                                            
+                                            <apex:pageBlockSectionItem >
+                                                <apex:outputLabel value="State"/>
+                                                <apex:inputText value="{!AddOnFilePersonWrap.personState}"  disabled="True" style="width:300px"/>
+                                            </apex:pageBlockSectionItem>
+                                            
+                                            <apex:pageBlockSectionItem >
+                                                <apex:outputLabel value="Zip"/>
+                                                <apex:inputText value="{!AddOnFilePersonWrap.personZipCode}"  disabled="True" style="width:300px"/>
+                                            </apex:pageBlockSectionItem>
+                                        </apex:pageBlockSection>    
+                                        <apex:pageBlockSection >
+                                        </apex:pageBlockSection>
+                                        <apex:pageBlockSection >
+                                            <apex:outputLabel rendered="{!!showSubmitBtnAOF}" value="Select Submit to send or Cancel to cancel the request."/>
+                                            
+                                        </apex:pageBlockSection>
+                                    </apex:outputPanel>
+                                    <!-- Alternate Address Start -->
+                                    <apex:outputPanel rendered="{!IF(selectAddress == 'AlternateAddress' , true, false)}">
+                                        <apex:pageBlockSection columns="2">
+                                            <apex:pageBlockSection columns="2">
+                                                
+                                                <apex:pageBlockSectionItem >
+                                                    <apex:outputLabel value="First Name"/>
+                                                    <apex:inputText value="{!personFirstNameAA}"  id="firstName" disabled="{!documentType == 'Member EOB'||documentTypeName == 'IRS 1095 Form'}" maxLength="35"/>
+                                                </apex:pageBlockSectionItem>
+                                                
+                                                <apex:pageBlockSectionItem >
+                                                    <apex:outputLabel value="Middle Initial"/>
+                                                    <apex:inputText value="{!personMiddleNameAA}" id="middleName" disabled="{!documentType == 'Member EOB'||documentTypeName == 'IRS 1095 Form'}"  maxLength="1"/>
+                                                </apex:pageBlockSectionItem>  
+                                                
+                                            </apex:pageBlockSection>
+                                            
+                                            <apex:pageBlockSection columns="2">
+                                                
+                                                <apex:pageBlockSectionItem >
+                                                    <apex:outputLabel value="Last Name"/>
+                                                    <apex:inputText value="{!personLastNameAA}" id="lastName" disabled="{!documentType == 'Member EOB'||documentTypeName == 'IRS 1095 Form'}" maxLength="35"/>
+                                                </apex:pageBlockSectionItem>
+                                                
+                                                <apex:pageBlockSectionItem >
+                                                    <apex:outputLabel value="Suffix">
+                                                    <img src="/s.gif" class="imgclass" title="{!$Label.ACETSuffixHelpText}" alt="HelpTextIcon.png" width="50" height="50"/>  
+                                                        </apex:outputLabel>
+                                                    <apex:inputText value="{!personSuffixAA}"  id="Suffix" disabled="{!documentType == 'Member EOB'||documentTypeName == 'IRS 1095 Form'}" maxLength="6"/>
+                                                </apex:pageBlockSectionItem>
+                                                
+                                            </apex:pageBlockSection>
+                                        </apex:pageBlockSection>
+                                        <apex:pageBlockSection columns="1">
+                                            
+                                            <apex:pageBlockSectionItem >
+                                                <apex:outputLabel value="Organization"/>
+                                                <apex:inputText value="{!personOrganizationAA}"  id="organization"  style="width:300px" maxLength="35"/>
+                                            </apex:pageBlockSectionItem>
+                                            
+                                            
+                                            <apex:pageBlockSectionItem >
+                                                <apex:outputLabel value="Address 1"/>
+                                                <apex:outputPanel >
+                                                    <div class="requiredInput">
+                                                        <div class="requiredBlock"></div>
+                                                        <apex:inputText value="{!personAddoneAA}"  id="Address1" style="width:300px" maxLength="25"/>
+                                                    </div>
+                                                </apex:outputPanel>
+                                            </apex:pageBlockSectionItem>
+                                            
+                                            <apex:pageBlockSectionItem >
+                                                <apex:outputLabel value="Address 2"/>
+                                                <apex:inputText value="{!personAddtwoAA}" id="Address2" style="width:300px" maxLength="25"/>
+                                            </apex:pageBlockSectionItem>
+                                            
+                                            <apex:pageBlockSectionItem >
+                                                <apex:outputLabel value="City"/>
+                                                <apex:outputPanel >
+                                                    <div class="requiredInput">
+                                                        <div class="requiredBlock"></div>
+                                                        <apex:inputText value="{!personCityAA}"  id="City" style="width:300px" maxLength="20"/>
+                                                    </div>
+                                                </apex:outputPanel>
+                                            </apex:pageBlockSectionItem>
+                                            
+                                            <apex:pageBlockSectionItem >
+                                                <apex:outputLabel value="State"/>
+                                                <apex:outputPanel >
+                                                    <div class="requiredInput">
+                                                        <div class="requiredBlock"></div>
+                                                        <apex:inputText value="{!personStateAA}"  id="State" style="width:300px" maxLength="2"/>
+                                                    </div>
+                                                </apex:outputPanel>
+                                            </apex:pageBlockSectionItem>
+                                            
+                                            <apex:pageBlockSectionItem >
+                                                <apex:outputLabel value="Zip"/>
+                                                <apex:outputPanel >
+                                                    <div class="requiredInput">
+                                                        <div class="requiredBlock"></div>
+                                                        <apex:inputText value="{!personZipCodeAA}"  id="ZipCode" style="width:300px" maxLength="9"/>
+                                                    </div>
+                                                </apex:outputPanel>
+                                            </apex:pageBlockSectionItem>
+                                        </apex:pageBlockSection>    
+                                        
+                                        <apex:pageBlockSection >
+                                            <apex:outputLabel value="Select Submit to send or Cancel to cancel the request."/>
+                                        </apex:pageBlockSection>
+                                        
+                                    </apex:outputPanel>
+                                    <!-- Alternate Address END -->
+                                </apex:outputPanel>
+                            </apex:pageBlockSection>
+                            
+                            <apex:pageBlockButtons location="bottom" id="buttonBlock"  >
+                                <apex:commandButton value="Submit" onClick="return onBulkResendClicked();" disabled="{!(selectAddress == 'AddressOnFile' && (showSubmitBtnAOF || showOriginatorMsg))}" rerender="popup" status="redStatusId"/>                            
+                                
+                                
+                                <apex:commandButton value="Cancel" action="{!btnCancel}" rerender="popup" status="redStatusId"/>
+                                <apex:actionStatus id="redStatusId" >
+                                    <apex:facet name="start" >
+                                        <img src="/img/loading.gif" />                    
+                                    </apex:facet>
+                                </apex:actionStatus>
+                                
+                            </apex:pageBlockButtons>
+                        </apex:PageBlock>
+                    </div>
+                </apex:outputPanel>
+            </apex:outputPanel> 
+            <script>
+            //include codes here so it can be rerendered after resend action
+            //doc id is passed from document detail page
+            var selectedDocId = '{!SelectedDocId}';
+            </script>                                              
+        </apex:outputPanel>
+        <!-- popup Aleternate Address End -->        
+    </apex:form>
+    <Script>
+        $(document).ready(function(){                        
+        //init autodoc     
+        acet.autodoc.createCommentsbox(); 
+        });
+        
+        function onDocumentTypeChanged(){
+        //mark field as required
+        $('[field-required="true"]').parent().wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');  
+        //disable Member ID field
+        disableMemberId();
+        if($("select[id$='documentType'] :selected").text()!="IRS 1095 Form"){
+            disableGroupNum();
+        }
+        
+        var docTypeSelected = $("select[id$='documentType'] :selected").text();
+        if(docTypeSelected=="IRS 1095 Form"){
+        //          alert('IRS 1095 Form selected');
+        // SuffixMessage();
+        //          $("label:contains('Subscriber ID')").parent().siblings("td:first").find("input").focus(function(){
+        // //           $("label:contains('Subscriber ID')").parent()parent().find("tr[1]").find("td[0]").find("input").click(function(){
+        // //               this.setAttribute("maxlength",9);
+        //              this.setAttribute("maxlength",9);
+        
+        //          });         
+        
+        $("label:contains('Subscriber ID')").parent().siblings("td:first").find("input").blur(function(){
+        //          $("label:contains('Subscriber ID')").parent()parent().find("tr[1]").find("td[0]").find("input").click(function(){
+        //              this.setAttribute("maxlength",9);
+        //              alert($(this).val());
+        var subIdStr = $(this).val();
+        //              alert(subIdStr.length);
+        if(subIdStr.length==11){
+        //                  alert(subIdStr.substring(9,11) + ' 00');
+        if(subIdStr.substring(9,11)=='00'){
+        //                      alert(subIdStr.substring(0,9))
+        //$(this).val(subIdStr.substring(0,9));
+        }
+        }
+        });
+        //          $("label:contains('Subscriber ID')").parent().siblings("td:first").find("input").setAttribute("maxlength",9);
+        
+        }
+        
+        //populate current date
+        $(".formattedTodayDate").click(function(){          
+        $(this).parent().find("[field-type='Date']").val($(this).text());
+        return false;           
+        }); 
+        
+        //show date picker
+        $("[field-type='Date']").click(function(){
+        $(this).datepicker();
+        });       
+        
+        //limit number only
+        $("[field-type='Number']").keypress(function (e){               
+        var regex = new RegExp("^[0-9]+$");
+        var str = String.fromCharCode(!e.charCode ? e.which : e.charCode);
+        //set max length of field if needed
+        if($(this).attr("field-length") && !$(this).attr("maxlength")){
+        var len = parseInt($(this).attr("field-length"));  
+        if(len > 0){
+        this.setAttribute("maxlength", len);
+        }
+        }
+        // Allow delete, tab, enter and escape keys through
+        if (regex.test(str) || (/^(8|9|13|27)$/.test("" + e.keyCode))) {
+        return true;
+        }
+        
+        e.preventDefault();
+        return false;
+        });  
+        
+        //limit to Alphanumeric
+        $("[field-type='Alphanumeric']").keypress(function (e) {
+        var regex = new RegExp("^[a-zA-Z0-9*&^%$ ]+$");
+        //var regex = new RegExp("^[a-zA-Z0-9*&^%$.]+$");
+        var str = String.fromCharCode(!e.charCode ? e.which : e.charCode);
+        // Allow delete, tab, enter and escape keys through
+        if (regex.test(str) || (/^(8|9|13|27)$/.test("" + e.keyCode))) {
+        return true;
+        }
+        
+        e.preventDefault();
+        return false;
+        });
+        
+        //limit to Alphanumeric w/ special characters
+        $("[field-type='Alphanumeric_Special_Characters']").keypress(function (e) {
+        var regex = new RegExp("^[a-zA-Z0-9*&%. ]+$");
+        //         var regex = new RegExp("^[a-zA-Z0-9*~!@#$%^&(),.<>{};:'\"[?/\\]\\\\_=\\-|`+]+$");
+        var str = String.fromCharCode(!e.charCode ? e.which : e.charCode);
+        // Allow delete, tab, enter and escape keys through
+        if (regex.test(str) || (/^(8|9|13|27)$/.test("" + e.keyCode))) {
+        return true;
+        }
+        
+        e.preventDefault();
+        return false;
+        });     
+        
+        
+        //US1965965 populate picklists for search by fields - Jacob Wagoner - Nirvana 8/16/19
+        var listPicklistOptions;
+        var listPicklistOptionsJSON = '{!JSENCODE(listPicklistOptionsJSON)}';
+        if(listPicklistOptionsJSON){
+            listPicklistOptions = JSON.parse(listPicklistOptionsJSON);
+        }
+        $("[field-type='Picklist']").each(function(){
+            if($(this).attr('name')!=null && $(this).attr('name')!='undefined' && $(this).attr('name')!=''){
+                $(this).find('option').remove();
+                console.log('id: ' + $(this).attr('id'));
+                var picklistDevName = $(this).attr('dev-name');
+                for(i=0; i<listPicklistOptions.length; i++){
+                    if(picklistDevName == listPicklistOptions[i].Document_Type_Search_By_Field__r.DeveloperName){
+                        $(this)[0].options.add(new Option(listPicklistOptions[i].Option_Name__c,listPicklistOptions[i].Option_Name__c));
+                    }
+                }
+                if($(this).attr('ws-default')!=null && $(this).attr('ws-default')!='undefined' && $(this).attr('ws-default')!=''){
+                    //select default value
+                    $(this).find('option[value="' + $(this).attr('ws-default') + '"]').attr('selected','selected');
+                }
+            }
+        });
+        //end US1965965
+    
+        //populate field if the field name maps to the name in additinal info
+        var additionalInfo;        
+        var additionalInfoStr = '{!JSENCODE(wrapper.AdditionalInfoStr)}';
+        if(additionalInfoStr){   
+        additionalInfo = JSON.parse(additionalInfoStr);   
+        console.log('additionalInfo.EffectiveStartDate '+additionalInfo.EffectiveStartDate);
+        if(additionalInfo.EffectiveStartDate == null){
+        additionalInfo.EffectiveStartDate = "{!JSENCODE($CurrentPage.parameters.effDate)}";
+        var provOnlyFlow = "{!JSENCODE($CurrentPage.parameters.ProvFlowOnly)}";
+        var provTaxId = '{!IF(Interaction.Originator_Type__c == "Other" && (Interaction.Third_Party__c != null || Interaction.Originator_Type__c == "Provider"), Interaction.Third_Party__r.Tax_ID__c, Interaction.Originator__r.Tax_ID__c)}'
+        }
+                $("input").each(function(){ 
+                    //special condition for GroupNumber and groupFlowGroupNumber due to differences in which to populate depending on flow
+                    if($(this).attr("hp-field-name")){
+                        if($(this).attr("hp-field-name")!='GroupNumber' && $(this).attr("hp-field-name")!='groupFlowGroupNumber' && additionalInfo[$(this).attr("hp-field-name")]){ 
+                            var doceffdateOHG = '{!$Label.ACETDocumentPlanEffectiveEndDate}';
+                            var doceffdateOHM = '{!$Label.ACETDocumentPlanEffectiveEndDateOHM}';
+                            var doceffdateSBC = '{!$Label.ACETDocumentPlanEffectiveEndDateSBC}';
+                            if($(this).attr("developer-name") == doceffdateOHG || $(this).attr("developer-name") == doceffdateOHM || $(this).attr("developer-name") == doceffdateSBC){
+                                var d = new Date(additionalInfo[$(this).attr("hp-field-name")]);
+                                var year = d.getFullYear();
+                                var month = d.getMonth();
+                                var day = d.getDate()+364;
+                                var newdate = new Date(year,month,day);
+                                var finaldate = newdate.getMonth()+1+'/'+newdate.getDate()+'/'+newdate.getFullYear();
+                                $(this).val(finaldate);
+                            }
+                            else{
+                                $(this).val(additionalInfo[$(this).attr("hp-field-name")]);
+                            } 
+                        }
+                        //special condition to populate group number/id field across different flows
+                        else if($(this).attr("hp-field-name") && ($(this).attr("hp-field-name")=='GroupNumber' || $(this).attr("hp-field-name")=='groupFlowGroupNumber')){
+                            //if member in focus flow, use GroupNumber
+	                    var parentPEO = '{!parentPEOId}';
+	                    var docType = $("select[id$='documentType'] :selected").text();
+	                    if(parentPEO != 'null' && parentPEO != '' && (docType=='Member Handbook' || docType=='Group Handbook')){
+	                       $(this).val(parentPEO);
+	                    }
+	                    else if(additionalInfo.GroupNumber!=null){
+	                       $(this).val(additionalInfo.GroupNumber);
+	                    }
+                            //if group in focus flow, use groupFlowGroupNumber
+                            else if(additionalInfo.groupFlowGroupNumber!=null){
+                                $(this).val(additionalInfo.groupFlowGroupNumber);
+                            }
+                        }
+                        else if($(this).attr("hp-field-name")=='SubscriberId' && $("select[id$='documentType'] :selected").text()=='IRS 1095 Form'){
+                            var subId = additionalInfo.MemberId;
+                            if(subId.length>9){
+        //subId = subId.substring(0,9);
+                                $(this).val(subId);
+                            }
+                        }
+                        else if($(this).attr("hp-field-name")=='ProvTaxID' && provOnlyFlow=='TRUE' && provTaxId!=null){
+                            $(this).val(provTaxId);
+                            $(this).prop('disabled',true);
+                        } 
+                    }                
+                });
+                
+            }               
+        }
+        
+        function validateSearchField(){
+         var today = new Date();   
+    console.log('Before -->>'+today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds() + ":" + today.getMilliseconds());
+        var retFlag = true;
+        var errmsg = false;
+        //clear existing error message
+        $(".error").removeClass("error").parent().find(".errorMsg").remove();
+        var dateField;
+        var numField;
+        var alnumField;
+        var textField;
+        var pickField;
+        var parameters = [];
+        //validate required field
+        $('[field-required="true"]').each(function(){
+        if(!$(this).val()){
+        $(this).addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + 'You must enter a value.' + '</div>'); 
+        retFlag = false;
+        errmsg = true;
+        }
+        });     
+        
+        //validate date field
+        $("[field-type='Date']").each(function(){
+        if(!isValidDate($(this).val())){
+        $(this).addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + 'Invalid Format' + '</div>');
+        retFlag = false;    
+        errmsg = true;
+        }
+        });
+        
+        //validate field length
+        $("[field-type='Number'],[field-type='Alphanumeric'],[field-type='Alphanumeric_Special_Characters']").each(function(){         
+        if($(this).val() && $(this).attr("field-length")){              
+        var len = parseInt($(this).attr("field-length"));                                               
+        if(len > 0 && $(this).val().length != len){
+        $(this).addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + 'Invalid Format (' + len + ' digits only).' + '</div>');
+        retFlag = false;   
+        errmsg = true;
+        }
+        }           
+        });
+        
+        
+        $("[field-type='Text']").each(function(){ 
+        if(($(this).val() != null) && ($(this).val() != '') && ($(this).val() != 'undefined'))
+        {
+        textField = $(this).val().replace(',','{comma}');        
+        textField+= ','+$(this).attr("ws-name");
+        textField+= ','+$(this).attr("data-type");
+        textField+= ','+$(this).attr("Operator");
+        parameters.push(textField); 
+        retFlag = false;  
+        }
+        });
+        
+        $("[field-type='Date']").each(function(){
+        if(($(this).val() != null) && ($(this).val() != '') && ($(this).val() != 'undefined'))
+        {
+        dateField = $(this).val();
+        dateField+= ','+$(this).attr("ws-name");
+        dateField+= ','+$(this).attr("data-type");
+        dateField+= ','+$(this).attr("Operator");
+        parameters.push(dateField); 
+        retFlag = false;  
+        }
+        
+        });
+        $("[field-type='Alphanumeric']").each(function(){
+        if($(this).val() != null && $(this).val() != '' && $(this).val() != 'undefined')
+        {
+        alnumField = $(this).val().replace(',','{comma}');
+        alnumField+= ','+$(this).attr("ws-name");
+        alnumField+= ','+$(this).attr("data-type");
+        alnumField+= ','+$(this).attr("Operator");
+        parameters.push(alnumField); 
+        retFlag = false;  
+        }
+        
+        });
+        
+        $("[field-type='Alphanumeric_Special_Characters']").each(function(){
+        if($(this).val() != null && $(this).val() != '' && $(this).val() != 'undefined')
+        {
+        alnumField = $(this).val().replace(',','{comma}');
+        alnumField+= ','+$(this).attr("ws-name");
+        alnumField+= ','+$(this).attr("data-type");
+        alnumField+= ','+$(this).attr("Operator");
+        parameters.push(alnumField); 
+        retFlag = false;  
+        }
+        
+        });
+        
+        $("[field-type='Number']").each(function(){
+        if($(this).val() != null && $(this).val() != '' && $(this).val() != 'undefined')
+        {
+        numField = $(this).val();
+        numField+= ','+$(this).attr("ws-name");
+        numField+= ','+$(this).attr("data-type");
+        numField+= ','+$(this).attr("Operator");
+        parameters.push(numField); 
+        retFlag = false;  
+        }
+        });
+        
+        $("[field-type='Picklist']").each(function(){
+        if($(this).val() != null && $(this).val() != '' && $(this).val() != 'undefined')
+        {
+        if($(this).val()!='All'){
+        pickField = $(this).val().toUpperCase();
+        pickField+= ','+$(this).attr("ws-name");
+        pickField+= ','+$(this).attr("data-type");
+        pickField+= ','+$(this).attr("Operator");
+        parameters.push(pickField); 
+        }
+        retFlag = false;  
+        }
+        });
+        
+        if(!retFlag){
+        var params = JSON.stringify(parameters);
+//         alert(params);
+        if(!errmsg){
+        afSearch(params);
+        }
+        }
+        
+        return false;
+        }
+        
+        function isValidDate(date){
+        if(!date) return true;
+        
+        var matches = /^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/.exec(date);
+        if (matches == null) return false;
+        var d = matches[2];
+        var m = matches[1] - 1;
+        var y = matches[3];
+        var composedDate = new Date(y, m, d);
+        return composedDate.getDate() == d &&
+        composedDate.getMonth() == m &&
+        composedDate.getFullYear() == y;
+        }
+        
+        function processDatatable(row, data, dataIndex){
+        var docId = data["DocumentId"]; 
+        var docType = data["cmis:contentStreamMimeType"];
+        var docLength = data["cmis:contentStreamLength"];
+        var isDocSizeMoreThanOneMB = (parseInt(docLength)/(1024*1024)) > 1 ? 'true' : 'false';
+        var documentType = $("select[id$='documentType'] :selected").text();
+        var AdditionalInfoencode = "{!JSENCODE($CurrentPage.parameters.additionalInfo)}";
+        var AdditionalInfo = encodeURIComponent(AdditionalInfoencode);
+        var InteractionId = "{!JSENCODE($CurrentPage.parameters.InteractionId)}";
+        var SRK = "{!JSENCODE($CurrentPage.parameters.SRK)}";
+        var groupID = "{!JSENCODE($CurrentPage.parameters.groupID)}";
+        var producerId = "{!JSENCODE($CurrentPage.parameters.producerId)}";
+        var ProvTypeCode = "{!JSENCODE($CurrentPage.parameters.ProvTypeCode)}";
+               
+        $(row).children(":nth-child(1)").html("<a data-id='docId' href=''>" + docId + "</a>"); 
+        $(row).children(":nth-child(1)").find("a").click(function(){    
+        
+   // console.log('Time Before click '+new Date().getMilliseconds() +':'+new Date().d.getSeconds());                        
+        var url = '/apex/ACETDocument?DocId=' + docId + '&docContentType=' + docType +'&docType='+documentType+'&additionalInfo='+AdditionalInfo+'&InteractionId='+InteractionId+'&SRK='+SRK+'&groupID='+groupID+'&producerId='+producerId+'&ProvTypeCode='+ProvTypeCode+'&performaction='+'1';
+        console.log('Sampath URL-->'+url);
+        sforce.console.getFocusedPrimaryTabId(function(result){
+        var primaryTabId = result.id;
+        sforce.console.getEnclosingTabId(function(result) {
+        url = url + '&parentTabId=' + result.id;
+        
+        sforce.console.openSubtab(primaryTabId, url, true, 'Document - ' + docId, null, null, 'Document - ' + docId);
+        });
+        });            
+        return false;
+        });                                                                                 
+        }
+        
+        function drawCallback(settings){
+        //display autodoc checkboxes,                     
+        acet.autodoc.startAutodoc();
+        
+        //disable bulk resend button by default
+        $("[id$='btnBulkResend']").addClass("btnDisabled").removeClass("btn").attr("disabled","disabled");
+        
+        //enable or disable bulk resend button if more than one document is seleced
+        $("[id$='DocResSection']").find(".auto-doc-list").find("tbody").find("tr").find(".autodoc").change(function(e){         
+        var count = $("[id$='DocResSection']").find(".auto-doc-list").find("tbody").find("input:checkbox:checked.autodoc").length;
+        if(count > 1 && !validateProfile()){
+        $("[id$='btnBulkResend']").addClass("btn").removeClass("btnDisabled").removeAttr("disabled");   
+        }else{
+        $("[id$='btnBulkResend']").addClass("btnDisabled").removeClass("btn").attr("disabled","disabled");
+        }       
+        });
+        
+        //trigger to call get fullfillment history web service
+        $("[id$='DocResSection']").find(".auto-doc-list").find("tbody").find("tr").click(function(e){
+        //do not invoke on autodoc checkbox
+        if(!$(e.target).is("input")){
+        //hightlight the selected row
+        $("tr.selected").removeClass("selected");
+        $(this).addClass("selected");
+        
+        var docId = $(this).find("[data-id='docId']").text();               
+        //acfgetCommunicationHistory(docId);
+        }
+        });                                    
+        }        
+        
+        function onBulkResendClicked(){     
+        var docIds = [];                
+        if(selectedDocId){
+        docIds.push(selectedDocId);     
+        }else{ 
+        //get selected doc ids from search page                     
+        $("[id$='DocResSection']").find(".auto-doc-list").find("tbody").find("input:checkbox:checked.autodoc").each(function(){
+        docIds.push($(this).closest("tr").find("[data-id='docId']").text());        
+        }); 
+        }        
+        acfbulkResend(docIds.join());
+        return false;
+        }
+        
+        function onBulkResendButtonClicked(){
+        showAddressWindow();            
+        }
+        
+        function showAddressWindow(docId){
+        if(docId){
+        acfresend(docId);
+        }else{
+        acfresend('');
+        }       
+        }
+        
+        function disableBulkResendButton(){
+      
+        $("[id$='btnBulkResend']").addClass("btnDisabled").removeClass("btn").attr("disabled","disabled");  
+        } 
+        
+        function validateProfile() {
+        var hasReasearchUser = false;
+        var profileName = '{!JSENCODE(profileName)}';
+        if(profileName == 'Research User') {
+        hasReasearchUser = true;
+        }
+        return hasReasearchUser;
+        }
+        function addressUpdate(){
+        acfupdateAddressFields();
+        }
+    </Script>
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />   
+</apex:page>

@@ -1,0 +1,322 @@
+<aura:component
+    implements="force:appHostable,flexipage:availableForAllPageTypes,lightning:isUrlAddressable,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction"
+    access="global" controller="ACET_ProviderLookupController">
+    <aura:handler name="init" value="{!this}" action="{!c.onLoad}" />
+    <aura:handler event="c:SAE_ProviderSearchResultsEvent" action="{!c.getProviderLookupInputs}" />
+    <aura:registerEvent name="ACETLink_ProviderSearchResultsEvent" type="c:SAE_ProviderSearchResultsEvent" />
+
+    <aura:attribute name="policyDetails" type="SAEPolicyDetailsResult" />
+    <aura:attribute name="providerDetails" type="Object" />
+    <aura:attribute name="memberDetails" type="Object" />
+    <aura:attribute name="isOnlyActive" type="Boolean" default="true" />
+    <aura:attribute name="productCodesMap" type="Map" />
+    <aura:attribute name="convertedProductCodes" type="String" />
+    <aura:attribute name="searchResults" type="Object" />
+    <aura:attribute name="selectedIPAValue" type="String" default="" />
+
+
+    <!-- SCRIPTS -->
+    <ltng:require scripts="{!$Resource.ACET_AutodocJS}" />
+
+    <ltng:require styles="{!$Resource.ACETLink_MasterStyle}" />
+    <!-- /SCRIPTS -->
+
+    <!-- US2349049 -->
+    <aura:attribute name="isModalOpen" type="boolean" default="false" />
+    <aura:attribute name="isCommentsBox" type="Boolean" default="false" />
+    <aura:attribute name="commentsValue" type="String" default="" />
+    <aura:attribute name="disableCommentButton" type="String" default="false" />
+
+    <aura:attribute name="providerDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="openedLookupDetails" type="String[]" />
+
+    <aura:handler event="c:ACET_OpenTTSPopUPFromRouting" action="{!c.openTTSPopup}" />
+    <!-- US2543182 - Thanish - 13th May 2020 -->
+    <aura:attribute name="routingSOPLinkClicked" type="boolean" default="false" />
+
+    <aura:attribute name="autodocUniqueId" type="String" />
+
+    <aura:attribute name="isAdvancedSearch" type="Boolean" default="false" />
+    <aura:attribute name="uhcProduct" type="String" />
+    <aura:attribute name="isSearchEnabled" type="boolean" default="false" />
+    <aura:attribute name="selectedProviders" type="Object[]" />
+    <aura:attribute name="isProviderSnapshot" type="boolean" default="false" />
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0" />
+    <aura:attribute name="sourceCode" type="String" />
+    <aura:attribute name="contactUniqueId" type="string" access="public" />
+    <aura:attribute name="isMemberLookup" type="Boolean" default="true" />
+    <aura:attribute name="noMemberToSearch" type="Boolean" default="false" />
+    <aura:attribute name="providerNotFound" type="Boolean" default="false" />
+    <aura:attribute name="isResultsEmpty" type="Boolean" default="true" />
+    <aura:attribute name="interactionRec" type="Interaction__c" />
+    <aura:attribute name="hipaaEndpointUrl" type="String" default="" />
+    <aura:attribute name="isHippaInvokedInProviderSnapShot" type="Boolean" default="false" />
+    <aura:attribute name="caseWrapper" type="Object" />
+    <aura:attribute name="caseWrapperMNF" type="Object" />
+    <aura:attribute name="memberCardData" type="Object" />
+    <aura:attribute name="showpreview" type="Boolean" default="false" />
+    <aura:attribute name="openSaveCase" type="Boolean" default="false" />
+    <aura:attribute name="tableDetails_prev" type="Object" />
+    <aura:attribute name="selectAllCheckBox" type="Boolean" />
+    <aura:attribute name="pageNumber" type="Integer" default="1" />
+    <!--aura:handler name="change" value="{!v.pageNumber}" action="{!c.changePage}"/-->
+    <aura:attribute name="maxPageNumber" type="Integer" default="1" />
+    <aura:method name="searchLookups" action="{!c.searchLookups}" access="public" />
+    <aura:attribute name="selectedRows" type="Object[]" />
+    <aura:attribute name="selectedDetailRecords" type="Object[]" />
+    <aura:attribute name="isOpenDetail" type="Boolean" default="false" />
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default="ProviderLookup" />
+    <aura:attribute name="taxId" type="String" />
+    <aura:handler event="c:ACET_ChangePageEvt" name="changePageEvent" action="{!c.getResults}" />
+
+    <aura:handler name="selectedRowData" event="c:ACET_AutoDocSelectedRow" action="{!c.getSelectedRecords}" />
+    <aura:handler name="selectedRowLink" event="c:ACET_AutoDocSelectedRow" action="{!c.navigateToDetail}" />
+    <aura:attribute name="autodocPageFeature" type="String" default="feature" />
+
+    <!--US2573718 - Auto Doc When No Results Are Displayed - Sravan -->
+    <aura:attribute name="policyChange" type="Boolean" default="false" />
+    <!-- US3192316 - Thanish - 27th Jan 2021 - removed auto check -->
+
+    <aura:handler event="c:ACET_EnableAutoDocLink" action="{!c.enableLink}" />
+    <!-- US2816912	Build UI for Create SRN for Add New Provider with Provider Look-up - 2/9/2020 - Sarma -->
+    <aura:attribute name="isCreateSrnComponent" type="Boolean" default="false" />
+    <aura:registerEvent name="addProviderCardToAuthEvent" type="c:ACET_AddProviderCardToAuthEvent" />
+    <aura:attribute name="memberTabId" type="string" access="public" />
+
+    <lightning:workspaceAPI aura:id="workspace" />
+
+    <!-- Detail page case items -->
+    <aura:attribute name="caseItemMap" type="Object" />
+
+    <!-- US2491365 - Avish -->
+    <aura:attribute name="interactionOverviewTabId" type="String" />
+    <aura:attribute name="memberId" type="String" />
+    <!-- US2491365 - Ends -->
+
+    <!-- US2808569 - Thanish - 27th Oct 2020 -->
+    <aura:attribute name="memberautodocUniqueId" type="String" />
+
+    <!-- DE373867 - Thanish - 8th Oct 2020 -->
+    <aura:handler name="change" value="{!v.isHippaInvokedInProviderSnapShot}" action="{!c.onHippaChanged}" />
+
+    <!-- US2931847 -->
+    <aura:attribute name="autoLaunchAddrId" type="String" />
+    <aura:attribute name="existingTabs" type="Object[]" default="[]" />
+    <aura:attribute name="autoLaunched" type="Boolean" default="true" />
+    <aura:method name="autoLaunch" action="{!c.autoLaunch}" access="public">
+        <aura:attribute name="addressId" type="String" />
+    </aura:method>
+    <aura:method name="clearTable" action="{!c.clearTable}" access="public" />
+    <!-- End -->
+
+    <aura:attribute name="isRoutingAllowed" type="boolean" default="true" />
+    <!--US3068299 - Sravan-->
+    <aura:attribute name="autoDocToBeDeleted" type="Object" />
+
+    <!--DE393490 - Sravan-->
+    <aura:attribute name="memberMap" type="Map" access="public" />
+
+    <!--US3117073 - Multiple Policies -  Creating Multiple Unique ORS Records Check In ISET - Sravan-->
+    <aura:attribute name="memberPolicyNumberMap" type="Map" default="" />
+
+    <aura:attribute name="callTopicLstSelected" type="sObject[]" />
+    <aura:attribute name="callTopicTabId" type="String" />
+
+    <!--Jitendra-->
+    <aura:attribute name="strBenefitPlanId" type="String" />
+
+
+    <!--US3259671 - Sravan-->
+    <aura:attribute name="flowDetails" type="Object" access="public" />
+
+    <!--Referral-->
+    <aura:attribute name="boolIsProviderLookupFromReferral" type="Boolean" default="false" />
+    <aura:attribute name="isOnlyActivePcpReferral" type="boolean" default="true" />
+    <aura:attribute name="objPcpBodyData" type="object" />
+    <aura:attribute name="boolShowProviderLookup" type="Boolean" default="false" />
+    <aura:attribute name="objPcpHeaderData" type="object" />
+
+    <!-- US3446590 - Thanish - 21st Apr 2021 -->
+    <aura:attribute name="transactionId" type="String" default="" />
+
+    <!-- US3308070 - Thanish - 2nd Mar 2021 -->
+    <aura:attribute name="policyList" type="list" access="public" />
+
+    <aura:handler event="c:ACET_AutoDocRefreshEvent" action="{!c.handleAutodocRefresh}" />
+    <aura:registerEvent name="topicClick" type="c:SAE_TopicClickEvent" />
+
+    <!-- Save Case Consolidation - US3424763 - Edited -->
+    <aura:attribute name="disableButtons" type="Boolean" default="true" />
+    
+    <!-- US2728364: Auto Doc: Member Snapshot - Have Provider Card Included in Eligibility Auto Doc Automatically - Krish - 06th July 2021 -->
+    <aura:attribute name="interactionCard" type="Object" access="public"/>
+    
+
+     <aura:attribute name="responseCount" type="Integer" default="0" />
+
+    <aura:if isTrue="{!v.isCommentsBox}">
+        <div class="slds-card card_left_padding card_top_padding card_right_padding card_bottom_padding">
+            <c:ACET_HoverPopup aura:id="commentsId" moveRight="" description="" isNubbinLeft="true"
+                descriptionList="[ 'Use the comments to include a brief','description of the issue, research performed,', 'and any attempts to resolve' ]" />
+            <p class="component_title slds-form-element__label field_label_padding"
+                style="border-bottom:1px dashed;padding:0px" data-popupId="commentsId" onmouseover="{!c.togglePopup}"
+                onmouseout="{!c.togglePopup}">
+                Comments:
+            </p>
+            <b class="component_title slds-p-left_small">Provider Lookup</b>
+            <lightning:textarea name="commentsTextArea" value="{!v.commentsValue}" label="Commets"
+                aura:id="commentsBoxId" variant="label-hidden" class="slds-p-top_small" onkeyup="{!c.handleKeyup }"
+                maxlength="2000" />
+            <span class="floatToRight valueCls slds-form-element__static">Characters remaining:
+                <lightning:formattedNumber value="{!2000-v.commentsValue.length}" /> </span>
+        </div>
+    </aura:if>
+
+    <div class="slds-card">
+        <lightning:spinner class="slds-show" aura:id="lookup-spinner" alternativeText="Loading.." title="Loading.."
+            variant="brand" size="medium" />
+        <aura:if isTrue="{!v.boolIsProviderLookupFromReferral}">
+            <div class="slds-card__header slds-grid slds-grid_vertical">
+                <div class="slds-col">
+                    <header class="slds-media slds-media_center slds-has-flexi-truncate slds-p-top_x-small">
+                        <div class="slds-media__body slds-p-left_small">
+                            <div class="slds-list_inline">
+                                <dd class="slds-item_detail slds-truncate">
+                                    <h2 class="slds-card__header-title slds-section-title">
+                                        <b>Provider Lookup Results</b>
+                                    </h2>
+                                </dd>
+                            </div>
+                        </div>
+                        <div class="slds-no-flex">
+                            <lightning:buttonGroup>
+                                <lightning:button class="slds-button slds-button_neutral" variant="brand"
+                                    label="Add to Referral" onclick="{!c.addToReferral}" />
+                                <lightning:button variant="brand" label="Autodoc" disabled="true" />
+                                <lightning:button variant="brand" label="Add Comments" disabled="true" />
+                                <lightning:button label="Save Case" variant="brand" disabled="true" />
+                            </lightning:buttonGroup>
+                        </div>
+                    </header>
+                </div>
+                <div class="slds-col slds-p-top_medium">
+                    <div class="searchPcpBox">
+                        <div class="slds-grid slds-wrap">
+                            <div class="slds-size_1-of-4 slds-form-element slds-p-top_xx-small">
+                                <label class="slds-checkbox_toggle slds-grid">
+                                    <span class="slds-form-element__label slds-m-bottom_none">All</span>
+                                    <input type="checkbox" name="checkbox-toggle-16" value="checkbox-toggle-16"
+                                        aria-describedby="checkbox-toggle-16" checked="{!!v.isOnlyActive}"
+                                        onclick="{!c.activeToggle}" />
+                                    <span id="checkbox-toggle-16" class="slds-checkbox_faux_container"
+                                        aria-live="assertive">
+                                        <span
+                                            class="{! 'slds-checkbox_faux toggle-faux_faux ' + ( !v.isOnlyActive ? ' tgl-text-left ' : ' tgl-text-right ')}"
+                                            style="width: 55px;">
+                                            {! if( !v.isOnlyActive, 'On', 'Off') }
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="slds-size_3-of-4">
+                                <lightning:input name="input1" label="" placeholder="Search" variant="label-hidden"
+                                    onchange="{!c.onSearch}" />
+                                <!--onchange="{!c.search}"-->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aura:if>
+
+        <aura:if isTrue="{! !v.boolIsProviderLookupFromReferral}">
+            <div
+                class="slds-grid slds-grid_align-spread card_left_padding card_top_padding card_bottom_padding card_right_padding">
+                <div class="slds-col component_title">Provider Lookup Results</div>
+                <div class="slds-col">
+                    <div style="float: right;margin-bottom: 13px;" class="slds-p-left_medium">
+                        <!-- Filters -->
+                        <!-- US2816912 - Chaniging right value to 650 from 550 to add 4th button -->
+                        <div class="" style="margin-top: 5px;right: 700px;position: absolute;">
+                            <div class="slds-form-element">
+                                <label class="slds-checkbox_toggle slds-grid">
+                                    <span class="slds-form-element__label slds-m-bottom_none">All</span>
+                                    <input type="checkbox" name="checkbox-toggle-16" value="checkbox-toggle-16"
+                                        aria-describedby="checkbox-toggle-16" checked="{!!v.isOnlyActive}"
+                                        onclick="{!c.activeToggle}" />
+                                    <span id="checkbox-toggle-16" class="slds-checkbox_faux_container"
+                                        aria-live="assertive">
+                                        <span
+                                            class="{! 'slds-checkbox_faux toggle-faux_faux ' + ( !v.isOnlyActive ? ' tgl-text-left ' : ' tgl-text-right ')}"
+                                            style="width: 55px;">
+                                            {! if( !v.isOnlyActive, 'On', 'Off') }
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                        <!-- Fileters End -->
+                        <!-- US2816912	Build UI for Create SRN for Add New Provider with Provider Look-up - 2/9/2020 - Sarma -->
+                        <lightning:buttonGroup>
+                            <aura:if isTrue="{!v.isCreateSrnComponent}">
+                                <lightning:button class="slds-button slds-button_neutral" variant="brand"
+                                    label="Add to Auth" onclick="{!c.addProviderToAuth}" />
+                            </aura:if>
+                            <!-- Save Case Consolidation - US3424763 -->
+                            <lightning:button class="slds-button slds-button_neutral neutral_button previewAuto"
+                                variant="neutral" label="Autodoc" onclick="{!c.getPreview}"
+                                disabled="{! v.isCreateSrnComponent || v.disableButtons || !v.isRoutingAllowed}" />
+                            <aura:if isTrue="{!!v.isCommentsBox}">
+                                <lightning:button
+                                    class="slds-button disableBtn slds-button_neutral neutral_button previewAuto"
+                                    variant="neutral" label="Add Comments" onclick="{!c.openCommentsBox}"
+                                    disabled="{! v.disableButtons || v.disableCommentButton || !v.isRoutingAllowed}" aura:id="commentsBtn" />
+                            </aura:if>
+                            <aura:if isTrue="{!v.isCommentsBox}">
+                                <lightning:button variant="neutral" label="Add Comments" disabled="true" />
+                            </aura:if>
+                            <lightning:button label="Route" name="pLookupsaveCaseName"
+                                class="slds-button slds-button_brand brand_button" onclick="{!c.openModal}"
+                                disabled="{! v.isCreateSrnComponent || v.disableButtons || !v.isRoutingAllowed}" />
+                        </lightning:buttonGroup>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </aura:if>
+
+        <aura:if isTrue="{!v.openSaveCase}">
+            <!-- Save Case Consolidation - US3424763 -->
+            <c:SAE_TtsModalCaseCreation Topic="Provider Lookup"
+                caseWrapper="{!v.isProviderSnapshot ? v.caseWrapper : v.caseWrapperMNF}" isModalOpen="{!v.openSaveCase}"
+                isProvider="{!v.isProviderSnapshot}" pagefeature="{!v.autodocPageFeature}" pageNumber="{!v.pageNumber}"
+                enableAutodocWarningMessage="true" isMemberLookup="{!v.isMemberLookup}" uhcProduct="{!v.uhcProduct}"
+                freeFormCommentsVal="{!v.commentsValue}"
+                providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}"
+                flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}" autodocUniqueId="{!v.autodocUniqueId}"
+                isMemberSnapshot="{!!v.isProviderSnapshot}" isRoutingAllowed="{!v.isRoutingAllowed}"
+                memberMap="{!v.memberMap}" memberPolicyNumberMap="{!v.memberPolicyNumberMap}"
+                flowDetails="{!v.flowDetails}" onlyRoute="true"/>
+            <!--US3117073 - Sravan-->
+            <!--DE393490 - Sravan-->
+        </aura:if>
+        <!--  {!v.autodocUniqueId}-->
+        <c:ACET_AutoDocDataTable aura:id="lookupResultsId" tableID="{!v.autodocUniqueId + '_ProviderLookup'}"
+            enablePagination="true" hasCaseItems="true" tableDetails="{!v.searchResults}"
+            autodocUniqueId="{!v.autodocUniqueId}" selectAllCheckBox="{!v.selectAllCheckBox}"
+            maxPageNumber="{!v.maxPageNumber}" pageNumber="{!v.pageNumber}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"
+            enableSort="true" enableSearch="true" isSingleRowHighlight="true"
+            isCreateSrnComponent="{!v.isCreateSrnComponent}" selectedRows="{!v.selectedRows}"
+            isCreateReferral="{!v.boolIsProviderLookupFromReferral}" isOnlyActive="{!v.isOnlyActivePcpReferral}"
+            isAutodocHidden="{!v.isCreateSrnComponent}" isResolvedHidden="{!v.isCreateSrnComponent}" />
+        <!-- US3192316 - Thanish - 27th Jan 2021 - removed auto check -->
+        <!--Attributes are added as part of US2573718  - Sravan -->
+        <!-- US2816912	Build UI for Create SRN for Add New Provider with Provider Look-up - 2/9/2020 - Sarma -->
+    </div>
+    <aura:if isTrue="{!v.showpreview}">
+        <c:ACET_PreviewAutoDoc tableDetails_prev="{!v.tableDetails_prev}" isModalOpen="{!v.showpreview}" />
+    </aura:if>
+</aura:component>

@@ -1,0 +1,253 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction,lightning:isUrlAddressable" access="global"  controller="ACETLGT_IdCardRequestController">
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}" />
+    <aura:attribute name="MemberDetails" type="List"/>
+     
+    <aura:attribute name="showSave" type="boolean" access="public" default="true"/>
+    
+    <aura:attribute name="showMisdirect" type="boolean" access="public" default="true"/>
+    <aura:attribute name="showMisdirectSearch" type="boolean" access="public" default="false"/>
+    <aura:attribute name="today" type="Date" />
+    <aura:attribute name="bookOfBusinessTypeCode" type="String" />
+    <aura:attribute name="startDate" type="Date" />
+    <aura:attribute name="endDate" type="Date" />
+    <aura:attribute name="isOnshore" type="boolean" default="true"/>
+    <aura:attribute name="isOpen" type="boolean" default="false"/>
+    <aura:attribute name="isSameDetail" type="boolean" default="false"/>
+    <aura:attribute name="isOpenSubtabs" type="boolean" default="false"/>
+    
+
+    <aura:attribute name="familyMembersCol" type="string[]"/>
+    <aura:attribute name="FamilyMemberList" type="list" default="[]"/>
+
+
+    <aura:attribute name="Memberdetail" type="sObject" access="public"/>
+    <aura:attribute name="needWebserviceCall" type="boolean" access="public" default="true"/>
+    <aura:attribute name="identifierType" type="string" access="public"/>
+    <aura:attribute name="identifier" type="string" access="public"/>
+    <aura:attribute name="groupNumber" type="string" access="public"/>
+    <aura:attribute name="effectiveDate" type="string" access="public"/>
+    <aura:attribute name="covLine" type="Object" access="public"/>
+    <aura:attribute name="Spinner" type="boolean" access="public" default="false"/>
+    <aura:attribute name="isSuccessUpdate" type="Boolean" default="false" />
+    <aura:attribute name="isFailedUpdate" type="Boolean" default="false" />
+    <aura:attribute name="errorMessage" type="String" />
+    <aura:attribute name="isUpdating" type="Boolean" default="false" access="public"/>
+    
+
+    <!-- TTS Attributes-->
+	<aura:attribute name="cseTopic" type="String" access="public" default="{!$Label.c.ACETCallTopicIDCardRequest}"/>
+	<aura:attribute name="srk" type="String" access="global" />
+    <aura:attribute name="int" type="Interaction__c" access="public"/>
+	<aura:attribute name="intId" type="String" access="global" />
+
+    <aura:attribute name="grpNum" type="String" access="public"/>
+    <aura:attribute name="memId" type="String" access="public"/>
+
+    <!-- Submit Button Attribute-->    
+	<aura:attribute name="uInfo" type="String" access="public"/>
+    <!-- Highlight Panel -->
+    <aura:attribute name="highlightPanel" type="ACETLGT_HighlightPanelInfo" access="global"/>
+    <aura:attribute name="hgltPanelDataString" type="String" access="global"/>
+
+
+    <!-- Autodock Attributes -->
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+    <div id="{!v.AutodocKey}">
+    <c:ACETLGT_AutoDoc></c:ACETLGT_AutoDoc>
+ 
+    <lightning:workspaceAPI aura:id="workspace"/> 
+    <lightning:card
+                    variant="Narrow"
+                    title="{!$Label.c.ACETCallTopicIDCardRequest}"
+                    iconName="standard:household"
+                    class="" 
+                    >       
+    <!--lightning:card class="slds-p-around_small" title="ID Card Request" variant="Narrow" iconName="standard:household" -->
+        <br/>
+        <aura:set attribute="actions">
+            <div class="slds-grid slds-form-element slds-m-right_large">
+                <lightning:buttonGroup>
+                    <!--c:ACETLGT_TTSModal cseTopic="ID Card Request" int="{!v.int}" intId="{!v.intId}" srk="{!v.srk}" highlightPanel="{!v.highlightPanel}"
+                                        showMemAlerts="true" showCirrus="true"/-->
+
+                    <c:ACETLGT_TTSModal aura:id = "cComp"
+                                        cseTopic="{!$Label.c.ACETCallTopicIDCardRequest}" 
+                                        int="{!v.int}" 
+                                        intId="{!v.intId}" 
+                                        srk="{!v.srk}"                                     
+                                        memberId="{!v.memId}"
+                                        groupId="{!v.grpNum}" 
+                                        highlightPanel="{!v.highlightPanel}"
+                                        showCirrus="true"  
+                                        bookOfBusinessTypeCode="{!v.bookOfBusinessTypeCode}"
+                                        pagefeature="{!v.AutodocKey}" 
+                                        AutodocKey="{!v.AutodocKey}"
+                                        />    
+
+
+                                        
+                </lightning:buttonGroup>
+            </div>
+        </aura:set>
+        <p class="slds-p-horizontal_small">
+            <!--<lightning:card title=""><c:ACETLGT_HighlightPanel highlightPanelValues="{!v.highlightPanel}" /> </lightning:card>-->
+        </p>
+ 
+        <c:ACETLGT_HighlightPanel highlightPanelValues="{!v.highlightPanel}" pageFeature="{!v.AutodocKey}" AutodocKey="{!v.AutodocKey}"/>
+    </lightning:card>
+ 	<div id="{!v.AutodocKey + 'SM'}">
+    <div class="slds-box slds-p-around_none slds-theme_default card_top_margin margin-sides-full-size">
+        <div>
+                <div class="outer-div">
+            	<aura:if isTrue="{!v.Spinner}">
+          		<lightning:spinner alternativeText="Loading, Please Wait..." 
+               		title="Loading, Please Wait..." 
+               		variant="brand" size="medium"/>
+    			</aura:if>
+                </div>
+        </div>
+           <div class="slds-col ">
+               <!--    Spinner -->
+               <aura:if isTrue="{!v.isUpdating}">
+                   <lightning:spinner alternativeText="" variant="brand" size="medium" />
+               </aura:if>
+               <!--    Spinner -->
+                <label class="slds-form-element__label slds-text-heading_small slds-p-left_medium" ><b>Select Member</b></label>
+               <br />
+               <div class="">
+                   <aura:if isTrue="{!v.isSuccessUpdate}">
+                       <ui:message title="" severity="confirm" closable="false">
+                           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Update successful&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                       </ui:message>
+                   </aura:if>
+                   <aura:if isTrue="{!v.isFailedUpdate}">
+                       <ui:message title="" severity="error" closable="false">
+                           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{!v.errorMessage}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                       </ui:message>
+                   </aura:if>
+               </div>
+			</div>
+        <br/>
+      
+        <!--div class="autodocTableView" data-auto-doc="true" data-auto-doc-case-items="false" data-auto-doc-pageFeature="{!v.AutodocKey}"  data-auto-doc-section-key="Selected Member"-->
+            <div class="autodocTableView" data-auto-doc="true" data-auto-doc-case-items="true" data-auto-doc-feature="{!v.AutodocKey}"  data-auto-doc-section-key="Selected Member">
+            <table class="slds-table slds-table_bordered slds-no-row-hover " >
+                <thead>
+                    <tr>
+                    	<th class="slds-cell-wrap">Recipient</th>
+                    	<th class="slds-cell-wrap">Member ID</th>
+                    	<th class="slds-cell-wrap">Member Status</th>
+                        <th class="slds-cell-wrap"></th>
+                    	<th class="slds-cell-wrap">Confirmation #</th>
+                        
+                    </tr>
+                </thead>
+                <tbody>
+                    <aura:iteration items="{!v.FamilyMemberList}" var="dt" aura:id="item" indexVar="index">
+                        <tr class="{!dt.FamilyId ==v.memId ? 'activecol slds-hint-parent' : 'slds-hint-parent'}">
+                            <td class="slds-cell-wrap">
+                                <!--ui:outputText value="{!dt.FirstName+' '+dt.LastName}" class="slds-wrap"/-->
+                                <div class="slds-wrap" >{!dt.FirstName+' '+dt.LastName}</div>
+                            </td>
+                            <td class="slds-cell-wrap">
+                                <!--ui:outputText value="{!dt.FamilyId}" class="slds-wrap"/-->
+                                <div class="slds-wrap" >{!dt.FamilyId}</div>
+                            </td>
+                            <td class="slds-cell-wrap">
+                                <!--ui:outputText value="{!dt.memberStatus}" class="slds-wrap"/-->
+                                <div class="slds-wrap" >{!dt.memberStatus}</div>
+                            </td>
+                            <td>
+                                <aura:if isTrue="{!and(v.uInfo != $Label.c.ACETResearchUserProfile, dt.memberStatus == 'ACTIVE')}">
+                                <button class="slds-button slds-button_brand slds-m-right--small noborder" type="button" data-currindex="{!index}" disabled="{!dt.orderSubmitted}"
+                                        data-memberId="{!dt.FamilyId}" label="Submit Order" value="Submit Order" onclick="{! c.submitOrderCtrl }">Submit Order</button>                                
+                                <aura:set attribute="else">
+                                    <button class="slds-button slds-button_brand slds-m-right--small noborder" type="button" data-currindex="{!index}" disabled="true"
+                                        data-memberId="{!dt.FamilyId}" label="Submit Order" value="Submit Order" onclick="{! c.submitOrderCtrl }">Submit Order</button>
+                                </aura:set>
+                                </aura:if> 
+                            </td>
+                            <td class="slds-cell-wrap">
+                                <div class="slds-wrap" >{!dt.token}</div>
+                            </td>
+                            
+                        </tr>
+                    </aura:iteration>
+                </tbody>
+            </table>
+        </div>
+        <br/>
+        
+    </div>
+    </div>
+    <div >
+        <div class="slds-box slds-p-around_none slds-theme_default card_top_margin margin-sides-full-size">
+    
+        <div class="slds-col ">
+				
+                <label class="slds-form-element__label slds-text-heading_small slds-p-left_medium" ><b>Order History</b></label>
+			
+		</div>
+        <div class="slds-grid slds-gutters">
+  			<div class="slds-col slds-size--1-of-6">
+            	<span></span>
+            </div>
+            <div class="slds-col slds-size--1-of-6">
+            	<span></span>
+            </div>
+            <div class="slds-col slds-size--1-of-6">
+         		
+                <span>
+					<lightning:input  aura:id="startDate" type="date" label="Start Date" value="{!v.startDate}"
+                                 disabled=""
+                                 dateStyle="short"
+                                 name="startDate"
+                                 pattern="/^([0-9]{4})\-([0-9]{2})\-([0-9]{2})$/"
+                                 messageWhenBadInput=""
+                                 messageWhenPatternMismatch="" 
+                                 onchange="{!c.dateUpdate}"/>
+                   </span>
+            </div>
+                <div class="slds-col slds-size--1-of-6">
+					<lightning:input aura:id="endDate" type="date" label="End Date" value="{!v.endDate}"
+                                 disabled="true" class=""
+                                 dateStyle="short"
+                                 name="endDate"
+                                 pattern="/^([0-9]{4})\-([0-9]{2})\-([0-9]{2})$/"
+                                 messageWhenBadInput=""
+                                 messageWhenPatternMismatch="" 
+                                 />
+				</div>
+            	<div class="slds-col slds-size--1-of-6">
+            	<span></span>
+            </div>
+            <div class="slds-col slds-size--1-of-6">
+            	<span></span>
+            </div>
+           </div>	
+        <br/>
+        
+
+        <!-- _________________________________________________________________________________________________ -->
+
+        <aura:iteration items="{!v.FamilyMemberList}" var="FMList">
+            <c:ACETLGT_IdCardOrderHistory idValue = "{!FMList.FamilyId}" 
+                                          titleLabel="{!FMList.FirstName+' '+FMList.LastName+' '+' - '+FMList.FamilyId}" 
+                                          memid="{!v.memId}" 
+                                          startDate = "{!v.startDate}"
+                                          endDate="{!v.endDate}" 
+                                          groupNumber="{!v.grpNum}"
+                                          AutodocKey="{!v.AutodocKey}"
+                                          > 
+                                        
+            </c:ACETLGT_IdCardOrderHistory> 
+        <br/>
+        </aura:iteration>
+
+        
+        
+    </div>
+    </div>
+
+    </div>
+</aura:component>

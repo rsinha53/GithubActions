@@ -1,0 +1,173 @@
+<apex:page controller="ACETTerminateMemberController" docType="html-5.0">
+<script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript> 
+    <apex:includeScript value="{!$Resource.JqueryTableSorter}"></apex:includeScript>
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js" />
+    <apex:includeScript value="/soap/ajax/30.0/connection.js" />
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+    <Script language="JavaScript1.2" src="/js/functions.js"></script>
+    <script src="/soap/ajax/20.0/connection.js" type="text/javascript"></script>
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"/>
+
+    <style>
+        .autodoc {
+            vertical-align: middle;
+        }
+        
+        .datePicker {
+            position: absolute;
+            z-index: 10001;
+        }
+        .messageTable {
+            border: none;
+           }
+    </style>
+
+    <script>
+    
+        $(document).ready(function() {
+            getMemberData();
+        });
+        
+        //Calendar popup
+        function datePickerOnload() {
+            $("[id$='txtdate']").datepicker({
+                changeMonth: true,
+                changeYear: true
+            });                                 
+        }
+         
+        //funtion which is called on save for validations
+        function validate(btnSave)
+        {
+            var retFlag = true;
+            var errorMsg = "You must make a selection.";
+            
+            //clear error message
+            $(".error").parent().find(".errorMsg").remove(); 
+            $(".error").removeClass("error");
+            $(".requiredBlock").remove();
+            
+            var isSystemUnavailable = $("[id$='sysUnavailableChkb']").is(":checked");
+            console.log(isSystemUnavailable);
+            
+            if(!isSystemUnavailable)
+            {
+                //validate at lease one item is checked on
+                if(!$(".autodoc:not(:first)").find("input[type='checkbox']").is(":checked")){                                
+                    $(".autodoc:not(:first)").find("input[type='checkbox']").addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+                    retFlag=false;
+                }
+                
+                //checked item must select a date
+                $("[id$='txtdate']").each(function(){              
+                    var ischecked = $(this).closest("tr").find(".autodoc").find("input[type='checkbox']").is(":checked");
+                    if(ischecked && ($(this).val()==''||$(this).val()==null) ){
+                        $(this).wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock" ></div>');
+                        $(this).addClass("error requiredInput").parent().append('<div class="errorMsg errorMsgReQd"><strong>Error:</strong> You must select a date. </div>');
+                        retFlag=false;
+                    }     
+                });
+            }
+            return retFlag;
+        }
+        
+        function closeTab()
+        {
+            sforce.console.getEnclosingTabId(closeSubtab);
+            
+        }
+        
+        var closeSubtab = function closeSubtab(result) {    
+            var tabId = result.id;
+            sforce.console.closeTab(tabId);    
+        };
+        
+    </script>
+
+    <apex:form id="termForm">
+        <apex:outputPanel id="hlPanel" layout="none">
+            <apex:inputHidden id="highlightPanelInfo" />
+            <c:ACETInteractionHighlightsPanel InteractionAtt="{!wrapper.interaction}"
+                SubjectAtt="{!wrapper.Subject}"
+                AdditionalInfoAtt="{!wrapper.AdditionalInfo}" html-auto-doc="auto"/>
+        </apex:outputPanel>
+        
+        <apex:actionFunction action="{!getMemberData}" name="getMemberData" reRender="pbid,pbTableId,messagePanel" status="refreshMemberStatus" oncomplete="datePickerOnload();acet.autodoc.startAutodoc();"/>
+        <apex:actionStatus id="refreshMemberStatus">
+            <apex:facet name="start">
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                &nbsp;
+            </div>
+            <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 1001; margin: 15% 50%">
+                <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                    <img src="/img/loading.gif" style="float: left; margin: 8px;" />
+                    <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                </div>
+            </div>
+            </apex:facet>
+        </apex:actionStatus>
+            
+        <apex:sectionHeader title="Terminate Member" />
+        
+    <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveButton="true" attrShowMisdirectButton="true" attrShowCancelButton="false" attrSourceOriginator="{!wrapper.SourceOriginator}"
+                attrInteractionId="{!wrapper.Interaction.Id}" attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="Terminate Member"/> 
+           <apex:outputPanel id="messagePanel" layout="none">
+             <apex:pageMessages />
+          </apex:outputPanel>    
+        <apex:pageBlock id="pbid" mode="edit">
+            
+          <br/>
+          <apex:outputPanel style="margin-left:31%;">
+              <c:ACETCirrusLandingPage id="cirrus" attrMemberId="{!wrapper.AdditionalInfo.MemberId}"/>    
+          </apex:outputPanel>
+          
+            <!-- Display active subscriber & family members when page is loaded ---->
+            <apex:pageblockSection columns="1" html-auto-doc="true" html-auto-doc-case-items="true">
+              <apex:outputpanel id="showerrormsg"/>
+                <apex:pageBlockTable id="pbTableId" title="Family Member"
+                    value="{!MemberDetail.FamilyMembers}" var="fm"
+                    rendered="{!MemberDetail.FamilyMembers.size != 0}">                                                          
+                    <apex:column headerValue="Surrogate key" rendered="false">
+                        <apex:outputText value="{!MemberDetail.SurrogateKey}"/>
+                    </apex:column>
+
+                    <apex:column headerValue="Member ID">
+                        <apex:outputText value="{!MemberDetail.MemberId}"
+                            rendered="{!fm.Relationship ='Subscriber'}" />
+                        <apex:outputText value="{!fm.familyId}"
+                            rendered="{!fm.Relationship !='Subscriber'}" />
+                    </apex:column>
+                    <apex:column value="{!fm.FirstName}  {!fm.MiddleInitial }  {!fm.LastName}"
+                        headerValue="Name" />
+                    <apex:column value="{!fm.Relationship}" headerValue="Relationship" />
+                    <apex:column value="{!fm.Gender}" headerValue="Gender" />
+                    <apex:column headerValue="Termination Date">
+                        <apex:inputText id="txtdate" value="{!fm.termDate}" onclick="datePickerOnload();" />       
+                     </apex:column>                      
+                </apex:pageBlockTable>
+                <br />
+            </apex:pageblockSection>
+            
+            <!-- comments and system unavilable ---->
+            <apex:outputPanel id="fieldsPanel">
+                <apex:pageblockSection columns="1" html-auto-doc="auto">
+                    <apex:pageBlockSectionItem html-auto-doc-item="false">
+                        <apex:outputLabel value="Comments" />
+                        <apex:inputTextArea id="comments" cols="100" rows="5"
+                            value="{!wrapper.Comments}" style="margin-left:10px;" />
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem >
+                        <apex:outputLabel value="System Unavailable" />
+                        <apex:inputCheckbox id="sysUnavailableChkb" style="margin-left:10px;" value="{!wrapper.isSystemUnavailable}" />
+                    </apex:pageBlockSectionItem>
+                </apex:pageblockSection>
+            </apex:outputPanel>
+        </apex:pageblock>
+            
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveButton="true" attrShowMisdirectButton="true" attrShowCancelButton="false" attrSourceOriginator="{!wrapper.SourceOriginator}"
+            attrInteractionId="{!wrapper.Interaction.Id}" attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="Terminate Member" attrLocation="bottom"/>           
+    </apex:form>
+</apex:page>

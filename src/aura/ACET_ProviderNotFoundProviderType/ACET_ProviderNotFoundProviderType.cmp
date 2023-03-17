@@ -1,0 +1,166 @@
+<!--
+    @Description: US2960236: Provider Not Found Provider Type Card
+    @Date: 11/18/2020
+    @Author: Krishnanshu
+-->
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes">
+    <ltng:require scripts="{!$Resource.ACET_AutodocJS}" />
+    <ltng:require scripts="{!$Resource.ACET_SAEContactDetails}" />
+    <ltng:require styles="{!$Resource.slds_page_header_hide}" />
+    <ltng:require styles="{!$Resource.ACET_MasterStyle}" />
+	<aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="caseWrapper" type="SAETTSCaseWrapper" access="public" default="[]"/>    
+   
+    <aura:attribute name="isModalOpen" type="boolean" default="false"/>
+   
+    <!--  -->
+    <aura:attribute name="contactName" type="String" access="public"/>
+    <aura:attribute name="interactionCard" type="Object" access="public"/>
+    <aura:attribute name="interactionRec" type="Interaction__c"/>
+    <lightning:workspaceAPI aura:id="workspace"/>
+
+    <aura:attribute name="isPreviewOpen" type="boolean" default="false" />
+    <aura:attribute name="commentsValue" type="String" default=""/>
+    <aura:attribute name="showpreview" type="Boolean" default="false" />
+
+    <aura:attribute name="isHippaInvokedInProviderSnapShot" type="Boolean" default="false"/>
+    
+    <aura:attribute name="autodocUniqueId" type="String" />
+    <aura:attribute name="autodocUniqueIdCmp" type="String"/>
+    <aura:attribute name="contactDetails" type="Object" />
+    <aura:attribute name="providerDetails" type="Object" />
+    <aura:attribute name="otherDetails" type="Object" />
+    <aura:attribute name="memberDetails" type="Object" />
+    <aura:attribute name="providerTypeCard" type="Object" />
+	<aura:attribute name="tableDetails_prev" type="Object" />
+    <aura:attribute name="isDefaultGenerated" type="Boolean" default="false" />
+    <aura:attribute name="isProviderSearchDisabled" type="boolean" default="true"/>
+
+    <!-- Local Attributes to be used in this component-->
+    <aura:attribute name="RadioOptions" type="List" default="[{'label': 'Yes', 'value': 'Yes'},
+                                                             {'label': 'No', 'value': 'No'}]"/>
+    <aura:attribute name="selectedRadioOption" type="String" default="" />
+    <aura:attribute name="selectedRadioOption2" type="String" default=""/>
+    <aura:attribute name="oneSourceLink" type="String" default=""/>
+
+    <!-- Methods - US3648370 -->
+    <aura:method name="openPreview" action="{!c.openPreview}"/>
+    <aura:method name="saveCase" action="{!c.SaveCase}"/>
+
+    <div aura:id="card" class="slds-card slds-size_8-of-12 slds-m-top_small card_left_padding card_top_padding card_right_padding card_bottom_padding">
+        <div class="autodocNotTableView">    
+            <lightning:layout class="card_bottom_margin">
+                <lightning:layoutItem size="6" >
+                    <div style="float: left;"><input type="checkbox" class="autodoc" checked="true" disabled="true"/>&nbsp;</div>
+                    <p class="component_title" style="float:left;"><lightning:layoutItem>Provider Type &nbsp;</lightning:layoutItem></p>
+                </lightning:layoutItem>
+                <lightning:layoutItem size="6">
+                    <!-- US3648370 -->
+                    <!-- <div class="slds-is-absolute slds-float_right card_buttons">
+                        <lightning:buttonGroup>
+                            <lightning:button class="slds-button slds-button_neutral neutral_button" variant="neutral"
+                                              label="Autodoc"  onclick="{!c.openPreview}"/>
+                            <lightning:button class="slds-button slds-button_neutral neutral_button"
+                                              variant="brand" label="Add Comments" disabled="true"/>
+                            <lightning:button class="slds-button slds-button_brand brand_button" variant="brand" label="Save Case"
+                                              onclick="{!c.SaveCase}"/>
+                        </lightning:buttonGroup>
+                    </div> -->
+                </lightning:layoutItem>
+            </lightning:layout>
+            <div>
+                <span aura:id="pnf2">
+                    <div>
+                        <div class="slds-p-top_medium" style="font-size:0.75rem">
+                            <p class="field-title">
+                                Is the provider a Medical Doctor/Facility ?
+                            </p>
+                        </div>
+                        <div class="slds-p-bottom_small">
+		                    <lightning:radioGroup name="radioGroup1"
+		                                          options="{! v.RadioOptions }"
+		                                          value="{! v.selectedRadioOption }"
+		                                          type="radio"
+		                                          onchange="{! c.handleRadioChange }"
+		                                          aura:id="providerTypeRadio"
+		                                          class="slds-form-element__static"/>
+                        </div>
+                    </div>
+                    <aura:If isTrue="{! equals(v.selectedRadioOption, 'Yes') }" >
+                        <div>
+                            <div class="slds-p-top_medium">
+                                <p class="field-title" style="font-size:0.75rem">
+                                    Is the Provider waiting to become INN or stating they should be showing as INN ?
+                                </p>
+                            </div>
+                            <div class="slds-p-bottom_small">
+		                        <lightning:radioGroup name="radioGroup2"
+		                                              options="{! v.RadioOptions }"
+		                                              value="{! v.selectedRadioOption2 }"
+		                                              type="radio"
+		                                              onchange="{! c.handleRadioChange }"
+		                                              aura:id="providerTypeRadio2"
+		                                              class="slds-form-element__static"/>
+                            </div>
+                        </div>
+                        <aura:If isTrue="{! equals(v.selectedRadioOption2, 'Yes') }" >
+                            <div class="slds-size_1-of-1 slds-m-around_small" style="margin-top: 5px;">
+                                Refer to your <lightning:formattedUrl onclick="{!c.handleOneSourceLink}" value="{!v.oneSourceLink}"  label="Provider Call Advocate Network Management (NWM), Credentialing, and Demographics SOP" target="_blank" />
+                            </div>
+                            <aura:set attribute="else">
+                                <aura:If isTrue="{! equals(v.selectedRadioOption2, 'No') }" >
+                                    <div class="slds-size_1-of-1 slds-m-around_small" style="margin-top: 5px;">Follow your standard research and resolution processes.</div>
+                                </aura:If>
+                            <div class="slds-size_1-of-1 hideField" style="margin-top: 20px;"><b>Is the Provider waiting to become INN or stating they should be showing as INN ? No</b></div>
+                            </aura:set>
+                        </aura:If>
+                        <div class="slds-grid slds-wrap hideField">
+                            <div class="slds-size_1-of-1 slds-m-around_small" style="margin-top: 20px;"><b>Is the provider a Medical Doctor/Facility ?  Yes</b></div>
+                        </div>
+                        <aura:set attribute="else">
+                            <aura:If isTrue="{! equals(v.selectedRadioOption, 'No') }" >
+                                <div class="slds-size_1-of-1 slds-m-around_small" style="margin-top: 5px;">Access the Misdirect button and follow the standard redirection process.</div>
+                            </aura:If>
+                            <div class="slds-size_1-of-1 hideField" style="margin-top: 20px;"><b>Is the provider a Medical Doctor/Facility ? No</b></div>
+                        </aura:set>
+                    </aura:If>
+                </span>
+            </div>
+        </div>
+    </div>
+    <!-- US3648370 -->
+    <!-- <div
+        class="slds-size_8-of-12 slds-m-top_small slds-m-bottom_small slds-card card_left_padding card_top_padding card_right_padding card_bottom_padding">
+        <c:ACET_HoverPopup aura:id="commentsId" 
+                           moveRight="" 
+                           description="" 
+                           isNubbinLeft="true"
+                           descriptionList="[ 'Use the comments to include a brief','description of the issue, research performed,', 'and any attempts to resolve' ]" />
+        <p class="component_title slds-form-element__label field_label_padding" 
+           style="border-bottom:1px dashed;padding:0px"
+           data-popupId="commentsId"
+           onmouseover="{!c.togglePopup}" 
+           onmouseout="{!c.togglePopup}">
+            Comments: 
+        </p>
+        <b class="component_title slds-p-left_small">Provider Not Found</b>
+        <lightning:textarea name="commentsTextArea"
+                            value="{!v.commentsValue}" 
+                            label="Commets" 
+                            aura:id="commentsBoxId"
+                            variant="label-hidden" 
+                            class="slds-p-top_small"
+                            onkeyup="{!c.handleKeyup }"
+                            maxlength="2000"/>
+        <span class="floatToRight valueCls slds-form-element__static">Characters remaining: <lightning:formattedNumber value = "{!2000-v.commentsValue.length}" /> </span>
+    </div> -->
+    <aura:if isTrue="{!v.showpreview}">
+        <c:ACET_PreviewAutoDoc tableDetails_prev="{!v.tableDetails_prev}" isModalOpen="{!v.showpreview}" />
+    </aura:if>
+
+    <aura:if isTrue="{!v.isModalOpen}">
+        <c:SAE_TtsModalCaseCreation Topic="Provider Not Found" caseWrapper="{!v.caseWrapper}" isProvider="true"
+            pagefeature="{!v.AutodocPageFeature}" AutodocKey="{!v.AutodocKey}" autodocUniqueId="{!v.autodocUniqueId}"
+            freeFormCommentsVal="{!v.commentsValue}" isModalOpen="{!v.isModalOpen}" isMemberSnapshot="false" omitRoute="true"/>
+    </aura:if>
+</aura:component>

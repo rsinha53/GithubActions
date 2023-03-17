@@ -1,0 +1,128 @@
+<!--
+ Name           : OPTUM_MemberSearchResults
+ Created By     : Virtusa(Prasad kammella)
+ Created Date   : Aug 31st, 2020
+ Description    : To Dispaly Member details
+-->
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes" access="global" controller= "OPTUM_MemberAccountController">
+    <aura:attribute name = "MemberDetails" type = "Object"/>
+    <aura:attribute name = "phoneMobile" type = "String"/>
+    <aura:attribute name = "phoneWork" type = "String"/>
+    <aura:attribute name = "phoneHome" type = "String"/>
+    <aura:attribute name = "ssnFormated" type = "String" access="public"/>
+    <aura:attribute name = "dateFormated" type = "String"/>
+	<aura:attribute name = "employerId" type = "String"/>
+    <aura:attribute name = "employerGroupName" type = "String"/>
+    <aura:attribute name = "employerName" type = "String"/>
+    <aura:attribute name="InteractionType" type="String" access="public"/>
+	  <!-- Added by Dimpy for DE384310: One member Account Details are displayed on another member-->
+     <aura:attribute name = "optumInt" type = "Interaction__c"/>
+    <aura:attribute name = "optumEID" type = "String"/>
+    <aura:attribute name="Spinner" type="boolean" default="false"/>
+	<aura:attribute name="memeberList" type="List"/>
+	<!-- Added by Dimpy for US3135948 Tech Story: Fuzzy search API integration-->
+    <aura:attribute name = "searchType" type = "String"/>
+    <aura:attribute name = "faroId" type = "String"/>
+     <lightning:workspaceAPI aura:id="workspace" />
+	<!--END  US3135948-->
+     <!-- Autodoc SCRIPTS -->
+    <ltng:require scripts="{!$Resource.ACET_AutodocJS}" />
+    <ltng:require styles="{!$Resource.ACETLink_MasterStyle}" />
+    <!-- /SCRIPTS -->
+    <aura:handler action="{!c.checkFormat}" event="c:OPTUM_MemberDetailEvent"/>
+    
+    <div class="slds-p-top_large clsdis slds-p-bottom_small slds-p-left_small"  title="SEARCH RESULTS"><b>SEARCH RESULTS </b></div>
+    
+	<aura:if isTrue="{!v.Spinner}">
+        <lightning:spinner alternativeText="Loading, Please Wait..." title="Loading, Please Wait..." variant="brand" size="medium"/>
+    </aura:if>
+	
+    
+    <table class="slds-table slds-table_bordered slds-table_cell-buffer">
+            <thead>
+                <tr>
+                    <th scope="col">
+                        <div class="clsdis"  title="Last Name">Last Name</div>
+                    </th>
+                    <th scope="col">
+                        <div class="clsdis"  title="First Name">First Name</div>
+                    </th>
+                    <th scope="col">
+                        <div class="clsdis"  title="Date of Birth">Date of Birth</div>
+                    </th>
+                    <th scope="col">
+                        <div class="clsdis"  title="SSN">SSN</div>
+                    </th>
+                    <th scope="col">
+                        <div class="clsdis"  title="Phone Number">Phone Number</div>
+                    </th>
+                     <th scope="col">
+                        <div class="clsdis"   title="Email Address">Email Address </div>
+                    </th>
+                    <th scope="col">
+                        <div class="clsdis"  title="Address">Address</div>
+                    </th>
+					<th scope="col">
+                        <div class="clsdis"  title="Employer Name">Employer Name</div>
+                    </th>
+                    <th scope="col">
+                        <div class="clsdis"  title="Admin">Admin</div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody> 
+               
+                <!--### display all records of searchResult attribute by Table format-->
+                     <aura:iteration items="{!v.memeberList}" var="data" aura:id="item">
+                    
+                    <tr>
+                        <td>
+                            <div class="clsdis" > <a class="clsdis" id="{!data.faroId}" href="javascript:void(0);" onclick= "{!c.openNewTab}">{!data.lastName} </a> </div>
+                        </td>
+                        <td>
+                            <div class="clsdis" >{!data.firstName}</div>
+                        </td>
+                        <td>
+                            <div class="clsdis" >{!data.formattedDate}</div>
+                        </td>
+                        <td>
+                            <div class="clsdis" >
+                                <!-- added by Iresh userstorie: US3041320 -->
+                                <aura:If isTrue="{!not(empty(data.formattedSSN)) }">
+                                	<c:ACETLGT_MaskSSNComponent SSNValue="{!data.formattedSSN}"></c:ACETLGT_MaskSSNComponent>
+                                </aura:If>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="clsdis" >{!data.formattedPhMobile} </div>
+                            <div class="clsdis" >{!data.formattedPhHome}  </div>
+                            <div class="clsdis" >{!data.formattedPhWork}  </div>
+                        </td>
+                        <td>
+                            <div class="clsdis" >{!data.emailAddress}</div>
+                        </td>
+                        <td>
+                            <div class="clsdis" >{!data.mailAddressLine1}</div>
+                            <div class="clsdis" >{!data.mailAddressLine2}</div>
+                            <div class="clsdis" ><aura:if isTrue="{!not(empty(data.mailAddressLine3))}">{!data.mailAddressLine3}</aura:if></div>
+                            <div class="clsdis" ><aura:if isTrue="{!not(empty(data.mailAddressLine4))}">{!data.mailAddressLine4}</aura:if></div>
+                            <div class="clsdis" ><aura:if isTrue="{!not(empty(data.mailAddressLine5))}">{!data.mailAddressLine5}</aura:if></div>
+                            <div class="clsdis" ><aura:if isTrue="{!not(empty(data.mailAddressCity,data.mailAddressState,data.mailAddressZip))}">{!data.mailAddressCity},&nbsp;{!data.mailAddressState}&nbsp;
+                            {!data.mailAddressZip}</aura:if></div>
+                          <!--<div class="clsdis" >{!v.MemberDetails.member.mailAddressState}</div>
+                          <div class="clsdis" >{!v.MemberDetails.member.mailAddressZip}</div>-->
+                           
+                        </td>
+						<td>
+                            <div class="clsdis" >{!data.employerNameAdded}</div>
+                        </td>
+                        <td>
+                            <div class="clsdis" >{!data.aliasAdded}</div>
+                        </td>
+                    </tr>
+                </aura:iteration>
+               
+            </tbody>
+        </table>
+    
+</aura:component>

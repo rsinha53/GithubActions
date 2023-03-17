@@ -1,0 +1,531 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes"
+                controller="SAE_PoliciesCtrl" access="global">
+    <!-- US2330408  - Avish -->
+    <ltng:require scripts="{!$Resource.ACET_SAESessionData}" />
+    <aura:attribute name="interactionOverviewTabId" type="String" />
+    <aura:attribute name="memberId" type="string" access="public"/> 
+    <!-- US2330408  - Ends -->
+    <aura:attribute name="AutodocKey" type="string" access="public"/>
+    <aura:registerEvent name="SAE_DisableTopicWhenNoPolicies" type="c:SAE_DisableTopicWhenNoPolicies" />
+    <aura:attribute name="caseWrapper" type="SAETTSCaseWrapper" access="public" default="[]"/>
+    <aura:attribute name="isModalOpen" type="boolean" default="false"/>
+    <aura:handler name="closeModalBox" event="c:SAE_TtsModalCloseEvent" action="{!c.closeModal}"/>
+    
+    <aura:handler name="init" value="{!this}" action="{!c.init}" />
+    
+    <aura:attribute name="data" type="Object" />
+    <aura:attribute name="dataORG" type="Object" />
+    <aura:attribute name="columns" type="List" />
+    <aura:attribute name="sortBy" type="String" />
+    <aura:attribute name="sortDirection" type="String" />
+    <aura:attribute name="policyList" type="list" access="public" />
+    <aura:handler name="change" value="{!v.policyList}" action="{!c.dataChange}" />
+    <!-- below attributes will be used for the table -->
+    <aura:attribute name="totalRecordsCount" type="Integer" />
+    <aura:attribute name="selectedRows" type="List" />
+    <aura:attribute name="initialLoading" type="Boolean" default="true" />
+    
+    <!-- Data Table filter attributes -->
+    <aura:attribute name="filterIsActive" type="Boolean" default="true" />
+    <aura:handler name="change" value="{!v.filterIsActive}" action="{!c.doFilter}" />
+    <aura:attribute name="filterIsMedicalOnly" type="Boolean" default="true" />
+    <aura:handler name="change" value="{!v.filterIsMedicalOnly}" action="{!c.doFilter}" />
+    
+    <!--	Events	-->
+    
+    <aura:registerEvent name="SAE_PolicyClickforAlerts" type="c:SAE_PolicyClickforAlerts" />
+    <!--Financials-->
+    <aura:registerEvent name="networkStatus" type="c:SAE_NetworkStatus" />
+    
+    <!--US1761826 - UHC/Optum Exclusion UI-->
+    <aura:attribute name="allowCallouts" type="Boolean" default="true"/>
+    <aura:attribute name="lstExlusions" type="List" access="public"/>
+    <aura:registerEvent name="show_hideComponents" type="c:SAE_HideComponentsForExclusions" />
+    
+    <aura:attribute name="IsCaseSaved" type="Boolean" default="false"/>
+    <!-- US1933887 - UHG Access - Sanka D. -->
+    <aura:attribute name="uhgAccess" type="boolean" default="false"/>
+    <aura:attribute name="memberTabId" type="String" access="public"/>
+    <aura:attribute name="providerTabId" type="String" access="public"/>
+    
+    <!--US2137922: Added by Ravindra-->
+    <aura:attribute type="Integer" name="policySelectedIndex" default="0"/>
+    
+    <aura:attribute name="loaded" type="Boolean" default="false" />
+    <aura:if isTrue="{! v.loaded }">
+        <!--lightning:spinner alternativeText="Loading" /-->
+    </aura:if>
+    
+    <!-- US2137922: Page Feature Unique - Thanish - 7th Nov 2019 -->
+    <aura:attribute name="AutodocPageFeature" type="String"/>
+    <aura:attribute name="initialClick" type="boolean" default="true"/>
+    <aura:attribute name="componentId" type="String"/>
+    <!--US2150842-->
+    <aura:handler name="change" value="{!v.AutodocPageFeature}" action="{!c.removeStorage}" />
+    
+    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda -->
+    <aura:attribute name="selectedColumn" type="String" />
+    <aura:attribute name="selectedOption" type="String" default="CLIP" />
+    <aura:attribute name="columnOptions" type="String[]" default="['CLIP', 'CLIP', 'CLIP', 'CLIP', 'CLIP', 'CLIP', 'CLIP', 'CLIP']" />
+    <aura:handler name="change" value="{!v.selectedColumn}" action="{!c.columnOptionsChange}"/>
+    <aura:handler name="change" value="{!v.selectedOption}" action="{!c.columnOptionsChange}"/>
+    
+    <!-- US2061732 - Added by Avish -->
+    <aura:registerEvent name="SAE_AuthSRNCreateEvent" type="c:SAE_AuthSRNCreateEvent" />
+    
+    <!-- DE301090 -->
+    <aura:attribute name="AutodocPageFeatureMemberDtl" type="String" />
+    <aura:attribute name="AutodocKeyMemberDtl" type="String"/> <!-- US2543737 - Thanish - 22nd Apr 2020 -->
+    
+    <!-- US2349049 - Sanka -->
+    <aura:attribute name="isPreviewOpen" type="boolean" default="false"/>
+    
+    <!-- US2396655 - Make Autodoc available for multiple pages -->
+    <aura:attribute name="isAutodocForMultiplePages" type="Boolean" default="false" />
+    
+    <!-- US2320729 - Thanish - 2nd Mar 2020 - to toggle auto doc multiple pages attribute in provider search results programatically -->
+    <aura:attribute name="providerSearchResultsADMultiplePages" type="boolean" default="false"/>
+    
+    <!-- US2271237 -->
+    <aura:registerEvent name="ACET_AuthResultAutoDocActivation" type="c:ACET_AuthResultAutoDocActivation" />
+    
+    <!-- US2423120, US2517602, US2517604 Praveen -->
+    <aura:attribute name="selectedPolicyLst" type="List" access="public"/>
+    <aura:attribute name="memberMap" type="Map" access="public"/>
+    <aura:handler event="c:ACET_GetPoliciesList" action="{!c.getSelectedPolicies}" />
+    <aura:registerEvent name="ACET_SetPoliciesList" type="c:ACET_SetPoliciesList" />
+    
+    <!-- US2579637 -->
+    <aura:attribute name="extendedCOBData" type="Object"/>
+    <aura:attribute name="extendedHouseholdData" type="Object"/>
+    <aura:attribute name="policyDetails" type="Object"/>
+    <aura:attribute name="contactAddress" type="String" />
+    <aura:attribute name="city" type="String" />
+    <aura:attribute name="state" type="String" />
+    <aura:attribute name="zip" type="String" />
+    
+    <!-- for Comments box-->
+    <aura:attribute name="isCommentsBox" type="Boolean" default="false"/>
+    <aura:attribute name="commentsValue" type="String" default=""/>
+    <aura:attribute name="disableCommentButton" type="String" default="false"/>
+    
+    <!--US2634539: AutoDoc for provider lookup results Praveen CR Start -->
+    <aura:attribute name="providerPageNumber" type="Integer" access="public" />
+    <aura:handler event="c:ACET_providerLookupSetPageNum" action="{!c.setProviderLookupPageNum}"/>
+    <aura:attribute name="lgt_dt_table_ID" type="String"/>
+    <!--US2634539: AutoDoc for provider lookup results Praveen CR End -->
+    
+    <!--US2076634 - HIPAA Guidelines Button - Sravan-->
+    <aura:attribute name="isHippaInvokedInProviderSnapShot" type="Boolean" default="false"/>
+    
+    <!-- US2554307: View Authorizations Details Page - Add Alerts Button Praveen CR -->
+    <aura:attribute name="memberIdAuthDtl" type="string" access="public"/>
+    <aura:attribute name="groupIdAuthDtl" type="string" access="public"/>
+    <aura:handler event="c:ACET_GetMemberIdGroupIdAuthDtl" action="{!c.setMmberIdGroupIdAuthDtl}" />
+    <aura:registerEvent name="ACET_SetMmberIdGroupIdAuthDtl" type="c:ACET_SetMmberIdGroupIdAuthDtl" />
+    <aura:attribute name="alertProviderId" type="String" access="public"/>
+    <aura:attribute name="alertTaxId" type="String" access="public"/>
+    <!-- US2678265	MVP - Offshore Restriction - Implementation for Member &  Provider Interaction -->
+    <aura:attribute name="originatorType" type="String"/>
+    <!-- US2718107 - Thanish - 30th June 2020 -->
+    <aura:attribute name="showAutodocWarning" type="Boolean" default="false"/>
+    <aura:attribute name="autodocWarningDescription" type="String" default="Warning!"/>
+    <aura:handler name="ACETCaseCreated" event="c:ACET_ACETCaseCreated" action="{!c.handleACETCaseCreated}"/>
+    <aura:attribute name="showCOBHistory" type="Boolean" default="false"/>
+    <aura:attribute name="isShowCobHistory" type="Boolean" default="false"/>
+    <aura:attribute name="showPCPHistory" type="Boolean" default="false"/>
+    <aura:attribute name="planLevelBenefitsRes" type="ACET_ExtendedServiceController.PlanLevelBenefits" access="Public"/>
+    
+    <!-- US2718111: View Authorizations - Switching Policies and Auto Doc - Error Message Need to Save a Case -->
+    <aura:registerEvent name="ACET_PolicySwithchAuthDetailsClose" type="c:ACET_PolicySwithchAuthDetailsClose"/>
+    
+    <!-- Sanka -->
+    <aura:attribute name="selectedPolicyAttributes" type="Object" />
+    <!-- Add items when openning a topic : Remove when saving a case from that topic: Default set to Member Snapshot -->
+    <!-- Inherit from Snapshot -->
+    <aura:attribute name="caseNotSavedTopics" type="String[]" default="['View Member Eligibility']"/>
+    <aura:attribute name="providerDetails" type="Object" access="public" />
+    <aura:attribute  name="higlightGrpNumber" type="String"/>
+    <!--Save Case Disabled for Non Medical Policies-->
+    <aura:attribute  name="isSaveCaseDisabled" type="Boolean" default="false"/>
+    <aura:attribute  name="boolSaveCaseDisabledWarning" type="Boolean" default="false"/>
+    
+    <!--US2584896 - Snapshot - Financials - As of Date E&I - Sravan-->
+    <!--US2584899 - Snapshot - Financials - As of Date M&R - Sravan-->
+    <aura:attribute name="highlightedPolicySourceCode" type="String" default=""/>
+    <aura:attribute name="isSourceCodeChanged" type="Boolean" default="false"/>
+    <aura:attribute name="policyStatus" type="Boolean" default="false"/>
+
+    <div class="{!v.AutodocKeyMemberDtl}"> <!-- US2138277 - Thanish - 24th Oct 2019 -->
+        <div style="width:100%" class="slds-is-relative slds-grid slds-card card_padding"> <!-- US2045625 - Thanish - 2nd Oct 2019 -->
+            <!-- US1888880 - Malinda : Spinner -->
+            <lightning:spinner class="slds-show" aura:id="policy-spinner"
+                               alternativeText="Loading.." title="Loading.."
+                               variant="brand" size="large"/>
+            <div class="slds-col slds-size_12-of-12">
+                <span>
+                    <div> <!-- US2045625 - Thanish - 2nd Oct 2019 -->
+                        <div style="float:left" class="card_bottom_margin"> <!-- US2045625 - Thanish - 2nd Oct 2019 -->
+                            <h3 class="component_title">Policies</h3>
+                        </div>
+                        <div style="float:right;" class="card_bottom_margin"> <!-- US2045625 - Thanish - 2nd Oct 2019 -->
+                            <lightning:buttonGroup>
+                                <!--Preview Autodoc US2349049-->
+                                <lightning:button class="slds-button slds-button_neutral neutral_button" variant="neutral" label="Autodoc" onclick="{!c.openModel}"/>
+                                <aura:if isTrue="{!!v.isCommentsBox}">
+                                    <lightning:button variant="brand" class="brand_button continueBtn" label="Add Comments" disabled="true"/>
+                                </aura:if>
+                                <lightning:button class="slds-button slds-button_brand brand_button" disabled="{!v.isSaveCaseDisabled}" variant="brand" label="Save Case" onclick="{! c.openModal }"/>
+                            </lightning:buttonGroup>
+                        </div>
+                        
+                        <div style="float:right" class="card_right_margin card_bottom_margin"> <!-- US2045625 - Thanish - 2nd Oct 2019 -->
+                            <lightning:input type="checkbox" label="Show only medical policies"
+                                             checked="{! v.filterIsMedicalOnly }" class="chxBoxCls" />
+                        </div>
+                        <div style="float:right" class="card_right_margin card_bottom_margin"> <!-- US2045625 - Thanish - 2nd Oct 2019 -->
+                            <lightning:input type="checkbox" label="Show only active policies"
+                                             checked="{! v.filterIsActive }" class="chxBoxCls" />
+                        </div>
+                    </div>
+                    
+                    <div class="autodocTableView noResolveCheckBox" data-auto-doc="true" data-auto-doc-case-items="true" data-auto-doc-feature="{!v.AutodocPageFeatureMemberDtl}"
+                         data-auto-doc-section-key="Policies" data-auto-doc-policy-table="true" id="{!v.componentId}" data-auto-doc-refresh="true">
+                    <div style="width: 100%;"> <!-- DE334066 - Thanish - 12th Jun 2020 -->
+
+                         <!-- Policies component autodoc bug - Thanish - 2nd Mar 2020 -->
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-no-row-hover"
+                    style="cursor:pointer">
+                    <thead>
+                                <tr class="">
+                                    <!-- US2138277 - Thanish - 24th Oct 2019 - Removed checkbox -->
+                            <th class="table_column_header" scope="col">
+                                <div title="Group #">
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                    <span >Group #</span>&nbsp;
+                                    <c:SAE_TableColumnButtonMenu columnMenuID="0" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                </div>
+                            </th>
+                            <th class="table_column_header" scope="col">
+                                <div title="Source">
+									<span >Source</span>&nbsp;
+									<c:SAE_TableColumnButtonMenu columnMenuID="1" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+								</div>
+                            </th>
+                            <th class="table_column_header" scope="col">
+                                <div title="Plan">
+                                <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                    <span>Plan</span>&nbsp;
+                                    <c:SAE_TableColumnButtonMenu  columnMenuID="2" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                </div>
+                            </th>
+                            <th class="table_column_header" scope="col">
+                                <div title="Policy">
+                                     <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                     <span >Policy</span>&nbsp;
+                                     <c:SAE_TableColumnButtonMenu  columnMenuID="3" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                     <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                </div>
+                            </th>
+                            <th class="table_column_header" scope="col">
+                                <div title="Coverage Level">
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                    <span >Coverage Level</span>&nbsp;
+                                    <c:SAE_TableColumnButtonMenu  columnMenuID="4" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                </div>
+                            </th>
+                            <th class="table_column_header" scope="col">
+                                <div title="Eligible Dates">
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                    <span >Eligible Dates</span>&nbsp;
+                                    <c:SAE_TableColumnButtonMenu  columnMenuID="5" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                </div>
+                            </th>
+                            <th class="table_column_header" scope="col">
+                                        <div title="Status"> <!--US2644766 - PCP Indicator UI and  Implementation - Durga [08/06/2020] -->
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                            <span >Status</span>&nbsp;<!--US2644766 - PCP Indicator UI and  Implementation - Durga [08/06/2020] -->
+                                    <c:SAE_TableColumnButtonMenu  columnMenuID="6" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                </div>
+                            </th>
+                            <th class="table_column_header" scope="col">
+                                        <div title="REF REQ"><!--US2644766 - PCP Indicator UI and  Implementation - Durga [08/06/2020] -->
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                            <span >REF REQ</span>&nbsp;<!--US2644766 - PCP Indicator UI and  Implementation - Durga [08/06/2020] -->
+                                    <c:SAE_TableColumnButtonMenu  columnMenuID="7" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                </div>
+                            </th>
+                             <!--US2644766 - PCP Indicator UI and  Implementation - Durga [08/06/2020]-->
+                                    <th class="table_column_header" scope="col">
+                                        <div class="slds-truncate" title="PCP REQ">PCP REQ</div>
+                                    </th>
+                              <!--US2644766 - PCP Indicator UI and  Implementation - Durga [08/06/2020]-->
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <aura:iteration items="{!v.data}" var="p" indexVar="index">
+                                    <tr aura:id="testid" class="{! p.SelectedItem ? 'slds-hint-parent highlight' : 'slds-hint-parent'}"
+                                        data-plan="{!p.Plan}" data-group="{!p.GroupNumber}" data-trid="{!p.transactionId}"
+                                        data-contaddress="{!p.concatAddress}" data-index="{!index}" data-rolval=""
+                                        data-addressLine1="{!p.addressLine1}"  data-city="{!p.city}"  data-state="{!p.state}"
+                                        data-zip="{!p.zip}" data-relationshipCode="{!p.relationshipCode}"
+                                        data-polmemberid="{!p.memberId}" data-polsourcecode="{!p.sourceCode}">
+                                        <!-- US2138277 - Thanish - 24th Oct 2019 - Removed checkbox -->
+                                <!-- US:US1842940 : Start-->
+                                        <td style="width: 10%; min-width: 10%; max-width: 10%;" onclick="{!c.handleHighlight}" data-label="Account Name" data-plan="{!p.Plan}"
+                                            data-group="{!p.GroupNumber}" data-trid="{!p.transactionId}" data-contaddress="{!p.concatAddress}"
+                                            data-addressLine1="{!p.addressLine1}"  data-city="{!p.city}"  data-state="{!p.state}"
+                                            data-zip="{!p.zip}" data-relationshipCode="{!p.relationshipCode}"
+                                            data-index="{!index}" data-rolval="" class="table_cell_value" data-endDate="{!p.EndDate}"
+                                            data-polmemberid="{!p.memberId}" data-polsourcecode="{!p.sourceCode}" data-planSubString="{!p.PlanSubString}"> <!--//US2061732 - Added by Avish -->
+                                            <aura:if isTrue="{!not(empty(p.GroupNumber))}">
+                                                <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                                <div class="{! ((equals(v.columnOptions[0], 'CLIP') ? ' truncate ' : '' )) }" >
+                                                    <div class="{! ((equals(v.columnOptions[0], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }" title="{!p.GroupNumber}"> {!p.GroupNumber}</div>
+                                                <aura:set attribute="else">
+                                                    <div class="slds-truncate">--</div>
+                                                </aura:set>
+                                                </div>
+                                                <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                            </aura:if>
+                                        </td>
+                                        <td style="width: 15%; min-width: 15%; max-width: 15%;" onclick="{!c.handleHighlight}" data-label="Account Name" data-plan="{!p.sourceCode}"
+                                            data-group="{!p.GroupNumber}" data-trid="{!p.transactionId}" data-contaddress="{!p.concatAddress}"
+                                            data-addressLine1="{!p.addressLine1}"  data-city="{!p.city}"  data-state="{!p.state}"
+                                            data-zip="{!p.zip}" data-relationshipCode="{!p.relationshipCode}"
+                                            data-index="{!index}" data-rolval="" class="table_cell_value"
+                                            data-polmemberid="{!p.memberId}" data-polsourcecode="{!p.sourceCode}" data-planSubString="{!p.PlanSubString}">
+                                            <aura:if isTrue="{!not(empty(p.sourceCode))}">
+                                                <div class="{! ((equals(v.columnOptions[1], 'CLIP') ? ' truncate ' : '' )) }" >
+                                                    <div class="{! ((equals(v.columnOptions[1], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }" title="{!p.sourceCodeDetail}">{!p.sourceCode}</div>
+                                                <aura:set attribute="else">
+                                                    <div class="slds-truncate">--</div>
+                                                </aura:set>
+                                                </div>
+                                            </aura:if>
+                                        </td>
+                                        <td style="width: 15%; min-width: 15%; max-width: 15%;" onclick="{!c.handleHighlight}" data-label="Account Name" data-plan="{!p.Plan}"
+                                            data-group="{!p.GroupNumber}" data-trid="{!p.transactionId}" data-contaddress="{!p.concatAddress}"
+                                            data-addressLine1="{!p.addressLine1}"  data-city="{!p.city}"  data-state="{!p.state}"
+                                            data-zip="{!p.zip}" data-relationshipCode="{!p.relationshipCode}"
+                                            data-index="{!index}" data-rolval="" class="table_cell_value"
+                                            data-polmemberid="{!p.memberId}" data-polsourcecode="{!p.sourceCode}" data-planSubString="{!p.PlanSubString}">
+                                            <aura:if isTrue="{!not(empty(p.Plan))}">
+                                                <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                                <div class="{! ((equals(v.columnOptions[2], 'CLIP') ? ' truncate ' : '' )) }" >
+                                                    <div class="{! ((equals(v.columnOptions[2], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }" title="{!p.Plan}">{!p.PlanSubString}</div>
+                                                <aura:set attribute="else">
+                                                    <div class="slds-truncate">--</div>
+                                                </aura:set>
+                                                </div>
+                                                <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                            </aura:if>
+                                        </td>
+                                        <td style="width: 16%; min-width: 16%; max-width: 16%;" onclick="{!c.handleHighlight}" data-label="Close Date" data-plan="{!p.Plan}"
+                                            data-group="{!p.GroupNumber}" data-trid="{!p.transactionId}" data-contaddress="{!p.concatAddress}"
+                                            data-addressLine1="{!p.addressLine1}"  data-city="{!p.city}"  data-state="{!p.state}"
+                                            data-zip="{!p.zip}" data-relationshipCode="{!p.relationshipCode}"
+                                            data-index="{!index}" data-rolval="" class="table_cell_value"
+                                            data-polmemberid="{!p.memberId}" data-polsourcecode="{!p.sourceCode}" data-planSubString="{!p.PlanSubString}">
+                                    <aura:if isTrue="{!not(empty(p.Policy))}">
+                                                <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                                <div class="{! ((equals(v.columnOptions[3], 'CLIP') ? ' truncate ' : '' )) }" >
+                                                    <div class="{! ((equals(v.columnOptions[3], 'CLIP') ? ' truncate ' : '' )) }" >
+                                                        <div class="{! ((equals(v.columnOptions[3], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }" title="{!p.Policy}">{!p.PolicySubString}</div>
+                                        <aura:set attribute="else">
+                                            <div class="slds-truncate">--</div>
+                                        </aura:set>
+                                                    </div>
+                                                </div>
+                                                <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                    </aura:if>
+                                </td>
+                                <!-- US1974546 - Sanka -->
+                                        <td style="width: 22%; min-width: 22%; max-width: 22%;" onclick="{!c.handleHighlight}" data-label="Coverage Level" data-plan="{!p.Plan}"
+                                            data-group="{!p.GroupNumber}" data-trid="{!p.transactionId}" data-contaddress="{!p.concatAddress}"
+                                            data-addressLine1="{!p.addressLine1}"  data-city="{!p.city}"  data-state="{!p.state}"
+                                            data-zip="{!p.zip}" data-relationshipCode="{!p.relationshipCode}"
+                                            data-index="{!index}" data-rolval="" class="table_cell_value"
+                                            data-polmemberid="{!p.memberId}" data-polsourcecode="{!p.sourceCode}" data-planSubString="{!p.PlanSubString}">
+                                    <aura:if isTrue="{!not(empty(p.CoverageType))}">
+                                        <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                        <div class="{! ((equals(v.columnOptions[4], 'CLIP') ? ' truncate ' : '' )) }" >
+                                            <div class="{! ((equals(v.columnOptions[4], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }" title="{!p.CoverageType}">{!p.CoverageType}</div>
+                                        <!-- <aura:set attribute="else">
+                                            <div class="slds-truncate"></div>
+                                        </aura:set> -->
+                                        </div>
+                                        <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                    </aura:if>
+                                </td>
+                                        <td style="width: 17%; min-width: 17%; max-width: 17%;" onclick="{!c.handleHighlight}" data-label="Confidence" data-plan="{!p.Plan}"
+                                            data-group="{!p.GroupNumber}" data-trid="{!p.transactionId}" data-contaddress="{!p.concatAddress}"
+                                            data-addressLine1="{!p.addressLine1}"  data-city="{!p.city}"  data-state="{!p.state}"
+                                            data-zip="{!p.zip}" data-relationshipCode="{!p.relationshipCode}"
+                                            data-index="{!index}" data-rolval="" class="table_cell_value"
+                                            data-polmemberid="{!p.memberId}" data-polsourcecode="{!p.sourceCode}" data-planSubString="{!p.PlanSubString}">
+                                    <aura:if isTrue="{!not(empty(p.eligibleDates))}">
+                                        <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                        <div class="{! ((equals(v.columnOptions[5], 'CLIP') ? ' truncate ' : '' )) }" >
+                                            <div class="{! ((equals(v.columnOptions[5], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }" title="{!p.eligibleDates}">{!p.eligibleDates}</div>
+                                        <aura:set attribute="else">
+                                            <div class="slds-truncate">--</div>
+                                        </aura:set>
+                                        </div>
+                                        <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                    </aura:if>
+                                </td>
+                                <!-- US:US1842940 : End -->
+                                        <td style="width: 6%; min-width: 6%; max-width: 6%;" onclick="{!c.handleHighlight}" data-label="Amount" data-plan="{!p.Plan}"
+                                            data-group="{!p.GroupNumber}" data-trid="{!p.transactionId}" data-contaddress="{!p.concatAddress}"
+                                            data-addressLine1="{!p.addressLine1}"  data-city="{!p.city}"  data-state="{!p.state}"
+                                            data-zip="{!p.zip}" data-relationshipCode="{!p.relationshipCode}"
+                                            data-index="{!index}" data-rolval="" class="table_cell_value"
+                                            data-polmemberid="{!p.memberId}" data-polsourcecode="{!p.sourceCode}" data-planSubString="{!p.PlanSubString}">
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                    <div class="{! ((equals(v.columnOptions[6], 'CLIP') ? ' truncate ' : '' )) }" >
+                                        <div class="{! ((equals(v.columnOptions[6], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }" title="{!p.planStatus}">
+                                        <lightning:icon
+                                            iconName="{! p.planStatus == 'true' ? 'action:approval' : p.planStatus == 'false' ? 'action:close': 'standard:macros'}"
+                                            alternativeText="{!p.planStatus}" size="x-small" />
+                                    </div>
+                                    </div>
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                </td>
+                                        <td style="width: 10%; min-width: 10%; max-width: 10%;" onclick="{!c.handleHighlight}" data-label="Account Name" data-plan="{!p.Plan}"
+                                            data-group="{!p.GroupNumber}" data-trid="{!p.transactionId}" data-contaddress="{!p.concatAddress}"
+                                            data-addressLine1="{!p.addressLine1}"  data-city="{!p.city}"  data-state="{!p.state}"
+                                            data-zip="{!p.zip}" data-relationshipCode="{!p.relationshipCode}"
+                                            data-index="{!index}" data-rolval="" class="table_cell_value"
+                                            data-polmemberid="{!p.memberId}" data-polsourcecode="{!p.sourceCode}" data-planSubString="{!p.PlanSubString}">
+                                            <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                            <div class="{! ((equals(v.columnOptions[7], 'CLIP') ? ' truncate ' : '' )) }" >
+                                                <div class="{! ((equals(v.columnOptions[7], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }" title="{!p.Referral}"> {!p.Referral}</div>
+                                            </div>
+                                            <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                </td>
+                                        <!--US2644766 - PCP Indicator UI and  Implementation - Durga [08/06/2020]-->
+                                        <td style="width: 10%; min-width: 10%; max-width: 10%;" data-label="Account Name" data-plan="{!p.Plan}"
+                                        data-group="{!p.GroupNumber}" data-trid="{!p.transactionId}" data-contaddress="{!p.concatAddress}"
+                                        data-addressLine1="{!p.addressLine1}"  data-city="{!p.city}"  data-state="{!p.state}"
+                                        data-zip="{!p.zip}" data-relationshipCode="{!p.relationshipCode}"
+                                        data-index="{!index}" data-rolval="" class="table_cell_value"
+                                            data-polmemberid="{!p.memberId}" data-polsourcecode="{!p.sourceCode}" data-planSubString="{!p.PlanSubString}">
+
+                                        <aura:if isTrue="{!p.Referral != 'Yes'}">
+                                            <aura:if isTrue="{!p.isValidated}">
+                                                Validated
+                                                <aura:set attribute="else">
+                                                        <div>
+                                                                <span><a
+                                                                         href="javascript:void(0)"  data-indexValue="{!index}"
+                                                                         onclick="{!c.navigateToValidateLink}">Validate</a></span>
+
+                                                            </div>
+                                                </aura:set>
+                                            </aura:if>
+                                            <aura:set attribute="else">
+                                                    {!p.Referral}
+                                            </aura:set>
+                                        </aura:if>
+                                        </td>
+                                        <!--US2644766 - PCP Indicator UI and  Implementation - Durga [08/06/2020]-->
+                            </tr>
+                        </aura:iteration>
+                    </tbody>
+                </table>
+                </div> <!-- DE334066 - Thanish - 12th Jun 2020 -->
+                        <br/>
+
+                        <!--End-->
+                    </div>
+            </span>
+        </div>
+
+    </div>
+    </div> <!-- US2138277 - Thanish - 24th Oct 2019 -->
+    
+    <!-- Add Free form Comments -->
+    <!--aura:if isTrue="{!v.isCommentsBox}"-->
+        <div class="slds-card card_left_padding card_top_padding card_right_padding card_bottom_padding" style="margin-top:1%">
+            <c:ACET_HoverPopup aura:id="commentsId" 
+                               moveRight="" 
+                               description="" 
+                               isNubbinLeft="true"
+                               descriptionList="[ 'Use the comments to include a brief','description of the issue, research performed,', 'and any attempts to resolve' ]" />
+            <p class="component_title slds-form-element__label field_label_padding" 
+               style="border-bottom:1px dashed;padding:0px"
+               data-popupId="commentsId"
+               onmouseover="{!c.togglePopup}" 
+               onmouseout="{!c.togglePopup}">
+                Comments: 
+            </p>
+            <b class="component_title slds-p-left_small">View Member Eligibility</b>
+            <lightning:textarea name="commentsTextArea"
+                                value="{!v.commentsValue}" 
+                                label="Commets" 
+                                aura:id="commentsBoxId"
+                                variant="label-hidden" 
+                                class="slds-p-top_small"
+                                onkeyup="{!c.handleKeyup }"
+                                maxlength="2000"/>
+            <span class="floatToRight valueCls slds-form-element__static">Characters remaining: <lightning:formattedNumber value = "{!2000-v.commentsValue.length}" /> </span>
+        </div>
+    <!--/aura:if-->
+    
+    
+    <!--TTS Modal Case Creation : US1852201 : START-->
+    <aura:if isTrue="{!v.isModalOpen}">
+        <!--Removed code-->
+        <aura:if isTrue="{!v.isModalOpen}">
+        <!--sending case data to the TTS popup model -->
+        <!-- Autodoc Metallica Code Merge - Thanish - 19th Feb 2020 -->
+            <c:SAE_TtsModalCaseCreation Topic="View Member Eligibility" caseWrapper="{!v.caseWrapper}"
+                                        pagefeature="{!v.AutodocPageFeature}" AutodocKey="{!v.AutodocKey}" freeFormCommentsVal="{!v.commentsValue}"/>
+        </aura:if>
+    </aura:if>
+    <!--TTS Modal Case Creation : US1852201 : END-->
+
+    <!-- US2349049 -->
+    <aura:if isTrue="{!v.isPreviewOpen}">
+        <c:ACET_AutoDocPreview isModalOpen="{!v.isPreviewOpen}" pagefeature="{!v.AutodocPageFeature}" AutodocKey="{!v.AutodocKey}"/>
+    </aura:if>
+
+    <!-- US2718107 - Thanish - 30th June 2020 -->
+    <aura:if isTrue="{!v.showAutodocWarning}">
+        <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <div class="slds-modal__content slds-is-relative slds-theme--warning centerTexts warningFont card_padding"
+                     style="border-top-right-radius: 0.25rem; border-top-left-radius: 0.25rem;">
+                    <aura:if isTrue="{!v.boolSaveCaseDisabledWarning}">
+                        <div aura:id="idCaseCreationAlert" class="slds-m-bottom_small">
+                            <lightning:layoutItem>
+                                <u>Note</u>: Case creation is not allowed for non-medical policies. Please select appropriate medical policy for case creation.
+                            </lightning:layoutItem>
+                        </div>
+                    </aura:if>
+                    <lightning:layout>
+                        <lightning:layoutItem>
+                            <lightning:icon iconName="utility:warning" variant="inverse" class="autodocWarningIcon"/>
+                        </lightning:layoutItem>
+                        <lightning:layoutItem>
+                            {!v.autodocWarningDescription}
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                </div>
+                <footer class="slds-modal__footer slds-theme--warning noTopBorder centerTexts">
+                    <lightning:button variant="neutral" label="Yes" class="noUnderline" onclick="{!c.handleAutodocWarningYes}"/>
+                    <lightning:button variant="neutral" label="No" class="noUnderline" onclick="{!c.handleAutodocWarningNo}"/>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+
+</aura:component>

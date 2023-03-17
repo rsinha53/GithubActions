@@ -1,0 +1,211 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes" controller="Motion_MemberInformationController"
+                access="global" >
+    
+    <lightning:workspaceAPI aura:id="workspace"/>
+    
+    <aura:attribute name="name" type="String"/>    
+    <aura:attribute name="interaction" type="SObject"/>
+    <aura:attribute name="registeredMemberId" type="String" default="" />
+    <aura:attribute name="eligibleMemberId"  type="String" default="" />
+	<aura:attribute name="groupName" type="String"/>
+    <aura:attribute name="groupNo" type="String"/>
+    <aura:attribute name="onshoreRestrictionDisp" type="String" default="yes" access="public"/>
+    <aura:attribute name="onshoreRestrictioCode" type="String" default="" access="public"/>
+    <aura:attribute name="cardDetails" type="Object"/>
+    <aura:attribute name="thirdPartyId" type="String" />
+    <aura:attribute name="isMemberNotFound" type="Boolean" default="false"/>
+    <aura:attribute name="DermID" type="String" default=""/>
+    
+    <aura:attribute name="highlightHeader" type="Object"/>
+    <aura:attribute name="intrec" type="Object"/>
+    <aura:attribute name="interId" type="String"/>
+    <aura:attribute name="memberId" type="String"/>
+    <aura:attribute name="AutodocKey" type="String" default="motion"/>
+    <aura:attribute name="OriginatorId" type="String"/>
+    <aura:attribute name="originator" type="String" access="public"/> 
+    <aura:attribute name="cseTopic" type="String" access="public" default="Member Overview"/>
+    <aura:attribute name="developerName" type="String" access="public" default="Motion"/>
+    <aura:attribute name="userInfo" type="User" access="public"/>
+    <aura:attribute name="orgInfo" type="Organization" access="public"/>
+    <aura:attribute name="orgid" type="String" access="public"/>
+    <aura:attribute name="showOriginatorErrorFired" type="boolean" default="false" access="public"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+	<aura:attribute name="HighlightPaneldetail" type="sObject" access="public"/>
+    <aura:attribute name="HighlightPanelString" type="String" access="public"/>    
+
+    <aura:handler event="c:Motion_ChangePageEvt" name="changePageEvent" action="{!c.getResults}"/>
+    <aura:handler name="tpevent" event="c:ACETLGT_TPModalEvent" action="{!c.handleTPEvent}"/>
+    <aura:handler name="ttsevent" event="c:ACETLGT_TTSModalEvent" action="{!c.handleCaseEvent}"/>    
+    <!--aura:handler name="getOriginatorEvent" event="c:ACETLGT_OriginatorChanged" action="{!c.onOriginatorChange}"/--> 
+    <aura:handler name="showOriginatorError" event="c:ACETLGT_ShowOriginatorErrorEvt"  action="{!c.handleShowOriginatorErrstop}" />
+    <aura:handler name="change" value="{!v.interaction}" action="{!c.prepareHighlightPanelInfo}"/> 
+	<aura:handler name="change" value="{!v.groupNo}" action="{!c.prepareHighlightPanelInfo}"/>
+    <aura:handler name="change" value="{!v.groupName}" action="{!c.prepareHighlightPanelInfo}"/>
+    
+    <aura:attribute name="showSave" type="Boolean" default="true"/>
+    <aura:attribute name="showConsoleButton" type="Boolean" default="false"/>
+    
+	<ltng:require scripts="{!$Resource.ACET_AutodocJS}" />
+    <ltng:require styles="{!$Resource.ACETLGT_MasterStyle}" />
+    <aura:attribute name="autodocUniqueId" type="String"  />														  
+    <!-- US3120970: Validate Motion Inquiry-->
+    <aura:attribute name="MotionInqValidCnd" type="boolean" default="true"/>
+	 <aura:attribute name="comments" type="String" access="global" />																
+        
+    <div id="originatorlocationscroll"/>
+    <div class="slds-box slds-theme--default slds-m-top_x-small highlight-pannel">
+        <div style="margin-left: -16px;margin-right: -16px;margin-bottom: -16px;margin-top:-17px;">
+            <article class="slds-card">
+                
+                <div class="slds-card__header slds-grid slds-border_bottom">
+                    <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                        <aura:if isTrue="{!v.isMemberNotFound}">
+                            <div class="slds-media__figure">
+                                <span class="slds-icon_container slds-icon-standard-account" title="member">
+                                    <lightning:icon iconName="standard:person_account"/>
+                                    <span class="slds-assistive-text">member</span>
+                                </span>
+                            </div>
+                            
+                            <div class="slds-media__body">
+                                <h2 class="slds-card__header-title">
+                                    <span class="slds-text-heading_small slds-truncate">
+                                        <div class="slds-media__body slds-border--left slds-p-left--medium">
+                                            <p class="setupMatTile-label slds-page-header__title slds-m-right--small slds-align-middle fade-text" style="color:black">
+                                               <span class=""></span> {!v.intrec.Third_Party__r.First_Name__c} <span class="slds-m-left_small"> {!v.intrec.Third_Party__r.LastName__c}</span>
+                                            </p>
+                                                                                     
+                                            <p class="page_header_link">
+                                                <a href="javascript:void(0)" data-intId="{!v.intrec.Id}" onclick="{!c.navigateToDetail}">{!v.intrec.Name}</a>
+                                            </p>
+                                                                                      
+                                        </div>
+                                    </span>
+                                </h2>	
+                            </div> 
+                           
+                            <div class="slds-no-flex">
+                                <!--button class="slds-button slds-button_neutral">Save</button-->
+                                <c:ACETLGT_TTSModal aura:id="cComp" cseTopic="{!v.cseTopic}" int="{!v.interaction}" intId="{!v.interaction.Id}" 
+                                                    showSave="{!v.showSave}" showMisdirectSearch="false" showMisdirect="false" showCirrus="false" showMemAlerts="false" 
+                                                    showConsoleButton="{!v.showConsoleButton}"
+                                                    isOriginatorModal="true"
+                                                    memberId="{!v.intrec.Id}"
+                                                    originator = "{!v.intrec.Id}"
+                                                    OriginatorId="{!v.intrec.Id}"
+                                                    noAutoDoc = "true"                                                    
+                                                    userInfo="{!v.userInfo}" 
+                                                    SubjectId = "{!v.intrec.Id}"
+                                                    highlightPanel = "{!v.HighlightPaneldetail}"                                                    
+                                                    highlightPanelstring = "{!v.HighlightPanelString}"
+                                                    developerName="{!v.developerName}"
+                                                    motionValidCnd="{!v.MotionInqValidCnd}"
+                                                    isMembernotfound="{!v.isMemberNotFound}"
+                                                    autodocUniqueId="{!v.autodocUniqueId}"
+													comments="{!v.comments}"
+                                                    />                               
+                            </div>
+                        
+                        <aura:set attribute="else">
+                            <div class="slds-media__figure">
+                                <span class="slds-icon_container slds-icon-standard-account" title="member">
+                                    <lightning:icon iconName="standard:person_account"/>
+                                    <span class="slds-assistive-text">member</span>
+                                </span>
+                            </div>
+                            <div class="slds-media__body">
+                                <h2 class="slds-card__header-title">
+                                    <span class="slds-text-heading_small slds-truncate">
+                                        <div class="slds-media__body slds-border--left slds-p-left--medium">
+                                            <p class="setupMatTile-label slds-page-header__title slds-m-right--small slds-align-middle fade-text" style="color:black">
+                                                {!v.name}
+                                            </p>
+                                            
+                                            
+                                            <!--a href="javascript:void(0);" onclick="{c.navigateToDetail}" >{!v.interaction.Name}</a-->
+                                            
+                                                <p class="page_header_link">
+                                                    <a href="javascript:void(0)" data-intId="{!v.interaction.Id}" onclick="{!c.navigateToDetail}">{!v.interaction.Name}</a>
+                                                </p>
+                                           
+                                            
+                                        </div>
+                                    </span>
+                                </h2>
+                            </div>                          
+                            <div class="slds-no-flex">   
+                                <!--button class="slds-button slds-button_neutral">Save</button-->
+                                <c:ACETLGT_TTSModal aura:id="cComp" cseTopic="{!v.cseTopic}" int="{!v.interaction}" intId="{!v.interaction.Id}" 
+                                                    showSave="{!v.showSave}" showMisdirectSearch="false" showMisdirect="false" showCirrus="false" showMemAlerts="false" 
+                                                    showConsoleButton="{!v.showConsoleButton}"
+                                                    isOriginatorModal="true"
+                                                    memberId="{!v.interaction.Originator__r.AccountId}" 
+                                                    originator = "{!v.originator}"
+                                                    OriginatorId="{!v.OriginatorId}"
+                                                    noAutoDoc = "true"                                                    
+                                                    userInfo="{!v.userInfo}" 
+                                                    SubjectId = "{!v.OriginatorId}"                                                    
+                                                    highlightPanel = "{!v.HighlightPaneldetail}"
+                                                    highlightPanelstring  = "{!v.HighlightPanelString}"
+                                                    developerName="{!v.developerName}"
+                                                    motionValidCnd="{!v.MotionInqValidCnd}"                                                    
+                                                    memberregisterId="{!v.DermID}"
+                                                    
+                                                    autodocUniqueId="{!v.autodocUniqueId}"	
+													comments="{!v.comments}"			
+                                        />                    
+                            </div>
+                            
+                        </aura:set>
+                            </aura:if>
+                    </header>
+                </div>               
+                
+                <div class="slds-card slds-box">       
+                    <div class="slds-grid slds-gutters slds-wrap contentSection  slds-p-top_small">         
+                        <aura:iteration items="{!v.cardDetails.cardData}" var="i" indexVar="index">               
+                            <div class="{!v.cardDetails.noOfColumns + ' slds-col card_element_top_margin'}">
+                                <table>
+                                    <tr>
+                                        <td style="width: 25px;vertical-align:top;">
+                                            
+                                        </td>
+                                        <td>
+                                            <aura:if isTrue="{!i.fieldType == 'emptySpace'}">
+                                                <div class="slds-form-element"> </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!i.fieldType == 'outputText'}">
+                                                <div class="slds-form-element val_lbl_pos">
+                                                    <span class="slds-form-element__label">
+                                                        {!i.fieldName}
+                                                    </span>
+                                                    <div class="slds-form-element__control" style="{!i.fieldValueStyle}">
+                                                        <div class="slds-form-element__static">{!i.fieldValue}</div>
+                                                    </div>
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!i.fieldType == 'unescapedHtml'}">
+                                                <div class="slds-form-element val_lbl_pos">
+                                                    <span class="slds-form-element__label">
+                                                        {!i.fieldName}
+                                                    </span>
+                                                    <div class="slds-form-element__control">
+                                                        <div class="slds-form-element__static customFont">
+                                                            <aura:unescapedHtml value="{!i.fieldValue}" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </aura:if>                                
+                                        </td>
+                                    </tr>
+                                    <tr></tr>
+                                </table>
+                            </div>
+                            
+                        </aura:iteration>
+                    </div>
+                </div>            
+            </article>
+        </div>    
+    </div>   
+</aura:component>

@@ -1,0 +1,216 @@
+<aura:component controller="SAEMemberProviderDetail" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction,lightning:isUrlAddressable"  access="global">
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" /> 
+    <aura:attribute name="CustmrAdmin" type="Object" />
+    <aura:attribute name="ProducerInfo" type="Object" />
+    <aura:attribute name="ProducerData" type="Object" />
+    <aura:attribute name="ProducerId" type="string" access="public"  />
+    <aura:attribute name="FlowType" type="string" />
+    <aura:attribute name="ContactId" type="string" />
+    <aura:attribute name="contactUniqueId" type="String" access="public"/>
+    <aura:attribute name="MemberCustmrAdmin" type="Object" />
+    <aura:attribute name="uhgAccess" type="String" />
+    <aura:attribute name="selectedGroupInfo" type="Object" />
+    <aura:attribute name="memberCardData" type="Object"/>
+    <aura:attribute name="houseHoldData" type="Object[]"/>
+    <aura:attribute name="specialInstructionsInfo" type="Object"/>
+    <aura:attribute name="contactName" type="string" access="public"/>
+    <aura:attribute name="adminType" type="string" access="public"/>
+    <aura:attribute name="memberTabId" type="string" access="public"/>
+    <aura:attribute name="cobData" type="Object"/>
+    <aura:attribute name="memberId" type="string" access="public"/>
+    <aura:attribute name="groupId" type="string" access="public"/>
+    <aura:attribute name="xRefId" type="string" access="public"/>
+    <aura:attribute name="memberDOB" type="string" access="public"/>
+    <aura:attribute name="selectedMemberInfo" type="Object" />
+    <aura:attribute name="displayGroup" type="boolean"  default ="false"/>
+    <aura:attribute name="displayProducer" type="boolean"  default ="false"/>
+    <aura:attribute name="displayGroupProducer" type="boolean"  default ="false"/>
+    <aura:attribute name="interactionRec" type="Interaction__c"/>
+    <aura:attribute name="interactionMemberInfo" type="Object" />
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0"/>
+    <aura:attribute name="transactionId" type="String"/>
+    <aura:attribute name="tranId" type="String" access="public"/>
+    <aura:attribute name="memberCardSnap" type="Object" access="public"/>
+    <aura:attribute name="concatAddress" type="String" access="public"/>
+    <aura:attribute name="policyDetails" type="ETSBE_PolicyDetailsResults"/>
+    <aura:handler name="change" value="{!v.tranId}" action="{!c.fireTranIdFunctions}"/>
+    <aura:attribute name="memberPolicies" type="SAEMemberProviderSearchCoveragesResult.CoverageLine[]"/>
+    <aura:handler  event="c:SAE_COBHistoryEvent" action="{!c.viewCOBHistory}"/>
+    <aura:attribute name="isPrimaryCoverageAvailable" type="Boolean" default="false" />
+    
+    <aura:attribute name="disableTopic" type="Boolean" default="false" />
+    <aura:attribute name="isMemberSearch" type="Boolean" default="false" />
+    <aura:attribute name="SearchType" type="string" default="" />
+    <aura:attribute name="primaryCoverageDetails" type="Object"/>
+    <aura:attribute name="isSecondaryCoverageAvailable" type="Boolean" default="false" />
+    <aura:attribute name="secondaryCoverageList" type="Object[]"/>
+    <aura:attribute name="isShowCobHistory" type="Boolean" default="false" />
+    <aura:attribute name="originatorType" type="string" access="public"/>
+    <aura:attribute name="detailPage" type="string" access="public"/>
+    <aura:attribute name="payerID" type="String" default="87726"/>
+    <aura:attribute name="updateCaseInfo" type="Object" />
+    <aura:attribute name="caseHistoryList" type="ACETGetCases.CaseWrapper[]"/>
+    <aura:registerEvent name="SAE_CaseHistoryEvent" type="c:SAE_CaseHistoryEvent" />
+    <aura:attribute name="isHouseHoldMemClicked" type="Boolean" default="false" />
+    <aura:attribute name="isMockEnabled" type="Boolean" default="false"/> 
+    
+    <aura:registerEvent name="ETSBE_ProducerDataEvent" type="c:ETSBE_ProducerDataEvent" />
+    <aura:registerEvent name="ETSBE_TabName" type="c:ETSBE_TabName" />
+       <c:ACETLGT_AutoDoc></c:ACETLGT_AutoDoc>
+    <lightning:workspaceAPI aura:id="workspace"/>
+    <lightning:card iconName="standard:person_account">
+        <aura:set attribute="title">
+            <div class="slds-media__body slds-border--left slds-p-left--medium">
+                <p class="setupMatTile-label slds-page-header__title slds-m-right--small slds-align-middle fade-text" style="color:black" >{!v.SearchType} Detail</p>
+                <p class="page_header_link">
+                    <a href="javascript:void(0)" data-intId="{!v.interactionRec.Id}" onclick="{!c.navigateToInteraction}">{!v.interactionRec.Name}</a>
+                </p>
+            </div>
+        </aura:set>
+        <aura:set attribute="actions">
+            <div class="slds-m-right_large">
+                
+                <!--<lightning:buttonGroup>
+                    <lightning:button variant="neutral" label="Misdirect" name="misDirectBtnName"
+                                      class="misdirect_button" onclick="{!c.openMisdirectComp}"/>
+                </lightning:buttonGroup>-->
+                
+            </div>
+        </aura:set>
+    </lightning:card>
+    
+    <!--	<div class="slds-is-relative slds-card">
+     <div class="c-container">
+         <c:ETSBE_MemberGeneralInfo/>
+     </div>
+ 
+ </div> -->
+    <br/>
+    <div class="slds-grid">
+        
+        <aura:if isTrue="{!v.adminType != 'Member'}">
+            <div class="slds-col">
+                <span> <c:ETSBE_CustomerAdmin CustmrAdmin="{!v.CustmrAdmin}" /></span>
+            </div>
+            
+            <aura:if isTrue="{!v.displayProducer}">
+                <div class="slds-col">
+                    <span> <c:ETSBE_ProducerHighlight producerDetail="{!v.ProducerData}"/></span>
+                </div>
+            </aura:if>
+            <aura:if isTrue="{!and(v.SearchType == 'Member' ,v.displayGroup)}">
+                <div class="slds-col">
+                    <span> <c:ETSBE_GroupDetail groupData="{!v.selectedGroupInfo}"/></span>
+                </div>
+            </aura:if>
+            <aura:set attribute="else">
+                <span> <c:ETSBE_Member_CustomerAdmin CustmrAdmin="{!v.memberCardSnap}" /></span>
+            </aura:set>
+        </aura:if>
+        <div class="slds-col" style="min-width:25%">
+            <span>  <c:ETSBE_Topic disableTopic="{!v.disableTopic}" interactionRec="{!v.interactionRec}" specialInstructionsInfo="{!v.specialInstructionsInfo}" FlowType="{!v.FlowType}" ContactId="{!v.ContactId}" groupData="{!v.selectedGroupInfo}" memberData="{!v.selectedMemberInfo}" customerAdminData="{!v.CustmrAdmin}" producerData="{!v.ProducerInfo}" memberSubjCardData="{!v.memberCardSnap}" houseHoldData="{!v.houseHoldData}" isHouseHoldMemClicked="{!v.isHouseHoldMemClicked}" updateCaseInfo="{!v.updateCaseInfo}" uhgAccess="{!v.uhgAccess}"/></span>
+        </div>
+    </div><br/>
+    <aura:if isTrue="{!v.SearchType == 'Member'}">
+        <lightning:spinner class="slds-show" aura:id="global-spinner"
+                           alternativeText="Loading.." title="Loading.."
+                           variant="brand" size="large"/>
+        <div class="slds-grid slds-gutters">
+            <div class="slds-col">
+                <div class="slds-is-relative slds-card" >
+                    <c:ETSBE_Policies policySelectedIndex="{!v.policySelectedIndex}" policyList="{!v.memberPolicies}" />
+                </div>
+            </div>
+        </div><br/>
+        
+        <div class="slds-grid">
+            <div class="slds-col">
+                <span>
+                     <c:ETSBE_MemberDetails subjectCard="{!v.memberCardSnap}" aura:id="memberDetailsAI" policySelectedIndex="{!v.policySelectedIndex}" memberCardData="{!v.memberCardData}" extendedCoverage="{!v.policyDetails}"/>
+                </span>
+            </div>
+            <div class="slds-col">
+                <span>
+                    <c:ETSBE_PolicyDetails transId="{!v.tranId}" conAddress="{!v.concatAddress}"  policyDetails="{!v.policyDetails}"
+                                           />
+                </span>
+            </div>
+            <div class="slds-col">
+                <span>
+                    
+                    <c:ETSBE_CoordinationOfBenefits cobData="{!v.cobData}"
+                                                isShowCobHistory="{!v.isShowCobHistory}"
+                                                COBExtendedData="{!v.extendedCOBData}"
+                                                secondaryCoverageList="{!v.secondaryCoverageList}"
+                                                isSecondaryCoverageAvailable="{!v.isSecondaryCoverageAvailable}"
+                                                primaryCoverageDetails="{!v.primaryCoverageDetails}"
+                                                isPrimaryCoverageAvailable="{!v.isPrimaryCoverageAvailable}"
+                                                memberTabId="{!v.memberTabId}"
+                                                policySelectedIndex="{!v.policySelectedIndex}"
+                                                policyDetails="{!v.policyDetails}"
+                                                cobMNRCommentsTable="{!v.cobMNRCommentsTable}"
+                                                regionCode="{!v.regionCode}"
+                                                dependentCode="{!v.dependentCode}"                                                       
+                                                cobENIHistoryTable="{!v.cobENIHistoryTable}"
+                                                memberPolicies="{!v.memberPolicies}"
+                                                houseHoldData="{!v.houseHoldData}"/>
+                    <c:ETSBE_Household selectedGroup="{!v.selectedGroupInfo}" selectedCustomerAdmin="{!v.CustmrAdmin}"  houseHoldData="{!v.houseHoldData}" 
+                                       contactName="{!v.contactName}" searchOption="{!v.searchOption}" memberGrpN="{!v.memberGrpN}"
+                                       membTabId="{!v.memberTabId}" 
+                                       memberCardFlag="{!v.memberCardFlag}"
+                                       specialInstructionsInfo="{!v.specialInstructionsInfo}"
+                                       FlowType="{!v.FlowType}"
+                                       interactionRecd="{!v.interactionRec}"
+                                       payerID="{!v.payerID}"
+                                       isMockEnabled="{!v.isMockEnabled}"/>
+                </span>
+            </div>
+        </div><br/>
+        
+        <div class="slds-grid slds-gutters">
+            <div class="slds-col">
+                <div class="slds-is-relative slds-card" >
+                    
+                    <c:ETSBE_CaseHistory aura:id="caseHistoryCard" showFamilyCases="true" xrefId="{!v.xRefId}" memberID="{!v.memberId}" groupId="{!v.groupId}" producerId="{!v.ProducerId}" memberTabId="{!v.memberTabId}" caseHistoryList="{!v.caseHistoryList}" flowtype="{!v.SearchType}"/>
+                </div>
+            </div>
+        </div>
+        <aura:set attribute="else">
+            <aura:if isTrue="{!v.SearchType == 'Group'}">
+                <div class="slds-grid slds-gutters">
+                    <div class="slds-col">
+                        <div class="slds-is-relative slds-card" >
+                            <c:ETSBE_GroupGeneralInfo groupData="{!v.selectedGroupInfo}"/>
+                        </div>
+                    </div>
+                </div><br/>
+                <div class="slds-grid slds-gutters">
+                    <div class="slds-col">
+                        
+                        <div class="slds-is-relative slds-card" >
+                            <c:ETSBE_CaseHistory aura:id="caseHistoryCard" flowtype="{!v.SearchType}" showFamilyCases="true" xrefId="{!v.xRefId}" groupId="{!v.groupId}" caseHistoryList="{!v.caseHistoryList}" />
+                        </div>
+                    </div>
+                </div>
+            </aura:if>
+            <aura:if isTrue="{!v.SearchType == 'Producer'}">
+                <div class="slds-grid slds-gutters">
+                    <div class="slds-col">
+                        <div class="slds-is-relative slds-card" >
+                            <c:ETSBE_ProducerDetail producerId="{!v.ProducerId}" producerData="{!v.ProducerData}"/>
+                        </div>
+                    </div>
+                </div><br/>
+                <div class="slds-grid slds-gutters">
+                    <div class="slds-col">
+                        
+                        <div class="slds-is-relative slds-card" >
+                            <c:ETSBE_CaseHistory aura:id="caseHistoryCard" showFamilyCases="true" xrefId="{!v.xRefId}" producerId="{!v.ProducerId}" flowtype="{!v.SearchType}" caseHistoryList="{!v.caseHistoryList}" />
+                        </div>
+                    </div>
+                </div>
+            </aura:if>
+        </aura:set>
+    </aura:if>
+    
+</aura:component>

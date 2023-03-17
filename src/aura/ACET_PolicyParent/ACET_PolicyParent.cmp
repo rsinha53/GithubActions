@@ -1,0 +1,366 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes"
+    controller="SAE_PoliciesCtrl" access="global">
+
+    <!-- SCRIPTS -->
+    <ltng:require scripts="{!$Resource.ACET_AutodocJS}" />
+    <!-- /SCRIPTS -->
+
+    <!-- US2330408  - Avish -->
+    <ltng:require scripts="{!$Resource.ACET_SAESessionData}" />
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute name="interactionOverviewTabId" type="String" />
+    <aura:attribute name="memberId" type="string" access="public" />
+    <!-- US2330408  - Ends -->
+
+    <!-- ATTRIBUTES -->
+    <aura:attribute name="autodocUniqueId" type="String" default="policySnapshot" />
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default="policyCmpId" />
+    <aura:attribute name="tableDetails" type="Object" />
+    <aura:attribute name="openSaveCase" type="Boolean" default="false" />
+    <aura:attribute name="showSpinner" type="Boolean" default="true" />
+    <aura:attribute name="policyList" type="list" access="public" />
+    <aura:attribute name="tableID" type="String" />
+    <aura:attribute name="currentTransactionId" type="String" access="public" />
+    <!--US2855833-->
+    <aura:attribute name="selectedRows" type="Object[]" />
+    <!-- <aura:attribute name="selectAllCheckBox" type="Boolean" /> commented out as of new requirement - Thanish - 9th Sep 2020 -->
+    <aura:attribute name="tableDetails_prev" type="Object" />
+    <aura:attribute name="filterIsMedicalOnly" type="Boolean" default="true" />
+    <aura:attribute name="filterIsActive" type="Boolean" default="true" />
+    <aura:attribute name="showpreview" type="Boolean" default="false" />
+    <aura:attribute name="selectedPolicyKey" type="Integer" />
+    <aura:attribute name="caseWrapper" type="SAETTSCaseWrapper" default="[]" />
+    <aura:attribute name="initialClick" type="boolean" default="true" />
+    <aura:attribute name="isTierOne" type="boolean" access="public" default="false" />
+    <!--US2973232-->
+    <aura:attribute name="tierMap" type="Map" access="public" default="{}" />
+    <aura:attribute name="providerStatusMap" type="Map" access="public" default="{}" />
+    <aura:attribute name="firstCallout" type="boolean" access="public" default="true" />
+    <!--<aura:attribute name="interactionOverviewTabId" type="String" />-->
+    <!-- <aura:attribute name="memberId" type="string" access="public"/>-->
+    <!-- Inherit from Snapshot -->
+    <aura:attribute name="providerDetails" type="Object" access="public" />
+    <aura:attribute name="higlightGrpNumber" type="String" />
+    <aura:attribute name="showCOBHistory" type="Boolean" default="false" />
+    <aura:attribute name="isShowCobHistory" type="Boolean" default="false" />
+    <aura:attribute name="showPCPHistory" type="Boolean" default="false" />
+    <!-- extended coverage related attributes -->
+    <aura:attribute name="planLevelBenefitsRes" type="ACET_ExtendedServiceController.PlanLevelBenefits"
+        access="Public" />
+    <aura:attribute name="extendedHouseholdData" type="Object" />
+    <aura:attribute name="extendedCOBData" type="Object" />
+    <aura:attribute name="policyDetails" type="Object" />
+    <!-- eligibility related attributes -->
+    <aura:attribute name="data" type="Object" />
+    <aura:attribute name="dataORG" type="Object" />
+    <!-- US1761826 - UHC/Optum Exclusion UI -->
+    <aura:attribute name="AutodocPageFeature" type="String" />
+    <aura:attribute name="lstExlusions" type="List" access="public" />
+    <aura:attribute name="allowCallouts" type="Boolean" default="true" />
+    <!-- US1933887 - UHG Access -->
+    <aura:attribute name="uhgAccess" type="boolean" default="false" />
+    <aura:attribute name="SnapTabId" type="String" access="public" /> <!-- US3557591: New Mapping Needed for Notes - Swapnil -->
+    <aura:attribute name="memberTabId" type="String" access="public" />
+    <aura:attribute name="providerTabId" type="String" access="public" />
+    <!-- US2678265	MVP - Offshore Restriction - Implementation for Member &  Provider Interaction -->
+    <aura:attribute name="originatorType" type="String" />
+    <!-- Comments box related attributes -->
+    <aura:attribute name="isCommentsBox" type="Boolean" default="false" />
+    <aura:attribute name="commentsValue" type="String" default="" />
+    <aura:attribute name="disableCommentButton" type="String" default="false" />
+    <!-- US2423120, US2517602, US2517604 Praveen -->
+    <aura:attribute name="selectedPolicyLst" type="List" access="public" />
+    <aura:attribute name="memberMap" type="Map" access="public" />
+    <!-- US2554307: View Authorizations Details Page - Add Alerts Button Praveen CR -->
+    <aura:attribute name="memberIdAuthDtl" type="string" access="public" />
+    <aura:attribute name="groupIdAuthDtl" type="string" access="public" />
+    <aura:attribute name="alertProviderId" type="String" access="public" />
+    <aura:attribute name="alertTaxId" type="String" access="public" />
+    <!-- below attributes will be used for the table -->
+    <aura:attribute name="initialLoading" type="Boolean" default="true" />
+    <!--Save Case Disabled for Non Medical Policies-->
+    <aura:attribute name="isSaveCaseDisabled" type="Boolean" default="false" />
+    <aura:attribute name="boolSaveCaseDisabledWarning" type="Boolean" default="false" />
+    <!--US2137922: Added by Ravindra-->
+    <aura:attribute type="Integer" name="policySelectedIndex" default="0" />
+    <!-- Sanka -->
+    <aura:attribute name="selectedPolicyAttributes" type="Object" />
+    <!-- US2579637 -->
+    <aura:attribute name="contactAddress" type="String" />
+    <aura:attribute name="city" type="String" />
+    <aura:attribute name="state" type="String" />
+    <aura:attribute name="zip" type="String" />
+    <!-- wrap / clip text  -->
+    <aura:attribute name="wrapClip" type="Object[]"
+        default="[{'class1':'truncate','class2':'slds-truncate'}, {'class1':'truncate','class2':'slds-truncate'}, {'class1':'truncate','class2':'slds-truncate'}, {'class1':'truncate','class2':'slds-truncate'}, {'class1':'truncate','class2':'slds-truncate'}, {'class1':'truncate','class2':'slds-truncate'}, {'class1':'truncate','class2':'slds-truncate'}, {'class1':'truncate','class2':'slds-truncate'}, {'class1':'truncate','class2':'slds-truncate'},{'class1':'truncate','class2':'slds-truncate'},{'class1':'truncate','class2':'slds-truncate'}]" />
+    <!-- US2859959 - Thanish - 11th Sep 2020 -->
+    <aura:attribute name="autodocTables" type="Object[]" />
+    <aura:attribute name="highlightedPolicySourceCode" type="String" default="" />
+    <aura:attribute name="isSourceCodeChanged" type="Boolean" default="false" />
+    <aura:attribute name="policyStatus" type="Boolean" default="false" />
+    <!-- US2812137 -->
+    <aura:attribute name="relationShipcode" type="String" />
+    <!-- /ATTRIBUTES -->
+    <!-- US3020043 - Thanish - 29th Oct 2020 -->
+    <aura:attribute name="showAutodocWarning" type="Boolean" default="false" />
+    <aura:attribute name="clickedRowData" type="Object" />
+    <!--US3068299 - Sravan-->
+    <aura:attribute name="autoDocToBeDeleted" type="Object" />
+    <!--US2925631 - Tech: Member Alerts Convert Member ID to EEID and Include the Business Segment - Sravan-->
+    <aura:attribute name="memberSubscriberId" type="String" default="" />
+    <!--US3117073 - Multiple Policies -  Creating Multiple Unique ORS Records Check In ISET - Sravan-->
+    <aura:attribute name="memberPolicyNumberMap" type="Map" default="" />
+    <!---Jitendra-->
+    <aura:attribute name="strBenefitPlandId" type="String" default="" />
+    <aura:attribute name="flowDetails" type="Object" access="public" />
+    <aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="showAPPolicyWarning" type="Boolean" default="false" />
+    <aura:attribute name="selectedPolicyWarning" type="String"/>
+
+    <aura:attribute name="memberCardData" type="Object" />
+    <aura:attribute name="selectedIPAValue" type="String" default="" />
+    <aura:attribute name="callCSContractsAPI" type="boolean" access="public" default="false" />
+    <aura:attribute name="isNoPolicies" type="boolean" access="public" />
+    <aura:attribute name="caseItemList" type="Object[]"/> <!-- DE409857 - Thanish - 8th Mar 2021 -->
+    <!--Ketki RCED begin-->
+    <aura:attribute name="rcedResultWrapper" type="ADBLoyaltyResponseWrapper" />
+    <!--Ketki RCED end-->
+
+    <!-- ketki VCCD begin -->
+    <aura:attribute name="iVRDetails" type="Object" access="public" />
+    <aura:attribute name="isVCCD" type="Boolean" default="false" />
+    <!-- ketki VCCD end -->
+    <!-- US3476452 When no policies found - Sarma - 28th Apr 2021 -->
+    <aura:attribute name="isShowOnlyMedicalDisabled" type="boolean" access="public" default="false" />
+    <aura:attribute name="isShowOnlyActiveDisabled" type="boolean" access="public" default="false" />
+    <!-- US3504373	Unable to Determine  Policy - Save Case - Sarma - 05th May 2021 -->
+    <aura:attribute name="isShowComponentBasedOnExclusions" type="Boolean" default="true" />
+    <!--US3816776 - Sravan-->
+    <aura:attribute name="highlightedPolicyNumber" type="String" default=""/>
+
+    <!-- METHODS -->
+    <!-- <aura:method name="refreshTable" action="{!c.refreshTable}" /> -->
+    <!-- /METHODS -->
+
+    <!-- HANDLERS -->
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}" />
+    <aura:handler name="change" value="{!v.policyList}" action="{!c.onPolicyListChange}" />
+    <aura:handler event="c:ACET_GetPoliciesList" action="{!c.getSelectedPolicies}" />
+    <!-- US2423120, US2517602, US2517604 Praveen -->
+    <aura:handler event="c:ACET_GetMemberIdGroupIdAuthDtl" action="{!c.setMmberIdGroupIdAuthDtl}" />
+    <!-- US2554307: View Authorizations Details Page - Add Alerts Button Praveen CR -->
+    <!-- /HANDLERS -->
+
+    <!-- EVENTS -->
+    <aura:registerEvent name="show_hideComponents" type="c:SAE_HideComponentsForExclusions" />
+    <aura:registerEvent name="SAE_AuthSRNCreateEvent" type="c:SAE_AuthSRNCreateEvent" />
+    <!-- US2061732 - Added by Avish -->
+    <aura:registerEvent name="SAE_DisableTopicWhenNoPolicies" type="c:SAE_DisableTopicWhenNoPolicies" />
+    <aura:registerEvent name="networkStatus" type="c:SAE_NetworkStatus" />
+    <!--Financials-->
+    <aura:registerEvent name="ACET_SetPoliciesList" type="c:ACET_SetPoliciesList" />
+    <!-- US2423120, US2517602, US2517604 Praveen -->
+    <aura:registerEvent name="ACET_SetMmberIdGroupIdAuthDtl" type="c:ACET_SetMmberIdGroupIdAuthDtl" />
+    <!-- US2554307: View Authorizations Details Page - Add Alerts Button Praveen CR -->
+    <aura:registerEvent name="SAE_PolicyClickforAlerts" type="c:SAE_PolicyClickforAlerts" />
+    <!-- TECH - US2692129 - Edited Signature -->
+    <!--US2908113 Claims Results line selection -->
+    <aura:registerEvent name="ACET_PolicyswitchclaimsEvent" type="c:ACET_PolicyswitchclaimsEvent" />
+    <!-- /EVENTS -->
+
+    <!-- Save Case Consolidation - US3424763 - Edited -->
+    <aura:attribute name="disableButtons" type="boolean" default="true" />
+    <aura:attribute name="showComments" type="boolean" default="false" />
+    <aura:handler event="c:ACET_AutoDocRefreshEvent" action="{!c.handleAutodocRefresh}" />
+
+    <div class="slds-card card_top_padding card_bottom_padding">
+        <aura:if isTrue="{!v.showSpinner}">
+            <lightning:spinner alternativeText="Loading.." title="Loading.." variant="brand" />
+        </aura:if>
+
+        <lightning:layout class="card_bottom_margin card_left_padding card_right_padding" horizontalAlign="spread">
+            <lightning:layoutItem size="2">
+                <h3 class="component_title">Policies</h3>
+            </lightning:layoutItem>
+            <lightning:layoutItem size="9">
+                <div style="float:right;">
+                    <lightning:buttonGroup>
+                        <!-- Save Case Consolidation - US3424763 -->
+                        <lightning:button class="" variant="neutral" label="Autodoc" onclick="{!c.getPreview}"
+                            disabled="{! v.disableButtons || v.isSaveCaseDisabled}" />
+                        <lightning:button class="" variant="neutral" label="Add Comments" onclick="{!c.openComments}"
+                            disabled="{! v.disableButtons || v.isSaveCaseDisabled}" />
+                        <!-- <lightning:button class="brand_button" disabled="{!v.isSaveCaseDisabled}" variant="brand"
+                            label="Route" onclick="{!c.openModal}" /> -->
+                        <lightning:button class="brand_button" disabled="{! v.disableButtons || v.isSaveCaseDisabled}" variant="brand"
+                            label="Route" onclick="{!c.openModal}" />
+                    </lightning:buttonGroup>
+                </div>
+                <div style="float: right; padding-top: 4px;">
+                    <lightning:input type="checkbox" label="Show only medical policies"
+                        checked="{!v.filterIsMedicalOnly}" onchange="{!c.onMedicalOnlyChanged}"
+                        disabled="{!v.isShowOnlyMedicalDisabled}" />
+                </div>
+                <div style="float: right; padding-top: 4px;">
+                    <lightning:input type="checkbox" label="Show only active policies" checked="{!v.filterIsActive}"
+                        onchange="{!c.onActiveOnlyChanged}" disabled="{!v.isShowOnlyActiveDisabled}"/>
+                </div>
+            </lightning:layoutItem>
+        </lightning:layout>
+
+        <div class="card_top_margin">
+            <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-no-row-hover">
+                <thead>
+                    <tr class="slds-line-height_reset">
+                        <th class="" scope="col">
+                            <!-- commented out as of new requirement - Thanish - 9th Sep 2020 -->
+                            <!-- <lightning:input type="checkbox" checked="{!v.selectAllCheckBox}" variant="label-hidden" onchange="{!c.selectAll}"/> -->
+                        </th>
+                        <aura:iteration items="{!v.tableDetails.tableHeaders}" var="header" indexVar="index">
+                            <th class="table_column_header" scope="col">
+                                <span class="slds-truncate">{!header}</span>
+                                <lightning:buttonMenu name="{!index}" variant="container" alternativeText="Show menu"
+                                    iconName="utility:chevrondown" iconSize="x-small" onselect="{!c.wrapClipSelect}">
+                                    <lightning:menuItem aura:id="menuItems" value="CLIP" label="Clip Text" />
+                                    <lightning:menuItem aura:id="menuItems" value="WRAP" label="Wrap Text" />
+                                </lightning:buttonMenu>
+                            </th>
+                        </aura:iteration>
+                    </tr>
+                </thead>
+                <tbody>
+                    <aura:iteration items="{!v.tableDetails.tableBody}" var="row" indexVar="index">
+                        <tr
+                            class="{!((row.hide) ? 'slds-hide ' : '') + 'slds-hint-parent ' + ((row.uniqueKey == v.selectedPolicyKey) ? 'highlight ' : '')}">
+                            <td style="width: 4%; min-width: 4%; max-width: 4%;" data-rowIndex="{!index}"
+                                onclick="{!c.onCellClick}">
+                                <div class="slds-truncate">
+                                    <lightning:input type="checkbox" name="{!index}" checked="{!row.checked}"
+                                        disabled="{!row.disabled}" variant="label-hidden" onchange="{!c.selectRow}" />
+                                </div>
+                            </td>
+                            <aura:iteration items="{!row.rowColumnData}" var="data" indexVar="idx">
+                                <td data-rowIndex="{!index}" onclick="{!c.onCellClick}"
+                                    class="{!(idx==0)?'width7':(idx==1)?'width4':(idx==2)?'width15':(idx==3)?'width6':(idx==4)?'width10':(idx==5)?'width20':(idx==6)?'width16':(idx==7)?'width7':'width7'}">
+                                    <div
+                                        class="{!(idx==0)?v.wrapClip[0].class1:(idx==1)?v.wrapClip[1].class1:(idx==2)?v.wrapClip[2].class1:(idx==3)?v.wrapClip[3].class1:(idx==4)?v.wrapClip[4].class1:(idx==5)?v.wrapClip[5].class1:(idx==6)?v.wrapClip[6].class1:(idx==7)?v.wrapClip[7].class1:v.wrapClip[8].class1}">
+                                        <div title="{!data.titleName ? data.titleName : data.fieldValue}"
+                                            class="{!(idx==0)?v.wrapClip[0].class2:(idx==1)?v.wrapClip[1].class2:(idx==2)?v.wrapClip[2].class2:(idx==3)?v.wrapClip[3].class2:(idx==4)?v.wrapClip[4].class2:(idx==5)?v.wrapClip[5].class2:(idx==6)?v.wrapClip[6].class2:(idx==7)?v.wrapClip[7].class2:v.wrapClip[8].class2}">
+                                            <aura:if isTrue="{!data.isLink}">
+                                                <a href="javascript:void(0);" class="slds-text-link_reset"
+                                                    data-indexValue="{!index}" onclick="{!c.navigateToValidateLink}">
+                                                    <span class="slds-text-link">{!data.fieldValue}</span></a>
+                                            </aura:if>
+                                            <aura:if isTrue="{!data.isOutputText}">
+                                                {!data.fieldValue}
+                                            </aura:if>
+                                            <aura:if isTrue="{!data.isIcon}">
+                                                <div class="statusIcon">
+                                                    <lightning:icon iconName="{!data.iconName}"
+                                                        alternativeText="{!data.fieldValue}" size="x-small" />
+                                                </div>
+                                            </aura:if>
+                                            <!--US3059727 - Sravan  -->
+                                            <!-- Save Case Consolidation - US3424763 -->
+                                            <aura:if isTrue="{!data.isCheckBox}">
+                                                <div style="text-align: center;">
+                                                    <lightning:input type="checkbox" checked="{!row.resolved}"
+                                                        onchange="{!c.checkResolved}" />
+                                                </div>
+                                            </aura:if>
+                                        </div>
+                                    </div>
+                                </td>
+                            </aura:iteration>
+                        </tr>
+                    </aura:iteration>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Save Case Consolidation - US3424763 -->
+    <aura:if isTrue="{!v.showComments}">
+        <div class="slds-card card_padding card_top_margin">
+            <c:ACET_HoverPopup aura:id="commentsId" moveRight="" description="" isNubbinLeft="true"
+                descriptionList="[ 'Use the comments to include a brief','description of the issue, research performed,', 'and any attempts to resolve' ]" />
+
+            <p class="component_title slds-form-element__label field_label_padding"
+                style="border-bottom:1px dashed;padding:0px" data-popupId="commentsId" onmouseover="{!c.togglePopup}"
+                onmouseout="{!c.togglePopup}">
+                Comments:
+            </p>
+            <b class="component_title slds-p-left_small">View Member Eligibility</b>
+
+            <lightning:textarea name="commentsTextArea" value="{!v.commentsValue}" label="Commets"
+                aura:id="commentsBoxId" variant="label-hidden" class="slds-p-top_small" onkeyup="{!c.handleKeyup }"
+                maxlength="2000" />
+            <span class="floatToRight valueCls slds-form-element__static">
+                Characters remaining:
+                <lightning:formattedNumber value="{!2000-v.commentsValue.length}" />
+            </span>
+        </div>
+    </aura:if>
+
+    <!-- Save Case Consolidation - US3424763 - Edited -->
+    <aura:if isTrue="{!v.openSaveCase}">
+        <c:SAE_TtsModalCaseCreation Topic="View Member Eligibility" caseWrapper="{!v.caseWrapper}"
+            isModalOpen="{!v.openSaveCase}" autodocUniqueId="{!v.autodocUniqueId}"
+            freeFormCommentsVal="{!v.commentsValue}" memberMap="{!v.memberMap}"
+            memberPolicyNumberMap="{!v.memberPolicyNumberMap}" flowDetails="{!v.flowDetails}"
+            flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}" state="{!v.state}" aura:id="casePopup"
+            onlyRoute="true" />
+        <!--US3182829 - Sravan-->
+        <!--DE393490 - Sravan-->
+        <!-- DE383846 - Thanish - 10th Nov 2020 -->
+    </aura:if>
+
+    <aura:if isTrue="{!v.showpreview}">
+        <c:ACET_PreviewAutoDoc tableDetails_prev="{!v.tableDetails_prev}" isModalOpen="{!v.showpreview}" />
+    </aura:if>
+    <!-- US3020043 - Thanish - 29th Oct 2020 -->
+    <aura:if isTrue="{!v.showAutodocWarning}">
+        <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true"
+            aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <div class="slds-modal__content slds-is-relative slds-theme--warning centerTexts warningFont card_padding"
+                    style="border-top-right-radius: 0.25rem; border-top-left-radius: 0.25rem;">
+                    <lightning:icon iconName="utility:warning" variant="inverse" class="autodocWarningIcon" /> Would you
+                    like to retain autodoc related to currently highlighted policy?
+                </div>
+                <footer class="slds-modal__footer slds-theme--warning noTopBorder centerTexts">
+                    <lightning:button variant="neutral" label="Yes" class="noUnderline" onclick="{!c.switchPolicy}" />
+                    <lightning:button variant="neutral" label="No" class="noUnderline" onclick="{!c.switchPolicy}" />
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+
+    <aura:if isTrue="{!v.showAPPolicyWarning}">
+        <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true"
+            aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <div class="slds-modal__content slds-is-relative slds-theme--warning centerTexts warningFont card_padding"
+                    style="border-top-right-radius: 0.25rem; border-top-left-radius: 0.25rem;">
+                    <lightning:icon iconName="utility:warning" variant="inverse" class="autodocWarningIcon" />
+                    <aura:if isTrue="{!v.selectedPolicyWarning =='AP' ? true : false}">
+                        The Policy Line selected is a Community &#38; State plan. <br/>
+                        If you are not trained to handle this plan type please misdirect this call.  <br/>
+                        Note: Review any other policy lines that may be applicable for your call that you can service.
+                    </aura:if>
+                    <aura:if isTrue="{!v.selectedPolicyWarning =='PA' ? true : false}">
+                        The Policy Line selected is a PHS/NICE plan. Use ISET for this member. <br/>
+                        If you are not trained to handle this plan type please misdirect this call.  <br/>
+                        Note: Review any other policy lines that may be applicable for your call that you can service.
+                    </aura:if>
+                </div>
+                <footer class="slds-modal__footer slds-theme--warning noTopBorder centerTexts">
+                    <lightning:button variant="neutral" label="Ok" class="noUnderline" onclick="{!c.showAPPolicyWarning}" />
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+
+</aura:component>

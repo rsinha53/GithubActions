@@ -1,0 +1,290 @@
+<apex:component controller="ACETCaseDetailController">
+     <apex:actionFunction name="caseCommentSection" action="{!displayCaseComments}" rerender="MouseOverPopUpPanel,caseMsgBox,CovDetInfo,MouseOverPopup" oncomplete="hideMaskCategoryNew();console.log('Hello');">
+         <apex:param name="casenumber" assignTo="{!casenumber}" value="" id="casenumber"/>
+        <apex:param name="originalType" assignTo="{!originalType}" value="" id="originalType"/>
+        <apex:param name="originalSubtype" assignTo="{!originalSubType}" value="" id="originalSubType"/>
+        <apex:param name="caseCommentString" assignTo="{!caseCommentString}" value="" id="aNode"/>
+        <apex:param name="ExternalIDs" assignTo="{!ExternalIDs}" value="" id="ExternalIDs"/>
+        <apex:param name="CaseItemStatus" assignTo="{!CaseItemStatus}" value="" id="CaseItemStatus"/>
+        <apex:param name="CaseOwner" assignTo="{!CaseOwner}" value="" id="CaseOwner" />
+
+    </apex:actionFunction>
+   
+    <style>
+        table.commentsTable thead tr th
+        {
+            font-size : 125%;
+        }
+        .casepopup-modal {
+            background-color: white;
+            border-width: 2px;
+            border-style: solid;
+            z-index: 9999;
+            left: 30%;
+            padding: 10px;
+            position: absolute;
+            margin-left: -160px;
+            top: 100px;
+            display: none;
+            width: 40%;
+            border-radius: 5px;
+        }
+        
+        .labelFormatReal {
+            font-weight: bold;
+            width: 22%;
+            text-align: right;
+        }
+        
+        .labelFormatSubType {
+            font-weight: bold;
+            text-align: right;
+        }
+    </style>
+    <script type="text/javascript">
+        var __sfdcSessionId = '{!GETSESSIONID()}';
+    </script>
+    <script src="/soap/ajax/28.0/connection.js" type="text/javascript"></script>
+    <script src="/soap/ajax/28.0/apex.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        var isOpened = false;
+        function caseLinkMouseHoverOver(caseId) { 
+        console.log('mouse enter');
+        isOpened  = true;
+                showMaskCategoryNew();
+                getCaseCommentsQuery(caseId);
+                $("#caseMsgBox").css("display","block");
+            
+        }
+        
+         function caseLinkMouseHoverOverNew(caseId) { 
+         
+         if(isOpened){
+              caseLinkMouseHoverOver(caseId);
+       
+         }
+       }
+        function getCaseCommentsQuery(caseId) {
+                        commentQuery = "SELECT Id, CommentBody,createddate,createdby.name FROM casecomment WHERE parentId = '" + caseId + "'";
+            commentQuery = commentQuery+' ORDER BY createddate DESC';
+            caseQuery = "SELECT Id,CaseNumber,Original_Type__c, Original_Subtype__c,Owner.Name FROM case WHERE Id = '" + caseId + "'";
+            caseItemExternalQuery = "SELECT ExternalID__c,Resolved__c FROM Case_Item__c WHERE Case__c = '" + caseId + "'";
+            var commentresult = sforce.connection.query(commentQuery);
+            var caseresult = sforce.connection.query(caseQuery);
+            var caseItemResult = sforce.connection.query(caseItemExternalQuery);
+             
+            var commentrecords = commentresult.getArray("records");
+            var caserecord = caseresult.getArray("records");
+            var caseItemRecord = caseItemResult.getArray("records");
+              var commentsList = [];
+              for(var i=0;i<commentrecords.length;i++) { 
+                  var commentsRecords = commentrecords[i];
+                  var casecommenrsStr = commentrecords[i].get('CreatedBy').Name+'<1>'+commentrecords[i].get('CreatedDate')+'<br/>'+commentrecords[i].get('CommentBody');
+                  commentsList.push(casecommenrsStr);
+              } 
+              var casenumber = '';
+              var originalType = '';              
+              var OriginalSubType = '';
+              var caseOwner = '';
+              for(var i=0;i<caserecord.length;i++) {
+                var caseRecords = caserecord[i];
+                
+                if(caserecord[i].get('CaseNumber')!=null){
+                    casenumber = caserecord[i].get('CaseNumber');
+                }
+                if(caserecord[i].get('Original_Type__c')!=null){
+                    originalType = caserecord[i].get('Original_Type__c');
+                }
+               
+                if(caserecord[i].get('Original_Subtype__c')!=null){
+                    OriginalSubType = caserecord[i].get('Original_Subtype__c');
+                }
+                if(caserecord[i].get('Owner') != null){
+                    
+                    caseOwner = caserecord[i].get('Owner').Name;
+                }
+                    
+                
+                //OriginalSubType = caserecord[i].get('Original_Subtype__c');
+              }
+              var ExternalIDs = "";
+              var CaseItemStatus = "";
+              for(var j=0; j<caseItemRecord.length;j++){
+              
+                if(caseItemRecord[j].get('ExternalID__c')!=null){
+                    if(ExternalIDs!=""){
+                        ExternalIDs = ExternalIDs + ",";
+                    }
+                    ExternalIDs = ExternalIDs + caseItemRecord[j].get('ExternalID__c');
+                }
+                if(caseItemRecord[j].get('Resolved__c')!=null){
+                    if(CaseItemStatus!=""){
+                        CaseItemStatus = CaseItemStatus + ",";
+                    }
+                    CaseItemStatus = CaseItemStatus + caseItemRecord[j].get('Resolved__c');
+                }
+              }
+              
+              console.log('>>>>>> ExternalIDs  ',ExternalIDs );
+              console.log('>>>>>> CaseItemStatus  ',CaseItemStatus );
+                        caseCommentSection(casenumber,originalType, OriginalSubType,JSON.stringify(commentsList), ExternalIDs,CaseItemStatus,caseOwner );
+        }
+        
+        function showMaskCategoryNew(){
+            $("#loader-scrollOver").css("display","table");
+            $("#MouseOverPopup").css("display","none");
+            $("#casepopup-mask").css("display","block");   
+        }
+        function hideMaskCategoryNew(){
+ // Fix Case detail hover over size based on the content .                 
+        var show  ='{!displayCaseActions}';
+        
+        if(show=='true'){
+   if($('#MouseOverPopup').height()<280){
+    $('#caseMsgBox').css('height','230px');
+  
+   }else{
+  $('#caseMsgBox').css('height','280px');
+   }
+   }
+            $("#loader-scrollOver").css("display","none");
+            $("#MouseOverPopup").css("display","block");
+           
+        }
+       function hideShowPopup() {
+           $("#caseMsgBox").css("display","none");
+       }
+       function closehoverPopup() {
+
+         console.log('mouse out');
+      
+       isOpened  = false;
+          $("#caseMsgBox").css("display","none");
+          $(".hippa-popupBackground").css("visibility","hidden");
+       }
+    </script>
+    <apex:slds />
+    <div id="caseMsgBox" class="casepopup-modal" style="min-width:386px;margin-left: 12px; max-width:940px;position:absolute;display: none;{!if(displayCaseActions ==true,'overflow-y: auto;','width:auto !important;')}">
+       
+        <div id = "loader-scrollOver" style = "display:none;margin : 0 auto;">
+        <img src="{!URLFOR($Resource.ACETResources, '/img/m/loading16x16.gif')}" />
+        </div> 
+        <apex:outputPanel rendered="{!displayCaseActions}">
+        <div style="float:right"><a href="#" onclick="closehoverPopup(); "  Style="text-decoration:underline;color: #000 !important">Close</a></div>
+        <br/> 
+        </apex:outputPanel>
+         <apex:outputPanel id="MouseOverPopUpPanel" styleClass="MouseOverPopUpPanel">
+            <div class="slds-panel__section"  style="padding: 0 2pc 1pc" id = "MouseOverPopup"> 
+                       
+                <div class="form-element__group fieldLayout collapse in" id="CovDetInfo" style="    text-align: left !important; line-height:1.4;">
+                  <div class="slds-form-element__row">  
+                       <div class="slds-form-element " >  
+                          <apex:outputLabel styleClass=" {!if(displayCaseActions ==true,'slds-form-label_cssforheadder','slds-form-element__label slds-text-body_regular labelFormatSubType')}" value="Case Number:" ></apex:outputLabel>  
+                          <apex:outputText value="{!casenumber}" styleClass="slds-form-element__label slds-form-element__control slds-text-body--small {!if(displayCaseActions ==true,'slds-form-label_css','')}" style="{!if(displayCaseActions ==true,'padding-left:5px !important;','')}"/>  
+                        </div>  
+                    </div>
+                   
+                    <div class="slds-form-element__row" style="text-align: left !important; line-height:1.4;">  
+                       <div class="slds-form-element " >  
+                          <apex:outputLabel styleClass=" {!if(displayCaseActions ==true,'slds-form-label_cssforheadder','slds-form-element__label slds-text-body_regular labelFormatSubType')}" value="Original Type:"></apex:outputLabel>  
+                          <apex:outputText value="{!originalType}" styleClass="slds-form-element__label slds-form-element__control slds-text-body--small {!if(displayCaseActions ==true,'slds-form-label_css','')}" style="{!if(displayCaseActions ==true,'padding-left:5px !important;','')}"/>  
+                        </div>  
+                    </div>
+                  
+                    <div class="slds-form-element__row" style="line-height:1.4;    text-align: left !important; ">  
+                       <div class="slds-form-element " >  
+                          <apex:outputLabel styleClass=" labelFormatSubType {!if(displayCaseActions ==true,'slds-form-label_cssforheadder','slds-form-element__label slds-text-body_regular')}" value="Original Subtype:"></apex:outputLabel>  
+                          <apex:outputText value="{!originalSubtype}" styleClass="slds-form-element__label slds-form-element__control slds-text-body--small {!if(displayCaseActions ==true,'slds-form-label_css','')}" style="{!if(displayCaseActions ==true,'padding-left:5px !important;','')}"/>  
+                        </div>  
+                    </div>
+                    
+                
+                <div class="slds-form-element__row" style="line-height:1.4;    text-align: left !important; ">  
+                       <div class="slds-form-element " >  
+                          <apex:outputLabel styleClass="slds-form-element__label slds-text-body_regular labelFormatSubType {!if(displayCaseActions ==true,'slds-form-label_cssforheadder','slds-form-element__label slds-text-body_regular labelFormatSubType')}" value="Case Owner: "></apex:outputLabel>  
+                          <apex:outputText value="{!CaseOwner}" styleClass="slds-form-element__label slds-form-element__control slds-text-body--small {!if(displayCaseActions ==true,'slds-form-label_css','')}" style="{!if(displayCaseActions ==true,'padding-left:5px !important;','')}"/>  
+                        </div>  
+                    </div>
+                    <div class="slds-form-element__row" style="line-height:1;" >  
+                      <div class="slds-form-element "  style="word-break: break-all;" > 
+                          <apex:outputLabel rendered="{!!displayCaseActions}" styleClass=" {!if(displayCaseActions ==true,'slds-form-label_cssforheadder','slds-form-element__label slds-text-body_regular labelFormatSubType')}" value="External ID:"></apex:outputLabel>  
+                          <apex:outputText rendered="{!!displayCaseActions}" value="{!ExternalIDs}" style="color: #54698d;" styleClass="slds-form-element__label1 slds-form-element__control slds-text-body--small {!if(displayCaseActions ==true,'slds-form-label_css','')}" /> 
+                        </div>  
+                    </div>  
+                </div>
+                 <div class="slds-form-element__row" >  
+                    <apex:dataTable id="commentsTable" value="{!caseDataList}" var="comments" styleClass=" {!if(displayCaseActions ==true,'slds-form-label_cssforheadder','slds-form-element__label slds-form-element__control slds-text-body--small')}" style="font-size: 13px ">
+                        <apex:column headerValue="Case Comments:" style="word-break: break-all;" styleClass=" {!if(displayCaseActions ==true,'slds-form-label_cssforheadder','slds-cell-wrap case_cmt')}">
+                              <apex:outputText value="Created By:" style="font-weight:bold; !important" styleClass=" {!if(displayCaseActions ==true,'slds-form-label_cssforheadder','slds-cell-wrap')}"/>
+                              <apex:outputText value="{!IF(comments != null && comments.createdByName != null,comments.createdByName, '')} ({!IF(comments != null && comments.createdByDate != null,comments.createdByDate,'')})" style=" !important;font-weight:bold; padding-left:10px" styleClass=" {!if(displayCaseActions ==true,'slds-form-label_cssforheadder','slds-cell-wrap')}"/><br/>
+          
+                              <apex:outputText value="{!IF(comments != null && comments.commentBodyCase != null,comments.commentBodyCase,'')}" style="word-break: break-all;"/>
+                          </apex:column>
+                    </apex:dataTable>
+                </div> 
+                           
+                <!--case item status table-->
+                    
+                <div class="slds-panel__section slds-table slds-table_cell-buffer slds-text-title borderclass" columns="1" style="line-height:1.4;{!if(displayCaseActions,'padding-top: 8px;','display:none')}">    
+                    <apex:pageBlock >
+                   
+                    <apex:pageBlockTable id="statusTable" value="{!caseitemList }" var="eachStatus" border="1px" rendered="{!displayCaseActions}">
+                        <apex:column headerValue="Case Item External ID" style="word-break: break-Word;" >
+                              <apex:outputText value="{!eachStatus.extid}" />
+                              </apex:column>
+                          <apex:column headerValue="Status" style="word-break: break-word;" styleClass="statusColumn">
+                              <apex:outputText value="{!IF(eachStatus.status != null && eachStatus.status=='true','Resolved','Unresolved')}" />
+                          </apex:column>
+
+                    </apex:pageBlockTable> 
+                    </apex:pageBlock>
+                </div> 
+                <!--end of item case staus table-->          
+            </div>
+                    </apex:outputpanel>
+    </div>
+    <style>
+// CSS for Related cases Global Component 
+.slds-scope th {
+    font-size: 13px !important;
+    }    
+.statusColumn {
+    width: 75px;
+}
+.slds-form-label_css{
+    display: inline-block !important; 
+    color: #000 !important;
+    font-size: 13px !important;    
+    margin-right: 0px !important;
+    margin-bottom: 0px !important;
+    font-family: Arial,Helvetica,sans-serif !important;
+        font-weight: normal !important;
+
+}
+.slds-form-label_cssforheadder {
+    display: inline-block !important; 
+    color: #000 !important;
+    font-size: 13px !important;    
+    margin-right: 0px !important;
+    margin-bottom: 0px !important;
+    font-family: Salesforce Sans,Arial,sans-serif !important;
+    font-weight:bold !important;
+}
+.borderclass .apexp .secondaryPalette{
+/*border-top-color: #996 !important;
+  border : 3px solid  #996 !important;*/
+   {!if(pageName =="ACETAuthorizationDetail",'border-top-color: #56458c; !important;border : 3px solid  #56458c; !important;','')}
+   {!if(Pagename =="ACETProviderLookUpDetails",'border-top-color: #1797c0;; !important;border : 3px solid  #1797c0;; !important;','')}
+
+  border-top-right-radius: 4px !important; 
+    border-top-left-radius: 4px !important; 
+    background-color:#f8f8f8;
+    border-bottom: 1px solid #eaeaea !important;
+    border-left: 1px solid #eaeaea !important;
+    border-right: 1px solid #eaeaea !important;
+
+}
+
+    </style>
+    
+</apex:component>

@@ -1,0 +1,157 @@
+<aura:component controller="ACET_RoutingScreenController" >
+     <lightning:workspaceAPI aura:id="workspace"/>
+    <aura:attribute name="claimPolicyList" type="List" access="public"/>
+    <aura:attribute name="selectedUnresolClaims" type="List" default=""/>
+    <aura:attribute name="caseWrapper" type="Object" access="public" default=""/>
+    <aura:attribute name="viewClaims" type="string" />
+    <aura:attribute name="viewClaimsSubType" type="string" />
+    <aura:attribute name="orsMap" type="Map"/>
+    <aura:attribute name="ttsTopic" type="String"/>
+    <aura:attribute name="isModalOpen" type="Boolean" default="false"/>
+    <aura:attribute name="orsMetaDataList" type="Object" default=""/>
+    <aura:attribute name="reasonCodesMap" type="Map"/>
+    <aura:attribute name="reasonCode" type="String" default="--"/>
+    <aura:attribute name="category" type="String" default="--"/>
+    <aura:attribute name="providerDetails" type="List"/>
+    <aura:attribute name="sendToListInputs" type="Object"/>
+    <aura:attribute name="reasonCodesList" type="Object"/>
+    <aura:attribute name="yesOrNoOptions" type="List" />
+    <aura:attribute name="selTabId" type="string" default="" />
+    <aura:attribute name="prvselTabId" type="string" default="" />
+    <aura:attribute name="contactNo" type="string" default="" />
+    <aura:attribute name="count" type="Integer" default="1" />
+    <aura:attribute name="vCount" type="Integer" default="1" />
+    <aura:attribute name="isServiceReqCmp" type="boolean" default="false" />
+    <aura:attribute name="showError" type="boolean" default="false" />
+    <aura:attribute name="isShowError" type="boolean" default="false" />
+    <aura:attribute name="isAdditionaDetCmp" type="boolean" default="false" />
+    <aura:attribute name="isComboboxCmp" type="boolean" default="false" />
+    <aura:attribute name="isClosedPopup" type="boolean" default="true" />
+    <aura:attribute name="warning" type="string" default="" />
+    <aura:attribute name="stopChngTab" type="string" default="" />
+    <aura:attribute name="warningMessage" type="string" default="" />
+    <aura:attribute name="Tabs" type="string" default="" />
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}" />
+    <aura:handler name="change" value="{!v.stopChngTab}" action="{!c.stopChngTab}"/>
+    <aura:registerEvent name="SubmitButtonValidation" type="c:ACET_SubmitButtonValidation"/>
+    <aura:handler name="ClaimRoutingValidationEvent" event="c:ACET_ClaimRoutingValidationEvent" action="{!c.validation}"/>
+    <aura:handler name="ClaimRoutingServiceCallCompleteEvent" event="c:ACET_ClaimRoutingServiceCallCompleteEvent" action="{!c.orsServiceCallComplete}"/>
+    <aura:handler name="ClaimRoutingTabChangeEvent" event="c:ACET_ClaimRoutingTabChangeEvent" action="{!c.tabChange}"/>
+    <aura:attribute name="allResolvedClaims" type="List" />
+    <aura:attribute name="acetCaseId" type="String" default="" />
+ 	<aura:attribute name="allUnresolvedResolvedFlg" type="boolean" access="public"  default="false" />
+    <aura:attribute name="finalPolicyMap" type="Map" default=""/>
+    <aura:attribute name="flowDetails" type="Object" access="public" />
+    <aura:attribute name="conStartTime" type="String" default="" />
+    <aura:attribute name="conStartType" type="String" default="" />
+    <aura:attribute name="conEndTime" type="String" default="" />
+    <aura:attribute name="conEndType" type="String" default="" />
+    <aura:attribute name="conTimeZone" type="String" default="" />
+    <aura:attribute name="AutodocKey" type="String"/>
+    <aura:attribute name="mapClaimSummaryDetails" type="Object" default="[]"/>
+    <aura:attribute name="unresolvedClmsToRetry" type="List" access="public" />
+    <aura:registerEvent name="ACET_AutoDocRefreshEvent" type="c:ACET_AutoDocRefreshEvent"/>
+    <aura:registerEvent name="ACET_CaseHistoryRefreshEvt" type="c:ACET_CaseHistoryRefreshEvt" />
+    <div class="slds-card card_padding slds-p-top_small">
+         <div class="slds-p-bottom_medium">
+            <span class="component_title">
+                <aura:if isTrue="{!v.viewClaimsSubType == 'Stop Pay and Reissue'}">
+					Payment Routing Request:
+					<aura:set attribute="else">Claim Routing Request:</aura:set>
+				</aura:if>
+                <aura:iteration items="{!v.providerDetails}" var="provider">
+                    <aura:if isTrue="{!or(provider.firstName,provider.lastName)}">
+                        {!provider.firstName} &nbsp;{!provider.lastName}
+                        <aura:set attribute="else"></aura:set>
+                    </aura:if>
+                </aura:iteration>
+            </span>
+         </div>
+        	 <lightning:spinner class="slds-hide" aura:id="clmdtl-spinner" alternativeText="Loading.." title="Loading.."
+                               variant="brand" size="medium" />
+              <lightning:tabset variant="scoped" class="tab-active" onselect="{!c.tabChangeMan}" selectedTabId="{!v.selTabId}">
+                     <aura:iteration items="{!v.claimPolicyList}" var="policy"  indexVar="index">
+                        <lightning:tab label="{!policy.policyType}" id="{!policy.policyType}" >
+                            <div  aura:id="disabled">
+                           <c:ACET_ClaimServiceRouting aura:id="ClaimServiceRouting"
+                                                       viewClaims="{!v.viewClaims}"
+                                                        viewClaimsSubType="{!v.viewClaimsSubType}"
+                                                        category="{!v.category}"
+                                                        selectedUnresolClaims="{!v.selectedUnresolClaims}"
+                                                        prvselTabId="{!v.prvselTabId}"
+                                                        orsMap="{!v.orsMap}"
+                                                        stopChngTab="{!v.stopChngTab}"
+                                                        selTabId="{!v.selTabId}"
+                                                        ttsTopic="{!v.ttsTopic}"
+                                                        Tabs="{!v.Tabs}"
+                                                        contactNo="{!v.contactNo}"
+                                                        showError="{!v.showError}"
+                                                        isShowError="{!v.isShowError}"
+                                                        providerDetails="{!v.providerDetails}"
+                                                        yesOrNoOptions="{!v.yesOrNoOptions}"
+                                                        sendToListInputs="{!v.sendToListInputs}"
+                                                        orsMetaDataList="{!v.orsMetaDataList}"
+                                                        reasonCodesList="{!v.reasonCodesList}"
+                                                        reasonCodesMap="{!v.reasonCodesMap}"
+                                                        sbtBName="{!v.claimPolicyList.length == index+1 ? 'Submit' :'Next'}"
+                                                       policyName="{!policy.policyType}"
+                                                       selectedUnresolvedClaims="{!policy.claims}"
+                                                       caseWrapper = "{!v.caseWrapper}"
+                                                       allResolvedClaims = "{!v.allResolvedClaims}"
+                                                       acetCaseId = "{!v.acetCaseId}"
+                                                       count="{!v.count}"
+                                                       claimPolicyList="{!v.claimPolicyList}"
+                                                       finalPolicyMap="{!v.finalPolicyMap}"
+                                                       flowDetails="{!v.flowDetails}"
+                                                       conStartTime="{!v.conStartTime}"
+                                                       conStartType="{!v.conStartType}"
+                                                       conEndTime="{!v.conEndTime}"
+                                                       conEndType="{!v.conEndType}"
+                                                       conTimeZone="{!v.conTimeZone}"
+                                                       unresolvedClmsToRetry= "{!v.unresolvedClmsToRetry}"
+                                                       mapClaimSummaryDetails="{!v.mapClaimSummaryDetails}"
+                                                       allUnresolvedResolvedFlg ="{!v.allUnresolvedResolvedFlg}"
+                                                       />
+                            <!--Ketki pass case wrapper to claim service routing-->
+                            </div>
+                        </lightning:tab>
+                     </aura:iteration>
+                 </lightning:tabset>
+                </div>
+
+        <aura:if isTrue="{!v.isModalOpen}">
+           <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container" style="width: 37%;">
+                    <!--Modal/Popup Box Body Starts here-->
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <p><b>
+                            <aura:if isTrue="{!equals(v.stopChngTab,'secNo')}">
+                               One or more service requests could not be generated. Do you want to retry again?
+                                <aura:set attribute="else">
+                                    One or more service requests could not be generated. Click the Yes button to retry.
+                                  </aura:set>
+                                    </aura:if>
+                            </b></p>
+                    </div>
+                    <!--Modal/Popup Box Footer Starts here-->
+                    <footer class="slds-modal__footer">
+                        <lightning:button variant="neutral"
+                                          label="Yes"
+                                          title="Yes"
+                                          class="slds-button slds-button_brand "
+                                          onclick="{! c.retryORSCase}"/>
+                         <aura:if isTrue="{!equals(v.stopChngTab,'secNo')}">
+                        <lightning:button variant="brand"
+                                          label="No"
+                                          title="No"
+                                          class="slds-button slds-button_brand "
+                                          onclick="{!c.closeModal}"/>
+                        </aura:if>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </aura:if>
+
+
+</aura:component>

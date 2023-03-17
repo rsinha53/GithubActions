@@ -1,0 +1,1797 @@
+<apex:component controller="ACETDiagnosisAndPricingTable" allowDML="true"  >
+    <apex:attribute type="String" name="pricingSet" description="pricingset Id" assignTo="{!pricingSetParam}" />
+    <apex:attribute type="Boolean" name="attrIsProviderFeeScheduleCallTopic" description="Coverage Levels"/>
+    <apex:attribute type="Boolean" name="attrIsProviderLookupCallTopic" description="Coverage Levels"/>
+    <apex:attribute type="Boolean" name="allignment" description="Contract Detail Page allignment"/>
+    <style> 
+        /*  body .pbBody table.list tr.dataRow th, body .pbBody table.list tr.dataRow td {
+           border-width: 0 0 1px 0;
+            vertical-align: top;
+        }*/
+        .messageTable{
+            border:none;
+        }
+        #searchTab th{
+            background-color: #F9F8F8;
+        //border: 1px solid darkgrey;
+        }
+        #searchCode {
+            margin-left:-14px;
+            width:66%;
+        }
+        #facilityTbl {
+            margin-left:8px;
+            width:69.3%;
+            border:1px black solid;
+            padding:5px;
+        }
+        #searchTab {
+            margin-left:9px;
+            width:65%;
+            position: static;
+        }
+        .errorClass{
+         border-color: #c00 !important;
+         border: 2px solid;
+        }
+        .errorMsg {
+        // color: #c00 !important;
+        // margin-left: 0.5%;
+        }
+        tr.selected {
+        background-color: #5dade2 !important;
+        }
+        .facilityLabel{
+            font-weight:bold;white-space: nowrap;
+        } 
+        
+    </style>
+    <script>
+ 
+    $(document).ready(function(){
+         acet.autodoc.startAutodoc(); 
+         acet.autodoc.createCommentsbox(); 
+        // afOnPageLoad(); 
+        //OpenDiagCodes_af(pricigsetid);
+        //$('.typeOfBill').wrap('<div class="requiredInput">').before('<div class="requiredBlock"></div>');
+    }); 
+    
+    function callagreements(){
+          GetAgreements();
+        }                                                                       
+    function expandthis(domId){
+        $("[id$="+domId+"]").click();
+    }
+    
+    function decimalOnly(e){
+            e.value = e.value.replace(/[^0-9\.]/g,'');
+            if(e.value.split('.').length>2) e.value = e.value.replace(/\.+$/,"");
+        }    
+        
+    /*  function clearForm(){
+        $("[id$='btnClearAll']").closest('form').find("input[type=text],select").val("");
+        clear();  
+        return true;
+    } */
+   function processDatatable(row, data, dataIndex){
+       $("[id$='AgrmtSection']").find(".auto-doc-list").find("thead").find("tr").children(":nth-child(1)").hide();
+       $(row).children().first().hide();
+       console.log($(row).children().first());
+    }
+    var tableDisplayed = false;
+    var surrogateKey ='{!surrogateKey}';
+
+    
+        function inputLimiter(e,allow) {
+            var AllowableCharacters = '';
+            
+            if (allow == 'Currency'){AllowableCharacters='1234567890.';}
+            
+            var k = document.all?parseInt(e.keyCode): parseInt(e.which);
+            if (k!=13 && k!=8 && k!=0){
+                if ((e.ctrlKey==false) && (e.altKey==false)) {
+                    return (AllowableCharacters.indexOf(String.fromCharCode(k))!=-1);
+                } else {
+                    return true;
+                }
+            } else {
+                return true;
+            }  
+        }   
+        
+        function DisableCtrlKey(e)
+        {
+            var code = (document.all) ? event.keyCode:e.which;
+            // look for CTRL key press
+            if (parseInt(code)==17)
+            {
+                alert("Paste Option disabled");
+                window.event.returnValue = false;
+        }
+        }
+
+        function DisableRightClick(event)
+        {
+            //For mouse right click
+            if (event.button==2)
+            {
+            alert("Paste Option disabled");
+          }    
+        }
+    
+        
+        
+    function IsAlphaNumeric1(e) {
+            var keyCode = e.keyCode == 0 ? e.charCode : e.keyCode;
+            var ret = ((keyCode >= 48 && keyCode <= 57) || (keyCode >= 65 && keyCode <= 90) || (keyCode >= 97 && keyCode <= 122) );
+           // document.getElementById("error").style.display = ret ? "none" : "inline";
+            return ret;
+        }
+        
+    function IsNumeric(evt) {
+        var charCode = (evt.which) ? evt.which : evt.keyCode
+        return !(charCode > 31 && (charCode < 48 || charCode > 57));
+    
+     }
+        
+     
+        function scrollIfError(){
+            var error1='';
+            var elem = $("[id$=pgMsg");
+            // alert(elem.html());
+              if(elem.html() != ''){
+                window.scrollTo(0,0);
+            }
+        }
+
+      </script>
+    
+
+        <apex:actionFunction name="addServiceLineItems" action="{!addRowsFromEntry}"  reRender="refreshTable,noOfRowsCount" onComplete="addPreviousData();applyEventListner();">
+        <apex:param assignTo="{!rowEntry}" value="" name="rowEntry" />
+        </apex:actionFunction>
+        <apex:actionFunction name="SearchAF" action="{!searchResults}" status="refreshMemberStatus" oncomplete="acet.autodoc.startAutodoc('pbsec');scrollIfError();applyRequiredMarkForRow('0');" rerender="opACETPFResults,pgMsg">
+            <apex:param name="jsonStr" value="" assignTo="{!jsonStr}"/>            
+        </apex:actionFunction>
+     
+     <apex:actionFunction name="clear" action="{!setTableSize}" status="refreshMemberStatus" oncomplete="applyRequiredMarkForRow('0');applyEventListner();afterClear();" rerender="clearTables,pgMsg,facilityTable,refreshTable" /> 
+         
+        
+         <apex:actionStatus id="refreshMemberStatus">
+            <apex:facet name="start">
+                <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                    &nbsp;
+                </div>
+                <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 1001; margin: 15% 50%">
+                    <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                        <img src="/img/loading.gif" style="float: left; margin: 8px;" />
+                        <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                    </div>
+                </div>
+            </apex:facet>
+        </apex:actionStatus> 
+        
+        
+       
+        <apex:pageMessages id="pgMsg" />  
+        <apex:actionFunction name="OpenDiagCodes_af" action="{!showData}" rerender="pbsection" oncomplete="applyEventListner();applyRequiredMarkForRow('0');" rendered="{!attrIsProviderFeeScheduleCallTopic}">
+            <apex:param name="selRowPId" value="" assignTo="{!pricingSetId}"/>
+        </apex:actionFunction>
+         
+        <apex:actionFunction name="OpenDiagCodes_af" action="{!showData}" rerender="pbsection" oncomplete="applyEventListner();applyRequiredMarkForRow('0');" rendered="{!attrIsProviderLookupCallTopic}">
+            <apex:param name="pricingSetId" value="" assignTo="{!pricingSetId}"/>
+        </apex:actionFunction>
+        <apex:actionFunction name="claimTypeChange" action="{!cliamTypeChange}" reRender="opACETPFResults,facilityTable,refreshTable,noOfRowsCount,pbsec,clearTables" oncomplete="applyRequiredMarkForRow('0');applyEventListner();afterClear();" rendered="{!attrIsProviderFeeScheduleCallTopic}"/>
+        <apex:actionFunction name="claimTypeChange" action="{!cliamTypeChange}" reRender="opACETPFResults,facilityTable,refreshTable,noOfRowsCount,pbsec,clearTables" oncomplete="applyRequiredMarkForRow('0');applyEventListner();afterClear();OpenDiagCodes_af('pricingSetId');" rendered="{!attrIsProviderLookupCallTopic}"/>
+        <apex:actionFunction name="OpenDiagCodesnotReRender" action="{!showData}" rerender="false" oncomplete="applyEventListner()">
+            <apex:param name="selRowPId" value="" assignTo="{!pricingSetId}"/>
+        </apex:actionFunction>
+        <apex:actionFunction name="clearDiagCodes" reRender="clearDiagCodes" />
+        
+        
+        <apex:pageblock mode="maindetail" > 
+            
+            <div id="errorMsgPanel">
+
+            </div>
+            <br/>
+        
+            <apex:outputPanel >
+                <apex:outputPanel id="pbsection" >
+                     <apex:outputPanel rendered="{!showvalue}">   
+                        <div style="margin-left:14px;color:#27282e;font-size:12px;">
+                        <apex:pageMessages />
+                            <apex:outputLabel value="Claim Form Type"/>&nbsp;&nbsp;&nbsp;
+                                <apex:selectList value="{!claimTypeLst}" size="1" style="height:23px;border:2px solid #CCD1D1" onchange="claimTypeChangeSettoNUll();" id="claimType" >
+                                    <apex:selectOptions value="{!claimTypeOptions}"/>
+                                </apex:selectList>
+                        </div>
+                        <hr style="border-top: 2px Solid #D1F2EB;"/>
+                        <br/><br/>
+                    <apex:outputPanel id="clearTables">   
+                        <div>
+                            <apex:outputLabel value="Diagnosis Codes"  style="margin-left:14px;color:#27282e;font-weight:bold;font-size:12px;"/>
+                        </div>
+                        <br/>
+                        <div style="margin-left:23px;" id="clearDiagCodes">                                                       
+                                <table cellspacing="8" width="70%"  id="searchCode" style="border:1px black solid;">
+                                    <th style="font-weight:Normal">1(A).</th> &nbsp;&nbsp;
+                                    <th style="font-weight:Normal">2(B).</th>&nbsp;&nbsp;
+                                    <th style="font-weight:Normal">3(C).</th>&nbsp;&nbsp;
+                                    <th style="font-weight:Normal">4(D).</th>&nbsp;&nbsp;
+                                    <th style="font-weight:Normal">5(E).</th>&nbsp;&nbsp;
+                                    <th style="font-weight:Normal">6(F).</th>&nbsp;&nbsp;
+                                    <tr> 
+                                        <td> <apex:inputText value="{!diagnosisCode.diagnosisCode1}" styleclass="diagCode" id="code1"/></td>
+                                        <td> <apex:inputText value="{!diagnosisCode.diagnosisCode2}" styleclass="diagCode" id="code2"/></td>
+                                        <td> <apex:inputText value="{!diagnosisCode.diagnosisCode3}" styleclass="diagCode" id="code3"/></td>
+                                        <td> <apex:inputText value="{!diagnosisCode.diagnosisCode4}" styleclass="diagCode" id="code4"/></td>
+                                        <td> <apex:inputText value="{!diagnosisCode.diagnosisCode5}" styleclass="diagCode" id="code5"/></td>
+                                        <td> <apex:inputText value="{!diagnosisCode.diagnosisCode6}" styleclass="diagCode" id="code6"/></td>
+                                    </tr>
+                                    <th style="font-weight:Normal">7(G).</th>&nbsp;&nbsp;
+                                    <th style="font-weight:Normal">8(H).</th>&nbsp;&nbsp;
+                                    <th style="font-weight:Normal">9(I).</th>&nbsp;&nbsp;
+                                    <th style="font-weight:Normal">10(J).</th>&nbsp;&nbsp;
+                                    <th style="font-weight:Normal">11(K).</th>&nbsp;&nbsp;
+                                    <th style="font-weight:Normal">12(L).</th>&nbsp;&nbsp;
+                                    <tr>
+                                        <td> <apex:inputText value="{!diagnosisCode.diagnosisCode7}" styleclass="diagCode" id="code7"/></td>
+                                        <td> <apex:inputText value="{!diagnosisCode.diagnosisCode8}" styleclass="diagCode" id="code8"/></td>
+                                        <td> <apex:inputText value="{!diagnosisCode.diagnosisCode9}" styleclass="diagCode" id="code9"/></td>
+                                        <td> <apex:inputText value="{!diagnosisCode.diagnosisCode10}" styleclass="diagCode" id="code10"/></td>
+                                        <td> <apex:inputText value="{!diagnosisCode.diagnosisCode11}" styleclass="diagCode" id="code11"/></td>
+                                        <td> <apex:inputText value="{!diagnosisCode.diagnosisCode12}" styleclass="diagCode" id="code12"/></td>
+                                    </tr>
+                                </table>
+                        </div> 
+                        <br/>
+                        <apex:outputPanel id="facilityTable">
+                            <apex:outputPanel rendered="{!if(claimTypeLst == 'Facility-UB04',true,false)}">
+                                <table  id="facilityTbl">
+                                    <tr>
+                                        <td>
+                                            <apex:outputLabel value="Type Of Bill" styleclass="facilityLabel"/>
+                                        </td>
+                                        <td>&nbsp;</td>
+                                        <td>
+                                            <div class="requiredInput">
+                                                <div class="requiredBlock"></div>
+                                                <apex:inputText value="{!typeOfBill}"  style="width:145px" id="typeOfBill" onKeyDown="return DisableCtrlKey(event)" 
+                                                                                        onMouseDown="DisableRightClick(event)" />
+                                            </div>
+                                        </td>
+                                        <td>&nbsp;&nbsp;</td>
+                                        <td>
+                                            <apex:outputLabel value="DRG Code" styleclass="facilityLabel" />                                        
+                                        </td>
+                                        <td>                                        
+                                            <apex:inputText value="{!drgCode}" style="width:145px" id="drgCode" onKeyDown="return DisableCtrlKey(event)" 
+                                                                                onMouseDown="DisableRightClick(event)"/>
+                                        </td>
+                                        <td>&nbsp;&nbsp;</td>
+                                        <td>
+                                            <apex:outputLabel value="Invoice Amount" styleclass="facilityLabel"/>                                        
+                                        </td>
+                                        <td>                                        
+                                            <apex:inputText value="{!invoiceAmount}" id="invoiceAmount" onkeypress="return onlyDotsAndNumbers(this,event);"  onKeyDown="return DisableCtrlKey(event)" 
+                                                                                     onMouseDown="DisableRightClick(event)"/>
+                                        </td>
+                                        <td>&nbsp;&nbsp;</td>
+                                        <td>
+                                            <apex:outputLabel value="Admission Date" styleclass="facilityLabel"/>                                        
+                                        </td>
+                                        <td>&nbsp;</td>
+                                        <td>   
+                                            <div class="requiredInput">
+                                                <div class="requiredBlock"></div>
+                                                <apex:inputField value="{!admissionDate.tst_Date_Field__c}" id="admissionDate"/>
+                                            </div>
+                                        </td>
+                                        <td>&nbsp;&nbsp;</td>
+                                        <td>
+                                            <apex:outputLabel value="Discharge Date" styleclass="facilityLabel"/>                                        
+                                        </td>
+                                        <td>                                        
+                                            <apex:inputField value="{!objInteraction.tst_Date_Field__c}" id="dischargeDate"/>
+                                        </td>
+                                    </tr>
+                                </table>
+                               
+                                </apex:outputPanel>
+                        </apex:outputPanel>
+                        
+                        <br/><br/>
+                        <apex:outputPanel id="refreshTable">
+                            <table id="searchTab"  cellspacing="5" style="border:1px black solid;" class="mainTableWidth">
+                                <thead>
+                                    <tr>
+                                        <th colspan = "2">
+                                            <p style="margin-left:24%">
+                                                Date(s) Of Service 
+                                            </p> 
+                                            <br/>
+                                            <p style="margin-left:10%;display:inline">
+                                                Start 
+                                            </p>
+                                            <p style="margin-left:38%;display:inline">
+                                                End 
+                                            </p>                                            
+                                        </th >
+                                        <th>
+                                            <apex:outputPanel >
+                                                <apex:outputPanel rendered="{!if(claimTypeLst == 'Facility-UB04',true,false)}">
+                                                    <center>Rev Code</center>
+                                                </apex:outputPanel>
+                                            </apex:outputPanel>
+                                        </th>
+                                        <th text-align="center" style="width:80px"><p><center>CPT/HCPCS</center></p></th >
+                                        <th colspan="4"><p><center>Modifiers </center></p> </th >
+                                        
+                                        <th ><apex:outputPanel rendered="{!if(claimTypeLst != 'Facility-UB04',true,false)}">
+                                            <p> <center>POS</center></p>
+                                            </apex:outputPanel>
+                                        </th >
+                                            
+                                        <th  style="width:80px"><p>
+                                            <center>Rx National <br/>Drug Code</center>
+                                            </p></th >
+                                        <th  style="width:80px"><p><center>Days/Units</center></p></th >
+                                        <th  style="width:80px"><p><center>Charged Amount</center></p></th >
+                                        <th style="text-align:center;" colspan = "2"><p><center>Action</center></p></th>
+                                    </tr>    
+                                </thead>
+                                <tbody>
+                                    <apex:variable var="rowNum" value="{!0}"/>
+                                    <apex:repeat value="{!inputList}" var="ptData">
+                                   
+                                        <tr>
+                                             <td>                                              
+                                                 <div id="DateOfServiceFromrequiredInput{!rowNum}">
+                                                    <div id="DateOfServiceFromrequiredBlock{!rowNum}" onclick="applyRequiredMarkForRow({!rowNum})"> </div>
+                                                    <apex:inputField value="{!objInteraction.tst_Date_Field__c}"
+                                                                      id="DateOfServiceFrom" 
+                                                                      styleclass="serviceLine"
+                                                                       onchange="applyRequiredMarkForRow({!rowNum})"/> 
+                                                </div>
+                                            </td>                         
+                                            <td > 
+                                                <div id="DateOfServiceThrurequiredInput{!rowNum}">
+                                                    <div id="DateOfServiceThrurequiredBlock{!rowNum}"  onclick="applyRequiredMarkForRow({!rowNum})"> </div>
+                                                    <apex:inputField value="{!objInteraction.tst_Date_Field__c}"
+                                                                      id="DateOfServiceThru" 
+                                                                      styleclass="serviceLine"
+                                                                      onchange="applyRequiredMarkForRow({!rowNum})"/> 
+                                                </div>
+                                                
+                                            </td>
+                                            <td>
+                                           
+                                                <apex:outputPanel rendered="{!if(claimTypeLst == 'Facility-UB04',true,false)}">
+                                                    <div id="revCoderequiredInput{!rowNum}">
+                                                    <div id="revCoderequiredBlock{!rowNum}"> </div>
+                                                    <input type="text" style="width:100px"
+                                                           class="revCode serviceLine" id="revCode{!rowNum}" 
+                                                           onKeyDown="return DisableCtrlKey(event)" 
+                                                           onMouseDown="DisableRightClick(event)"/>
+                                                           </div>
+                                                </apex:outputPanel>
+                                         
+                                            </td>
+                                            <td> 
+                                                <div id="PCoderequiredInput{!rowNum}">
+                                                    <div id="PCoderequiredBlock{!rowNum}"> </div>
+                                                    <input type="text" id="PCode{!rowNum}"  style="width:80px"
+                                                                    onkeypress="return IsAlphaNumeric1(event);" class="cpthpcs serviceLine"
+                                                                    onKeyDown="return DisableCtrlKey(event)" 
+                                                                    onMouseDown="DisableRightClick(event)"/> 
+                                                </div>
+                                            </td>
+                                            
+                                            <td> 
+                                                <input type="text" style="width:60px; background-color:#CCEEFF" 
+                                                                 id="mod1{!rowNum}"  class="modifier serviceLine" onKeyDown="return DisableCtrlKey(event)" 
+                                                                                     onMouseDown="DisableRightClick(event)" /> 
+                                            </td>
+                                            <td> <input type="text" style="width:60px; background-color:#CCEEFF" 
+                                                                 id="mod2{!rowNum}" class="modifier serviceLine" onKeyDown="return DisableCtrlKey(event)" 
+                                                                                    onMouseDown="DisableRightClick(event)" /> 
+                                            </td>
+                                            <td> <input type="text" style="width:60px; background-color:#CCEEFF" 
+                                                                 id="mod3{!rowNum}" class="modifier serviceLine" onKeyDown="return DisableCtrlKey(event)" 
+                                                                                    onMouseDown="DisableRightClick(event)" /> 
+                                            </td>
+                                            <td> <input type="text" 
+                                                        style="width:60px;height:15px; background-color:#CCEEFF" 
+                                                        id="mod4{!rowNum}" class="modifier serviceLine" onKeyDown="return DisableCtrlKey(event)" 
+                                                                           onMouseDown="DisableRightClick(event)" /> 
+                                            </td>
+                                            
+                                            <td> 
+                                                <apex:outputPanel rendered="{!if(claimTypeLst != 'Facility-UB04',true,false)}">
+                                                    <div>
+                                                        <div id="browserrequiredInput{!rowNum}">
+                                                            <div id="browserrequiredBlock{!rowNum}"> </div>
+                                                            <input list="dataList{!rowNum}" name="browser{!rowNum}" 
+                                                                   id="browser{!rowNum}" 
+                                                                   onkeyup="updateList(this);" oninput="updateInput(this);" 
+                                                                   onblur="onChangeDataList(this.id, this.value,'selectedPOSId{!rowNum}')"
+                                                                   class="serviceLine"/>
+                                                        </div>
+                                                        <datalist id="dataList{!rowNum}">
+                                                            <apex:repeat value="{!posVals}" var="val">
+                                                                <option value="{!val}" ></option>
+                                                            </apex:repeat>
+                                                        </datalist>
+                                                        <input type="hidden"  id="selectedPOSId{!rowNum}"/>                                            
+                                                    </div>
+                                                </apex:outputPanel>
+                                             </td>
+                                            <td> <input type="text"     style="width:100px"
+                                                        class="drugCode serviceLine" id="drugCode{!rowNum}" 
+                                                        onKeyDown="return DisableCtrlKey(event)" 
+                                                          onMouseDown="DisableRightClick(event)"/>
+                                            </td> 
+                                            <td> 
+                                                
+                                                <div id="daysOrUnitsrequiredInput{!rowNum}">
+                                                        <div id="daysOrUnitsrequiredBlock{!rowNum}"> </div>
+                                                    <input type="text"  style="width:80px"
+                                                            onKeyDown="return DisableCtrlKey(event)" 
+                                                            onMouseDown="DisableRightClick(event)" 
+                                                            id="daysOrUnits{!rowNum}"
+                                                            class="dayOrCurr serviceLine"/>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div id="chargesrequiredInput{!rowNum}">
+                                                        <div id="chargesrequiredBlock{!rowNum}"> </div>
+                                                    <input type="text"   style="width:89px"
+                                                            onKeyDown="return DisableCtrlKey(event)" 
+                                                            onMouseDown="DisableRightClick(event)"                                                      
+                                                            id="charges{!rowNum}"
+                                                            class="serviceLine" onkeypress="return onlyDotsAndNumbers(this,event);"/>  
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <a style="cursor:pointer" onClick="copyServiceLine('{!rowNum}')"><b><u>Copy</u></b></a>
+                                            </td>
+                                            <td>
+                                                <a   style="cursor:pointer"  onClick="clearServiceLine('{!rowNum}')"><b><u>Clear</u></b></a>                                               
+                                            </td>
+                                            <apex:variable var="rowNum" value="{!rowNum+1}"/>
+                                        </tr>
+                                    </apex:repeat>          
+                                </tbody> 
+                            </table> 
+                           </apex:outputPanel>
+                        <br/>
+                            <div >
+                                <apex:inputText value="{!rowEntry}" style="width:5%;background-color:#dbd3c2;margin-left:8px" html-placeholder="1...60" id="addRows"/>&nbsp;&nbsp;
+                                <input type="button" value="Add" onclick="prepareWrapperAndSearch(false)" id="addbutton"/>&nbsp;&nbsp;&nbsp;&nbsp;
+                                <apex:outputPanel id="noOfRowsCount">
+                                    <apex:outputLabel value="Total Rows:"/>&nbsp;&nbsp;&nbsp;
+
+                                    <apex:outputText value="{!inputList.size}" id="inputCount"/>
+                                </apex:outputPanel>
+                            </div>
+                       
+                        <div align="center" draggable="false" style="margin-left:-345px;">                            
+                            <input type="button" value="Search" onclick="Data_Validate();"  class="btn"/>                            
+                            <input type="button" id="btnClearAll"  class="btn" value="Clear" onclick="return clearForm();"/>
+                        </div>
+                     </apex:outputPanel>
+                    </apex:outputPanel>
+                </apex:outputPanel>
+            </apex:outputPanel>
+            <br/>
+            
+            
+            
+            <br/><br/>
+            <apex:pageBlockSection >
+                     <apex:outputPanel id="opACETPFResults"> 
+                     <apex:outputPanel rendered="{!showDetails}">
+                          
+                           <!--<apex:outputPanel html-auto-doc-pagination="true" styleClass="enablePagination" html-auto-doc-section-combinedkey="pbsec" html-auto-doc-section-tabid="" >-->
+                           <apex:repeat value="{!tablesDisplayMap}" var="row"><table><tr>
+                           <td> 
+                            <apex:pageBlockSection html-auto-doc="true" id="pbsec" html-auto-doc-section-key="pbsec" html-auto-doc-section-column-indexes="1,2,3,4,5,6,7,8,9,10,11,12" >
+                           <apex:pageBlockTable value="{!tablesDisplayMap[row]}" var="res"  id="ResultTab" columns="13" title="Fee Schedule Results" styleclass="changeTableWidth">
+                                <apex:column headerValue="Start Date" value="{!res.dateOfServiceFrom}">
+                                   
+                                </apex:column> 
+                                <apex:column value="{!res.dateOfServiceThru}" headerValue="End Date"></apex:column>
+                               <apex:column headerValue="DRG Code"  value="{!res.drgCode}" rendered="{!if(claimTypeLst == 'Facility-UB04',true,false)}">
+                                  
+                               </apex:column>
+                               <apex:column headerValue="Rev Code" value="{!res.revenueCode}" rendered="{!if(claimTypeLst == 'Facility-UB04',true,false)}"/> 
+                                <apex:column value="{!res.procedureCode}" headerValue="CPT/HCPCS"></apex:column> 
+                                <apex:column headerValue="Modifiers ">
+                                    <apex:variable var="count" value="{!1}"   />
+                                    <apex:repeat value="{!res.modifierPricedList}" var="modifier">
+                                        {!modifier.modifierCode}
+                                        <apex:outputLabel value="," rendered="{!count != res.modifierPricedList.size}"/>
+                                         <apex:variable value="{!count+1}" var="count"/>
+                                    </apex:repeat>
+                               
+                                </apex:column>                         
+                                <apex:column value="{!res.placeOfServiceCode}" headerValue="POS" rendered="{!if(claimTypeLst == 'Professional-CMS1500',true,false)}"></apex:column>
+                               <apex:column value="{!res.serviceUnits}" headerValue="Days/Units"></apex:column>
+                                <apex:column headerValue="Charged Amount">
+                                 <span style="display:{!if(res.billedAmount != '','','none')}">$</span>{!res.billedAmount}
+                                </apex:column>
+                                <apex:column headerValue="Edit Code/Text" style="width:19%">
+                                    <apex:repeat value="{!res.messages}" var="msg">
+                                        {!msg.id}-{!msg.description}<br/>
+                                    </apex:repeat> 
+                                    <span style="display:{!if(res.billedAmount != '','none','')};float:right;font-weight:bold;">Total Priced Amount:</span>
+                                </apex:column>
+                                <apex:column headerValue="Priced Amount" >
+                                    ${!res.finalPricedAmount}
+                                    <span style="display:{!if(res.billedAmount != '','none','')};">{!res.totalPricedAmount} </span>
+                                </apex:column> 
+                                <apex:column value="{!res.pricingSetIDParent}" headerValue="Pricing Set Id">
+                                 
+                                </apex:column>
+                                <apex:column value="{!res.pricingScheduleIDParent}" headerValue="Pricing Schedule Id"></apex:column>
+                                <apex:column headerValue="Pricing Type">
+                                    <apex:repeat value="{!res.componentDetailTierList}" var="pType">
+                                        {!pType.pricingComponentType}
+                                    </apex:repeat>
+                                </apex:column>
+                            </apex:pageBlockTable>
+                            <!--</apex:outputPanel>--> </apex:pageBlockSection>
+                             </td></tr> 
+                             </table>
+                            </apex:repeat>
+                    </apex:outputPanel>
+                </apex:outputPanel>
+            </apex:pageBlockSection>
+        </apex:pageblock>
+    
+    <script>
+        var requiredMarkAppliedRows = []; 
+        
+        function applyEventListner(){
+           
+            
+            $(".diagCode").keypress(diagCodeValidations);
+            $(".cpthpcs").keypress(CPTHPCSValidation);
+            $(".modifier").keypress(modifiersValidation);
+            $(".drugCode").keypress(drugCodeValidation);   
+            $(".dayOrCurr").keypress(daysCurrency);
+            $(".serviceLine").blur(callRequiredMark);
+            $(".serviceLine").change(callRequiredMark); 
+            $("[id$=drgCode]").keypress(AllowDigitsOnly);
+            $("[id$=typeOfBill]").keypress(typeOfBillAllowDigitsOnly);
+            $(".revCode").keypress(AllowFourDigitsOnly);
+            $("[id$=addRows]").keyup(addRowsValidation);
+            $("[id$=addRows]").keypress(addRowsAllowDigitsOnly);
+            
+            
+            $(".errorMsg").remove();
+            $('#addbutton').removeAttr("disabled");
+            $("[id$=inputCount]").removeClass("errorClass").parent().find(".errorMsg").remove();
+            var inputCount = $("[id$=inputCount]").text();      
+            if(inputCount != null && inputCount !='' && inputCount == 75) {
+                   console.log('inputCount' +inputCount);
+                   var errorMsg = "Maximum number of search rows have been reached (75).";
+                   $("[id$=inputCount]").parent().append('<span class="errorMsg" style="margin-left: 12px;"><strong>Error: </strong>'+ errorMsg +'</span>');
+                   $('#addbutton').attr("disabled", "disabled");  
+            }
+            $("#topErrorMsgDiv").remove();
+            clearErrors();
+       }
+    
+       function callRequiredMark(){
+           var domId = this.id;
+           var rowNum;// = domId[domId.length-2]+''+domId[domId.length-1];     
+           //alert(domId+'::'+domId.indexOf('mod')); 
+           if(domId.indexOf('mod') >= 0){
+                if(domId.length == 5){
+                    rowNum = domId[domId.length-1]; 
+                }else{
+                    rowNum = domId[domId.length-2]+''+domId[domId.length-1];     
+                }                
+            }else{
+                rowNum = domId[domId.length-2]+''+domId[domId.length-1];     
+            }
+               
+            
+           // console.log('rowNum :: '+rowNum);
+            if($.isNumeric(rowNum) == false){
+               rowNum = domId[domId.length-1];
+            }
+            applyRequiredMarkForRow(rowNum);
+        }
+    
+        function drugCodeValidation(InputElement){
+            //Allow delete, tab, enter and escape keys through
+            if (/^(8|9|13|27)$/.test("" + InputElement.keyCode)) {
+                return true; 
+            }
+            var val = this.value;
+           
+            
+            var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+            if (/^[0-9]+$/.test(str)) {
+                if(val != null && val != ''){
+                    if (val.length == 11) {
+                        var fieldDom = document.getElementById(this.id);
+                        if(fieldDom != null){
+                            val = val.substr(0,fieldDom.selectionStart);
+                        }
+                    }
+                    if (val.length < 11) {
+                        return true;
+                    }
+                }else{
+                    return true;
+                }
+            }
+            
+            
+            InputElement.preventDefault();
+            return false;
+        }
+    
+        function daysCurrency(InputElement){
+            //Allow delete, tab, enter and escape keys through
+            if (/^(8|9|13|27)$/.test("" + InputElement.keyCode)) {
+                return true;
+            }
+            var val = this.value;
+            
+            
+            var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+            
+            if (/^[0-9.]+$/.test(str)) {
+                return true;
+            }
+            InputElement.preventDefault();
+            return false;
+        }
+         function onlyDotsAndNumbers(InputElement, event) {
+            var charCode = (event.which) ? event.which : event.keyCode
+            if (charCode == 46) {
+                if (InputElement.value.indexOf(".") < 0)
+                    return true;
+                else
+                    return false;
+            }
+
+            if (InputElement.value.indexOf(".") > 0) {
+                var txtlen = InputElement.value.length;
+                var dotpos = InputElement.value.indexOf(".");
+                if ((txtlen - dotpos) > 2)
+                    return false;
+            }
+
+            if (charCode > 31 && (charCode < 48 || charCode > 57))
+                return false;
+
+            return true;
+     }
+        function diagCodeValidations(InputElement) {
+            //Allow delete, tab, enter and escape keys through
+            if (/^(8|9|13|27)$/.test("" + InputElement.keyCode)) {
+                return true;
+            }
+            
+            var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+            if (/^[a-zA-Z0-9. ]+$/.test(str)) {
+                return true;
+            }
+            
+            InputElement.preventDefault();
+            return false;
+        }
+    
+        function CPTHPCSValidation(InputElement) {
+            //Allow delete, tab, enter and escape keys through
+            if (/^(8|9|13|27)$/.test("" + InputElement.keyCode)) {
+                return true;
+            }
+            var val = this.value;
+            console.log(val);
+            var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+            if (/^[a-zA-Z0-9 ]+$/.test(str)) {
+                if(val != null && val != ''){
+                    if (val.length == 5) {
+                        var fieldDom = document.getElementById(this.id);
+                        if(fieldDom != null){
+                            val = val.substr(0,fieldDom.selectionStart);
+                        }
+                    }
+                    if (val.length < 5) {
+                        return true;
+                    }
+                }else{
+                    return true;
+                }
+            }
+            InputElement.preventDefault();
+            return false;
+        }
+    
+        function modifiersValidation(InputElement) {
+            //Allow delete, tab, enter and escape keys through
+            if (/^(8|9|13|27)$/.test("" + InputElement.keyCode)) {
+                return true;
+            }
+            var val = this.value;
+            
+            var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);            
+            if (/^[a-zA-Z0-9 ]+$/.test(str)) {
+                if(val != null && val != ''){
+                    if (val.length == 2) {
+                        var fieldDom = document.getElementById(this.id);
+                        if(fieldDom != null){
+                            val = val.substr(0,fieldDom.selectionStart);
+                        }
+                    }
+                    if (val.length < 2) {
+                        return true;
+                    }
+                }else{
+                    return true;
+                }
+            }
+            
+            
+            
+            InputElement.preventDefault();
+            return false;
+        }
+        
+        function isNumber(evt) {
+            evt = (evt) ? evt : window.event;
+            var charCode = (evt.which) ? evt.which : evt.keyCode;
+            if (charCode > 31 && (charCode < 48 || charCode > 57)) {
+                return false;
+            }
+            return true;
+        }
+    
+      
+       
+       var requiredFields;
+       var serviceLineDomIds = ['DateOfServiceFrom~dateOfServiceFrom','DateOfServiceThru~dateOfServiceThru','revCode~revCode','PCode~procedureCode','mod1~modifierCode1','mod2~modifierCode2','mod3~modifierCode3','mod4~modifierCode4','browser~placeOfServiceCode','drugCode~rxNationalDrugCode','daysOrUnits~serviceUnits','charges~billedAmount','dischargeDate~dischargeDate','admissionDate~admissionDate'];
+       var serviceLineDoms = ['DateOfServiceFrom','DateOfServiceThru','revCode','PCode','mod1','mod2','mod3','mod4','browser','drugCode','daysOrUnits','charges','dischargeDate','admissionDate'];
+       function applyRequiredMarkForRow(rowNum){
+           rowNum = parseInt(rowNum);
+           var claimType = $("[id$=claimType]").val();
+           if(claimType == 'Facility-UB04'){
+                requiredFields = ['DateOfServiceFrom','DateOfServiceThru','revCode','daysOrUnits','charges'];
+            }else{
+                requiredFields = ['DateOfServiceFrom','DateOfServiceThru','PCode','browser','daysOrUnits','charges'];
+            }
+           if(rowNum != 0){
+               var applyRedBar = false;
+               $.each( serviceLineDomIds, function( index, fielddom ) {  
+                   
+                   if(fielddom.indexOf('DateOfServiceFrom') == 0){
+                       var fromDate = 'DateOfServiceFrom'+'requiredInput'+rowNum;
+                       var fromDateVal = $("[id="+fromDate+"]").find('input').val();
+                       
+                       if(fromDateVal != null && fromDateVal != ''){
+                           applyRedBar = true;
+                           return false;
+                       }
+                   }else if(fielddom.indexOf('DateOfServiceThru') == 0){
+                       var toDate = 'DateOfServiceThru'+'requiredInput'+rowNum;
+                       var toDateVal = $("[id="+toDate+"]").find('input').val();
+                       if(toDateVal != null && toDateVal != ''){
+                           applyRedBar = true;
+                           return false;
+                       }
+                   }else {
+                       var fieldDomId = fielddom.split('~')[0] +rowNum;
+                       if($("[id="+fieldDomId+"]").val() != null && $("[id="+fieldDomId+"]").val() != ''){
+                           applyRedBar = true;
+                           return false;
+                       }
+                   }
+                   if(applyRedBar == true){
+                       return false;
+                   }
+               });
+               if(applyRedBar == false){
+                   $.each( requiredFields, function( index, field ) { 
+                       var requiredInputDomId = field+'requiredInput'+rowNum;
+                       var requiredBlockDomId = field+'requiredBlock'+rowNum;
+                       $("[id$="+requiredInputDomId+"]").removeClass('requiredInput');
+                       $("[id$="+requiredBlockDomId+"]").removeClass('requiredBlock');               
+                   });
+                   requiredMarkAppliedRows = $.grep(requiredMarkAppliedRows, function(value) {
+                      return value != rowNum;
+                   });
+                   console.log(requiredMarkAppliedRows);
+                   return false;
+               }
+           }
+           
+           
+           if($.inArray( rowNum, requiredMarkAppliedRows ) > 0){
+               return false;
+           }
+           requiredMarkAppliedRows.push(rowNum);
+           
+           $.each( requiredFields, function( index, field ) { 
+               var requiredInputDomId = field+'requiredInput'+rowNum;
+               var requiredBlockDomId = field+'requiredBlock'+rowNum;               
+               $("[id="+requiredInputDomId+"]").addClass('requiredInput');
+               $("[id="+requiredBlockDomId+"]").addClass('requiredBlock');               
+           });
+       }
+        
+       
+       var errorCnt = 0;
+       var errorArray = [];
+       var invalidPOS = false;
+       function Data_Validate(){
+
+            $(".errorMsg").remove();
+            $("#topErrorMsgDiv").remove();
+            $("[id$=dischargeDate]").removeClass('errorClass');
+            $("[id$=drgCode]").removeClass('errorClass'); 
+            $("[id$=typeOfBill]").removeClass('errorClass'); 
+            $("[id$=type]").removeClass('errorClass'); 
+            $("[id$=admissionDate]").removeClass('errorClass');
+            var valid = true;
+            var invalidData = false;
+            clearErrors(); 
+            var drgStartCode = $("[id$=drgCode]").val();
+            errorCnt = 0;
+            errorArray = [];
+            if(drgStartCode !=null && drgStartCode !='') {
+            if(!/^\d{3}$/.test(drgStartCode)) {
+              console.log('drgCode' +drgStartCode);
+               valid = false;
+              invalidData = true;
+              $("[id$=drgCode]").addClass('errorClass'); 
+              $("[id$=drgCode]").after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;"> <strong>Error:</strong> You must enter 3 digits. </p> </span>');
+             }
+            }
+            var cliamTypeId = $("[id$=claimType]").val();
+            var tobCode = $("[id$=typeOfBill]").val();
+            if(cliamTypeId == 'Facility-UB04'){
+                if(tobCode.length == 0){
+                    valid = false;
+                    invalidData = true;
+                    $("[id$=typeOfBill]").addClass('errorClass'); 
+                }
+                if(tobCode !=null && tobCode !='') {
+                if(!/^\d{4}$/.test(tobCode)) {
+                   valid = false;
+                  invalidData = true;
+                  $("[id$=typeOfBill]").addClass('errorClass'); 
+                  $("[id$=typeOfBill]").after('<span id="errorMsgDiv" class="errorMsg"> <strong>Error:</strong> You must enter 4 digits. </p> </span>');
+                 }
+                }
+            }
+                        
+            var admissionDate = $("[id$=admissionDate]").val();
+            var dischargeDate = $("[id$=dischargeDate]").val();
+             if(cliamTypeId == 'Facility-UB04'){
+                 if(admissionDate.length == 0){
+                    valid = false;
+                    invalidData = true;
+                    $("[id$=admissionDate]").addClass('errorClass'); 
+                 }
+                 if(admissionDate !=null && admissionDate !='') {
+                   if(DateValidation(admissionDate) == false){
+                                      valid = false;
+                                      invalidData = true;                
+                                      console.log('adding error');
+                                      $("[id$=admissionDate]").addClass('errorClass');  
+                                      $("[id$=admissionDate]").next('span').after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;"> <strong>Error:</strong> Please enter valid date. </p> </span>');
+                                  }
+                }
+            }
+            if(dischargeDate !=null && dischargeDate !='') {
+               if(DateValidation(dischargeDate) == false){
+                                  valid = false;
+                                  invalidData = true;                
+                                  console.log('adding error');
+                                  $("[id$=dischargeDate]").addClass('errorClass'); 
+                                  $("[id$=dischargeDate]").next('span').after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;"> <strong>Error:</strong> Please enter valid date. </p> </span>');
+                                  
+                              }
+            }
+              if(admissionDate != null && admissionDate !='' && dischargeDate !=null && dischargeDate !='') {
+                    if(DateValidation(admissionDate) == true && DateValidation(dischargeDate) == true){
+                        var admissionstartDate = admissionDate.split("/");
+                        var admissionstartDateFormatted = (((parseInt(admissionstartDate[2], 10) * 100) + parseInt(admissionstartDate[0], 10)) * 100) + parseInt(admissionstartDate[1], 10);                        
+                        var dischargeToDate = dischargeDate.split("/");  
+                        var dischargeToDateFormatted = (((parseInt(dischargeToDate[2], 10) * 100) + parseInt(dischargeToDate[0], 10)) * 100) + parseInt(dischargeToDate[1], 10);
+                        if(dischargeToDateFormatted < admissionstartDateFormatted){
+                            valid = false;
+                            invalidData = true;
+                            $("[id$=dischargeDate]").addClass('errorClass');                                     
+                            $("[id$=dischargeDate]").next('span').after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;"> <strong>Error:</strong> Discharge Date must be later than Admission Date. </p> </span>');
+                            
+                        }
+                    }
+                  }
+            
+            
+            if(requiredMarkAppliedRows.length > 0){
+                requiredMarkAppliedRows = GetUnique(requiredMarkAppliedRows);
+                console.log('after duplicate elimination::'+requiredMarkAppliedRows);
+                $.each( requiredMarkAppliedRows, function( index, rowNum ) {
+                     
+                     $.each( requiredFields, function( indx, field ) {
+                          var fieldDomId;  
+                          var val;
+                          var dateDomId;
+                          if(field.indexOf('DateOfService') == 0){
+                              
+                              if(field == 'DateOfServiceFrom'){
+                                  dateDomId = 'DateOfServiceFrom'+'requiredInput'+rowNum;                                  
+                              }else if(field == 'DateOfServiceThru'){
+                                  dateDomId = 'DateOfServiceThru'+'requiredInput'+rowNum;
+                              }
+                              val = $("[id="+dateDomId+"]").find('input').val(); 
+                              fieldDomId = dateDomId;
+                          }else{
+                              fieldDomId = field + rowNum;  
+                              val = $("[id$="+fieldDomId+"]").val();
+                          }
+                          if(val == null || val == ''){
+                              valid = false;
+                              if(field.indexOf('DateOfService') == 0){
+                                  $("[id$="+fieldDomId+"]").find('input').addClass('errorClass');
+                              }else{
+                                  $("[id$="+fieldDomId+"]").addClass('errorClass');                      
+                              }
+                              /*if($("[id$="+fieldDomId+"]").next('span').hasClass( "dateFormat" )){
+                                 $("[id$="+fieldDomId+"]").next('span').after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;"> <strong>Error:</strong> You must enter a value </p> </span>');
+                              }else{
+                                 $("[id$="+fieldDomId+"]").after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;"><strong>Error:</strong>  You must enter a value</p> </span>');
+                              }*/
+                              errorCnt = errorCnt + 1;
+                              errorArray.push(fieldDomId);
+                          }if(val != null && val != '' && field.indexOf('DateOfService') == 0){  
+                              console.log('val ::'+val+'::field'+field);                                                                                               
+                              if(DateValidation(val) == false){
+                                  valid = false;
+                                  invalidData = true;                
+                                  console.log('adding error');
+                                  $("[id$="+fieldDomId+"]").find('input').addClass('errorClass');                                        
+                                  $("[id$="+fieldDomId+"]").find('input').next('span').after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;"> <strong>Error:</strong> Please enter valid date. </p> </span>');
+                                  errorCnt = errorCnt + 1;
+                                  errorArray.push(fieldDomId);
+                              }
+                              
+                         }                                                    
+                     });
+                });    
+            }
+            
+            var inputCount = $("[id$=inputCount]").text();  
+            for(var rowNo =0;rowNo<inputCount;rowNo++){
+                var fromDate = 'DateOfServiceFrom'+'requiredInput'+rowNo;                                  
+                var ThruDate = 'DateOfServiceThru'+'requiredInput'+rowNo;
+                var fromVal = $("[id="+fromDate+"]").find('input').val(); 
+                var ThruVal = $("[id="+ThruDate+"]").find('input').val();
+                var pcodeDatecode = 'PCode'+'requiredInput'+rowNo;
+                var pcodeDatecodeVal =  $("[id="+pcodeDatecode+"]").find('input').val(); 
+                if(pcodeDatecodeVal !=null && pcodeDatecodeVal !='') {
+                   if(!/^[a-zA-Z0-9]{5}$/.test(pcodeDatecodeVal)) {   
+                     console.log('PCode' +pcodeDatecodeVal);
+                      valid = false;
+                      invalidData = true;
+                      $("[id$="+pcodeDatecode+"]").find('input').addClass('errorClass'); 
+                      $("[id$="+pcodeDatecode+"]").after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;white-space: nowrap;"> <strong>Error:</strong> You must enter 5 digits. </p> </span>');
+                      errorCnt = errorCnt + 1;
+                      errorArray.push(pcodeDatecode);
+                    }
+                }
+                var drugDateCode = 'drugCode'+rowNo;
+                var drugCodeVal= $("[id="+drugDateCode+"]").val();
+                 if(drugCodeVal !=null && drugCodeVal !='') {
+                    if(!/^\d{11}$/.test(drugCodeVal)) {
+                      console.log('drugCode' +drugCodeVal);
+                      valid = false;
+                      invalidData = true;
+                      $("[id$="+drugDateCode+"]").addClass('errorClass'); 
+                      $("[id$="+drugDateCode+"]").after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;white-space: nowrap;"> <strong>Error:</strong> You must enter 11 digits. </p> </span>');
+                      errorCnt = errorCnt + 1;
+                      errorArray.push(drugDateCode);
+                  }
+               }
+                var modifierDateCode1 = 'mod1'+rowNo;
+                var modifierCode1 = $("[id="+modifierDateCode1+"]").val();
+                var modifierDateCode2 = 'mod2'+rowNo;
+                var modifierCode2 = $("[id="+modifierDateCode2+"]").val();
+                var modifierDateCode3= 'mod3'+rowNo;
+                var modifierCode3 = $("[id="+modifierDateCode3+"]").val();
+                var modifierDateCode4 = 'mod4'+rowNo;
+                var modifierCode4 = $("[id="+modifierDateCode4+"]").val();
+                if(modifierCode1 !=null && modifierCode1 !='') {
+                  if(!/^[a-zA-Z0-9]{2}$/.test(modifierCode1)) {
+                       console.log('modifierCode1' +modifierCode1);
+                       valid = false;
+                       invalidData = true;
+                       $("[id$="+modifierDateCode1+"]").addClass('errorClass'); 
+                       $("[id$="+modifierDateCode1+"]").after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;white-space: nowrap;"> <strong>Error:</strong> You must enter 2 digits. </p> </span>');
+                       errorCnt = errorCnt + 1;
+                       errorArray.push(modifierDateCode1);
+                  }
+                 }
+                 if(modifierCode2 !=null && modifierCode2 !='') {
+                  if(!/^[a-zA-Z0-9]{2}$/.test(modifierCode2)) {
+                       console.log('modifierCode2' +modifierCode2);
+                       valid = false;
+                       invalidData = true;
+                       $("[id$="+modifierDateCode2+"]").addClass('errorClass'); 
+                       $("[id$="+modifierDateCode2+"]").after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;white-space: nowrap;"> <strong>Error:</strong> You must enter 2 digits. </p> </span>');
+                       errorCnt = errorCnt + 1;
+                       errorArray.push(modifierDateCode2);
+                  }
+                 }
+                 if(modifierCode3 !=null && modifierCode3 !='') {
+                  if(!/^[a-zA-Z0-9]{2}$/.test(modifierCode3)) {
+                       console.log('modifierCode3' +modifierCode3);
+                       valid = false;
+                       invalidData = true;
+                       $("[id$="+modifierDateCode3+"]").addClass('errorClass'); 
+                       $("[id$="+modifierDateCode3+"]").after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;white-space: nowrap;"> <strong>Error:</strong> You must enter 2 digits. </p> </span>');
+                       errorCnt = errorCnt + 1;
+                       errorArray.push(modifierDateCode3);
+                  }
+                 }
+                 if(modifierCode4 !=null && modifierCode4 !='') {
+                  if(!/^[a-zA-Z0-9]{2}$/.test(modifierCode4)) {
+                       console.log('modifierCode4' +modifierCode4);
+                       valid = false;
+                       invalidData = true;
+                       $("[id$="+modifierDateCode4+"]").addClass('errorClass'); 
+                       $("[id$="+modifierDateCode4+"]").after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;white-space: nowrap;"> <strong>Error:</strong> You must enter 2 digits. </p> </span>');
+                       errorCnt = errorCnt + 1;
+                       errorArray.push(modifierDateCode4);
+                  }
+                }
+                var revDateCode = 'revCode'+rowNo;
+                var revCodeVal = $("[id="+revDateCode+"]").val();
+                if(revCodeVal !=null && revCodeVal !='') {
+                    if(!/^(?:\D*\d){4}/.test(revCodeVal)) {
+                    console.log('revCode' + revCodeVal);
+                    valid = false;
+                    invalidData = true;
+                    $("[id$="+revDateCode+"]").addClass('errorClass'); 
+                    $("[id$="+revDateCode+"]").after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;white-space: nowrap;"> <strong>Error:</strong> You must enter 4 digits. </p> </span>');
+                    errorCnt = errorCnt + 1;
+                    errorArray.push(revDateCode);
+               }
+            }                           
+                if(fromVal != 'undefined' && ThruVal != 'undefined'){
+                    if(DateValidation(fromVal) == true && DateValidation(ThruVal) == true){
+                        var startDate = fromVal.split("/");
+                        var startDateFormatted = (((parseInt(startDate[2], 10) * 100) + parseInt(startDate[0], 10)) * 100) + parseInt(startDate[1], 10);                        
+                        
+                        var ToDate = ThruVal.split("/");  
+                        var ToDateFormatted = (((parseInt(ToDate[2], 10) * 100) + parseInt(ToDate[0], 10)) * 100) + parseInt(ToDate[1], 10);
+                        
+                        if(ToDateFormatted < startDateFormatted){
+                            valid = false;
+                            invalidData = true;
+                            $("[id$="+ThruDate+"]").find('input').addClass('errorClass');                                        
+                            $("[id$="+ThruDate+"]").find('input').next('span').after('<span id="errorMsgDiv" class="errorMsg"> <p style="margin-top:-0px;"> <strong>Error:</strong> End Date must be later than Start Date. </p> </span>');
+                            errorCnt = errorCnt + 1;
+                            errorArray.push(ThruDate);
+                        }
+                    }
+                }
+            }
+           
+            invalidPOS = false;
+            for(var i=0;i<inputCount;i++){
+            
+                var posID = 'browser'+i;
+                var posVal = $("[id="+posID+"]").val();
+                var selectedPOS = 'selectedPOSId'+i;
+                onChangeDataList(posID, posVal,selectedPOS);
+                
+                console.log('invalidPOS ::'+invalidPOS);
+                if(invalidPOS == true){
+                    valid = false;
+                    invalidData = true;                    
+                }
+            
+                
+            }
+           //alert('valid  '+valid+'invalidData '+invalidData);
+            if(valid == false){
+                if(invalidData == true){
+                    $("[id$=errorMsgPanel]").after('<div  id="errorMsgDiv" class="errorMsg"><center><strong>Error: </strong>You must enter a valid value.</center>  </div>');
+                }else{
+                    $("[id$=errorMsgPanel]").after('<div  id="errorMsgDiv" class="errorMsg"><center><strong>Error: </strong>You must enter a value. </center> </div>');    
+                }
+                
+                errorCnt = errorCnt + 1;
+                errorArray.push('errorMsgPanel');
+                return false;
+            }else{
+                prepareWrapperAndSearch(true);
+            }            
+       }
+       
+       function GetUnique(inputArray)
+        {
+        var outputArray = [];
+        for(var i = 0; i < inputArray.length; i++)
+        {   
+            var val = parseInt(inputArray[i]);
+            if (($.inArray(val, outputArray)) == -1)
+            {
+                outputArray.push(val);
+            }
+        }
+        return outputArray;
+        }
+        
+    
+       function clearForm(){
+            $("[id$=admissionDate]").removeClass('errorClass');
+            $("[id$=admissionDate]").val("");
+            $("[id$=dischargeDate]").removeClass('errorClass');
+            $("[id$=dischargeDate]").val("");
+            $("[id$=DateOfServiceFrom]").removeClass('errorClass');
+            $("[id$=DateOfServiceFrom]").val("");
+            $("[id$=DateOfServiceThru]").removeClass('errorClass');
+            $("[id$=DateOfServiceThru]").val("");
+            claimType = $("[id$=claimType]").val();
+            clearErrors();
+            $("[id$=addRows]").removeClass("errorClass").parent().find(".errorMsg").remove(); 
+            //$("[id$='btnClearAll']").closest('form').find("input[type=text],select").val("");
+            clear(); 
+            var fielddom = '';
+            $('.mainTableWidth').find('tr').each(function(rowNum){
+                var fieldDomId = fielddom.split('~')[0] +rowNum;                  
+                $("[id$="+fieldDomId+"]").val('');   
+                $("[id$="+fieldDomId+"]").removeClass('errorClass');  
+                $("[id$="+fieldDomId+"]").next("#errorMsgDiv").remove(); 
+                var PCoderequiredInputDomId = 'PCoderequiredInput'+rowNum;
+                $("[id$="+PCoderequiredInputDomId+"]").next("#errorMsgDiv").remove(); 
+                var PCoderequiredBlockDomId = 'PCoderequiredBlock'+rowNum;
+                var dosFromDomId = 'DateOfServiceFromrequiredBlock'+rowNum;
+                var dosThruDomId = 'DateOfServiceThrurequiredBlock'+rowNum;
+                var pOfServiceDomIds = 'browserrequiredBlock'+rowNum;
+                var DUnitsDomId = 'daysOrUnitsrequiredBlock'+rowNum;
+                var cAmountDomId = 'chargesrequiredBlock'+rowNum;
+                $("[id$="+PCoderequiredBlockDomId+"]").removeClass('requiredBlock');
+                $("[id$="+dosFromDomId+"]").removeClass('requiredBlock');
+                $("[id$="+dosThruDomId+"]").removeClass('requiredBlock');
+                $("[id$="+pOfServiceDomIds+"]").removeClass('requiredBlock');
+                $("[id$="+DUnitsDomId+"]").removeClass('requiredBlock');
+                $("[id$="+cAmountDomId+"]").removeClass('requiredBlock');
+            });
+            clearDiagCodes();
+            applyRequiredMarkForRow(0); 
+            return true;
+       } 
+       function clearDiagCodes(){
+            $("[id$=code1]").val("");
+            $("[id$=code2]").val("");
+            $("[id$=code3]").val("");
+            $("[id$=code4]").val("");
+            $("[id$=code5]").val("");
+            $("[id$=code6]").val("");
+            $("[id$=code7]").val("");
+            $("[id$=code8]").val("");
+            $("[id$=code9]").val("");
+            $("[id$=code10]").val("");
+            $("[id$=code11]").val("");
+            $("[id$=code12]").val("");
+       }
+    
+       function afterClear(){ 
+           requiredMarkAppliedRows = []; 
+           applyRequiredMarkForRow(0);   
+           $('[id$=addRows]').val(''); 
+       }
+    
+       function clearErrors(){ 
+            if(errorArray != null){
+                for(var ea in errorArray){
+                    if($.isNumeric(ea)){                        
+                        $("[id$="+errorArray[ea]+"]").removeClass("errorClass");
+                        if(errorArray[ea].indexOf('DateOfService') == 0){
+                            $("[id$="+errorArray[ea]+"]").find('input').removeClass('errorClass');
+                        }
+                        if(errorArray[ea].indexOf('PCode') == 0){
+                            $("[id$="+errorArray[ea]+"]").find('input').removeClass('errorClass');
+                        }
+                    } 
+                }                
+            }
+            errorArray = [];
+            for(var i=0;i<errorCnt;i++){               
+                $("#errorMsgDiv").removeClass();
+                $("#errorMsgDiv").remove();
+            }     
+       }
+        var jsonObj = [];
+        function prepareWrapperAndSearch(allowSearch){
+           
+            jsonObj = [];
+             var result = true;
+             var addRows;
+            $("[id$=addRows]").removeClass("errorClass").parent().find(".errorMsg").remove();       
+            if(allowSearch){
+                if(requiredMarkAppliedRows.length > 0){
+                    $.each( requiredMarkAppliedRows, function( index, rowNum ) {
+                         var item = {};
+                         item ['rowIndex'] = rowNum;
+                         $.each( serviceLineDomIds, function( indx, field ) {
+                            
+                              var fieldId = field.split('~')[0];
+                              var fieldLabel = field.split('~')[1];
+                              
+                             if(fieldId == 'DateOfServiceFrom'){
+                                 var fromDate = 'DateOfServiceFrom'+'requiredInput'+rowNum;
+                                 var fromDateVal = $("[id="+fromDate+"]").find('input').val();
+                                 var startDateArray = fromDateVal.split("/");
+                                 var startDateFormatted = startDateArray[2]+'-'+startDateArray[0]+'-'+startDateArray[1];
+                                 item [fieldLabel] = startDateFormatted;  
+                                 
+                             }else if(fieldId == 'DateOfServiceThru'){
+                                 var toDate = 'DateOfServiceThru'+'requiredInput'+rowNum;
+                                 var toDateVal = $("[id="+toDate+"]").find('input').val();
+                                 var toDatearray = toDateVal.split("/");
+                                 var toDateFormatted = toDatearray[2]+'-'+toDatearray[0]+'-'+toDatearray[1];
+                                 item [fieldLabel] = toDateFormatted;
+                             }else{
+                                  var fieldDomId = fieldId + rowNum;  
+                                  var val = $("[id$="+fieldDomId+"]").val();
+                                  item [fieldLabel] = val;      
+                             }
+                              
+                         });
+                        
+                         jsonObj.push(item);
+                    });    
+                }
+            }else{
+                 addRows = $("[id$=addRows]").val();
+                 console.log('addRows' +addRows);
+                 if(addRows != null && addRows != '') {
+                    if(requiredMarkAppliedRows.length > 0){
+                    $.each( requiredMarkAppliedRows, function( index, rowNum ) {
+                         var item = {};
+                         item ['rowIndex'] = rowNum;
+                         $.each( serviceLineDoms, function( indx, field ) {
+                            
+                              var fieldId = field;
+                              var fieldLabel = field;
+                              
+                             if(fieldId == 'DateOfServiceFrom'){
+                                 var fromDate = 'DateOfServiceFrom'+'requiredInput'+rowNum;
+                                 var fromDateVal = $("[id="+fromDate+"]").find('input').val();
+                                 item [fieldLabel] = fromDateVal;  
+                                 
+                             }else if(fieldId == 'DateOfServiceThru'){
+                                 var toDate = 'DateOfServiceThru'+'requiredInput'+rowNum;
+                                 var toDateVal = $("[id="+toDate+"]").find('input').val();
+                                 item [fieldLabel] = toDateVal;
+                             }else{
+                                  var fieldDomId = fieldId + rowNum;  
+                                  var val = $("[id$="+fieldDomId+"]").val();
+                                  item [fieldLabel] = val;      
+                             }
+                              
+                         });
+                        
+                         jsonObj.push(item);
+                    });    
+                }
+                
+            }
+             else {
+                      var errorMsg = "You must enter a value.";
+                      $("[id$=addRows]").addClass('errorClass').parent().append('<div class="errorMsg" style="margin-left:7px"><strong>Error:</strong>' + errorMsg +'</div>');
+                       result = false;      
+                  }                    
+            }
+    
+            var jsonStr = JSON.stringify(jsonObj);
+        
+            if(allowSearch){
+                SearchAF(jsonStr);
+            }
+            else if(!allowSearch && result){ 
+                 addServiceLineItems(addRows);
+            }
+    }
+        function DateValidation(dateStr) {
+            var datePat = /^(\d{1,2})(\/|-)(\d{1,2})\2(\d{2}|\d{4})$/;
+            var matchArray = dateStr.match(datePat);
+            if (matchArray == null) {
+                return false;
+            }
+            month = matchArray[1]; // parse date into variables
+            day = matchArray[3];
+            year = matchArray[4];
+            if (month < 1 || month > 12) { // check month range
+                return false;
+            }
+            if (day < 1 || day > 31) {
+                return false;
+            }
+            if ((month==4 || month==6 || month==9 || month==11) && day==31) {
+                return false
+            }
+            if (month == 2) { // check for february 29th
+            var isleap = (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+            if (day>29 || (day==29 && !isleap)) {
+                return false;
+               }
+            }
+            return true;  // date is valid
+        }
+        
+        
+        
+     function onChangeDataList(domId, selectedVal, hiddenDomId){
+            
+            invalidPOS = false;
+            $("[id="+domId+"]").removeClass("error");
+            $("[id=errorMsg"+domId+"]").remove();
+            var selectedValTemp = selectedVal;
+            if(selectedVal != null && selectedVal != ''){
+                if(!$.isNumeric(selectedVal)){
+                    selectedVal = selectedVal.toUpperCase();
+                }
+            }
+            var objList = JSON.parse('{!objList}');
+            if(selectedVal!= null && selectedVal!= '') {
+                if($.isNumeric(selectedVal.split('-')[0]) && selectedVal.indexOf('-') > 0){
+                    
+                    $("[id="+domId+"]").val(selectedValTemp.split('-')[0]); 
+                    $("[id="+hiddenDomId+"]").val(selectedValTemp.substring(selectedValTemp.indexOf('-')+1));
+               }  
+               else if(!$.isNumeric(selectedVal) || ($.isNumeric(selectedVal) && selectedVal.indexOf('-')== -1)){
+                    var matchFound = false;
+                    for(var i=0; i< objList.length; i++) {
+                        if(!$.isNumeric(selectedVal)) {
+                          var tempVal = objList[i];
+                          tempVal = tempVal.toUpperCase();
+                          if(tempVal.indexOf(selectedVal) > 0){
+                             var selectedValTemp = tempVal.substring(tempVal.indexOf('-')+1);
+                              if(selectedVal.indexOf('-') == -1 && selectedVal == selectedValTemp) {
+                              matchFound = true;
+                            $("[id="+domId+"]").val(objList[i].split('-')[0]); 
+                            $("[id="+hiddenDomId+"]").val(objList[i].split('-')[1]);
+                           }
+                           else if(!$.isNumeric(selectedVal.split('-')[0]) && selectedVal.indexOf('-') > 0) {
+                                matchFound = true;
+                                $("[id="+domId+"]").val(objList[i].split('-')[0]); 
+                                $("[id="+hiddenDomId+"]").val(objList[i].substring(objList[i].indexOf('-')+1));
+                           }
+                        }
+                     }
+                    else if($.isNumeric(selectedVal)) {
+                       var tempVal = objList[i].split('-')[0];
+                        if(tempVal == selectedVal){
+                            matchFound = true;
+                            $("[id="+domId+"]").val(objList[i].split('-')[0]); 
+                            $("[id="+hiddenDomId+"]").val(objList[i].split('-')[1]);
+                        }
+                    }    
+                  } 
+                    if(matchFound == false){
+                        var errorMsg = "No results match.";
+                        invalidPOS = true;
+                        $("[id="+domId+"]").addClass("error").parent().append('<div class="errorMsg" id="errorMsg'+domId+'"><strong>Error:</strong> ' + errorMsg + '</div>');
+                    }   
+                
+                }
+          }
+        }    
+        var fieldsToCopy = ['DateOfServiceFrom','DateOfServiceThru','mod1','mod2','mod3','mod4','browser','daysOrUnits'];
+        function copyServiceLine(rowNum){
+            
+            var dataAvailableInCurrentRow = false;
+            $.each( serviceLineDoms, function( indx, field ) {
+                var fieldVal;
+                if(dataAvailableInCurrentRow == false){
+                    if(field == 'DateOfServiceFrom'){
+                        var fromDate = 'DateOfServiceFrom'+'requiredInput'+rowNum;
+                        fieldVal = $("[id="+fromDate+"]").find('input').val();                         
+                    }else if(field == 'DateOfServiceThru'){
+                        var toDate = 'DateOfServiceThru'+'requiredInput'+rowNum;
+                        fieldVal = $("[id="+toDate+"]").find('input').val();
+                    }else{
+                        var fieldDomId = field + rowNum;  
+                        fieldVal = $("[id$="+fieldDomId+"]").val();     
+                    }     
+                } 
+                if(fieldVal != null && fieldVal != ''){
+                    dataAvailableInCurrentRow = true;
+                    return false;
+                }
+            });
+            console.log('dataAvailableInCurrentRow ::'+dataAvailableInCurrentRow);
+            if(dataAvailableInCurrentRow == false){
+                return false;
+            }
+            var rowNumToCopy = parseInt(rowNum)+1;
+            var allServiceLines = [];
+            for(var i=rowNumToCopy;i<100;i++){
+                allServiceLines.push(i);
+            }
+            
+            $.each( allServiceLines, function( index, serviceLineRowNum ) {
+                
+                var dataNotAvailableInNextRow = true;
+                $.each( serviceLineDoms, function( indx, field ) {
+                    var fieldVal;
+                    if(field == 'DateOfServiceFrom'){
+                        var fromDate = 'DateOfServiceFrom'+'requiredInput'+serviceLineRowNum;
+                        fieldVal = $("[id="+fromDate+"]").find('input').val();                         
+                    }else if(field == 'DateOfServiceThru'){
+                        var toDate = 'DateOfServiceThru'+'requiredInput'+serviceLineRowNum;
+                        fieldVal = $("[id="+toDate+"]").find('input').val();
+                    }else{
+                        var fieldDomId = field + serviceLineRowNum;  
+                        fieldVal = $("[id$="+fieldDomId+"]").val();     
+                    }     
+                    if(fieldVal != null && fieldVal != ''){
+                        dataNotAvailableInNextRow = false;                                                                                                    
+                    }                       
+                });     
+                console.log('dataNotAvailableInNextRow :'+dataNotAvailableInNextRow);
+                console.log(':::::::::::');
+                if(dataNotAvailableInNextRow == true){                  
+                    rowNumToCopy = serviceLineRowNum;
+                    return false;
+                }
+            });
+            console.log('rowNumToCopy ::'+rowNumToCopy);
+            
+            $.each( fieldsToCopy, function( indx, field ) {
+
+                if(field == 'DateOfServiceFrom'){
+                    var fromDate = 'DateOfServiceFrom'+'requiredInput'+rowNum;
+                    var fromDateVal = $("[id="+fromDate+"]").find('input').val();
+                    var fromDateToCopy = 'DateOfServiceFrom'+'requiredInput'+rowNumToCopy;
+                    $("[id="+fromDateToCopy+"]").find('input').val('');
+                    if(fromDateVal != null && fromDateVal != ''){
+                        var startDateArray = fromDateVal.split("/");
+                        var startDateFormatted = startDateArray[0]+'/'+startDateArray[1]+'/'+startDateArray[2];                        
+                        $("[id="+fromDateToCopy+"]").find('input').val(startDateFormatted);
+                    }
+                }else if(field == 'DateOfServiceThru'){
+                    var toDate = 'DateOfServiceThru'+'requiredInput'+rowNum;
+                    var toDateVal = $("[id="+toDate+"]").find('input').val();
+                    var ToDateToCopy = 'DateOfServiceThru'+'requiredInput'+rowNumToCopy;
+                    $("[id="+ToDateToCopy+"]").find('input').val('');
+                    if(toDateVal != null && toDateVal != ''){
+                        var toDatearray = toDateVal.split("/");
+                        var toDateFormatted = toDatearray[0]+'/'+toDatearray[1]+'/'+toDatearray[2];
+                        $("[id="+ToDateToCopy+"]").find('input').val(toDateFormatted);
+                    }
+                }else{
+                    var fieldDomId = field + rowNum;  
+                    var val = $("[id$="+fieldDomId+"]").val();                    
+                    var fieldToCopyDomId = field + rowNumToCopy; 
+                    $("[id$="+fieldToCopyDomId+"]").val(val);
+                    
+                }
+                 
+            });
+            applyRequiredMarkForRow(rowNumToCopy);
+        }
+    
+        function clearServiceLine(rowNum){
+            
+            $.each( serviceLineDomIds, function( index, fielddom ) {                     
+                if(fielddom.indexOf('DateOfServiceFrom') == 0){
+                    var fromDate = 'DateOfServiceFrom'+'requiredInput'+rowNum;
+                    $("[id="+fromDate+"]").find('input').val('');
+                }else if(fielddom.indexOf('DateOfServiceThru') == 0){
+                    var toDate = 'DateOfServiceThru'+'requiredInput'+rowNum;
+                    $("[id="+toDate+"]").find('input').val('');
+                }else {
+                    var fieldDomId = fielddom.split('~')[0] +rowNum;                  
+                    $("[id$="+fieldDomId+"]").val('');   
+                    $("[id$="+fieldDomId+"]").removeClass('errorClass');  
+                    $("[id$="+fieldDomId+"]").next("#errorMsgDiv").remove(); 
+                    var PCoderequiredInputDomId = 'PCoderequiredInput'+rowNum;
+                    $("[id$="+PCoderequiredInputDomId+"]").next("#errorMsgDiv").remove(); 
+                    
+                }                   
+            });
+            var posError = 'errorMsgbrowser'+rowNum;
+            $("[id="+posError+"]").remove(); 
+            
+            $.each( requiredFields, function( indx, field ) {
+                var fieldDomId;  
+                var dateDomId;
+                if(field.indexOf('DateOfService') == 0){                    
+                    if(field == 'DateOfServiceFrom'){
+                        dateDomId = 'DateOfServiceFrom'+'requiredInput'+rowNum;                                  
+                    }else if(field == 'DateOfServiceThru'){
+                        dateDomId = 'DateOfServiceThru'+'requiredInput'+rowNum;
+                    }                     
+                    fieldDomId = dateDomId;
+                }else{
+                    fieldDomId = field + rowNum;  
+                    
+                }
+                
+                if(field.indexOf('DateOfService') == 0){
+                    $("[id$="+fieldDomId+"]").find('input').removeClass('errorClass');
+                }else{                   
+                    $("[id$="+fieldDomId+"]").removeClass('errorClass');                      
+                    $("[id$="+fieldDomId+"]").removeClass('error');   
+                   
+                }
+                 
+                
+                if(field.indexOf('DateOfService') == 0){                                
+                    $("[id$="+fieldDomId+"]").find('input').removeClass('errorClass');                                        
+                    $("[id$="+fieldDomId+"]").find('input').next('span').next('span').remove();
+                }                                                    
+            });
+           
+            applyRequiredMarkForRow(rowNum);
+            
+        }
+    
+        function addPreviousData(){
+            if(requiredMarkAppliedRows.length > 0){
+                $.each( jsonObj, function( index, item ) {
+                    $.each( item, function( Itemlabel, ItemVal ) {
+                        var rowNum = item['rowIndex'];
+                        if(ItemVal != null && ItemVal != ''){
+                            if(Itemlabel == 'DateOfServiceFrom'){
+                                var fromDate = 'DateOfServiceFrom'+'requiredInput'+rowNum;                              
+                                $("[id="+fromDate+"]").find('input').val(ItemVal);                                                                                     
+                            }else if(Itemlabel == 'DateOfServiceThru'){
+                                var toDate = 'DateOfServiceThru'+'requiredInput'+rowNum;
+                                $("[id="+toDate+"]").find('input').val(ItemVal);
+                            }else if(Itemlabel != 'rowIndex'){
+                                var fieldDomId = Itemlabel + rowNum;  
+                                $("[id$="+fieldDomId+"]").val(ItemVal);  
+                            }
+                            applyRequiredMarkForRow(rowNum);
+                        }
+                    });                    
+                });
+            }
+            applyRequiredMarkForRow(0);
+        }
+    
+       var claimType = $("[id$=claimType]").val();
+    
+        function setClaimType(){ 
+            
+           if(claimType != null && claimType != ''){
+                $("[id$=claimType]").val(claimType);
+                  $("[id$=claimType]").change();
+            }
+        }
+     
+    
+        function addRowsValidation(InputElement)  {
+            //Allow delete, tab, enter and escape keys through
+            if (/^(8|9|13|27)$/.test("" + InputElement.keyCode))    {
+                return true;
+            }
+            var val = this.value;
+            var sum;
+            var maximumCount = 75;
+            var rowInputCount = $("[id$=inputCount]").text(); 
+            if(val != null && val != '') {          
+                 if(!isNaN(val) && val.length != 0) {
+                    var sum = parseInt(this.value) + parseInt(rowInputCount);
+                    if(sum <= maximumCount && (/(^[1-9]$)|(^[1-5][0-9]?$)|^60$/.test(val))) { 
+                       return true;
+                    }
+                    else {
+                               $("[id$=addRows]").val('');
+                               $("[id$=addRows]").attr("placeholder", "1...60");
+                               return false;
+                            }                           
+              } 
+            }
+                else {
+                  return true;
+                }  
+             InputElement.preventDefault();          
+             return false;
+           
+        }
+        function addRowsAllowDigitsOnly(InputElement)  {
+            //Allow delete, tab, enter and escape keys through
+            if (/^(8|9|13|27)$/.test("" + InputElement.keyCode))    {
+                return true;
+            }
+            var val = this.value;
+            console.log (val);
+            var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+            if (/^[0-9 ]+$/.test(str)) {
+                     if(val != null && val != ''){
+                    if (val.length == 2) {
+                        var fieldDom = document.getElementById(this.id);
+                        if(fieldDom != null){
+                            val = val.substr(0,fieldDom.selectionStart);
+                        }
+                    }
+                    if (val.length < 2) {
+                        return true;
+                    }
+                }else{
+                    return true;
+                }
+            }
+             InputElement.preventDefault();
+             return false;
+           
+        }
+       function AllowDigitsOnly(InputElement)  {
+            //Allow delete, tab, enter and escape keys through
+            if (/^(8|9|13|27)$/.test("" + InputElement.keyCode))    {
+                return true;
+            }
+            var val = this.value;
+            console.log(val);
+            var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+            if (/^[0-9 ]+$/.test(str)) {
+                if(val != null && val != ''){
+                    if (val.length == 3) {
+                        var fieldDom = document.getElementById(this.id);
+                        if(fieldDom != null){
+                            val = val.substr(0,fieldDom.selectionStart);
+                        }
+                    }
+                    if (val.length < 3) {
+                        return true;
+                    }
+                }else{
+                    return true;
+                }
+            }
+             InputElement.preventDefault();
+             return false;
+           
+        }
+        function typeOfBillAllowDigitsOnly(InputElement)  {
+            //Allow delete, tab, enter and escape keys through
+            if (/^(8|9|13|27)$/.test("" + InputElement.keyCode))    {
+                return true;
+            }
+            var val = this.value;
+            console.log(val);
+            var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+            if (/^[0-9 ]+$/.test(str)) {
+                if(val != null && val != ''){
+                    if (val.length == 4) {
+                        var fieldDom = document.getElementById(this.id);
+                        if(fieldDom != null){
+                            val = val.substr(0,fieldDom.selectionStart);
+                        }
+                    }
+                    if (val.length < 4) {
+                        return true;
+                    }
+                }else{
+                    return true;
+                }
+            }
+             InputElement.preventDefault();
+             return false;
+           
+        }
+        function AllowFourDigitsOnly(InputElement) {
+            //Allow delete, tab, enter and escape keys through
+            if (/^(8|9|13|27)$/.test("" + InputElement.keyCode)) {
+                return true;
+            }
+            var val = this.value;
+            console.log(val);
+            var str = String.fromCharCode(!InputElement.charCode ? InputElement.which : InputElement.charCode);
+            if (/^[0-9]+$/.test(str)) {
+                if(val != null && val != ''){
+                    if (val.length == 4) {
+                        var fieldDom = document.getElementById(this.id);
+                        if(fieldDom != null){
+                            val = val.substr(0,fieldDom.selectionStart);
+                        }
+                    }
+                    if (val.length < 4) {
+                        return true;
+                    }
+                }else{
+                    return true;
+                }
+            }
+       
+            InputElement.preventDefault();
+            return false;
+        }
+        
+     </script>
+      <script> 
+        'use strict';
+        function updateList(that) {
+            if (!that) {
+                return;
+            }
+            var lastValue = that.lastValue,
+                value = that.value,
+                array = [],
+                pos = value.indexOf('|'),
+                start = that.selectionStart,
+                end = that.selectionEnd,
+                options;
+        
+            if (that.options) {
+                options = that.options;
+            } else {
+                options = Object.keys(that.list.options).map(function (option) {
+                    return that.list.options[option].value;
+                });
+                that.options = options;
+            }
+        
+            if (lastValue !== value) {
+                that.list.innerHTML = options.filter(function (a) {
+                    return ~a.toLowerCase().indexOf(value.toLowerCase());
+                }).map(function (a) {
+                    return '<option value="' + value + '|' + a + '">' + a + '</option>';
+                }).join();
+                updateInput(that);
+                that.lastValue = value;
+            }
+        }
+        
+        function updateInput(that) {
+            if (!that) {
+                return;
+            }
+            var value = that.value,
+                pos = value.indexOf('|'),
+                start = that.selectionStart,
+                end = that.selectionEnd;
+        
+            if (~pos) {
+                value = value.slice(pos + 1);
+            }
+            that.value = value;
+            that.setSelectionRange(start, end);
+        }
+        function claimTypeChangeSettoNUll(){
+          
+           var cType = $("[id$=claimType]").val();
+           var admissionDate = $("[id$=admissionDate]").val();
+           var dosFrom = $("[id$=DateOfServiceFrom]").val();
+           var dosThru = $("[id$=DateOfServiceThru]").val();
+           var disDate = $("[id$=dischargeDate]").val();
+          
+           if(cType == 'Professional-CMS1500'){
+             $("[id$=admissionDate]").val("");
+             $("[id$=dischargeDate]").val("");
+             $("[id$=DateOfServiceFrom]").val("");
+             $("[id$=DateOfServiceThru]").val("");
+           } 
+           if(cType == 'Facility-UB04'){
+             $("[id$=admissionDate]").val("");
+             $("[id$=dischargeDate]").val("");
+             $("[id$=DateOfServiceFrom]").val("");
+             $("[id$=DateOfServiceThru]").val("");
+           } 
+           claimTypeChange();
+        }
+        $(document).ready(function(){
+           //claimTypeChange();
+           $("[id$=addRows]").val('');
+           $("[id$=addRows]").attr("placeholder", "1...60");
+       });
+        
+    </script>
+</apex:component>

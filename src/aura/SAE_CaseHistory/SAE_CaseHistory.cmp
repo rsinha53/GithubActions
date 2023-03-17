@@ -1,0 +1,181 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes" access="global">
+
+    <!-- US2041480 - Thanish 31st March 2020 -->
+    <aura:attribute name="cmpUniqueId" type="string" default="SAE_CaseHistory"/>
+
+     <aura:handler name="init" value="{!this}" action="{!c.init}"/>
+    <aura:attribute name="caseHistoryList" type="Case[]"/>
+    <aura:handler event="c:SAE_CaseHistoryEvent" action="{!c.showResults}" />
+    <aura:handler event="c:SAE_CaseHistorySpinnerEvent" action="{!c.showCaseSpinner}" />
+    <aura:handler event="c:SAE_CaseToggleHistory" action="{!c.showResultsToggle}" />
+    <aura:attribute name="showFamilyCases" type="Boolean" default="true" />
+	<lightning:workspaceAPI aura:id="workspace"/>
+    <aura:attribute name="srk" type="string"/>
+    <aura:attribute name="memName" type="string"/>
+    <aura:attribute name="caseHistory" type="string[]"/>
+    <aura:attribute name="caseColumns" type="string[]"/>
+    <aura:attribute name="caseList" type="case[]"/>    
+    <aura:attribute name="dataTblId" type="String"/>    
+    <aura:attribute name="totalPages" type="integer" />
+    <aura:attribute name="currentPageNumber" type="integer" />
+    <aura:attribute name="pageList" type="list" />
+    <aura:attribute name="togglehover" type="String" default="" />
+    <aura:attribute name="Spinner" type="boolean" default="false"/>
+    <aura:attribute name="isToggleOnOff" type="Boolean" default="false"/>
+    <aura:attribute name="xRefId" type="String"/>
+    <aura:attribute name="memberID" type="String"/>
+    <aura:attribute name="IsInitializedTable" type="Boolean" default="false" />
+    <!-- <aura:attribute name="currentPage" type="integer" default="0" /> -->
+
+    <!-- DEF285312: Kavinda -->
+    <aura:attribute name="memberTabId" type="string" access="public"/>
+
+    <!-- US2041480 - Thanish 31st March 2020 -->
+    <aura:handler event="c:ACET_SRICloseTabEvent" action="{!c.handleSRITabClosed}"/>
+
+    <!--use JQuery Data Table css,Js and jQUERY js file in lightning component by using ltng:require component-->
+    <!-- DE302184 - Thanish - 13th Feb 2020 -->
+	<ltng:require styles="{! $Resource.datatable + '/DataTables-1.10.16/media/css/jquery.dataTables.min.css'}"
+                  scripts="{!join(',', 
+                           $Resource.datatable + '/DataTables-1.10.16/media/js/jquery.dataTables.min.js')
+                           }" /> <!--afterScriptsLoaded="{!c.init}"-->
+	 
+    <div style="width:100%" class="slds-p-top_small">
+        <!--loading spinner start-->
+        <lightning:spinner class="slds-show" aura:id="case-spinner"
+                           alternativeText="Loading.." title="Loading.."
+                           variant="brand" size="medium"/>	
+        <!-- Loading spinner end-->
+        <lightning:layout class="slds-p-left_small slds-p-right_small" verticalAlign="center" >
+            <lightning:layoutItem size="10" >
+                <span class="component_title">Case History</span>
+            </lightning:layoutItem>
+            <aura:If isTrue="{! v.showFamilyCases }" >
+                <lightning:layoutItem size="1" class="slds-text-align_right" >
+                    <div class="slds-form-element__static slds-text-align_right">
+                        Family Cases
+                    </div>
+                </lightning:layoutItem>
+                <lightning:layoutItem size="1" >
+                    <c:SAE_ToggleSwitch isToggleOn="{!v.isToggleOnOff}" textToggleOn="On" textToggleOff="Off" xRefId="{!v.xRefId}" memberID="{!v.memberID}" memberTabId="{! v.memberTabId }" />
+                
+				</lightning:layoutItem>
+            </aura:If>
+        </lightning:layout>
+        
+        <lightning:layout class="slds-m-top_medium slds-p-horizontal_small" verticalAlign="center" >
+            <lightning:layoutItem size="12" >                
+                <div class="slds-m-around_medium" width="100%" style="overflow: auto;">
+                    <table id="{! v.dataTblId }" class="slds-no-row-hover slds-table_bordered slds-table_cell-buffer tblCase auto-doc-list" cellspacing="0" width="100%">
+                        <thead>
+                            <tr class="slds-line-height_reset">
+                                <th scope="col" style="width: 3%;" ></th>
+                                <th scope="col" style="width: 14%;" >
+                                    <div class="slds-truncate" title="ORIGINATOR TYPE">ORIGINATOR TYPE</div>
+                                </th>
+                                <th scope="col" style="width: 12%;" > 
+                                    <div class="slds-truncate" title="CREATED DATE">CREATED DATE</div>
+                                </th>
+                                <th scope="col" style="width: 15%;" >
+                                    <div class="slds-truncate" title="ID">ID</div>
+                                </th>
+                                <th scope="col" style="width: 8%;" >
+                                    <div class="slds-truncate" title="ID TYPE">ID TYPE</div>
+                                </th>
+                                <th scope="col" style="width: 10%;" >
+                                    <div class="slds-truncate" title="CASE ID">CASE ID</div>
+                                </th>
+                                <th scope="col" style="width: 28%;" >
+                                    <div class="slds-truncate" title="TOPICS/REASO">TOPICS/REASON</div>
+                                </th>
+                                <th scope="col" style="width: 10%;" >
+                                    <div class="slds-truncate" title="STATUS">STATUS</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:If isTrue="{! lessthanorequal(v.caseHistoryList.length, 0) }" >
+                                <td colspan="8" ><center>No records found.</center></td>
+                                <aura:set attribute="else">
+                                        <aura:iteration items="{!v.caseHistory}" var="case" indexVar="index">
+                                            <tr data-selected-Index="{!index}">
+                                                <td>
+                                                    <div class="slds-checkbox">
+                                                        <input type="checkbox" name="options" id="{! 'cshis' + index }" value="{! 'cshis' + index }" />
+                                                        <label class="slds-checkbox__label" for="{! 'cshis' + index }">
+                                                            <span class="slds-checkbox_faux"></span>
+                                                        </label>
+                                                    </div>
+                                                </td>
+                                                <td data-label="BENEFIT LIMIT">
+                                                    <div class="slds-truncate slds-text-align_left" title="{! case.Originator_Type__c }">{! case.Originator_Type__c }</div>
+                                                </td>
+                                                <td data-label="APPLIED">
+                                                    <div class="slds-truncate slds-text-align_left" title=""><ui:outputDate format="MM/DD/YYYY" value="{!case.CreatedDate}"/></div>
+                                                </td>
+                                                <td data-label="REMAINING">
+                                                    <div class="slds-truncate slds-text-align_left" title="{! case.ID__c }"><a href="javascript:void(0);" data-caseId="{!case.ID__c}" onclick="{!c.openServiceRequestDetail}">{! case.ID__c }</a></div>
+                                                </td>
+                                                <td data-label="REMAINING">
+                                                    <div class="slds-truncate slds-text-align_left" title="{! case.IdType }"> </div>
+                                                </td>
+                                                <td data-label="REMAINING">
+                                                    <div class="slds-truncate slds-text-align_left" title="{! case.CaseNumber }"><a href="javascript:void(0);" data-caseId="{!case.Id}" onclick="{!c.openCaseDetail}">{! case.CaseNumber }</a></div>
+                                                </td>
+                                                <td data-label="REMAINING">
+                                                    <div class="slds-truncate slds-text-align_left" title="{! case.TopicsReason }"> </div>
+                                                </td>
+                                                <td data-label="REMAINING">
+                                                    <div class="slds-truncate slds-text-align_left" title="{! case.Status }">{! case.Status }</div>
+                                                </td>
+                                            </tr>
+                                        </aura:iteration>
+                                </aura:set>
+                            </aura:If>
+                        </tbody>
+                    </table>
+                    <aura:If isTrue="{! greaterthan(v.caseHistoryList.length, 0) }" >
+                        <div id="tableWrapper" class="table_container">
+                            <lightning:layout multipleRows="true" horizontalalign="center" class="pagenation_container">
+                    
+                                <lightning:layoutItem padding="around-small" flexibility="auto">
+                                </lightning:layoutItem>
+                                <lightning:layoutItem padding="around-small" flexibility="auto" class="lgt_dt_pagenation_container">
+                                    <lightning:button label="First" iconName="utility:left" iconPosition="left" onclick="{!c.onFirst}" disabled="{! v.currentPageNumber == 1}" />
+                                    <lightning:button iconName="utility:chevronleft" iconPosition="left" onclick="{!c.onPrev}" disabled="{! v.currentPageNumber == 1}" />
+                                    <span class="slds-p-horizontal_x-small">
+                                    <a  name="1" 
+                                            class="selected_page_cls">{!v.currentPageNumber}</a>
+                                </span>
+                                    <span class="slds-p-horizontal_xxx-small">
+                                    <a>...</a>
+                                </span>
+                    
+                                    <aura:iteration items="{!v.pageList}" var="item">
+                                        <span class="slds-p-horizontal_x-small">
+                                        <a id ="selectpage" onclick="{!c.processMe}" name="{!item}"
+                                                class="{! (v.currentPageNumber == item) ? 'selected' : ''}">{!item}</a>
+                                    </span>
+                                    </aura:iteration>
+                                    <aura:if isTrue="{!and(v.totalPages > '11',v.totalPages != v.currentPageNumber)}">
+                                        <span class="slds-p-horizontal_xxx-small">
+                                    <a>...</a>
+                                </span>
+                                        <span class="slds-p-horizontal_x-small">
+                                    <a  name="1"  class=""  onclick="{!c.onLast}">{!v.totalPages}</a>
+                                </span>
+                                    </aura:if>
+                                    <lightning:button iconName="utility:chevronright" iconPosition="right" disabled="{! v.currentPageNumber == v.totalPages}" onclick="{!c.onNext}" />
+                                    <lightning:button label="Last" iconName="utility:right" iconPosition="right" disabled="{!v.currentPageNumber == v.totalPages}" onclick="{!c.onLast}" />
+                                </lightning:layoutItem>
+                            </lightning:layout>
+                    
+                        </div>
+                    </aura:If>
+                
+                </div>
+            </lightning:layoutItem>
+        </lightning:layout>
+    </div>
+
+</aura:component>

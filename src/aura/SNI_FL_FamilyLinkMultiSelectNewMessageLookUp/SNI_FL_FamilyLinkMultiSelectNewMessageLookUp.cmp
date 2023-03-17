@@ -1,0 +1,82 @@
+<!-- 
+Component Name    : SNI_FL_FamilyLinkMultiSelectNewMessageLookUp
+Description       : Lookup component 
+Created By        : Bindu Sakhamuri
+Created Date      : 04-01-2021
+
+Modification Log: 
+Developer                   Date                   Description
+
+-->
+
+<aura:component controller="SNI_FL_ProviderMessageUtil">
+
+    <aura:attribute name="SelectedProgram"  type="String" />
+    <aura:attribute name="SearchKeyWord"    type="string" default=""/>
+    <aura:attribute name="label"            type="string" default="To" description="Label will be displayed above input Box" />
+    <aura:attribute name="objectName"       type="string" default="User"/>
+    <aura:attribute name="recordsList"      type="List" access="private" description="List of Records having data" />
+    <aura:attribute name="Message"          type="String" default=""/>
+    <aura:attribute name="IconName"         type="string" default="standard:user"/>
+    <aura:attribute name="lstSelectedRecords" type="sObject[]" default="[]" description="Use,for store SELECTED sObject Records"/>
+    <aura:attribute name="listOfSearchRecords" type="sObject" description="Use,for store the list of search records which returns from apex class"/>
+    <aura:attribute name="removedSelectedRecords" type="sObject[]" default="[]" description="Use from parent,for store SELECTED sObject Records"/>
+    
+    <aura:handler name="oSelectedRecordEvent" event="c:SNI_FL_SelectedsObjectRecordsEvt" action="{!c.handleComponentEvent}" />
+
+    <!--Unused attributes and events-->
+    <aura:attribute name="familyId" type="String"/>
+    <aura:attribute name="objectAPIName" type="string" default=""/>
+    <aura:attribute name="recordCount" 	type="string" default="5" description="Records visible at once"/>
+    <aura:attribute name="selectedTabId" type="String"/>
+    <aura:method name="clearFunction" action="{!c.handleClear}" access="public"/>
+    <aura:method name="initFunction" action="{!c.handleDefaultUser}" access="public"/>
+
+    <!-- div realted tag - onmouseleave = "{!c.onblur}" -->  
+    <div aura:id="searchRes" onmouseleave = "{!c.onblur}"  class="slds-form-element slds-lookup slds-is-close" >        
+        <label class="slds-form-element__label" style="color:#54698d;font-size:12px;margin-bottom:-11px;"> <abbr class="slds-required" title="required">* </abbr> {!v.label}</label>
+        <!--This part is for display search bar for lookup-->  
+        <div class="slds-form-element__control">
+            <div class="slds-input-has-icon slds-input-has-icon--right">
+                <!-- This markup is for when an record is selected style="height:0.5px !important"-->
+                <div aura:id="lookup-pill" class="{!(v.lstSelectedRecords.length == 0) ? '':'slds-pill-container'}" >
+                    <div aura:id="lookupField" class="inputSize slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right"  style="width: 100%;">
+                        
+                        <ui:inputText click="{!c.onfocus}"
+                                      updateOn="keyup"
+                                      keyup="{!c.keyPressController}"
+                                      class="slds-lookup__search-input slds-input searchBoxSize"
+                                      value="{!v.SearchKeyWord}"
+                                      placeholder="Search..."/>
+                        
+                        <span class="divCss iconsearch slds-icon_container slds-icon-utility-search slds-input__icon slds-input__icon_right" >
+                            <lightning:icon iconName="utility:search" size="xx-small" alternativeText="icon" />
+                        </span>
+                    </div> 
+                    <!--Selected Records Pills Section-->
+                    <aura:iteration items="{!v.lstSelectedRecords}" var="sr">
+                        <lightning:pill class="slds-m-around_xx-small" label="{!sr.label}"  name="{!sr.value}" onremove="{! c.clear }">
+                            <aura:set attribute="media">
+                                <lightning:icon class="{!sr.userType=='A'?'slds-icon slds-icon_small advisor':sr.userType=='PT'?'slds-icon slds-icon_small providerTeam':'slds-icon slds-icon_small provider'}" iconName="{!v.IconName}" size="x-small" alternativeText="icon"/>
+                            </aura:set>
+                        </lightning:pill>
+                    </aura:iteration>
+                </div>
+            </div>
+        </div>
+        
+        <!--This part is for Display typehead lookup result List --> 
+        <ul style="max-width:100%; min-height:40px; margin-top:0px; margin-left:0px;" class="recordListBox slds-listbox slds-listbox_vertical slds-dropdown slds-dropdown_length-5 slds-dropdown_fluid slds-lookup__menu slds" role="listbox">
+            <lightning:spinner class="slds-hide" variant="brand" size="small" aura:id="mySpinner"/>
+            <aura:if isTrue="{!not(empty(v.Message))}">
+                <li class="slds-listbox__item">
+                    <span class="slds-media slds-listbox__option_entity">{!v.Message}</span>
+                </li>
+            </aura:if> 
+            <aura:iteration items="{!v.listOfSearchRecords}" var="singleRec">
+                <!--Child Component--> 
+                <c:SNI_FL_ProviderMultiSelect oRecord="{!singleRec}" IconName="{!v.IconName}" selectedListRecords="{!v.lstSelectedRecords}"/>
+            </aura:iteration>
+        </ul>
+    </div>
+</aura:component>

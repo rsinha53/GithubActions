@@ -1,0 +1,368 @@
+<aura:component controller="ACET_ClaimServiceRequestDetailCtrl"
+    implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,lightning:isUrlAddressable"
+    access="global">
+
+    <!-- SCRIPTS -->
+    <ltng:require styles="{!$Resource.ACET_MasterStyle}" />
+    <!-- /SCRIPTS -->
+
+    <!-- ATTRIBUTES -->
+    <aura:attribute name="issueId" type="string" />
+    <aura:attribute name="issueType" type="string" />
+    <aura:attribute name="taxId" type="string" />
+    <aura:attribute name="parentUniqueId" type="string" default="" />
+    <aura:attribute name="tabId" type="string" />
+    <aura:attribute name="icon" type="String" default="utility:chevronright" />
+    <aura:attribute name="showAdditionalDetails" type="Boolean" default="false" />
+    <aura:attribute name="externalIdDetails" type="Object" />
+    <aura:attribute name="historyList" type="List" />
+    <aura:attribute name="filteredHistoryList" type="List" />
+    <aura:attribute name="attachmentsList" type="List" />
+    <aura:attribute name="filteredAttachments" type="List" />
+    <aura:attribute name="historySortColumn" type="string" default="none" />
+    <aura:attribute name="historySortingIcon" type="string" default="none" />
+    <aura:attribute name="attachmentSortColumn" type="string" default="none" />
+    <aura:attribute name="attachmentSortingIcon" type="string" default="none" />
+    <aura:attribute name="externalIdDetailsLoaded" type="Boolean" default="false" />
+    <aura:attribute name="attachmentsLoaded" type="Boolean" default="false" />
+    <aura:attribute name="cmpUniqueId" type="string" default="SAE_CaseServiceRequestInfo" />
+    <aura:attribute name="recordId" type="String" default="" />
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute name="openedTabs" type="List" default="[]" />
+    <!-- ATTRIBUTES -->
+
+    <!-- HANDLERS -->
+    <aura:handler name="init" value="{!this}" action="{!c.init}" />
+    <aura:handler event="lightning:tabClosed" action="{!c.onTabClosed }" />
+    <aura:handler event="lightning:tabFocused" action="{! c.onTabFocused }" />
+    <aura:handler name="change" value="{!v.taxId}" action="{!c.getClaimReconDetail}" />
+    <aura:handler event="c:ACET_SRICloseTabEvent" action="{!c.enableORSIdLink}" />
+    <!-- HANDLERS -->
+
+    <!-- EVENTS -->
+    <aura:registerEvent name="ACET_SRICloseTabEvent" type="c:ACET_SRICloseTabEvent" />
+    <!-- /EVENTS -->
+
+    <!-- Header Section -->
+    <div class="slds-card card_padding">
+        <div class="slds-grid">
+            <div class="slds-col slds-has-flexi-truncate">
+                <div class="slds-media slds-no-space slds-grow">
+                    <div class="slds-media__figure">
+                        <span class="slds-icon_container">
+                            <lightning:icon iconName="action:record" alternativeText="Service Request Details" />
+                        </span>
+                    </div>
+                    <div class="slds-media__body">
+                        <div class="slds-page-header__name">
+                            <div class="slds-page-header__name-title" style="position:absolute;">
+                                <h1 class="page_header_label slds-m-right_small  slds-truncate">Service Request Details
+                                </h1>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            <!-- ACTION BUTTONS -->
+            <lightning:buttonGroup>
+                <c:SAE_Alerts aura:id="alertsAI" providerId="{!v.providerId}" taxId="{!v.taxId}"
+                    providerNotFound="{!v.providerNotFound}" noMemberToSearch="{!v.noMemberToSearch}"
+                    memberNotFound="{!v.mnf}" isProviderSearchDisabled="{!v.isProviderSearchDisabled}"
+                    isProviderSnapshot="true" caseRecordId="{!v.recordId}" memberId="{!v.externalIdDetails.memberId}"/>
+            </lightning:buttonGroup>
+        </div>
+    </div>
+    <!-- Header Section -->
+
+    <!-- ExternalId Section -->
+    <div class="slds-card card_padding">
+        <aura:if isTrue="{!!v.externalIdDetailsLoaded}">
+            <lightning:spinner alternativeText="Loading" variant="brand" />
+        </aura:if>
+        <div class="component_title slds-text-heading_small card_bottom_margin">External ID Details: {!v.issueId}</div>
+
+        <div class="slds-grid slds-wrap slds-grid_align-spread">
+            <div class="slds-col">
+                <p class="field_label field_label_padding">ID Type</p>
+                <p>{!v.issueType}</p>
+            </div>
+            <div class="slds-col">
+                <p class="field_label field_label_padding">Status</p>
+                <p>{!v.externalIdDetails.status}</p>
+            </div>
+            <div class="slds-col">
+                <p class="field_label field_label_padding">Adjustment #</p>
+                <a href="javascript:void(0);" class="idLink" data-orsId="{!v.externalIdDetails.adjustment}"
+                    onclick="{!c.openORSDetail}">{!v.externalIdDetails.adjustment}</a>
+            </div>
+            <div class="slds-col">
+                <p class="field_label field_label_padding">Member Name</p>
+                <p>{!v.externalIdDetails.memberName}</p>
+            </div>
+            <div class="slds-col">
+                <p class="field_label field_label_padding">Member Id</p>
+                <p>{!v.externalIdDetails.memberId}</p>
+            </div>
+            <div class="slds-col">
+                <p class="field_label field_label_padding">Claim Number</p>
+                <p>{!v.externalIdDetails.claimNumber}</p>
+            </div>
+            <div class="slds-col">
+                <p class="field_label field_label_padding">Claim Service Date</p>
+                <p>{!v.externalIdDetails.claimServiceDate}</p>
+            </div>
+            <div class="slds-col">
+                <p class="field_label field_label_padding">Billed Amount</p>
+                <p>{!v.externalIdDetails.billedAmount}</p>
+            </div>
+            <div class="slds-col">
+                <p class="field_label field_label_padding">Amount Requested</p>
+                <p>{!v.externalIdDetails.amountRequested}</p>
+            </div>
+            <div class="slds-col">
+                <p class="field_label field_label_padding">Platform</p>
+                <p>{!v.externalIdDetails.platform}</p>
+            </div>
+        </div>
+        <!-- Additional Details -->
+        <div class="slds-m-top_large slds-m-bottom_medium">
+            <div onclick="{!c.chevToggle}">
+                <span>
+                    <lightning:icon aura:id="additionalDetailsChevronAI" iconName="{!v.icon}" size="x-small"
+                        alternativeText="Chevron Icon When Inactive" />
+                </span>
+                <span class="slds-m-left_x-small slds-m-top_small">Additional Details</span>
+            </div>
+        </div>
+        <div class="{!(v.showAdditionalDetails== 'true') ? 'slds-show':'slds-hide'}">
+            <div class="slds-grid slds-wrap slds-grid_align-spread">
+                <div class="slds-col">
+                    <p class="field_label field_label_padding">Contact Name</p>
+                    <p>{!v.externalIdDetails.contactName}</p>
+                </div>
+                <div class="slds-col">
+                    <p class="field_label field_label_padding">Phone #</p>
+                    <p>
+                        <lightning:formattedPhone value="{!v.externalIdDetails.phnNumber}" disabled="true" />
+                    </p>
+                </div>
+                <div class="slds-col">
+                    <p class="field_label field_label_padding">Email</p>
+                    <p>{!v.externalIdDetails.emailAddress}</p>
+                </div>
+                <div class="slds-col">
+                    <p class="field_label field_label_padding">Tax Id</p>
+                    <p>{!v.taxId}</p>
+                </div>
+                <div class="slds-col">
+                    <p class="field_label field_label_padding">Billing Provider</p>
+                    <p>{!v.externalIdDetails.billingProvider}</p>
+                </div>
+                <div class="slds-col">
+                    <p class="field_label field_label_padding">Servicing Provider</p>
+                    <p>{!v.externalIdDetails.servicingProvider}</p>
+                </div>
+            </div>
+        </div>
+        <!-- Additional Details -->
+    </div>
+    <!-- ExternalId Section -->
+
+    <!-- History -->
+    <div class="slds-card card_padding">
+        <aura:if isTrue="{!!v.externalIdDetailsLoaded}">
+            <lightning:spinner alternativeText="Loading" variant="brand" />
+        </aura:if>
+        <div class="slds-grid slds-grid_align-spread card_bottom_margin">
+            <div class="slds-col component_title">History</div>
+            <div class="slds-col">
+                <lightning:input aura:id="historySearchBox" variant="label-hidden" placeholder="Search"
+                    onchange="{!c.onHistorySearch}" />
+            </div>
+        </div>
+        <table class="slds-table slds-table_bordered historyTable">
+            <thead>
+                <tr>
+                    <th scope="col" style="width: 20%; cursor: pointer;" data-column="dateAndTime" data-sortOrder="des"
+                        onclick="{!c.onHistoryColumnSort}">
+                        <div class="slds-truncate table_column_header" style="float: left; padding-right: 5px;">
+                            DATE</div>
+                        <aura:if isTrue="{!v.historySortColumn == 'dateAndTime'}">
+                            <div style="float: left; margin-top: -4px;">
+                                <lightning:buttonIcon iconName="{!v.historySortingIcon}" variant="bare" />
+                            </div>
+                        </aura:if>
+                    </th>
+                    <th scope="col" style="width: 20%; cursor: pointer;" data-column="addedBy" data-sortOrder="des"
+                        onclick="{!c.onHistoryColumnSort}">
+                        <div class="slds-truncate table_column_header" style="float: left; padding-right: 5px;">ADDED BY
+                        </div>
+                        <aura:if isTrue="{!v.historySortColumn == 'addedBy'}">
+                            <div style="float: left; margin-top: -4px;">
+                                <lightning:buttonIcon iconName="{!v.historySortingIcon}" variant="bare" />
+                            </div>
+                        </aura:if>
+                    </th>
+                    <th scope="col" style="width: 60%; cursor: pointer;" data-column="comments" data-sortOrder="des"
+                        onclick="{!c.onHistoryColumnSort}">
+                        <div class="slds-truncate table_column_header" style="float: left; padding-right: 5px;">COMMENTS
+                        </div>
+                        <aura:if isTrue="{!v.historySortColumn == 'comments'}">
+                            <div style="float: left; margin-top: -4px;">
+                                <lightning:buttonIcon iconName="{!v.historySortingIcon}" variant="bare" />
+                            </div>
+                        </aura:if>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                <aura:iteration items="{!v.filteredHistoryList}" var="item">
+                    <tr class="slds-text-title_caps">
+                        <td style="width: 20%;">
+                            <div class="slds-truncate table_cell_value">
+                                <aura:if isTrue="{!item.dateAndTime}">
+                                    {!item.dateAndTime}
+                                    <aura:set attribute="else">
+                                        --
+                                    </aura:set>
+                                </aura:if>
+                            </div>
+                        </td>
+                        <td style="width: 20%;">
+                            <div class="slds-truncate table_cell_value">
+                                <aura:if isTrue="{!item.addedBy}">
+                                    {!item.addedBy}
+                                    <aura:set attribute="else">
+                                        --
+                                    </aura:set>
+                                </aura:if>
+                            </div>
+                        </td>
+                        <td style="width: 60%;">
+                            <div class="slds-cell-wrap table_cell_value"
+                                style="{! (item.addedBy == 'System') ? '' : 'font-weight: bold;'}">
+                                <aura:if isTrue="{!item.comments}">
+                                    <lightning:formattedtext value="{!item.comments}" />
+                                    <aura:set attribute="else">
+                                        --
+                                    </aura:set>
+                                </aura:if>
+                            </div>
+                        </td>
+                    </tr>
+                </aura:iteration>
+            </tbody>
+        </table>
+    </div>
+    <!-- History -->
+
+    <!-- Attachments -->
+    <div class="slds-card card_padding">
+        <aura:if isTrue="{!!v.attachmentsLoaded}">
+            <lightning:spinner alternativeText="Loading" variant="brand" />
+        </aura:if>
+        <div class="slds-grid slds-grid_align-spread card_bottom_margin">
+            <div class="slds-col component_title">Attachments</div>
+            <div class="slds-col">
+                <lightning:input aura:id="additionalDetailsSearchBox" variant="label-hidden" placeholder="Search"
+                    onchange="{!c.onAttachmentSearch}" />
+            </div>
+        </div>
+        <table class="slds-table slds-table_bordered attachmentTable">
+            <thead>
+                <tr>
+                    <th scope="col" style="width: 25%; cursor: pointer;" data-column="dateAndTime" data-sortOrder="des"
+                        onclick="{!c.onAttachmentColumnSort}">
+                        <div class="slds-truncate table_column_header" style="float: left; padding-right: 5px;">
+                            DATE/TIME</div>
+                        <aura:if isTrue="{!v.attachmentSortColumn == 'dateAndTime'}">
+                            <div style="float: left; margin-top: -4px;">
+                                <lightning:buttonIcon iconName="{!v.attachmentSortingIcon}" variant="bare" />
+                            </div>
+                        </aura:if>
+                    </th>
+                    <th scope="col" style="width: 25%; cursor: pointer;" data-column="addedBy" data-sortOrder="des"
+                        onclick="{!c.onAttachmentColumnSort}">
+                        <div class="slds-truncate table_column_header" style="float: left; padding-right: 5px;">ADDED BY
+                        </div>
+                        <aura:if isTrue="{!v.attachmentSortColumn == 'addedBy'}">
+                            <div style="float: left; margin-top: -4px;">
+                                <lightning:buttonIcon iconName="{!v.attachmentSortingIcon}" variant="bare" />
+                            </div>
+                        </aura:if>
+                    </th>
+                    <th scope="col" style="width: 25%; cursor: pointer;" data-column="type" data-sortOrder="des"
+                        onclick="{!c.onAttachmentColumnSort}">
+                        <div class="slds-truncate table_column_header" style="float: left; padding-right: 5px;">TYPE
+                        </div>
+                        <aura:if isTrue="{!v.attachmentSortColumn == 'type'}">
+                            <div style="float: left; margin-top: -4px;">
+                                <lightning:buttonIcon iconName="{!v.attachmentSortingIcon}" variant="bare" />
+                            </div>
+                        </aura:if>
+                    </th>
+                    <th scope="col" style="width: 25%; cursor: pointer;" data-column="fileName" data-sortOrder="des"
+                        onclick="{!c.onAttachmentColumnSort}">
+                        <div class="slds-truncate table_column_header" style="float: left; padding-right: 5px;">FILE
+                            NAME
+                        </div>
+                        <aura:if isTrue="{!v.attachmentSortColumn == 'fileName'}">
+                            <div style="float: left; margin-top: -4px;">
+                                <lightning:buttonIcon iconName="{!v.attachmentSortingIcon}" variant="bare" />
+                            </div>
+                        </aura:if>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                <aura:iteration items="{!v.filteredAttachments}" var="item">
+                    <tr>
+                        <td style="width: 25%;">
+                            <div class="slds-truncate table_cell_value">
+                                <aura:if isTrue="{!item.dateAndTime}">
+                                    {!item.dateAndTime}
+                                    <aura:set attribute="else">
+                                        --
+                                    </aura:set>
+                                </aura:if>
+                            </div>
+                        </td>
+                        <td style="width: 25%;">
+                            <div class="slds-truncate table_cell_value">
+                                <aura:if isTrue="{!item.addedBy}">
+                                    {!item.addedBy}
+                                    <aura:set attribute="else">
+                                        --
+                                    </aura:set>
+                                </aura:if>
+                            </div>
+                        </td>
+                        <td style="width: 25%;">
+                            <div class="slds-truncate table_cell_value">
+                                <aura:if isTrue="{!item.addedBy}">
+                                    {!item.type}
+                                    <aura:set attribute="else">
+                                        --
+                                    </aura:set>
+                                </aura:if>
+                            </div>
+                        </td>
+                        <td style="width: 25%;">
+                            <div class="slds-truncate table_cell_value">
+                                <aura:if isTrue="{!item.fileName != '--'}">
+                                    <a href="javascript:void(0);" data-fileId="{!item.fileId}" class="idLink"
+                                        onclick="{!c.openClaimAttachment}">{!item.fileName}</a>
+                                    <aura:set attribute="else">
+                                        --
+                                    </aura:set>
+                                </aura:if>
+                            </div>
+                        </td>
+                    </tr>
+                </aura:iteration>
+            </tbody>
+        </table>
+    </div>
+    <!-- Attachments -->
+</aura:component>

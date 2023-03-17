@@ -1,0 +1,424 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes" controller="ACET_ORSWebservice" access="global">
+
+    <!-- US2041480 - Thanish 31st March 2020 -->
+    <aura:attribute name="cmpUniqueId" type="string" default="SAE_CaseHistory"/>
+
+    <aura:attribute name="data" type="Object"/>
+    <aura:attribute name="columns" type="List"/>
+    <aura:attribute name="recordId" type="String"/>
+
+    <aura:attribute name="allData" type="SAE_ProviderSnapshotController.CaseWrapper[]"/>
+    <aura:attribute name="originalData" type="SAE_ProviderSnapshotController.CaseWrapper[]"/>
+    <aura:attribute name="currentPageNumber" type="Integer" default="1"/>
+    <aura:attribute name="currentStartNumber" type="Integer" default="0"/>
+    <aura:attribute name="currentEndNumber" type="Integer"/>
+    <aura:attribute name="pageSize" type="Integer" default="50"/>
+    <aura:attribute name="totalPages" type="Integer" default="0"/>
+    <aura:attribute name="pageList" type="List"/>
+    <aura:handler event="c:SAE_CaseHistoryEvent" action="{!c.showResults}" />
+    <aura:attribute name="caseHistoryList" type="SAE_ProviderSnapshotController.CaseWrapper[]"/>
+    <aura:attribute name="memberTabId" type="string" access="public"/>
+    <aura:attribute name="sortBy" type="String"/>
+    <aura:attribute name="sortDirection" type="String"/>
+    <aura:attribute name="isProvider" type="Boolean" default="false"/>
+    <aura:attribute name="orsToggleSelectIssues" type="List" />
+    <aura:handler name="init" action="{!c.doInit}" value="{!this}"/>
+    <aura:attribute name="arrowDirection" type="string" default="arrowdown" description="Use for change arrow sign direction on header based on click"/>
+    <aura:attribute name="isAsc" type="boolean" default="true" description="boolean flag for pass sorting condition to apex class"/>
+    <aura:attribute name="selectedTabsoft" type="string" default="firstName" description="Use for show/hide arraow sign on header based on conditions"/>
+    <lightning:workspaceAPI aura:id="workspace"/>
+    <aura:attribute name="showFamilyCases" type="Boolean" default="true" />
+    <aura:attribute name="isToggleOnOff" type="Boolean" default="false" />
+    <aura:attribute name="xRefId" type="String"/>
+    <aura:attribute name="memberID" type="String"/>
+    <aura:handler event="c:SAE_CaseToggleHistory" action="{!c.showResultsToggle}" />
+    <aura:handler event="c:SAE_CaseHistorySpinnerEvent" action="{!c.showCaseSpinner}" />
+    <aura:attribute name="taxId" type="String" />
+    <aura:attribute name="orsSelectIssues" type="List"/>
+    <!--US2584524 - FACETS Member snapshot case history-START-->
+    <aura:attribute name="memberPolicies" type="SAEMemberProviderSearchCoveragesResult.CoverageLine[]"/>
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0"/>
+    <aura:attribute name="selectedPolicies" type="List" default=""/>
+    <aura:attribute name="isCandSPolicy" type="Boolean" default="false"/>
+    <aura:attribute name="isAllFACETCasesFetched" type="boolean" default="false" />
+    <aura:attribute name="cspProviderID" type="String" />
+    <aura:attribute name="cnsProviderId" type="String" default=""/> <!--Added as part of FACET US bind variable-->
+    <aura:attribute name="lstFacetCases" type="List"/>
+    <aura:attribute name="nextPageInd" type="Boolean" />
+    <aura:attribute name="offSet" type="Integer" default="1"/>
+    <aura:attribute name="recordsCount" type="Integer"/>
+    <!--US2584524 - FACETS Member snapshot case history-END-->
+    <aura:attribute name="icon" type="String" default="utility:chevronright" />
+    <aura:attribute name="toggleName" type="String" default="slds-hide" />
+    <!-- US2041480 - Thanish 31st March 2020 -->
+    <aura:handler event="c:ACET_SRICloseTabEvent" action="{!c.handleSRITabClosed}"/>
+
+    <aura:attribute name="nextIssueKey" type="String" default=""/>
+    <aura:attribute name="moreData" type="Boolean" />
+    <aura:attribute name="paginationBtnDisable" type="Boolean" default="false" />
+    <aura:attribute name="memberSubscriberId" type="String" default="SubscriberId" />
+    <!--Added by Raviteja Team Blinkers for Alerts on May 19 2021 US3511613 -->
+     <aura:attribute name="alertProviderId" type="String" access="public" />
+     <aura:attribute name="alertMemberId" type="String" access="public" />
+     <aura:attribute name="alertGroupId" type="String" access="public" />
+     <aura:attribute name="alertTaxId" type="String" access="public" />
+     <aura:attribute name="policyGroupId" type="String" access="public" />
+     <aura:attribute name="policyMemberId" type="String" access="public" />
+     <aura:attribute name="interactionRecId" type="String" access="public" />
+     <aura:attribute name="providerNotFound" type="Boolean" default="false" />
+     <aura:attribute name="noMemberToSearch" type="Boolean" default="false" />
+     <aura:attribute name="isProviderSearchDisabled" type="Boolean" default="false" />
+     <aura:attribute name="houseHoldMemberId" type="String" access="public" />
+     <aura:attribute name="mnf" type="string" default="mnfx" access="public" />
+     <aura:attribute name="CurrentUser" type="Object"/>
+	<!-- End of US3511613 -->
+    <!-- Filter Pills -->
+    <aura:attribute name="items" type="List" default="[ {label: 'Provider Originator', name: '1'}, {label: 'ACET - Last 6 Months', name: '2'} ]"/>
+    <aura:attribute name="itemsAvailable" type="List" default="[]" />
+    <aura:attribute name="allUnfilteredData" type="Object"/>
+
+    <aura:attribute name="providerChecked" type="boolean" default="true" />
+    <aura:attribute name="lastsixchecked" type="boolean" default="true" />
+    <aura:attribute name="isIndividual" type="boolean" default="true" />
+
+    <aura:attribute name="showAllToggle" type="boolean" default="false" />
+
+    <aura:attribute name="caseSearchFlag" type="Boolean" default="false"/>
+
+    <!-- US2667560 -  Sanka - ORS Family Filtering -->
+    <aura:attribute name="xRefIdORS" type="String" />
+    <aura:attribute name="isServiceCalled" type="Boolean" default="false" />
+    <aura:attribute name="memberFN" type="String" />
+    <aura:attribute name="memberLN" type="String" />
+    <aura:attribute name="memberDOB" type="String" />
+    <aura:attribute name="memberGrpN" type="String" />
+	<aura:attribute name="flowType" type="String"/>
+	<!-- US2812137 -->
+    <aura:attribute name="relationShipcode" type="String"/>
+
+    <aura:attribute name="isSpireOnlyCases" type="boolean" default="true" />
+    <aura:attribute name="isAllORSCasesFetched" type="boolean" default="false" />
+    <aura:attribute name="isLastSixtyDaysOnly" type="boolean" default="true" />
+    <aura:attribute name="isContinueORSFetch" type="boolean" default="true" />
+    <aura:attribute name="isORSCalled" type="boolean" default="false" />
+    <aura:attribute name="tableDivClassstr" type="String"/>
+
+    <aura:attribute name="isCaseHistoryShown" type="Boolean" default="false" />
+
+    <!-- US2815284 -->
+    <aura:attribute name="refreshUnique" type="String" />
+    <aura:attribute name="enableMemberFilter" type="boolean" default="false"/>
+    <aura:handler event="c:ACET_CaseHistoryRefreshEvt" action="{!c.handleRefresh}" />
+
+    <aura:attribute name="policyDetails" type="SAEPolicyDetailsResult"/>
+    <aura:attribute name="selectedPolicy" type="SAEMemberProviderSearchCoveragesResult.FinancialsWrapper" access="public"/>
+    <aura:handler name="change" value="{!v.selectedPolicy}" action="{!c.policyChangeHandlerNew}"/>
+    <aura:handler name="change" value="{!v.policyDetails}" action="{!c.policyChangeHandlerNew}"/>
+    <aura:handler name="change" value="{!v.policySelectedIndex}" action="{!c.policyChangeHandlerNew}"/>
+
+    <aura:attribute name="isFacetsEnabled" type="String" access="public" default="{!$Label.c.ACET_FacetsEngineTrigger}"/>
+    <aura:attribute name="facetsServiceFailed" type="Boolean" default="false" />
+    <aura:attribute name="orsServiceFailed" type="Boolean" default="false" />
+    <!-- Blinker US3520814-->
+    <aura:attribute name="autodocUniqueId" type="String" default=""/>
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default=""/>
+    <aura:attribute name="FISourceCode" type="String" default="" />
+    <!-- US3177995 - Thanish - 22nd Jun 2021 -->
+    <aura:attribute name="subjectCard" type="Object" access="public"/>
+
+    <!-- US3537364 -->
+    <aura:attribute name="openedTabs" type="Map" access="public" default="{}"/>
+
+    <aura:attribute name="policyList" type="list" access="public" />
+
+    <aura:attribute name="caseWrapper" type="Object" access="public"/>
+
+
+    <!--US3579548 - Sravan-->
+    <aura:attribute name="additonalRecordsNotFound" type="Boolean" default="false"/>
+
+    <!-- You must define keyField as 'Id' to save the record back in Salesforce 'onsave' attribute will executed when user clicks on save button -->
+
+    <!-- US3602768 - Thanish - 18th Jun 2021 -->
+    <div style="width:100%" class="slds-p-top_small">
+        <lightning:spinner class="slds-hide" aura:id="case-spinner" alternativeText="Loading.." title="Loading.." variant="brand" size="medium"/>
+
+        <!--Added by Raviteja Team Blinkers for logged in user profile on May 24 2021 US3511613 -->
+        <force:recordData recordId="{!$SObjectType.CurrentUser.Id}" fields="Profile.Name" targetFields="{!v.CurrentUser}"/>
+        <!-- End of US3511613 -->
+        <lightning:layout class="slds-p-left_small slds-p-right_small" verticalAlign="center" >
+            <lightning:layoutItem size="12" >
+                <div class="slds-card" >
+                        <section class="slds-clearfix topLine">
+                            <div class="slds-float--left" id="chevInactive">
+                                <div  class="slds-icon_container chevInactive" style="padding: 0; cursor: pointer;" onclick="{!c.chevToggle}">
+                                    <aura:if isTrue="{!v.toggleName == 'slds-hide'}">
+                                        <img src="{!$Resource.SLDS+'/assets/icons/utility/chevronright_60.png'}" class="slds-icon slds-icon_x-small"/>
+
+                                        <aura:set attribute="else">
+                                            <img src="{!$Resource.SLDS+'/assets/icons/utility/chevrondown_60.png'}" class="slds-icon slds-icon_x-small"/>
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </div>
+                            <div class="slds-m-left--large">
+                                <b> <span class="component_title">Case History</span></b><!--US3579548 - Sravan -->
+                            </div>
+                        </section>
+                    </div>
+            </lightning:layoutItem>
+            <aura:If isTrue="{! v.showFamilyCases }" >
+                <lightning:layoutItem size="1" class="slds-hide">
+                    <c:SAE_ToggleSwitch aura:id="toggleButtonId" isToggleOn="{!v.isToggleOnOff}" textToggleOn="On" textToggleOff="Off"
+                                        xRefId="{!v.xRefId}" memberID="{!v.memberID}" memberTabId="{! v.memberTabId }"/>
+                </lightning:layoutItem>
+            </aura:If>
+        </lightning:layout>
+
+        <div class="{!v.toggleName}">
+            <lightning:layout multipleRows="true" horizontalAlign="center">
+                <lightning:layoutItem size="12">
+                    <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center card_padding">
+                        <div class="slds-col">
+                            <aura:if isTrue="{!(v.CurrentUser.Profile.Name=='Provider Service' || v.CurrentUser.Profile.Name=='System Administrator')}">
+                                <lightning:button label="External ID Search" name="externalId" variant="neutral" onclick="{!c.openexternalid}"
+                                                  class="externalId_button"/>
+                            </aura:if>
+                        </div>
+                        <div class="slds-col">
+                            <aura:If isTrue="{! v.showFamilyCases }">
+                                <div class="slds-grid slds-grid_vertical-align-center slds-grid_align-spread">
+                                    <div class="slds-col slds-size_2-of-15" style="width: 100px;">
+                                        <lightning:input checked="{!v.providerChecked}" type="checkbox" label="Provider" name="input1" onchange="{!c.addRemoveFilters}"/>
+                                    </div>
+                                    <div class="slds-col slds-size_2-of-15" style="width: 100px;">
+                                        <lightning:input checked="{!v.isIndividual}" type="checkbox" label="Individual" name="input2" onchange="{!c.toggleFamily}"/>
+                                    </div>
+                                    <div class="slds-col slds-size_2-of-15" style="width: 140px;">
+                                        <lightning:input checked="{!v.isSpireOnlyCases}" type="checkbox" label="SPIRE only cases" name="input4" onchange="{!c.fetchORScases}"/>
+                                    </div>
+                                    <div class="slds-col slds-size_3-of-15" style="width: 120px;">
+                                        <lightning:input checked="{!v.lastsixchecked}" type="checkbox" label="Last 6 Months" name="input3" onchange="{!c.addRemoveFilters}"/>
+                                    </div>
+                                    <!-- US3177991: Create Purged ORS Checkbox and Display Records UI - Krish - 8th June 2021 -->
+                                    <aura:if isTrue="{!!v.isProvider}">
+                                        <div class="slds-col slds-size_3-of-15" style="width: 120px;">
+                                            <lightning:input type="checkbox" label="Purged" onchange="{!c.onPurgedCheck}"/> <!-- US3177995 - Thanish - 22nd Jun 2021 -->
+                                        </div>
+                                    </aura:if>
+                                    <div class="slds-col slds-size_3-of-15"  style="width: 200px;">
+                                        <lightning:input variant="label-hidden" name="fieldToSearch" aura:id="caseSearchID" placeholder="Search" onchange="{!c.searchValueFunc}"/>
+                                    </div>
+                                </div>
+                            </aura:If>
+                            <aura:If isTrue="{! !v.showFamilyCases }">
+                                <div class="slds-grid">
+                                    <div class="slds-col slds-size_3-of-12" style="width: 100px;">
+                                        <lightning:input checked="{!v.providerChecked}" type="checkbox" label="Provider" name="ProviderInput" onchange="{!c.toggleAll}"/>
+                                    </div>
+                                    <div class="slds-col slds-size_3-of-12" style="width: 150px;">
+                                        <lightning:input checked="{!v.isSpireOnlyCases}" type="checkbox" label="SPIRE only cases" name="input4" onchange="{!c.fetchORScases}"/>
+                                    </div>
+                                    <div class="slds-col slds-size_3-of-12" style="width: 200px;">
+                                        <lightning:input variant="label-hidden" name="fieldToSearch" aura:id="caseSearchID" placeholder="Search" onchange="{!c.searchValueFunc}"/>
+                                    </div>
+                                </div>
+                            </aura:If>
+                        </div>
+                    </div>
+                    <div class="tableDivClass" >
+                        <table class="slds-table slds-table--bordered slds-table--cell-buffer">
+                            <thead>
+                                <tr class="slds-text-title--caps">
+                                    <th class="slds-is-sortable slds-text-title--caps" scope="col" data-fieldName="OriginatorType" onclick="{!c.handleSort}">
+                                        <a href="javascript:void(0);" class="slds-th__action slds-text-link--reset">
+                                            <span class="slds-assistive-text">Sort</span>
+                                            <span class="slds-truncate" title="Originator Type" style="margin-left: -0.5rem;">Originator Type</span>
+                                            <aura:if isTrue="{! and(v.arrowDirection == 'arrowdown', v.selectedTabsoft == 'OriginatorType') }">&nbsp;  &#9660; </aura:if>
+                                            <aura:if isTrue="{! and(v.arrowDirection != 'arrowdown', v.selectedTabsoft == 'OriginatorType') }"> &nbsp;  &#9650; </aura:if>
+                                        </a>
+                                    </th>
+                                    <th class="slds-is-sortable slds-text-title--caps" scope="col" data-fieldName="CreatedDate" onclick="{!c.handleSort}">
+                                        <a href="javascript:void(0);" class="slds-th__action slds-text-link--reset">
+                                            <span class="slds-assistive-text">Sort</span>
+                                            <span class="slds-truncate" title="Created Date" style="margin-left: -0.5rem;">Created Date</span>
+                                            <aura:if isTrue="{! and(v.arrowDirection == 'arrowdown', v.selectedTabsoft == 'CreatedDate') }">&nbsp;  &#9660;</aura:if>
+                                            <aura:if isTrue="{! and(v.arrowDirection != 'arrowdown', v.selectedTabsoft == 'CreatedDate') }">&nbsp;  &#9650;</aura:if>
+
+                                        </a>
+                                    </th>
+                                    <th class="slds-is-sortable slds-text-title--caps" scope="col" data-fieldName="relationship" onclick="{!c.handleSort}">
+                                        <a href="javascript:void(0);" class="slds-th__action slds-text-link--reset">
+                                            <span class="slds-assistive-text">Sort</span>
+                                            <span class="slds-truncate" title="Subject" style="margin-left: -0.5rem;">Subject</span>
+                                        <aura:if isTrue="{! and(v.arrowDirection == 'arrowdown', v.selectedTabsoft == 'relationship') }">&nbsp;  &#9660;</aura:if>
+                                        <aura:if isTrue="{! and(v.arrowDirection != 'arrowdown', v.selectedTabsoft == 'relationship') }">&nbsp;  &#9650;</aura:if>
+                                        </a>
+                                    </th>
+                                    <th class="slds-is-sortable slds-text-title--caps" scope="col" data-fieldName="ID" onclick="{!c.handleSort}">
+                                        <a href="javascript:void(0);" class="slds-th__action slds-text-link--reset">
+                                            <span class="slds-assistive-text">Sort</span>
+                                            <span class="slds-truncate" title="ID" style="margin-left: -0.5rem;">External ID</span>
+                                            <aura:if isTrue="{! and(v.arrowDirection == 'arrowdown', v.selectedTabsoft == 'ID') }">&nbsp;  &#9660;</aura:if>
+                                            <aura:if isTrue="{! and(v.arrowDirection != 'arrowdown', v.selectedTabsoft == 'ID') }">&nbsp;  &#9650;</aura:if>
+                                        </a>
+                                    </th>
+                                    <th class="slds-is-sortable slds-text-title--caps" scope="col" >
+                                        <a href="javascript:void(0);" class="slds-th__action slds-text-link--reset">
+                                            <span class="slds-assistive-text">Sort</span>
+                                            <span class="slds-truncate" title="ID" style="margin-left: -0.5rem;">ID Type</span>
+                                            <aura:if isTrue="{! and(v.arrowDirection == 'arrowdown', v.selectedTabsoft == 'Department') }">&nbsp;  &#9660;</aura:if>
+                                            <aura:if isTrue="{! and(v.arrowDirection != 'arrowdown', v.selectedTabsoft == 'Department') }">&nbsp;  &#9650;</aura:if>
+                                        </a>
+                                    </th>
+                                    <th class="slds-is-sortable slds-text-title--caps" scope="col" data-fieldName="CaseNumber" onclick="{!c.handleSort}">
+                                        <a href="javascript:void(0);" class="slds-th__action slds-text-link--reset">
+                                            <span class="slds-assistive-text">Sort</span>
+                                            <span class="slds-truncate" title="ID" style="margin-left: -0.5rem;">Case ID</span>
+                                            <aura:if isTrue="{! and(v.arrowDirection == 'arrowdown', v.selectedTabsoft == 'CaseNumber') }">&nbsp;  &#9660;</aura:if>
+                                            <aura:if isTrue="{! and(v.arrowDirection != 'arrowdown', v.selectedTabsoft == 'CaseNumber') }">&nbsp;  &#9650;</aura:if>
+                                        </a>
+                                    </th>
+                                    <th class="slds-is-sortable slds-text-title--caps" scope="col" data-fieldName="TopicReason" onclick="{!c.handleSort}">
+                                        <a href="javascript:void(0);" class="slds-th__action slds-text-link--reset">
+                                            <span class="slds-assistive-text">Sort</span>
+                                            <span class="slds-truncate" title="ID" style="margin-left: -0.5rem;">Topic Reason</span>
+                                        <aura:if isTrue="{! and(v.arrowDirection == 'arrowdown', v.selectedTabsoft == 'TopicReason') }">&nbsp;  &#9660;</aura:if>
+                                        <aura:if isTrue="{! and(v.arrowDirection != 'arrowdown', v.selectedTabsoft == 'TopicReason') }">&nbsp;  &#9650;</aura:if>
+                                        </a>
+                                    </th>
+                                    <th class="slds-is-sortable slds-text-title--caps" scope="col" data-fieldName="Status" onclick="{!c.handleSort}">
+                                        <a href="javascript:void(0);" class="slds-th__action slds-text-link--reset">
+                                            <span class="slds-assistive-text">Sort</span>
+                                            <span class="slds-truncate" title="ID" style="margin-left: -0.5rem;">Sae Case Status</span>
+                                            <aura:if isTrue="{! and(v.arrowDirection == 'arrowdown', v.selectedTabsoft == 'Status') }">&nbsp;  &#9660;</aura:if>
+                                            <aura:if isTrue="{! and(v.arrowDirection != 'arrowdown', v.selectedTabsoft == 'Status') }">&nbsp;  &#9650;</aura:if>
+                                        </a>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="{!v.isProvider == true ? 'tbody' : ''}">
+                                <aura:iteration items="{!v.data}" var="caseObj">
+                                    <tr>
+                                        <!-- US3177995 - Thanish - 22nd Jun 2021 -->
+                                        <aura:if isTrue="{!and((caseObj.IDType == 'Purged ORS'), (caseObj.isEmptyPurgedORS))}">
+                                            <th colspan="8">
+                                                <div class="slds-truncate" style="text-align: center;" title="{!caseObj.relationship}">{!caseObj.relationship}</div>
+                                            </th>
+                                            <aura:set attribute="else">
+                                                <th scope="row">
+                                                    <div class="slds-truncate" title="{!caseObj.OriginatorType}">{!caseObj.OriginatorType}</div>
+                                                </th>
+                                                <th scope="row">
+                                                    <div class="slds-truncate" title="{!caseObj.CreatedDate}">{!caseObj.CreatedDate}</div>
+                                                </th>
+                                                <th scope="row">
+                                                    <div class="slds-truncate" title="{!caseObj.relationship}">{!caseObj.relationship}</div>
+                                                </th>
+                                                <th scope="row">
+                                                    <div class="slds-truncate" title="{!caseObj.ID}">
+                                                        <aura:if isTrue="{!caseObj.IDType == 'Purged ORS'}">
+                                                            <div scope="row">
+                                                                <a href="javascript:void(0);" data-externalId="{!caseObj.ID}" data-idtype="{!caseObj.IDType}" data-objectId="{!caseObj.purgedORSID}" onclick="{!c.openPurgedDetails}">
+                                                                    {!caseObj.ID}
+                                                                </a>
+                                                            </div>
+                                                            <aura:set attribute="else">
+                                                                <aura:iteration items="{!caseObj.ID}" var="idList">
+                                                                    <div scope="row">
+                                                                        <aura:if
+                                                                            isTrue="{! and(caseObj.hasOpened,caseObj.tabOpenedCase == idList)}">
+                                                                            <a href="javascript:void(0);"
+                                                                                data-caseId="{!idList}"
+                                                                                data-idtype="{!caseObj.IDType}"
+                                                                                data-sfCaseId="{!caseObj.recordID}"
+                                                                                onclick="{!c.openServiceRequestDetail}"
+                                                                                class="{! caseObj.subtabClass + ' disabledLink'}">
+                                                                            {!idList}
+                                                                        </a>
+                                                                            <aura:set attribute="else">
+                                                                                <a href="javascript:void(0);"
+                                                                                    data-caseId="{!idList}"
+                                                                                    data-idtype="{!caseObj.IDType}"
+                                                                                    data-sfCaseId="{!caseObj.recordID}"
+                                                                                    onclick="{!c.openServiceRequestDetail}">
+                                                                                    {!idList}
+                                                                                </a>
+                                                                            </aura:set>
+                                                                        </aura:if>
+                                                                    </div>
+                                                                </aura:iteration>
+                                                            </aura:set>
+                                                        </aura:if>
+                                                    </div>
+                                                </th>
+                                                <th scope="row">
+                                                    <div class="slds-truncate" title="{!caseObj.IDType}">{!caseObj.IDType}</div>
+                                                </th>
+                                                <th scope="row">
+                                                    <div class="slds-truncate" title="{!caseObj.CaseNumber}"><a href="javascript:void(0);" data-caseId="{!caseObj.recordID}" onclick="{!c.openCaseDetail}">{!caseObj.CaseNumber}</a></div>
+                                                </th>
+                                                <th scope="row">
+                                                    <div class="slds-truncate" title="{!caseObj.TopicReason}">
+                                                        <aura:if isTrue="{!caseObj.TopicReason}">
+                                                            {!caseObj.TopicReason}
+                                                            <aura:set attribute="else">
+                                                                --
+                                                            </aura:set>
+                                                        </aura:if>
+                                                    </div>
+                                                </th>
+                                                <th scope="row">
+                                                    <div class="slds-truncate" title="{!caseObj.Status}">{!caseObj.Status}</div>
+                                                </th>
+                                            </aura:set>
+                                        </aura:if>
+                                    </tr>
+                                </aura:iteration>
+                                <aura:if isTrue="{!v.caseSearchFlag}">
+                                    <aura:if isTrue="{!v.additonalRecordsNotFound}">
+                                        <tr><td colspan="8"><center>No Additional Case History Results Found</center></td></tr>
+                                        <aura:set attribute="else">
+                                       <aura:if  isTrue="{!and(v.lastsixchecked, v.showFamilyCases)}" >
+                                       	<tr><td colspan="8" ><center>No Case History Results in the Last 6 Months</center></td></tr>
+                                        <aura:set attribute="else">
+                                           <tr><td colspan="8" ><center>No Case History Results Found</center></td></tr>
+                                        </aura:set>
+                                         </aura:if>
+                                        </aura:set>
+                                    </aura:if>
+                                </aura:if>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card_left_padding card_top_padding">Showing {!v.currentStartNumber} to {!v.allData.length > v.currentEndNumber ? v.currentEndNumber : v.allData.length} of {!v.allData.length} entries</div>
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" flexibility="auto">
+                    <lightning:button label="First" iconName="utility:left" iconPosition="left" onclick="{!c.onFirst}" disabled="{! v.currentPageNumber == 1}"/>
+                    <lightning:button iconName="utility:chevronleft" iconPosition="left" onclick="{!c.onPrev}" disabled="{! v.currentPageNumber == 1}"/>
+                    <span class="slds-p-horizontal_x-small">
+                        <a onclick="{!c.processMe}" name="1" class="{! (v.currentPageNumber == 1) ? 'selected' : ''}">1</a>
+                    </span>
+                    <span class="slds-p-horizontal_xxx-small">
+                        <a>...</a>
+                    </span>
+                    <aura:iteration items="{!v.pageList}" var="item">
+                        <span class="slds-p-horizontal_x-small">
+                            <a onclick="{!c.processMe}" name="{!item}" class="{! (v.currentPageNumber == item) ? 'selected' : ''}">{!item}</a>
+                        </span>
+                    </aura:iteration>
+                    <span class="slds-p-horizontal_xxx-small">
+                        <a>...</a>
+                    </span>
+                    <span class="slds-p-horizontal_x-small">
+                        <a onclick="{!c.processMe}" name="{!v.totalPages}" class="{! (v.currentPageNumber == v.totalPages) ? 'selected' : ''}">{!v.totalPages}</a>
+                    </span>
+                    <lightning:button iconName="utility:chevronright" iconPosition="right"
+                                    disabled="{! or(and(v.currentPageNumber == v.totalPages,v.isSpireOnlyCases),v.isAllORSCasesFetched)}" onclick="{!c.onNext}"/>
+                    <lightning:button label="Last" iconName="utility:right" iconPosition="right"
+                                  disabled="{! or(v.currentPageNumber == v.totalPages)}" onclick="{!c.onLast}"/>
+                </lightning:layoutItem>
+            </lightning:layout>
+        </div>
+    </div>
+</aura:component>

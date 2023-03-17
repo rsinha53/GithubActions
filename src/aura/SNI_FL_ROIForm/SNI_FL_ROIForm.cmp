@@ -1,0 +1,556 @@
+<aura:component implements="forceCommunity:themeLayout,forceCommunity:availableForAllPageTypes,forceCommunity:layout,force:lightningQuickAction,force:appHostable,force:hasRecordId"  controller="SNI_FL_ROIFormController" access="global" >
+    <aura:attribute name="fullName" type="string" />
+    <aura:attribute name="loginName" type="string" />
+    <aura:attribute name="recordId" type="String" />
+    <aura:attribute name="today" type="Date" />
+    <aura:attribute name="isViewAuth" type="boolean" default="false"/>
+    <aura:attribute name="disbleCell" type="boolean" default="true"/>
+    <aura:attribute name="isSignAuth" type="boolean" default="false"/>
+    <aura:attribute name ="careTeamList" type="SNI_FL_Care_Team_Member__c[]" />
+    <aura:attribute name ="ctmDoneList" type="String[]" />
+    <aura:attribute name ="ctmPendingList" type="SNI_FL_Care_Team_Member__c[]" />
+    <aura:attribute name ="ctmInviteAllList" type="SNI_FL_Care_Team_Member__c[]" />
+    <aura:attribute name ="FLAccOwnerList" type="SNI_FL_Care_Team_Member__c[]" />
+    <aura:attribute name="isUserExist" type ="boolean" default ="false"/>
+    <aura:attribute name="isFAOSign" type ="boolean" default ="true"/>
+    <aura:attribute name="isFLAccOwnerCareTeamId" type ="String" />
+    <aura:attribute name="flAccOwnerMemName" type ="String" />
+    <aura:attribute name="displayCTMName" type="string"/>
+    <aura:attribute name="careTeamMemberName" type="string"/>
+    <aura:attribute name="careTeamId" type="String"/>
+    <aura:attribute name="displayCareTeamId" type="String" default=""/>
+    <aura:attribute name= "familyId" type="string"/>
+    <aura:attribute name= "selectedCareTeam" type = "Map"/> 
+    <aura:attribute name="behaviourCheck" type="boolean" default="false"/>
+    <aura:attribute name="mbehaviourCheck" type="boolean" default="false"/>
+    <aura:attribute name="signElectCheck" type="boolean" default="false"/>
+    <aura:attribute name="emailCheck" type="boolean" default="false"/>
+    <aura:attribute name="emailId" type="string" default=""/>
+    <aura:attribute name="selectedOption" type="string" default="SignElectronically"/>
+    <aura:attribute name="mselectedOption" type="string" default="SignElectronically"/>
+    <aura:attribute name= "disableSignButton" type ="boolean" default = "true"/>
+    <aura:attribute name= "disableSaveButton" type ="boolean" default = "true"/>
+    <aura:attribute name= "isInvited" type ="boolean" default = "false"/>
+    <aura:attribute name= "child" type="String" default ="I"/> 
+    <aura:attribute name= "isViewAuthorization" type="boolean" default ="false"/>
+    <aura:attribute name= "childName" type="String" default ="my"/> 
+    <aura:attribute name= "childCTMId" type="String" default =""/> 
+    <aura:attribute name= "viewRecId" type="String"/> 
+    <aura:attribute name= "isCTM" type="boolean"/> 
+    <aura:attribute name="options" type="List" default="[
+    {'label': 'Sign Electronically', 'value': 'SignElectronically'},
+    {'label': 'Email', 'value': 'Email'}
+    ]"/>    
+    <aura:handler name="init" value="{!this}" action="{!c.myAction}"/>
+    <aura:registerEvent name="refreshCareTeam" type="c:SNI_FL_RefreshCmp"/>
+    <aura:handler event="c:SNI_FL_ViewAuth" action="{!c.refreshViewAuth}"/>
+    <aura:attribute name ="viewROIwrapp" type="SNI_FL_ROIUtility.ViewROIReturnWrapper" />
+    
+    <aura:attribute name= "careTeamperMemAdd" type="String" default =""/>
+    <aura:attribute name= "birthdate" type="String" default =""/>
+    <aura:attribute name= "careTeamMemAdd" type="String" default =""/>
+   
+    <aura:if isTrue="{!v.isSignAuth}">
+        
+        <div class="desktopview" id="desktopviewId">
+            <div class="slds-section slds-is-open slds-m-bottom_small">
+                <div class="slds-modal slds-text-align_left slds-modal_small slds-fade-in-open" aria-hidden="false" role="dialog" id="EditDetailModal">
+                    <div class="slds-modal__container">
+                        <header class="slds-modal__header slds-modal__header_empty">
+                            <lightning:buttonIcon iconName="utility:close"
+                                                  onclick="{!c.closeWarning}"
+                                                  alternativeText="close"
+                                                  variant="bare-inverse"
+                                                  class="slds-modal__close slds-change-color"/> 
+                        </header>
+                        <div class="slds-modal__content" id="modal-content-id-1">
+                            <div class="slds-grid slds-wrap hgtcls slds-is-relative">
+                                 
+                                <div class="slds-col slds-size--1-of-3">
+                                    <div class="slds-grid slds-wrap">
+                                        <div  class="slds-col slds-size--1-of-1 slds-p-bottom_small slds-text-heading_small headingColor nopading"><strong>Signature Form</strong></div>
+                                        <aura:renderIf isTrue="{!empty(v.displayCareTeamId)}">
+                                            <lightning:spinner class="slds-show" aura:id="global-spinner" 
+                                                         alternativeText="Loading.." title="Loading.." 
+                                                         variant="brand" size="medium"/>
+                                        </aura:renderIf>
+                                        <aura:renderIf isTrue="{!!empty(v.displayCareTeamId)}">
+                                        <aura:if isTrue="{!and(v.isFAOSign,v.isFLAccOwnerCareTeamId != v.displayCareTeamId)}">
+                                            <div  class="slds-col slds-size--1-of-1 nopading">Does {!v.displayCTMName} have a medical or behavioral condition that makes him/her unable to sign this form?</div>
+                                            <div  class="slds-col slds-size--1-of-1 slds-p-bottom_medium nopading">
+                                               
+                                                        <lightning:input aura:id="behaviourCheck"
+                                                                         class="lblColor"
+                                                                         type="checkbox"
+                                                                         name="Behaviour"
+                                                                         label="Yes"
+                                                                         onchange="{!c.behaviourChange}" 
+                                                                         checked="{!v.behaviourCheck}">
+                                                        </lightning:input>
+                                                       <!--{!c.behaviourChange}-->
+                                            </div>
+                                            <aura:if isTrue="{!!v.behaviourCheck}">
+                                            <div  class="slds-col slds-size--1-of-1 nopading">How would you like for {!v.displayCTMName} to sign</div>
+                                            <div  class="slds-col slds-size--1-of-1 slds-p-bottom_medium nopading">
+                                                 <lightning:radioGroup aura:id="signOption"
+                                                                      name="signOption"
+                                                                      variant="label-hidden" 
+                                                                      type="radio"
+                                                                      options="{!v.options}"
+                                                                      value="{!v.selectedOption}"
+                                                                      />
+                                            </div> 
+                                            </aura:if>
+                                       
+                                        <aura:if isTrue="{!v.selectedOption=='Email'}">
+                                                    <div  class="slds-col slds-size--1-of-1 nopading">Email</div>
+                                                    <div  class="slds-col slds-size--1-of-1 nopading">
+                                                        <lightning:input aura:id="emailId"
+                                                                         variant="label-hidden" type="String"
+                                                                         name="Email"
+                                                                         placeholder="{!v.displayCTMName +'\''+'s email'}"
+                                                                         onchange ="{!c.enableSaveButton}"
+                                                                         value="{!v.emailId}">
+                                                        </lightning:input>
+                                                    </div>
+                                        </aura:if>
+                                        </aura:if>
+                                        <aura:if isTrue="{!v.selectedOption!='Email'}">
+                                       <div  class="slds-col slds-size--1-of-1" style="padding-bottom:8px !important;"><b class="underLine">Disclaimer:</b> If any of the populated information on this form isn’t correct,
+                                           please contact your advisor in the Care Advisor Connect messaging tab for assistance.</div>
+
+
+                                        <div  class="slds-col slds-size--1-of-1 nopading">Signature</div>
+                                        <div  class="slds-col slds-size--1-of-1 nopading">
+                                            <lightning:input aura:id="fullNameDId"
+                                                             variant="label-hidden" type="String"
+                                                             name="fullName"
+                                                             placeholder="(Signature)"
+                                                             onchange ="{!c.enableSignButton}"
+                                                             value="{!v.fullName}">
+                                            </lightning:input>
+                                        </div>
+                                        <div  class="slds-col slds-size--1-of-1 nopading">
+                                            <div class="slds-grid">
+                                                <div class="slds-col slds-size--1-of-2 slds-align_absolute-left nopading fntStyle">
+                                                    {!v.displayCTMName}
+                                                </div>
+                                                <div class="slds-col slds-size--1-of-2 slds-align_absolute-right nopading">
+                                                    {!v.today}
+                                                    
+                                                </div>
+                                            </div>
+                                        </div>
+                                        </aura:if>
+                                        <lightning:layout>
+                                            <aura:if isTrue="{!v.selectedOption!='Email'}">
+                                            <lightning:layoutItem aura:id= "signButton" class="BgColor"> 
+                                             <lightning:button 
+                                                                 variant="neutral"
+                                                                  label="Sign"
+                                                                  title="Sign"
+                                                                  disabled = "{!v.disableSignButton}"
+                                                                  onclick="{!c.signROI}"/>
+                                            </lightning:layoutItem>
+                                            </aura:if>
+                                            <aura:if isTrue="{!v.selectedOption=='Email'}">
+                                            <lightning:layoutItem  aura:id ="saveButton" class="BgColor"> 
+                                                <lightning:button variant="neutral"
+                                                                  label="Send"
+                                                                  title="Send	"
+                                                                  disabled = "{!v.disableSaveButton}"
+                                                                  onclick="{!c.sendemailsignauth}"/>
+                                            </lightning:layoutItem>
+                                            </aura:if>
+                                        </lightning:layout>
+                                        </aura:renderIf>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size--2-of-3 sld-wrap slds-scrollable hgtcls">
+                                    <div class="display display-white">
+                                        <div class="auth-document">
+                                            <h1 class="auth-h1">Authorization for Release of Information</h1>
+                                            <div class="body">
+                                                <span><p>I, {!v.displayCTMName}, voluntarily authorize Optumcare and its affiliates to disclose {!v.childName} health information to the following persons/organizations:</p>
+                                                    <ul>
+                                                        <aura:iteration items="{!v.careTeamList}" var="item">
+                                                            <li>{!item.SNI_FL_Member__r.Name}</li>
+                                                        </aura:iteration>
+                                                    </ul>
+                                                    <p class="nbm">By signing this authorization, I understand and agree that:</p>
+                                                    <p>this authorization is voluntary; {!v.child} may not be denied treatment, payment for health care services, or enrollment or eligibility for health care benefits if I do not sign this form; {!v.childName} health information may be subject to re-disclosure by the recipient, and if the recipient is not a health plan or health care provider, the information may no longer be protected by the federal privacy regulations; this authorization will expire one year from the date I sign the authorization. I may revoke this authorization at any time by notifying Optumcare in writing; however, the revocation will not have an effect on any actions taken prior to the date my revocation is received and processed.</p>
+                                                    <p class="nbm">I voluntarily authorize disclosure of all of {!v.childName} health information to:</p>
+                                                    <ul><aura:iteration items="{!v.careTeamList}" var="item">
+                                                        <li>{!item.SNI_FL_Member__r.Name}</li>
+                                                        </aura:iteration>
+                                                    </ul>
+                                                    <p>including information relating to medical, pharmacy, dental, vision, mental health, substance abuse, HIV/AIDS, psychotherapy, reproductive, communicable disease and health care program information. This information is being shared with:</p>
+                                                    <ul>
+                                                        <aura:iteration items="{!v.careTeamList}" var="item">
+                                                            <li>{!item.SNI_FL_Member__r.Name}</li>
+                                                        </aura:iteration> 
+                                                    </ul>
+                                                    <p>so that the group can stay connected and care can be shared.</p>
+                                                    <p><b class="underLine">Member ID:</b> &nbsp;{!v.careTeamperMemAdd}</p>
+                                                    <p><b class="underLine">Date of Birth:</b> &nbsp;<ui:outputDate value="{!v.birthdate}" format="M/d/yyyy" class="datecss"/> </p>
+                                                    <p><b class="underLine">Address:</b> &nbsp;{!v.careTeamMemAdd}</p>
+                                                </span>
+                                                <div class="signed-document"><p></p>
+                                                    <hr></hr>
+                                                    <div class="slds-grid">
+                                                        <div class="slds-col slds-size--1-of-2 slds-align_absolute-left nopading fntStyle">
+                                                            {!v.displayCTMName}
+                                                        </div>
+                                                        <div class="slds-col slds-size--1-of-2 slds-align_absolute-right nopading">
+                                                            {!v.today}
+                                                            
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        
+        <div class="mobileView">
+        <div class="slds-section slds-is-open slds-m-bottom_small">
+            <div class="slds-modal slds-text-align_left slds-modal_small slds-fade-in-open" aria-hidden="false" role="dialog" id="EditDetailModal">
+                <div class="slds-modal__container">
+					 <header class="slds-modal__header slds-modal__header_empty">
+                            <lightning:buttonIcon iconName="utility:close"
+                                                  onclick="{!c.closeWarning}"
+                                                  alternativeText="close"
+                                                  variant="bare-inverse"
+                                                  class="slds-modal__close slds-change-color"/> 
+                        </header>
+                    <div class="slds-modal__content" id="modal-content-id-1">
+                        <div class="slds-grid slds-wrap hgtcls slds-is-relative">
+                            <div class="slds-col slds-size-1-of-1 sld-wrap slds-scrollable hgtcls slds-m-bottom_medium slds-m-left_medium slds-m-top_medium">
+                               <div class="slds-col slds-size--1-of-1 sld-wrap slds-scrollable hgtcls">
+                                    <div class="display display-white">
+                                        <div class="auth-document">
+                                            <h1 class="auth-h1">Authorization for Release of Information</h1>
+                                            <div class="body">
+                                                <span><p>I, {!v.displayCTMName}, voluntarily authorize Optum and its affiliates to disclose {!v.childName} health information to the following persons/organizations:</p>
+                                                    <ul>
+                                                        <aura:iteration items="{!v.careTeamList}" var="item">
+                                                            <li>{!item.SNI_FL_Member__r.Name}</li>
+                                                        </aura:iteration>
+                                                    </ul>
+                                                    <p class="nbm">By signing this authorization, I understand and agree that:</p>
+                                                    <p>this authorization is voluntary; {!v.child} may not be denied treatment, payment for health care services, or enrollment or eligibility for health care benefits if I do not sign this form; {!v.childName} health information may be subject to re-disclosure by the recipient, and if the recipient is not a health plan or health care provider, the information may no longer be protected by the federal privacy regulations; this authorization will expire one year from the date I sign the authorization. I may revoke this authorization at any time by notifying Optumcare in writing; however, the revocation will not have an effect on any actions taken prior to the date my revocation is received and processed.</p>
+                                                    <p class="nbm">I voluntarily authorize disclosure of all of {!v.childName} health information to:</p>
+                                                    <ul><aura:iteration items="{!v.careTeamList}" var="item">
+                                                        <li>{!item.SNI_FL_Member__r.Name}</li>
+                                                        </aura:iteration>
+                                                    </ul>
+                                                    <p>including information relating to medical, pharmacy, dental, vision, mental health, substance abuse, HIV/AIDS, psychotherapy, reproductive, communicable disease and health care program information. This information is being shared with:</p>
+                                                    <ul>
+                                                        <aura:iteration items="{!v.careTeamList}" var="item">
+                                                            <li>{!item.SNI_FL_Member__r.Name}</li>
+                                                        </aura:iteration> 
+                                                    </ul>
+                                                    <p>so that the group can stay connected and care can be shared.</p>
+                                                    <p><b class="underLine">Member ID:</b> &nbsp;{!v.careTeamperMemAdd}</p>
+                                                    <p><b class="underLine">Date of Birth:</b> &nbsp;<ui:outputDate value="{!v.birthdate}" format="M/d/yyyy" class="datecss"/> </p>
+                                                    <p><b class="underLine">Address:</b> &nbsp;{!v.careTeamMemAdd}</p>
+                                                </span>
+                                                <div class="signed-document"><p></p>
+                                                    <hr></hr>
+                                                    <div class="slds-grid">
+                                                        <div class="slds-col slds-size--1-of-2 slds-align_absolute-left nopading fntStyle">
+                                                            {!v.displayCTMName}
+                                                        </div>
+                                                        <div class="slds-col slds-size--1-of-2 slds-align_absolute-right nopading">
+                                                            {!v.today}
+                                                            
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size-1-of-1  slds-m-left_medium slds-m-right_medium notificnCls">
+                                <div class="slds-grid slds-wrap" style="padding-right:0px !important;">
+                                    <div  class="slds-col slds-size--1-of-1 slds-p-bottom_small slds-text-heading_small headingColor nopading"><strong>Signature Form</strong></div>
+                                    <aura:renderIf isTrue="{!empty(v.displayCareTeamId)}">
+                                            <lightning:spinner class="slds-show" aura:id="global-spinner" 
+                                                         alternativeText="Loading.." title="Loading.." 
+                                                         variant="brand" size="medium"/>
+                                    </aura:renderIf>
+                                    <aura:renderIf isTrue="{!!empty(v.displayCareTeamId)}">
+                                    <aura:if isTrue="{!and(v.isFAOSign,v.isFLAccOwnerCareTeamId != v.displayCareTeamId)}">
+                                            <div  class="slds-col slds-size--1-of-1 nopading">Does {!v.displayCTMName} have a medical or behavioral condition that makes him/her unable to sign this form?</div>
+                                            <div  class="slds-col slds-size--1-of-1 slds-p-bottom_medium nopading">
+                                               
+                                                        <lightning:input aura:id="mbehaviourCheck"
+                                                                         class="lblColor"
+                                                                         type="checkbox"
+                                                                         name="Behaviour"
+                                                                         label="Yes"
+                                                                         onchange="{!c.behaviourChange}" 
+                                                                         checked="{!v.mbehaviourCheck}">
+                                                        </lightning:input>
+                                                       <!--{!c.behaviourChange}-->
+                                            </div>
+                                            <aura:if isTrue="{!!v.mbehaviourCheck}">
+                                            <div  class="slds-col slds-size--1-of-1 nopading">How would you like for {!v.displayCTMName} to sign</div>
+                                            <div  class="slds-col slds-size--1-of-1 slds-p-bottom_medium nopading">
+                                                 <lightning:radioGroup aura:id="msignOption"
+                                                                      name="msignOption"
+                                                                      variant="label-hidden" 
+                                                                      type="radio"
+                                                                      options="{!v.options}"
+                                                                      value="{!v.mselectedOption}"
+                                                                      />
+                                            </div> 
+                                            </aura:if>
+                                        </aura:if>
+                                        <aura:if isTrue="{!v.mselectedOption=='Email'}">
+                                                    <div  class="slds-col slds-size--1-of-1 nopading">Email</div>
+                                                    <div  class="slds-col slds-size--1-of-1 nopading">
+                                                        <lightning:input aura:id="memailId"
+                                                                         variant="label-hidden" type="String"
+                                                                         name="Email"
+                                                                         placeholder="{!v.displayCTMName +'\''+'s email'}"
+                                                                         value="{!v.emailId}"
+                                                                         onchange ="{!c.enableSaveButton}">
+                                                        </lightning:input>
+                                                    </div>
+                                        </aura:if> 
+                                    <aura:if isTrue="{!v.mselectedOption !='Email'}">
+                                     <div  class="slds-col slds-size--1-of-1" style="padding-bottom:5px !important;"><b class="underLine">Disclaimer:</b> If any of the populated information on this form isn’t correct,
+                                           please contact your advisor in the Care Advisor Connect messaging tab for assistance.<br></br></div>
+
+                                    <div  class="slds-col slds-size-1-of-1 nopading signatureLabel">Signature</div>
+                                    <div  class="slds-col slds-size-1-of-1 nopading">
+                                        <lightning:input aura:id="fullNameId"
+                                                         required="true" id="fullName"
+                                                         variant="label-hidden" type="String"
+                                                         name="fullName"
+                                                         placeholder="(Signature)"
+                                                         value="{!v.fullName}"
+                                                         onchange ="{!c.enableSignButton}">
+                                        </lightning:input>
+                                    </div>
+                                    </aura:if>
+                                    <div  class="slds-col slds-size-1-of-1 nopading">
+                                        <div class="slds-grid">
+                                            <div class="slds-col slds-size-1-of-2 slds-align_absolute-left nopading fntStyle">
+                                                    {!v.displayCTMName}
+                                            </div>
+                                            <div class="slds-col slds-size-1-of-2 slds-align_absolute-right nopading">
+                                                {!v.today}
+
+                                            </div>
+                                        </div>
+                                    </div>
+                                        <lightning:layout>
+                                             <aura:if isTrue="{!v.mselectedOption!='Email'}">
+                                            <lightning:layoutItem aura:id ="msignButton" class="BgColor" > 
+                                                <lightning:button variant="neutral"
+                                                                  label="Sign"
+                                                                  title="Sign"
+                                                                  disabled = "{!v.disableSignButton}"
+                                                                  onclick="{!c.signROI}"/>
+                                            </lightning:layoutItem>
+                                            </aura:if>
+                                            <aura:if isTrue="{!v.mselectedOption=='Email'}">
+                                            <lightning:layoutItem  aura:id ="msaveButton" class="BgColor"> 
+                                                <lightning:button variant="neutral"
+                                                                  label="Send"
+                                                                  title="Send"
+                                                                  disabled = "{!v.disableSaveButton}"
+                                                                  onclick="{!c.sendemailsignauth}"/>
+                                            </lightning:layoutItem>
+                                            </aura:if>
+                                        </lightning:layout>
+                                    </aura:renderIf>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+		 </div>
+    </div>
+    </aura:if>
+    <aura:if isTrue="{!v.isViewAuth}">
+      <aura:if isTrue="{!$Browser.formFactor == 'DESKTOP'}">
+            <div class="slds-section slds-is-open slds-m-bottom_small">
+                <div class="slds-modal slds-text-align_left slds-modal_small slds-fade-in-open-view" aria-hidden="false" role="dialog" id="EditDetailModal">
+                    <div class="slds-modal__container">
+                        <header class="slds-modal__header slds-modal__header_empty">
+                            <lightning:buttonIcon iconName="utility:close"
+                                                  onclick="{!c.closeWarning}"
+                                                  alternativeText="close"
+                                                  variant="bare-inverse"
+                                                  class="slds-modal__close slds-change-color"/> 
+                        </header>
+                        <div class="slds-modal__content" id="modal-content-id-2">
+                            <div class="slds-grid slds-wrap hgtcls">
+                                <div class="slds-col slds-size--1-of-3 ROIpdf-size-padding">
+                                    <div class="slds-grid slds-wrap">
+                                        <div  class="slds-col slds-size--1-of-1 slds-p-bottom_small slds-text-heading_small headingColor nopading"><strong>Signature Form</strong></div>
+                                           
+                                                <div class="slds-grid slds-wrap ROIpdf">
+                                                <div class="slds-size_2-of-4 ROIpdf-btn-padding">
+                                               <lightning:button variant="ROIpdf" label="Close" title="Close" onclick="{!c.closeWarning}"/>
+                                                </div>
+                                                    <div class="slds-size_2-of-4 ROIpdf-btn-padding">
+                                               <lightning:button variant="ROIpdf" label="Print" title="Print" onclick="{!c.viewROI}"/>                                         
+                                                </div>
+                                                </div>
+                                                
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size--2-of-3 sld-wrap slds-scrollable hgtcls">
+                                    <div class="display display-white">
+                                        <div class="auth-document">
+                                            <h1 class="auth-h1">Authorization for Release of Information</h1>
+                                            <div class="body">
+                                                <span><p>I, {!v.viewROIwrapp.ctmName}, voluntarily authorize Optumcare and its affiliates to disclose {!v.viewROIwrapp.childname} health information to the following persons/organizations:</p>
+                                                    <ul>
+                                                        <aura:iteration items="{!v.viewROIwrapp.ROINames}" var="item">
+                                                            <li>{!item}</li>
+                                                        </aura:iteration>
+                                                    </ul>
+                                                    <p class="nbm">By signing this authorization, I understand and agree that:</p>
+                                                    <p>this authorization is voluntary; {!v.viewROIwrapp.childnamenoap} may not be denied treatment, payment for health care services, or enrollment or eligibility for health care benefits if I do not sign this form; {!v.viewROIwrapp.childname} health information may be subject to re-disclosure by the recipient, and if the recipient is not a health plan or health care provider, the information may no longer be protected by the federal privacy regulations; this authorization will expire one year from the date I sign the authorization. I may revoke this authorization at any time by notifying Optumcare in writing; however, the revocation will not have an effect on any actions taken prior to the date my revocation is received and processed.</p>
+                                                    <p class="nbm">I voluntarily authorize disclosure of all{!v.viewROIwrapp.addcontent} {!v.viewROIwrapp.childname} health information to:</p>
+                                                    <ul><aura:iteration items="{!v.viewROIwrapp.ROINames}" var="item">
+                                                        <li>{!item}</li>
+                                                        </aura:iteration>
+                                                    </ul>
+                                                    <p>including information relating to medical, pharmacy, dental, vision, mental health, substance abuse, HIV/AIDS, psychotherapy, reproductive, communicable disease and health care program information. This information is being shared with:</p>
+                                                    <ul>
+                                                        <aura:iteration items="{!v.viewROIwrapp.ROINames}" var="item">
+                                                            <li>{!item}</li>
+                                                        </aura:iteration> 
+                                                    </ul>
+                                                    <p>so that the group can stay connected and care can be shared.</p>
+                                                    <p><b class="underLine">Member ID:</b> &nbsp;{!v.careTeamperMemAdd}</p>
+                                                    <p><b class="underLine">Date of Birth:</b> &nbsp;<ui:outputDate value="{!v.birthdate}" format="M/d/yyyy" class="datecss"/> </p>
+                                                    <p><b class="underLine">Address:</b> &nbsp;{!v.careTeamMemAdd}</p>
+                                                </span>
+                                                <div class="signed-document"><p></p>
+                                                    {!v.viewROIwrapp.ctmName}
+                                                    <hr></hr>
+                                                    <div class="slds-grid">
+                                                        <div class="slds-col slds-size--1-of-2 slds-align_absolute-left nopading fntStyle">
+                                                            {!v.viewROIwrapp.ctmName}
+                                                        </div>
+                                                        <div class="slds-col slds-size--1-of-2 slds-align_absolute-right nopading">
+                                                            {!v.viewROIwrapp.signeddate}
+                                                            
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+           <aura:set attribute="else">     			        
+        <div class="slds-section slds-is-open slds-m-bottom_small">
+            <div class="slds-modal slds-text-align_left slds-modal_small slds-fade-in-open" aria-hidden="false" role="dialog" id="EditDetailModal">
+                <div class="slds-modal__container">
+					 <header class="slds-modal__header slds-modal__header_empty">
+                            <lightning:buttonIcon iconName="utility:close"
+                                                  onclick="{!c.closeWarning}"
+                                                  alternativeText="close"
+                                                  variant="bare-inverse"
+                                                  class="slds-modal__close slds-change-color"/> 
+                        </header>
+                    <div class="slds-modal__content" id="modal-content-id-1">
+                        <div class="slds-grid slds-wrap hgtcls">
+                            <div class="slds-col slds-size-1-of-1 sld-wrap slds-scrollable hgtcls slds-m-bottom_medium slds-m-left_medium slds-m-top_medium">
+                               <div class="slds-col slds-size--1-of-1 sld-wrap slds-scrollable hgtcls">
+                                    <div class="display display-white">
+                                        <div class="auth-document">
+                                            <h1 class="auth-h1">Authorization for Release of Information</h1>
+                                            <div class="body">
+                                                <span><p>I, {!v.viewROIwrapp.ctmName}, voluntarily authorize Optumcare and its affiliates to disclose {!v.viewROIwrapp.childname} health information to the following persons/organizations:</p>
+                                                    <ul>
+                                                        <aura:iteration items="{!v.viewROIwrapp.ROINames}" var="item">
+                                                            <li>{!item}</li>
+                                                        </aura:iteration>
+                                                    </ul>
+                                                    <p class="nbm">By signing this authorization, I understand and agree that:</p>
+                                                    <p>this authorization is voluntary; {!v.viewROIwrapp.childnamenoap} may not be denied treatment, payment for health care services, or enrollment or eligibility for health care benefits if I do not sign this form; {!v.viewROIwrapp.childname} health information may be subject to re-disclosure by the recipient, and if the recipient is not a health plan or health care provider, the information may no longer be protected by the federal privacy regulations; this authorization will expire one year from the date I sign the authorization. I may revoke this authorization at any time by notifying Optumcare in writing; however, the revocation will not have an effect on any actions taken prior to the date my revocation is received and processed.</p>
+                                                    <p class="nbm">I voluntarily authorize disclosure of all{!v.viewROIwrapp.addcontent} {!v.viewROIwrapp.childname} health information to:</p>
+                                                    <ul><aura:iteration items="{!v.viewROIwrapp.ROINames}" var="item">
+                                                        <li>{!item}</li>
+                                                        </aura:iteration>
+                                                    </ul>
+                                                    <p>including information relating to medical, pharmacy, dental, vision, mental health, substance abuse, HIV/AIDS, psychotherapy, reproductive, communicable disease and health care program information. This information is being shared with:</p>
+                                                    <ul>
+                                                        <aura:iteration items="{!v.viewROIwrapp.ROINames}" var="item">
+                                                            <li>{!item}</li>
+                                                        </aura:iteration> 
+                                                    </ul>
+                                                    <p>so that the group can stay connected and care can be shared.</p>
+                                                    <p><b class="underLine">Member ID:</b> &nbsp;{!v.careTeamperMemAdd}</p>
+                                                    <p><b class="underLine">Date of Birth:</b> &nbsp;<ui:outputDate value="{!v.birthdate}" format="M/d/yyyy" class="datecss"/> </p>
+                                                    <p><b class="underLine">Address:</b> &nbsp;{!v.careTeamMemAdd}</p>
+                                                </span>
+                                                <div class="signed-document"><p></p>
+                                                    {!v.viewROIwrapp.ctmName}
+                                                    <hr></hr>
+                                                    <div class="slds-grid">
+                                                        <div class="slds-col slds-size--1-of-2 slds-align_absolute-left nopading fntStyle">
+                                                            {!v.viewROIwrapp.ctmName}
+                                                        </div>
+                                                        <div class="slds-col slds-size--1-of-2 slds-align_absolute-right nopading">
+                                                            {!v.viewROIwrapp.signeddate}
+                                                            
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size-1-of-1  slds-m-left_medium slds-m-right_medium notificnCls">
+                                <div class="slds-grid slds-wrap">
+                                    <div  class="slds-col slds-size--1-of-1 slds-p-bottom_small slds-text-heading_small headingColor nopading"></div>
+										<div  class="slds-col slds-size--1-of-1 slds-p-bottom_small slds-text-heading_small headingColor nopading"><strong>Signature Form</strong></div>
+                                             <div class="slds-grid slds-wrap ROIpdf" style="padding-bottom: 20px;">
+                                                <div class="slds-size_2-of-4 ROIpdf-btn-padding">
+                                               <lightning:button variant="ROIpdf" label="Close" title="Close" onclick="{!c.closeWarning}"/>
+                                                </div>
+                                                    <div class="slds-size_2-of-4 ROIpdf-btn-padding-left">
+                                               <lightning:button variant="ROIpdf" label="Print" title="Print" onclick="{!c.mobViewROI}"/>                                         
+                                                </div>
+                                                </div>
+                                        
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+		 </div>
+           </aura:set>
+        </aura:if>
+    </aura:if>
+    <aura:if isTrue="{!v.isViewAuthorization}">
+        <c:SNI_FL_ViewAuthorization recid="{!v.viewRecId}" isCTM="{!v.isCTM}"/>
+      
+      </aura:if>
+
+</aura:component>

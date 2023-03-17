@@ -1,0 +1,279 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction,lightning:isUrlAddressable"
+                access="global"
+                controller="ACETLGT_ViewAuthorizationsController">  
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+	<!-- Data Table : -->
+    <!--use JQuery Data Table css,Js and jQUERY js file in lightning component by using ltng:require component-->
+    <ltng:require styles="{! $Resource.	datatable + '/DataTables-1.10.16/media/css/jquery.dataTables.min.css'}" 
+                  scripts="{!join(',', 
+                           $Resource.jquery224 , 
+                           $Resource.datatable + '/DataTables-1.10.16/media/js/jquery.dataTables.min.js')
+                           }"/><!--afterScriptsLoaded="{!c.doInit}"/-->
+	<!-- init method loads the data attribute values -->
+    <aura:handler name="init" action="{!c.doInit}" value="{!this}" />
+    <!--<aura:handler name="change" action="{!c.onDateChange}" value="{!v.startDateValue}" />-->
+
+        
+	<!-- isCSRFVisible triggers "Document the CSRF Number" -->
+	<aura:attribute name="isCSRFVisible" type="boolean" access="global" />
+    <aura:attribute name="bookOfBusinessTypeCode" type="String" />
+    <aura:attribute name="isDataCleared" type="boolean" access="global" default="false" />
+	<!--<aura:attribute name="isCSRFVisible" type="String" access="global" />-->
+	<aura:attribute name="callTypes" type="Object" access="global" />
+	<aura:attribute name="cseTopic" type="String" access="public" default="{!$Label.c.ACETCallTopicViewAuthorizations}"/>
+	<aura:attribute name="srk" type="String" access="global" />
+	<aura:attribute name="int" type="Interaction__c" access="global" />
+	<aura:attribute name="intId" type="String" access="global" />
+	<aura:attribute name="csrfurl" type="String" access="global" />
+    
+    <aura:attribute name="grpNum" type="String" access="public"/>
+    <aura:attribute name="memId" type="String" access="public"/>    
+	<!-- Validate input to CSRF number -->
+	<aura:attribute name="CSRF" type="string" default="" />
+	<!--{!v.cseTopic}{!v.int}{!v.int.Id}{!v.srk}-->
+    <aura:attribute name="firstName" type="String" access="global"/>
+    <aura:attribute name="lastName" type="String" access="global"/>
+    <aura:attribute name="contactName" type="String" access="global"/>
+	<aura:attribute name="memberId" type="String" access="global"/>
+	
+    
+	<!-- Accordion-->
+	<aura:attribute name="activeSections" type="List" default="['Filters']" />
+	<aura:attribute name="activeSectionsMessage" type="String" default="" />
+
+    <!-- Date Value-->
+	<aura:attribute name="startDateValue" type="Date" default=""/>
+    <aura:attribute name="dob1" type="Date" default=""/>
+    <aura:attribute name="dob2" type="Date" default=""/>
+	<aura:attribute name="endDateValue" type="Date" default=""/>
+    <aura:attribute name="today" type="Date" />
+    <aura:attribute name="startDateValueSTR" type="String" />
+    
+    <aura:attribute name="Auth_Number" type="String"/>
+    <aura:attribute name="Auth_Type" type="String"/>
+    <aura:attribute name="Auth_Status" type="String"/>
+    <aura:attribute name="Auth_Status2" type="String"/>
+	
+    <aura:attribute name="ICUEURL" type="String" access="global" />
+    
+    <aura:attribute name="userInfo" type="user" access="public"/>
+	<aura:attribute name="allowedUser" type="string" access="public" default="false"/>
+	
+    <!-- Data Table: Main List -->
+	<aura:attribute name="mainList" type="ACETLGT_AuthorizationSearchResult"/>
+    
+	<!-- Data Table: Inpatient Cases -->
+	<aura:attribute name="inPatientList" type="ACETLGT_AuthorizationSearchResult"/>
+
+	<!-- Data Table: outPatient Facility Cases -->
+	<aura:attribute name="outPatientFacilityList" type="ACETLGT_AuthorizationSearchResult"/>
+
+	<!-- Data Table: outPatient  Cases -->
+	<aura:attribute name="outPatientList" type="ACETLGT_AuthorizationSearchResult" />
+    
+    <!-- Drop down value-->
+    <aura:attribute name="valueAuthType" type="String" />
+
+    <!-- Date V.2-->
+    <aura:attribute name="startdate" type="Date" access="GLOBAL"/>
+    <aura:handler name="change" value="{!v.startdate}" action="{!c.startdateChange}"/> 
+    
+    <aura:attribute name="enddate" type="Date" access="GLOBAL"/>
+    <aura:handler name="change" value="{!v.enddate}" action="{!c.enddateChange}"/>  
+    
+    <aura:attribute name="options" type="List" default="[
+    {'label': 'Inpatient', 'value': 'Inpatient'},
+    {'label': 'Outpatient', 'value': 'Outpatient'},
+    {'label': 'Outpatient Facility', 'value': 'OutpatientFacility'},
+    ]"/>
+    
+    
+    <!-- Highlight Panel -->
+    <aura:attribute name="highlightPanel" type="ACETLGT_HighlightPanelInfo" access="global"/>
+    <aura:attribute name="highlightPanel_String" type="String" access="global"/>
+
+    <!--<aura:handler name="change" value="{!v.Auth_Status}" action="{!c.onDateChangeSelect}"/> --> 
+    
+    <aura:attribute name="dob" type="Date" default=""/>
+    
+    <!-- Added 22-11-2019 Defect-->
+    <aura:attribute name="Start_ErrorMessage" type="String" />
+    <aura:attribute name="End_ErrorMessage" type="String" />
+    
+    <aura:attribute name="is_sdval" type="boolean" default="false"/>                       
+	<aura:attribute name="Spinner" type="boolean" default="true"/>
+    
+    <aura:if isTrue="{!v.Spinner}">
+    	<div class="exampleHolder">
+            <lightning:spinner alternativeText="Loading" size="medium" variant="brand" />
+        </div>
+  	</aura:if>
+    <c:ACETLGT_AutoDoc></c:ACETLGT_AutoDoc>
+    <div id="{!v.AutodocKey}" class="{!v.AutodocKey}" >  
+    <div data-auto-doc-multiple-pages="true">
+    <!-- Save , Misdirect , Cirrus -->
+    <lightning:card
+                    variant="Narrow"
+                    title="{!$Label.c.ACETCallTopicViewAuthorizations}"
+                    iconName="standard:contact"
+                    class="va-card"
+                    >
+        <aura:set attribute="actions">
+            <div class="slds-grid slds-form-element slds-m-right_large">
+                <lightning:buttonGroup>
+                    <c:ACETLGT_TTSModal aura:id = "cComp"
+                                        cseTopic="{!$Label.c.ACETCallTopicViewAuthorizations}"  
+                                        int="{!v.int}" 
+                                        intId="{!v.intId}" 
+                                        srk="{!v.srk}" 
+                                        showCirrus="true"
+                                        bookOfBusinessTypeCode="{!v.bookOfBusinessTypeCode}"
+                                        pagefeature="{!v.AutodocKey}"
+                                        memberId="{!v.memId}"
+                                        groupId="{!v.grpNum}" 
+                                        highlightPanel="{!v.highlightPanel}"
+                                        AutodocKey="{!v.AutodocKey}"
+                                        />
+                    <aura:if isTrue="{!v.allowedUser == 'true'}">
+                    	<lightning:button label="Create Authorization" onclick="{! c.createAuth }"  />
+            	    </aura:if>
+                </lightning:buttonGroup>
+            </div>
+        </aura:set>
+        <p class="slds-p-horizontal_small">
+            <!--<lightning:card title=""><c:ACETLGT_HighlightPanel highlightPanelValues="{!v.highlightPanel}"/> </lightning:card>-->
+        </p>
+ 
+        <c:ACETLGT_HighlightPanel highlightPanelValues="{!v.highlightPanel}" pageFeature="{!v.AutodocKey}" AutodocKey="{!v.AutodocKey}"/>
+    </lightning:card>
+
+    
+    
+    <!-- Filter -->
+    <div class="slds-card">
+    <lightning:accordion allowMultipleSectionsOpen="true" onsectiontoggle="{! c.handleSectionToggle }" activeSectionName="{! v.activeSections }">
+        <lightning:accordionSection name="Filters" label="Filters">
+            <aura:set attribute="body">
+
+		<div class="slds-grid slds-gutters" onkeypress="{!c.onClickOfEnter}">
+			<div class="slds-col slds-size_1-of-5">
+				<span>
+					<lightning:input aura:id="authNo" type="search"  name="Authorization_Number" label="Authorization Number" value="{!v.Auth_Number}"/>
+				</span>               
+			</div>
+
+			<div class="slds-col slds-size_1-of-5">
+				<span>
+					<lightning:select aura:id = "authType" name="Authorization_Type" label="Authorization Type" value="{!v.Auth_Type}">
+                    	<option value="None">None</option>
+                        <option value="Inpatient">Inpatient</option>                        
+                        <option value="Outpatient Facility">Outpatient Facility</option>
+                        <option value="Outpatient">Outpatient</option>
+					</lightning:select>
+                    
+                    <!--<lightning:combobox name="progress" label="Auth Type" value="{!v.Auth_Status2}" options="{! v.options }" onchange="{! c.handleChange }"/>-->
+				</span>
+			</div>
+
+			<div class="slds-col slds-size_1-of-5">
+				<!--<span onfocus="{!c.TestMethod12}">-->
+                <span>    
+					<lightning:select name="Status" label="Status" value="{!v.Auth_Status}" aura:id="authStatus">
+                        <option value="None">None</option>
+                        <option value="Open">Open</option>
+                        <option value="Closed">Closed</option>
+                        <option value="Anticipated Admission">Anticipated Admission</option>
+						<option value="Closed">Cancelled</option>
+                        <option value="Closed">Incomplete</option>
+                        <option value="Closed">Discarded</option>                        
+                    </lightning:select>
+				</span>
+			</div>            
+            
+			<div class="slds-col slds-size_1-of-5">
+				<span autocomplete="off">
+					<!--lightning:input autocomplete="off" aura:id="startDate" type="date" label="Start Date" value="{!v.startDateValue}"
+                                 disabled="" class=""
+                                 dateStyle="short"
+                                 name="dobName"
+                                 pattern="/^([0-9]{4})\-([0-9]{2})\-([0-9]{2})$/"                                 
+                                 messageWhenBadInput="Error : Invalid Start Date"
+                                 messageWhenPatternMismatch="Error : Invalid Start Date" 
+                                 
+                                 /-->
+                <!--<ui:inputDate aura:id="dob1" label="DOB 1" format="MM/DD/YYYY" displayDatePicker="true" value="{!v.dob1}" class="slds-input" />-->   
+				<!--ui:inputDate aura:id="startDate" label="Start Date" format="MM/DD/YYYY" displayDatePicker="true"  value="{!v.startDateValue}" class="slds-input" change="{!c.onDateChange}" /-->
+                
+                <!--ui:inputDate aura:id="startdateValue" label="Start Date" value="{!v.startDateValue}" displayDatePicker="true" format="MM/DD/YYYY" class="slds-input"/-->
+                
+                <!--<ui:inputDate aura:id="dob" label="DOB" format="MM/DD/YYYY" displayDatePicker="true" value="{!v.dob}" class="slds-input" />-->    
+                
+
+
+                <!-- Changes : 21-11-2019-->
+                <!-- DE277504 -->    
+                <ui:inputDate aura:id="startdateValue" label="Start Date" value="{!v.startDateValue}" displayDatePicker="true" format="MM/DD/YYYY" class="slds-input"/>
+                
+                <div aura:id="sd_msgTxt" class="slds-text-color_error slds-hide">
+                    {!v.Start_ErrorMessage}
+                </div>
+
+
+                </span>
+
+                
+                
+			</div> 
+            
+			<div class="slds-col slds-size_1-of-5">
+				<span autocomplete="off">
+					<!--lightning:input autocomplete="off" aura:id="enddateValue" type="date" label="End Date" value="{!v.endDateValue}"
+                                 disabled="" class=""
+                                 dateStyle="short"
+                                 name="dobName"
+                                 pattern="/^([0-9]{4})\-([0-9]{2})\-([0-9]{2})$/"
+                                 messageWhenBadInput="Error : Invalid End Date"
+                                 messageWhenPatternMismatch="Error : Invalid End Date" 
+                                 /-->
+                    
+                <!--ui:inputDate aura:id="endDate" label="End Date" format="MM/DD/YYYY" displayDatePicker="true"  value="{!v.endDateValue}" class="slds-input" /-->      
+				<!--<ui:inputDate aura:id="dob2" label="DOB 2" format="MM/DD/YYYY" displayDatePicker="true" value="{!v.dob2}" class="slds-input" />-->
+                
+                
+                <ui:inputDate aura:id="enddateValue" label="End Date" value="{!v.endDateValue}" displayDatePicker="true" format="MM/DD/YYYY" class="slds-input" />   
+                
+                <div aura:id="ed_msgTxt" class="slds-text-color_error slds-hide">
+                    {!v.End_ErrorMessage}
+                </div>
+
+
+                </span>
+
+			</div>     	 
+		</div>                
+                
+            </aura:set>
+        </lightning:accordionSection>
+        
+		<div class="slds-grid slds-gutters">
+			<div class="slds-col ">
+				<br/>
+				<div class="slds-align_absolute-center slds-button-group " >
+					<lightning:button aura:id="filterButton" iconName="utility:search" iconPosition="left"  variant="brand" label="Apply Filters" title="" onclick="{!c.applyFilter }" class="slds-m-right--small"/>
+					<lightning:button iconName="utility:clear" iconPosition="left" variant="brand" label="Clear Filters" title="" onclick="{! c.clearFilter }" class="slds-m-right--small"/>
+               </div>
+                <div class="slds-p-bottom_small"></div>
+			</div>
+		</div>
+    </lightning:accordion> 
+    </div> 
+
+    <!-- Tables : Inpatien , Outpatient , Outpatient Facility -->
+    <c:ACETLGT_ViewAuthorizations_List memberId="{!v.memId}" groupId="{!v.grpNum}" intId="{!v.intId}" srk="{!v.srk}"
+                                       inPatientList="{!v.inPatientList}" outPatientFacilityList="{!v.outPatientFacilityList}" outPatientList="{!v.outPatientList}" 
+                                       userInfo="{!v.userInfo}" allowedUser="{!v.allowedUser}" highlightPanel="{!v.highlightPanel}" highlightPanel_String="{!v.highlightPanel_String}"
+                                       AutodocKey="{!v.AutodocKey}"/>
+    
+	</div>
+    </div>
+</aura:component>

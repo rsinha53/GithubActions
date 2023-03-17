@@ -1,0 +1,392 @@
+<aura:component controller="ACETLGT_ContractDetailController" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,lightning:isUrlAddressable" access="global" >
+	<aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+	<aura:attribute name="contractrowdata" type="Object"/>
+	<aura:attribute name="providerdata" type="Object"/>
+	<aura:attribute name="GetMedProvAgreementresponce" type="Object"/>
+	<aura:attribute name="network" type="Object"/>
+    <aura:attribute name="pricingSetId" type="String"/>
+	<aura:attribute name="PricingSchedulecolums" type="list[]" default="['Status','ID','Description','Effective Date','Cancel Date','Facility Paper Type ID','Facility Paper Type Description']"/>
+	<aura:attribute name="lstAgreementDetail" type="Object"/>
+    <aura:attribute name="intId" type="String" access="public" />
+    <aura:attribute name="memberId" type="string" access="global" />
+    <aura:attribute name="grpNum" type="String" access="public"/>
+    <aura:attribute name="highlightPanel" type="ACETLGT_HighlightPanelInfo" access="global"/>
+    <aura:attribute name="AutodocKey" type="string" access="public"/>
+    <aura:attribute name="GUIkey" type="String" access="public"/>
+    <aura:attribute name="Ismnf" type="boolean" default="false"/>
+    <div id="{!v.AutodocKey + v.GUIkey}" class="{!v.AutodocKey}">
+    <lightning:card variant="Narrow"
+                    title="Contract Details"
+                    iconName="standard:contract"
+                    class="page_header_Cls">
+		<aura:set attribute="actions">
+			<div class="slds-grid slds-form-element slds-m-right_large">
+				<lightning:buttonGroup>
+					<c:ACETLGT_TTSModal aura:id = "cComp"
+                                        cseTopic="Provider Lookup"
+                                        showSave="false" 
+                                        showMisdirect="false" 
+                                        srk="{!v.srk}"
+                                        intId="{!v.intId}" 
+                                        groupId="{!v.grpNum}"
+                                        memberId="{!v.memberId}"
+                                        showMemAlerts="true"
+                                        pagefeature="{!v.AutodocKey}"  AutodocKey="{!v.AutodocKey}"/>
+				</lightning:buttonGroup>
+			</div>
+		</aura:set>
+       <c:ACETLGT_HighlightPanel highlightPanelValues="{!v.highlightPanel}" pageFeature="{!v.AutodocKey}" AutodocKey="{!v.AutodocKey + v.GUIkey}" Ismnf="{!v.Ismnf}"/>
+	</lightning:card>
+	<lightning:card  iconName="standard:contract_line_item" class="component_card">
+		<aura:set attribute="title">
+			<div class="slds-text-heading_small">
+				<b>Contract</b>
+			</div>
+		</aura:set>
+		<div style="overflow:auto">
+		<div class="autodocTableView" data-auto-doc="true" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-section-key="Contract">   
+			<div>
+            <table class="slds-table accordionTables slds-table_bordered slds-table_cell-buffer slds-no-row-hover">
+				<thead>
+					<tr>
+						<th>Active</th>
+						<th>Network ID</th>
+						<th>Network Name</th>
+						<th>Process Order</th>
+						<th>Pricing Set ID</th>
+						<th>Contract ID</th>
+						<th>Effective</th>
+						<th>Cancel</th>
+						<aura:if isTrue="{!v.providerdata.providerType =='Physician'}">
+							<th>Assignment Type</th>
+						</aura:if>
+					</tr>
+				</thead>
+				<tbody>
+					<tr class="slds-hint-parent">
+						<td>
+							<aura:if isTrue="{!v.lstAgreementDetail.contractDetail.statusCode == 'Active'}">
+								<div id="active_image" class="slds-icon_container_circle slds-icon-action-approval slds-icon_container">
+                                <img src="{!$Resource.SLDS + '/assets/icons/action/approval_60.png'}" style="max-width:14px;" />
+                                </div>
+								<aura:set attribute="else">
+                                 <aura:if isTrue="{!v.lstAgreementDetail.contractDetail.statusCode == 'Inactive'}">
+									<div id="non_active_image" class="slds-icon_container_circle slds-icon-action-close slds-icon_container">
+    								<img src="{!$Resource.SLDS + '/assets/icons/action/close_60.png'}" style="max-width:14px;"/>
+                                     </div>
+                                    </aura:if></aura:set>
+							</aura:if>
+						</td>
+						<td>{!v.lstAgreementDetail.network.id}</td>
+						<td>{!v.lstAgreementDetail.network.name}</td>
+						<td>{!v.lstAgreementDetail.contractDetail.processOrderNumber}</td>
+						<td>{!v.lstAgreementDetail.pricingSet.id}</td>
+						<td>{!v.lstAgreementDetail.key.contractDetailId}</td>
+						<td>{!v.lstAgreementDetail.contractDetail.effectiveDate}</td>
+						<td>{!v.lstAgreementDetail.contractDetail.cancelDate}</td>
+						<aura:if isTrue="{!v.providerdata.providerType =='Physician'}">
+							<td>{!v.lstAgreementDetail.contractDetail.providerAssignmentTypeCode}</td>
+						</aura:if>
+					</tr>
+				</tbody>
+			</table>
+	     
+            </div>
+        </div>
+		</div>
+	</lightning:card>
+	<div class="slds-box slds-p-around_none slds-theme_default slds-m-top_x-small">
+        <c:ACETLGT_ProviderFeeSchedule pricingSetId ="{!v.pricingSetId}" AutodocKey="{!v.AutodocKey}"/>
+	</div>
+	<div class="slds-box slds-p-around_none slds-theme_default slds-m-top_x-small">
+		<lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="FilingLimitDetails" class="titlecls" >
+			<lightning:accordionSection name="FilingLimitDetails" label="Filing Limit Details"  >
+				<div class="slds-scrollable_x">
+				<div class="autodocTableView" data-auto-doc="true" data-auto-doc-case-items="false" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-section-key="Filing Limit Details">   
+					<div>
+                    <table class="slds-table accordionTables slds-table_bordered slds-table_cell-buffer slds-no-row-hover">
+						<thead>
+							<tr>
+								<th>Period</th>
+								<th>Effective Date</th>
+								<th>Period Type</th>
+								<th>Type</th>
+								<th>Cancel Date</th>
+								<th>Penalty Percentage</th>
+							</tr>
+						</thead>
+						<tbody>
+							<aura:iteration items="{!v.GetMedProvAgreementresponce.AgreementDetail.filingLimit}" var="filingLimitarry">
+								<tr class="slds-hint-parent">
+									<td>{!filingLimitarry.period}</td>
+									<td>{!filingLimitarry.effectiveDate}</td>
+									<td>{!filingLimitarry.periodType}</td>
+									<td>{!filingLimitarry.typeCode}</td>
+									<td>{!filingLimitarry.cancelDate}</td>
+									<td>{!filingLimitarry.penaltyPercentage}</td>
+								</tr>
+							</aura:iteration>
+						</tbody>
+					</table>
+			     </div>
+				</div>
+                </div>
+			</lightning:accordionSection>
+		</lightning:accordion>
+	</div>
+	<div class="slds-box slds-p-around_none slds-theme_default slds-m-top_x-small">
+		<lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="Pricing Schedules" class="titlecls">
+			<lightning:accordionSection name="Pricing Schedules" label="Pricing Schedules">
+		     <div class="autodocTableView" data-auto-doc="true" data-auto-doc-case-items="false" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-section-key="Pricing Schedules">
+               <div>
+				<table class="slds-table accordionTables slds-table_bordered slds-table_cell-buffer slds-no-row-hover">
+					<thead>
+						<tr>
+							<th>Status</th>
+						    <th>ID</th>
+						    <th>Description</th>
+							<th>Effective Date</th>
+							<th>Cancel Date</th>
+							<th>Facility Paper Type ID</th>
+                            <th>Facility Paper Type Description</th>
+						</tr>
+					</thead>
+					<tbody>
+						<aura:iteration items="{!v.GetMedProvAgreementresponce.AgreementDetail.pricingSchedule}" var="pricingSchedulearry">
+							<tr class="slds-hint-parent">
+								<td>
+									<aura:if isTrue="{!pricingSchedulearry.assignmentStatusCode == 'A'}">
+										<div id="active_image" class="slds-icon_container_circle slds-icon-action-approval slds-icon_container">
+ 											<img src="{!$Resource.SLDS + '/assets/icons/action/approval_60.png'}" style="max-width:14px;" />
+                                        </div>
+										<aura:set attribute="else">
+											<aura:if isTrue="{!pricingSchedulearry.assignmentStatusCode == 'I'}">
+												<div id="non_active_image" class="slds-icon_container_circle slds-icon-action-close slds-icon_container">
+    												<img src="{!$Resource.SLDS + '/assets/icons/action/close_60.png'}" style="max-width:14px;"/>
+                                                </div>
+											</aura:if>
+										</aura:set>
+									</aura:if>
+								</td>
+								<td>{!pricingSchedulearry.id}</td>
+								<td>{!pricingSchedulearry.description} </td>
+								<td>{!pricingSchedulearry.assignmentEffectiveDate}</td>
+								<td>{!pricingSchedulearry.assignmentCancelDate}</td>
+								<td>{!pricingSchedulearry.paperTypeCode}</td>
+								<td>{!pricingSchedulearry.paperTypeDescription}</td>
+							</tr>
+						</aura:iteration>
+					</tbody>
+				</table>
+			</div>
+           </div>
+			</lightning:accordionSection>
+		</lightning:accordion>
+	</div>
+	<div class="slds-grid ">
+		<div class="slds-col slds-p-around_none slds-m-right_x-small">
+			<span>
+				<div class="slds-box slds-p-around_none slds-theme_default slds-m-top_x-small">
+					<lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="PricingSet" class="titlecls" >
+						<lightning:accordionSection name="PricingSet" label="Pricing Set"  >
+						<div data-auto-doc="true" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-section-key="Pricing Set">
+						<div class="autodocNotTableView" data-auto-doc-feature="{!v.AutodocKey}">
+							<div class="slds-box slds-box_small">
+								<div class="slds-grid slds-form-element">
+									<div class="slds-p-around_xx-small  slds-size_1-of-3 autodocField">
+										<div class="header-column">
+											<p class="field-title slds-form-element__label autodocFieldName" title="Name">Version Status</p>
+											<p class="valueCls autodocValue">
+												<div class="slds-form-element__static">{!v.GetMedProvAgreementresponce.AgreementDetail.pricingSet.statusCode}</div>
+											</p>
+										</div>
+									</div>
+									<div class="slds-p-around_xx-small  slds-size_1-of-3 autodocField" >
+										<div class="header-column">
+											<p class="field-title slds-form-element__label autodocFieldName" >ID</p>
+											<p class="valueCls autodocValue">
+												<div class="slds-form-element__static">{!v.GetMedProvAgreementresponce.AgreementDetail.pricingSet.id}</div>
+											</p>
+										</div>
+									</div>
+									<div class="slds-p-around_xx-small slds-size_1-of-3 autodocField" >
+										<div class="header-column">
+											<p class="field-title slds-form-element__label autodocFieldName" >Description</p>
+											<p class="valueCls autodocValue">
+												<div class="slds-form-element__static">{!v.GetMedProvAgreementresponce.AgreementDetail.pricingSet.description}</div>
+											</p>
+										</div>
+									</div>
+								</div>
+								<div class="slds-grid slds-form-element">
+									<div class="slds-p-around_xx-small slds-size_1-of-3 autodocField" >
+										<div class="header-column">
+											<p class="field-title slds-form-element__label autodocFieldName" >Effective Date</p>
+											<p class="valueCls autodocValue">
+												<div class="slds-form-element__static">{!v.GetMedProvAgreementresponce.AgreementDetail.pricingSet.effectiveDate}</div>
+											</p>
+										</div>
+									</div>
+									<div class="slds-p-around_xx-small slds-size_1-of-3 autodocField" >
+										<div class="header-column">
+											<p class="field-title slds-form-element__label autodocFieldName" >Version</p>
+											<p class="valueCls autodocValue">
+												<div class="slds-form-element__static">{!v.GetMedProvAgreementresponce.AgreementDetail.pricingSet.version}</div>
+											</p>
+										</div>
+									</div>
+								</div>
+							</div>
+                        </div>
+                     </div>
+						</lightning:accordionSection>
+					</lightning:accordion>
+				</div>
+				<div class="slds-box slds-p-around_none slds-theme_default slds-m-top_x-small ">
+					<lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="Line Of Business" class="titlecls" >
+						<lightning:accordionSection name="Line Of Business" label="Line Of Business">
+							<div class="autodocTableView" data-auto-doc="true" data-auto-doc-case-items="false" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-section-key="Line Of Business">   
+                                <div>                     
+								<table class="slds-table accordionTables slds-table_bordered slds-table_cell-buffer slds-no-row-hover">
+									<thead>
+										<tr>
+											<th>Name</th>
+											<th>Medical Necessity</th>
+										</tr>
+									</thead>
+									<tbody>
+										<aura:iteration items="{!v.GetMedProvAgreementresponce.AgreementDetail.lineOfBusiness}" var="lob">
+											<tr class="slds-hint-parent">
+												<td>{!lob.name}</td>
+												<td>{!lob.medicalNecessityIndicator}</td>
+											</tr>
+										</aura:iteration>
+									</tbody>
+								</table>
+							</div>
+							</div>
+						</lightning:accordionSection>
+					</lightning:accordion>
+				</div>
+			</span>
+		</div>
+		<div class="slds-col slds-p-around_none">
+			<span>
+				<div class="slds-box slds-p-around_none slds-theme_default  slds-m-top_x-small">
+					<lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="Networks" class="titlecls" >
+						<lightning:accordionSection name="Networks" label="Networks"  >
+						<div data-auto-doc="true" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-section-key="Networks">
+						<div class="autodocNotTableView" data-auto-doc-feature="{!v.AutodocKey}">
+							<div class="slds-box slds-box_small">
+								<div class="slds-grid slds-form-element">
+									<div class="slds-p-around_xx-small  slds-size_1-of-3 autodocField" >
+										<div class="header-column">
+											<p class="field-title slds-form-element__label autodocFieldName" title="Name">Name</p>
+											<p class="valueCls autodocValue">
+												<div class="slds-form-element__static">{!v.network.name}</div>
+											</p>
+										</div>
+									</div>
+									<div class="slds-p-around_xx-small  slds-size_1-of-3 autodocField" >
+										<div class="header-column">
+											<p class="field-title slds-form-element__label autodocFieldName" >Effective Date</p>
+											<p class="valueCls autodocValue">
+												<div class="slds-form-element__static">{!v.network.effectiveDate}</div>
+											</p>
+										</div>
+									</div>
+									<div class="slds-p-around_xx-small slds-size_1-of-3 autodocField" >
+										<div class="header-column">
+											<p class="field-title slds-form-element__label autodocFieldName" >Cancel Date</p>
+											<p class="valueCls autodocValue">
+												<div class="slds-form-element__static">{!v.network.cancelDate}</div>
+											</p>
+										</div>
+									</div>
+								</div>
+								<div class="slds-grid slds-form-element">
+									<div class="slds-p-around_xx-small slds-size_1-of-3 autodocField" >
+										<div class="header-column">
+											<p class="field-title slds-form-element__label autodocFieldName" >ID</p>
+											<p class="valueCls autodocValue">
+												<div class="slds-form-element__static">{!v.network.id}</div>
+											</p>
+										</div>
+									</div>
+									<div class="slds-p-around_xx-small slds-size_1-of-3 autodocField" >
+										<div class="header-column">
+											<p class="field-title slds-form-element__label autodocFieldName" >Type</p>
+											<p class="valueCls autodocValue">
+												<div class="slds-form-element__static">{!v.GetMedProvAgreementresponce.NTypeList}</div>
+											</p>
+										</div>
+									</div>
+								</div>
+                            </div>
+                         </div>
+                        </div>
+						</lightning:accordionSection>
+					</lightning:accordion>
+				</div>
+				<div class="slds-box slds-p-around_none slds-theme_default slds-m-top_x-small ">
+					<lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="OverpaymentRecovery" class="titlecls" >
+						<lightning:accordionSection name="OverpaymentRecovery" label="Overpayment Recovery"  >
+                          <div data-auto-doc="true" data-auto-doc-feature="{!v.AutodocKey}" data-auto-doc-section-key="Overpayment Recovery" data-auto-doc-section-column-indexes="1,2" >
+                           <div class="autodocNotTableView" data-auto-doc-feature="{!v.AutodocKey}">
+							<div class="slds-box slds-box_small">
+								<div class="slds-grid slds-form-element">
+									<div class="slds-p-around_xx-small  slds-size_1-of-3 autodocField" >
+										<div class="header-column">
+											<p class="field-title slds-form-element__label autodocFieldName" title="Name">Indicator</p>
+											<p class="valueCls autodocValue">
+												<div class="slds-form-element__static">{!v.GetMedProvAgreementresponce.AgreementDetail.recovery.overpaymentIndicator}</div>
+											</p>
+										</div>
+									</div>
+									<div class="slds-p-around_xx-small  slds-size_1-of-3 autodocField" >
+										<div class="header-column">
+											<p class="field-title slds-form-element__label autodocFieldName" >Deadline Period</p>
+											<p class="valueCls autodocValue">
+												<div class="slds-form-element__static">{!v.GetMedProvAgreementresponce.AgreementDetail.recovery.deadlinePeriod}</div>
+											</p>
+										</div>
+									</div>
+									<div class="slds-p-around_xx-small slds-size_1-of-3 autodocField" >
+										<div class="header-column">
+											<p class="field-title slds-form-element__label autodocFieldName" >Deadline Period Type</p>
+											<p class="valueCls autodocValue">
+												<div class="slds-form-element__static">{!v.GetMedProvAgreementresponce.AgreementDetail.recovery.deadlinePeriodTypeCode}</div>
+											</p>
+										</div>
+									</div>
+								</div>
+								<div class="slds-grid slds-form-element">
+									<div class="slds-p-around_xx-small slds-size_1-of-3 autodocField" >
+										<div class="header-column">
+											<p class="field-title slds-form-element__label autodocFieldName" >Wait Period</p>
+											<p class="valueCls autodocValue">
+												<div class="slds-form-element__static">{!v.GetMedProvAgreementresponce.AgreementDetail.recovery.waitPeriod}</div>
+											</p>
+										</div>
+									</div>
+									<div class="slds-p-around_xx-small slds-size_1-of-3 autodocField" >
+										<div class="header-column">
+											<p class="field-title slds-form-element__label autodocFieldName" >Wait Period Type</p>
+											<p class="valueCls autodocValue">
+												<div class="slds-form-element__static">{!v.GetMedProvAgreementresponce.AgreementDetail.recovery.waitPeriodTypeCode}</div>
+											</p>
+										</div>
+									</div>
+								</div>
+							</div>
+                          </div>
+                         </div>
+						</lightning:accordionSection>
+					</lightning:accordion>
+				</div>
+			</span>
+		</div>
+	</div>
+    
+	</div>
+</aura:component>

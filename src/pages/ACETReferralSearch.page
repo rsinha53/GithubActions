@@ -1,0 +1,364 @@
+<apex:page controller="ACETReferralSearchController" id="pageid" action="{!init}">
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+  <!--  <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />-->
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+    <apex:stylesheet value="{!URLFOR($Resource.ACETResources, '/css/m/memberdetail.css')}" />
+    <apex:includeScript value="{!$Resource.StickyHeaders}"></apex:includeScript>
+    <script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+
+      
+   <style>
+        body .pbBody table.list tr.dataRow th, body .pbBody table.list tr.dataRow td
+        {
+            border-width: 0 0 1px 0;
+            vertical-align: middle;
+        }
+        .messageTable {
+        border: none !important;
+        }
+
+
+        .apexp .bPageBlock .detailList .list .last td, .apexp .bPageBlock .detailList .list .last th,
+        .apexp .detailList .list .totalRow td, .apexp .detailList .list .totalRow th
+        {
+            border-width: 0 0 1px 0;
+            vertical-align: middle;
+        }
+    </style>
+     <script>
+         function autocleardate(){
+            if(document.getElementById("{!$Component.pageid.formid.Block1.pbFilterSection.StartDateSection.StartDate}"))
+                document.getElementById("{!$Component.pageid.formid.Block1.pbFilterSection.StartDateSection.StartDate}").value= null;
+            if(document.getElementById("{!$Component.pageid.formid.Block1.pbFilterSection.EndDateSection.Enddate}"))
+                document.getElementById("{!$Component.pageid.formid.Block1.pbFilterSection.EndDateSection.Enddate}").value= null;
+           ClearFilter();   
+        }
+        function validateDate(){
+            var $startDate = document.getElementById("{!$Component.pageid.formid.Block1.pbFilterSection.StartDateSection.StartDate}");
+            var $endDate = document.getElementById("{!$Component.pageid.formid.Block1.pbFilterSection.EndDateSection.Enddate}");
+            var $errorMsg = document.getElementById("errorMessages");
+            var errorMsg = '';
+
+            if($startDate!= null)
+            {
+                $startDate.setAttribute("class","");
+                var divs = $startDate.parentNode.parentNode.getElementsByClassName("errorMsg");
+                divs[0].style.display="none";
+            }
+            if($endDate!= null)
+            {
+                $endDate.setAttribute("class","");
+                var divs = $endDate.parentNode.parentNode.getElementsByClassName("errorMsg");
+                divs[0].style.display="none";
+            }
+            if($endDate != null && $endDate.value != undefined && $startDate != null && $startDate.value != undefined && 
+               new Date($startDate.value) > new Date($endDate.value))
+            {
+                errorMsg = 'ERROR';
+                $endDate.setAttribute("class","Required");
+                $startDate.setAttribute("class","Required");
+                var divs = $endDate.parentNode.parentNode.getElementsByClassName("errorMsg");
+                divs[0].innerHTML="<b>Error:</b> End Date must be later than Start Date";
+                divs[0].style.display="block";
+            }
+            if($endDate != null && $endDate.value != undefined && $endDate.value.search("[a-z,A-Z]")>=0)
+            {
+                errorMsg = 'ERROR';
+                $endDate.setAttribute("class","Required");
+                var divs = $endDate.parentNode.parentNode.getElementsByClassName("errorMsg");
+                divs[0].innerHTML="<b>Error:</b> Invalid End Date";
+                divs[0].style.display="block";
+            }
+        
+            if($startDate != null && $startDate.value != undefined && $startDate.value.search("[a-z,A-Z]")>=0)
+            {
+                errorMsg = 'ERROR';
+                $startDate.setAttribute("class","Required");
+                var divs = $startDate.parentNode.parentNode.getElementsByClassName("errorMsg");
+                divs[0].innerHTML = "<b>Error:</b> Invalid Start Date";
+                divs[0].style.display="block";
+            }
+            if(errorMsg != "")
+            {
+                if(errorMsg != 'ERROR')
+                $errorMsg.innerHTML = '<div><b>Error: Invalid Data. <br/>'+errorMsg+'</b></div>';
+            }
+            else
+            {
+                ApplyFilterAF();
+            }
+        }
+        function OpenReferralDetail(SRK, selectedRefNumber) {
+            var url = '/apex/ACETReferalDetails?id= ' + selectedRefNumber +'&'+'interactionId={!JSENCODE(Interaction.Id)}' +'&' + 'contactId={!JSENCODE(Subject.Id)}'+ '&' + 'sourceOriginator={!sourceOriginator}'+ '&' +'additionalInfo={!JSENCODE(hpAdditionInfoStr)}'+'&'+'SRK='+SRK; 
+            console.log('URL--->'+url);
+            
+            var primaryCalltopicTabId = '{!JSENCODE($CurrentPage.parameters.primaryCalltopicTabId)}';
+            sforce.console.getEnclosingTabId(function(result) {
+                var tabId = result.id;
+                url = url + '&primaryCalltopicTabId=' + (primaryCalltopicTabId ? primaryCalltopicTabId : tabId);
+                sforce.console.getFocusedPrimaryTabId(function(result){
+                    sforce.console.openSubtab(result.id, url, true,'Referral - '+selectedRefNumber, null,openSuccess);
+                });
+            });
+        }
+        function openCreatePCPReferral(baseLink){
+            console.log('baseLink'+baseLink);
+            window.open(baseLink,'_blank', 'location=yes,menubar=yes,titlebar=yes,toolbar=yes,width=1200, height=800 ,left=0 ,top=0 ,scrollbars=1 ,resizable=1');    
+        }//
+
+        var openSuccess = function openSuccess(result) {
+            if (result.success == true) {}
+            else {}
+        };
+        
+         var cmmentsTmp; 
+
+        $(document).ready(function(){                                     
+            //acet.autodoc.startAutodoc();
+            acet.autodoc.createCommentsbox();
+            acet.autodoc.subTabIds = []; 
+            
+            var primaryCalltopicTabId = '{!JSENCODE($CurrentPage.parameters.primaryCalltopicTabId)}';
+            
+            var subjectId = '{!Subject.Id}';
+            acet.autodoc.getAutodocFromSubTabs = function(){
+                acet.autodoc.additionalInfo = '';                                               
+                sforce.console.fireEvent('RequestReferralDetail_'.concat(subjectId), subjectId);                   
+            }
+            
+            //receive autodoc comments from sub tabs                      
+            sforce.console.addEventListener('ReceiveReferralDetail_'.concat(subjectId), function(r){                   
+                var res = JSON.parse(r.message); 
+                console.log('res--->'+res);    
+                acet.autodoc.subTabIds.push(res.subTabId);                                    
+                acet.autodoc.additionalInfo = acet.autodoc.additionalInfo + res.doc;               
+                //close sub tab
+                sforce.console.closeTab(res.subTabId);                                     
+            }); 
+            
+            //send over referral search autodoc to primary call topic, e.g the view referral is opened from claim detail      
+            sforce.console.addEventListener('RequestSubTabAutodoc', function(r) {
+                sforce.console.getEnclosingTabId(function(result) {
+                    if(r.message == primaryCalltopicTabId){
+                        var res = {};
+                        res.primaryCalltopicTabId = primaryCalltopicTabId;
+                        res.subTabId = result.id;
+                        res.doc = acet.autodoc.saveAutodoc();
+                        sforce.console.fireEvent('ReceiveSubTabAutodoc', JSON.stringify(res));
+                    }
+                });
+            });
+            
+            
+            //sync comments between referral search and referral details tabs
+            var timer;
+        $("#autodocComments").keyup(function() {
+            clearTimeout(timer);
+            timer = setTimeout(function() {
+                sforce.console.fireEvent('ReferralCommentsUpdated_'.concat(subjectId), $("#autodocComments").val());
+            }, 500);
+        }); 
+            
+            sforce.console.addEventListener('ReferralCommentsUpdated_'.concat(subjectId), function(r){
+            if(r.message != $("#autodocComments").val()){
+                $("#autodocComments").val(r.message);   
+                }             
+            });  
+            //sync comments between search and detail pages 
+                 sforce.console.addEventListener('RequestReferralComments_'.concat(subjectId), function(r){            
+            sforce.console.fireEvent('ReferralCommentsUpdated_'.concat(subjectId), $("#autodocComments").val());  
+        });         
+         console.log('Document ready1 Success');
+         });
+                  
+         
+         $(document).ready(function() {  
+               acet.autodoc.startAutodoc();             
+               var noAutoSearch = '{!JSENCODE($CurrentPage.parameters.noAutoSearch)}';
+               if(noAutoSearch != 'true'){
+                   var vccdParams = '{!JSENCODE($CurrentPage.parameters.vccdParams)}';                   
+                   if(vccdParams != 'undefined' && vccdParams != ''){
+                   try {
+                       vccdParams =  JSON.parse(vccdParams);
+                       }
+                      catch(err) {
+                      console.log('VCCD Parse Failed ---->'+err.message);
+                       }
+                       $("[id$='ReferralNumber']").val(vccdParams.ReferralNumber);                                  
+                       $("[id$='btnApplyfilter']").click();
+                   }    
+               }
+                        console.log('Document ready2 Success');
+
+           });
+
+    </script>
+    <apex:form id="formid">
+    <c:ACETInteractionHighlightsPanel InteractionAtt="{!wrapper.interaction}"
+            SubjectAtt="{!wrapper.Subject}"
+            AdditionalInfoAtt="{!wrapper.AdditionalInfo}" html-auto-doc="auto" selectedOriginator="{!wrapper.interaction.Originator_Name__c}"></c:ACETInteractionHighlightsPanel>
+            <apex:outputPanel id="hippapopupPanel">
+                       <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+            </apex:outputPanel>
+        
+    <apex:sectionHeader title="View PCP Referrals" />
+    <apex:pageMessages id="pgMsg"/> 
+   
+    <apex:actionFunction action="{!navigateTodetail}" name="navigateTodetail" onComplete="OpenReferralDetail('{!JSENCODE(SRK)}','{!JSENCODE(selectedRefNumber)}');" reRender="wrapperresultsStrHide,selectedRefNumberHide">
+        <apex:param name="ReferalNumber" value=""/>
+    </apex:actionFunction>
+    <apex:actionFunction name="ApplyFilterAF" action="{!Applyfilter}" rerender="pbFilterSection,rsResults" status="SearchStatus" oncomplete="acet.autodoc.startAutodoc();" />
+    <apex:actionFunction name="ClearFilter" action="{!clearfilter}" reRender="pbFilterSection" status="ClearStatus" oncomplete="acet.autodoc.startAutodoc();ApplyFilterAF();" />
+    <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+        attrShowSaveAndCloseButton="false" attrShowSaveButton="true"
+        attrShowMisdirectButton="true" 
+        attrSourceOriginator="{!Interaction.Interaction_Type__c}"
+        attrInteractionId="{!wrapper.Interaction.Id}"
+        attrSubjectId="{!wrapper.Subject.Id}"             
+        attrCallTopic="View PCP Referrals" />
+     
+    
+        <apex:outputPanel id="opFilterSection">
+            <apex:pageblock mode="mainDetail" id="Block1">
+            <apex:inputHidden value="{!wrapperresultsStr}" id="wrapperresultsStrHide"/>
+            <apex:inputHidden value="{!selectedRefNumber}" id="selectedRefNumberHide"/>   
+            
+                <apex:pageBlockButtons location="bottom">
+                    <input type="button" id="btnApplyfilter" class="btn"
+                        value="Apply Filters" onclick="validateDate();" />
+                    <input type="button" id="btnClearfilter" class="btn" value="Clear Filters"
+                        onclick="autocleardate()" />
+                    <apex:outputPanel rendered="{!allowedUser}">
+                            <input id="launchCirrusBtn" type="button" value="Create PCP Referral" class="btn"
+                                onclick="return openCreatePCPReferral('{!baseURL}');" /> <!--style="margin-left: 34%;"-->
+                        </apex:outputPanel>
+                        <apex:outputPanel rendered="{!isResearchUser}">
+                            <input id="launchCirrusBtn1" class="btnDisabled" type="button" value="Create PCP Referral" 
+                                 disabled="{!isResearchUser}" />
+                        </apex:outputPanel>
+
+                    </apex:pageblockButtons>
+
+                    <apex:pageblocksection title="Filters" columns="3"
+                        id="pbFilterSection">
+                        <apex:pageblocksectionitem dataStyle="width:16.67%;"
+                            labelStyle="width:16.67%;">
+                            <apex:outputLabel >Referral Number</apex:outputLabel>
+                            <apex:outputPanel >
+                                <div>
+                                    <apex:inputText id="ReferralNumber"
+                                        value="{!strReferralNumber}" />
+                                </div>
+                            </apex:outputPanel>
+
+                        </apex:pageblocksectionitem>
+
+                        <apex:pageblocksectionItem dataStyle="width:16.67%;"
+                            labelStyle="width:16.67%;">
+                            <apex:outputLabel >Referral Type</apex:outputLabel>
+                            <apex:selectList size="1" id="ReferralType"
+                                value="{!ReferralType}">
+                                <apex:selectOptions value="{!ReferralTypeValues}"></apex:selectOptions>
+
+
+                            </apex:selectList>
+                        </apex:pageblocksectionItem>
+
+                        <apex:pageblocksectionitem dataStyle="width:16.67%;"
+                            labelStyle="width:16.67%;">
+                            <apex:outputLabel >Referral Status</apex:outputLabel>
+                            <apex:selectList size="1" id="RefrStatus" value="{!RefrStatus}">
+                                <apex:selectOption itemLabel="--None--" itemValue=""></apex:selectOption>
+                                <apex:selectOption itemLabel="Active" itemValue="active"></apex:selectOption>
+                                <apex:selectOption itemLabel="Inactive" itemValue="Inactive"></apex:selectOption>
+                            </apex:selectList>
+                        </apex:pageblocksectionitem>
+
+                        <apex:pageblocksectionitem id="StartDateSection"
+                            dataStyle="width:16.67%;" labelStyle="width:16.67%;">
+                            <apex:outputLabel >Start Date</apex:outputLabel>
+                            <apex:outputPanel id="StartDatePanel">
+                                <apex:inputField id="StartDate"
+                                    value="{!StartDate.tst_Date_Field__c}" required="false" />
+                                <div class="errorMsg" style="display: none; margin-left: -4px;">
+                                    <b>Error:</b> Invalid Start Date
+                                </div>
+                            </apex:outputPanel>
+                        </apex:pageblocksectionitem>
+
+                        <apex:pageblocksectionitem id="EndDateSection"
+                            dataStyle="width:16.67%;" labelStyle="width:16.67%;">
+                            <apex:outputLabel >End Date</apex:outputLabel>
+                            <apex:outputPanel id="EndDatePanel">
+                                <apex:inputField id="EndDate"
+                                    value="{!EndDate.tst_Date_Field__c}" />
+                                <div class="errorMsg" style="display: none; margin-left: -4px;">
+                                    <b>Error:</b> Invalid End Date
+                                </div>
+                            </apex:outputPanel>
+                        </apex:pageblocksectionitem>
+
+                    </apex:pageblocksection>
+            </apex:pageblock>
+        </apex:outputPanel>
+        <apex:outputPanel >
+             <apex:pageBlock id="rsResults" title="Referral Search Results">
+                     <apex:pageBlockSection columns="1" html-auto-doc="true" html-auto-doc-case-items="true">
+                        <apex:pageBlockTable value="{!if(isFilterApply,referralsresult,lstReferrals)}" var="w"
+                            id="results-table" style="border:none">
+                        
+                        <apex:column headerValue="Referral Number" >
+    
+                             <a href="#" class="keyfieldId"
+                                onClick="navigateTodetail('{!JSENCODE(w.resultreferralExternalID)}');return false;">
+                                {!w.resultreferralExternalID}</a>
+                        
+
+                        </apex:column>
+                        <apex:column value="{!w.resultReferaltype}"
+                            headerValue="Referral Type" />
+
+                        <apex:column value="{!w.resultStartdate}" headerValue="Start Date" />
+                        <apex:column value="{!w.resultEnddate}" headerValue="End Date" />
+                        <apex:column value="{!w.resultReferralStatus}"
+                            headerValue="Referral Status" />
+                         <apex:column value="{!w.resultRequestingtin}"
+                            headerValue="Requesting TIN" />
+                        <apex:column value="{!w.resultRequestingprovider}"
+                            headerValue="Requesting Provider" />
+                        <apex:column value="{!w.resultServicingtin}"
+                            headerValue="Servicing TIN" />
+                        <apex:column value="{!w.resultServicingprovider} " headerValue="Servicing Provider" />                       
+                        <apex:column value="{!w.resultDxcode}" headerValue="Dx Code" />
+                        <apex:column value="{!w.resultDXDescription }"
+                            headerValue="Dx Description" />
+                       
+                    </apex:pageBlockTable>
+                    <apex:outputPanel rendered="{!errorFlagForNoRecords}"> 
+                            <div style="text-align:center"> No Results Found. </div>                                                
+                    </apex:outputPanel>
+                    </apex:pageBlockSection>
+               <script>
+       
+               $('[id$=results-table]').stickyTableHeaders();
+
+               </script>
+                <!-- <c:ACETDataTable attrDatatableWrapper="{!DTWrapper}" />-->
+                </apex:pageblock>
+                
+        </apex:outputPanel>
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}"
+            attrShowSaveAndCloseButton="false" attrShowSaveButton="true"
+            attrShowMisdirectButton="true" 
+            attrSourceOriginator="{!Interaction.Interaction_Type__c}"
+            attrInteractionId="{!wrapper.Interaction.Id}"
+            attrSubjectId="{!wrapper.Subject.Id}"
+            attrCallTopic="View PCP Referrals"
+            attrLocation="bottom" />
+    </apex:form>
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+          <div align="left"> <a href="#" id="backToToP" style="color:Blue" >Back To Top</a> </div>  
+
+</apex:page>

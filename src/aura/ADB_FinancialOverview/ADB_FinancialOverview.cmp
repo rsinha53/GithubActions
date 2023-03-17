@@ -1,0 +1,224 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome" access="global" >
+<aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+<!-- Sample Values : Financial Overview : US2683487 -->
+<aura:attribute name="FinOverviewData" type="Object" />
+<!-- Hover Attributes : US2690830 -->    
+<aura:attribute name="isHoverVisible" type="boolean" default="false"/>
+<aura:attribute name="hoverRow" type="Integer" default="-1" />
+<aura:attribute name="hoverCol" type="Integer" default="-1" />  
+ 
+<!-- Change Handler -->    
+<aura:handler name="change" value="{!v.FinOverviewData}" action="{!c.onListChange}"/>
+    
+<!-- Selected Account Name Attribute -->       
+<aura:attribute name="selectedAccName" type="String"/>    
+<aura:attribute name="AccShortName" type="String"/>  
+<!-- Selected Account User Details -->
+<aura:attribute name="accFirstName" type="String"/>    
+<aura:attribute name="accLastName" type="String"/>   
+<aura:attribute name="accSSN" type="String"/>   
+<!-- Selected Account Details -->
+<aura:attribute name="accNum" type="String"/>
+<aura:attribute name="accSysCode" type="String"/>        
+<aura:attribute name="TransactionsAccountsData" type="ADBTransactionsWrapper.TransactionData"/>   			   
+    
+<aura:attribute name="accAuthUser" type="String"/>    
+<aura:attribute name="accInvBal" type="String"/>   
+<aura:attribute name="agentHSASecurityAccess" type="boolean"/>
+<aura:attribute name="spendingAccountsAvlbl" type="boolean"/>
+
+    
+<lightning:layout horizontalAlign="center" multipleRows="true">
+<lightning:layoutItem size="11" >
+<div>
+<span><b>Financial Overview</b></span>
+</div>    
+<br/>   
+<div class="slds-scrollable">   
+<!-- Data table for Financial Overview -->
+    
+<table class="tableWidth slds-table slds-table_fixed-layout slds-no-row-hover slds-table_bordered slds-border_right slds-border_left">
+<thead>
+    <tr class="slds-line-height_reset ">
+        <th class="thCustom tableHeader" scope="col" >
+            <div class="slds-text-align_left">Account</div>
+        </th>
+        <th class="thCustom tableHeader" scope="col" >
+            <div class="slds-text-align_left">Bank Name</div>
+        </th>
+        <th class="thCustom tableHeader" scope="col" >
+            <div class="popover-wrapper">
+                <div class="slds-text-align_left slds-p-right_large" onmouseover="{!c.hoverOver_currentYR}" onmouseout="{!c.hoverOut_currentYR}">Current <br/> Year <br/> Balance</div>
+            </div>
+        </th>
+        <th class="thCustom tableHeader" scope="col" >
+            <div class="popover-wrapper">
+                <div class="slds-text-align_left slds-p-right_large" onmouseover="{!c.hoverOver_priorYBal}" onmouseout="{!c.hoverOut_priorYBal}">Prior <br/>Year<br/> Balance</div> 
+                </div>
+        </th>
+        <th class="thCustom tableHeader" scope="col" >
+            <div class="popover-wrapper">
+                <div class="slds-text-align_left slds-p-right_large" onmouseover="{!c.hoverOver_accCBal}" onmouseout="{!c.hoverOut_accCBal}">Cumulative <br/>Balance</div>
+            </div>
+        </th>
+    </tr>
+</thead>
+<tbody>
+<aura:if isTrue="{!v.spendingAccountsAvlbl}">
+    <aura:iteration items="{!v.FinOverviewData.account}" var="acc" indexVar="index">
+        
+    <tr data-id="{!acc.accountTypeCode}" data-accnum="{!acc.accountNumber}"  data-pryrbal="{!acc.priorYRBal}" data-cryrbal="{!acc.currentYRBal}"  data-accauthuser="{!acc.authorizedUsers}"   data-accinvbal="{!acc.accInvBal}" class="{!lessthan(index,1) ? 'slds-hint-parent slds-border_top tableRowHighlight' : 'slds-hint-parent slds-border_top'}" onclick="{!c.onRowClick}" >        
+        <td data-label="Events" scope="row"  style="vertical-align:top;">
+            <div class="popover-wrapper">
+                <div class="slds-truncate event_word_wrap slds-text-align_left" data-index="{!index}" data-column="0" onmouseover="{!c.showHover}" onmouseout="{!c.showHover}">
+                    {!acc.accountTypeCode}
+                </div> 
+                <aura:if isTrue="{!not(empty(acc.accountTypeDescription))}">
+                    <aura:if isTrue="{!v.isHoverVisible}">
+                        <aura:if isTrue="{!and((v.hoverRow==index), (v.hoverCol==0))}">
+                            <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left popover-content" role="tooltip">
+                                <div class="slds-popover__body"> 
+                                    {!acc.accountTypeDescription}
+                                </div>
+                            </div>
+                        </aura:if> 
+                    </aura:if>
+                </aura:if>
+            </div>
+        </td>
+        <td data-label="caseNum" style="vertical-align:top;">
+            <div class="slds-text-align_left" style="word-wrap: break-word;white-space:normal">
+                {!acc.accountSystemCode}
+            </div>
+                                </td>
+                                <td data-label="appealStatus" style="vertical-align:top;">
+                                    <div class="slds-text-align_left" >
+                                        <aura:if isTrue="{!acc.accountTypeCode == 'HSA'}">
+                                        <aura:if isTrue="{!v.agentHSASecurityAccess}">
+                                            <aura:if isTrue="{!acc.currentYearBalance != ''}">
+                                            ${!acc.currentYearBalance}
+                                                <aura:set attribute="else">
+                                                   N/A
+                                                </aura:set>
+                                            </aura:if>
+                                             <aura:set attribute="else">
+                                                   -
+                                                </aura:set>
+                                         </aura:if>
+                                             <aura:set attribute="else">
+                                            <aura:if isTrue="{!acc.currentYearBalance != ''}">
+                                            	${!acc.currentYearBalance}
+                                                <aura:set attribute="else">
+                                                   N/A
+                                                </aura:set>
+                                            </aura:if>
+                                                </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </td>
+                                <td data-label="appealOutcome" style="vertical-align:top;">
+                                    <div class="slds-text-align_left" >
+                                        <aura:if isTrue="{!acc.accountTypeCode == 'HSA'}">
+                                        <aura:if isTrue="{!v.agentHSASecurityAccess}">
+                                        <aura:if isTrue="{!acc.priorYearBalance != ''}">
+                                        ${!acc.priorYearBalance}
+                                           <aura:set attribute="else">
+                                               N/A
+                                            </aura:set> 
+                                         </aura:if>
+                                            <aura:set attribute="else">
+                                                   -
+                                                </aura:set>
+                                        </aura:if>
+                                        <aura:set attribute="else">
+                                            <aura:if isTrue="{!acc.currentYearBalance != ''}">
+                                            	${!acc.priorYearBalance}
+                                                <aura:set attribute="else">
+                                                   N/A
+                                                </aura:set>
+                                            </aura:if>
+                                                </aura:set>
+                                        </aura:if>     
+                                    </div>
+                                </td>
+                                <td data-label="appealOutcome" style="vertical-align:top;">
+                                    <div class="slds-text-align_left" >
+                                        <aura:if isTrue="{!acc.accountTypeCode == 'HSA'}">
+                                        <aura:if isTrue="{!v.agentHSASecurityAccess}">
+                                        <aura:if isTrue="{!acc.cumulativeBalance != ''}">
+                                        ${!acc.cumulativeBalance}
+                                            <aura:set attribute="else">
+                                               N/A
+                                            </aura:set>
+                                        </aura:if>
+                                            <aura:set attribute="else">
+                                                   -
+                                                </aura:set>
+                                        </aura:if>
+                                        <aura:set attribute="else">
+                                            <aura:if isTrue="{!acc.currentYearBalance != ''}">
+                                            	${!acc.cumulativeBalance}
+                                                <aura:set attribute="else">
+                                                   N/A
+                                                </aura:set>
+                                            </aura:if>
+                                                </aura:set>
+                                        </aura:if>
+                                    </div>
+        </td>
+    </tr>
+    </aura:iteration>
+    <!-- Totals -->
+    <aura:if isTrue="{!not(empty(v.FinOverviewData.account))}"> 
+    <tr class="slds-hint-parent slds-border_top">
+        <td data-label="dateRecieved" style="vertical-align:top;">
+            <div class="slds-text-align_left" >
+            </div>
+        </td>
+        <td data-label="caseNum" style="vertical-align:top;">
+            <div class="slds-text-align_left" >
+                <b>Total Balance:</b>
+            </div>
+        </td>
+        <td data-label="appealStatus" style="vertical-align:top;">
+            <div class="greenColorText slds-text-align_left">
+                <!--checking is agent has access. setting lesser value based on the rows and amounts displayed : Sai Kolluru-->
+                                    	${!v.FinOverviewData.totalCurrentYrBalance}
+                   
+            </div>
+        </td>
+        <td data-label="appealOutcome" style="vertical-align:top;">
+            <div class="greenColorText slds-text-align_left">
+                <!--checking is agent has access. setting lesser value based on the rows and amounts displayed : Sai Kolluru-->
+                                    	${!v.FinOverviewData.totalPriorYrBalance}
+                                        
+                                   
+            </div>
+        </td>
+        <td data-label="appealOutcome" style="vertical-align:top;">
+            <div class="greenColorText slds-text-align_left" >
+                 <!--checking is agent has access. setting lesser value based on the rows and amounts displayed : Sai Kolluru-->
+                                    	${!v.FinOverviewData.totalCumulativeBalance}
+                                   
+            </div>
+        </td>
+    </tr>
+    </aura:if>
+    </aura:if>
+    </tbody>
+    </table>
+    <!-- /End Data table for Financial Overview -->
+    <aura:if isTrue="{!empty(v.FinOverviewData.account)}">
+<div id="finOverviewNoDataMsg" class="errMsg  slds-m-top_xx-small">
+<ui:message title="" severity="info" closable="false" class=" ">
+{!$Label.c.ADB_FinancialOverviewNoDataMsg}
+</ui:message>
+</div>
+    </aura:if>
+
+    </div>
+
+   
+</lightning:layoutItem>
+</lightning:layout>
+</aura:component>

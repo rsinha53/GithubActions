@@ -1,0 +1,309 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes"
+    controller="ETSBE_PoliciesCtrl" access="global">
+    <aura:attribute name="AutodocKey" type="string" access="public"/>
+    <aura:registerEvent name="ETSBE_DisableTopicWhenNoPolicies" type="c:ETSBE_DisableTopicWhenNoPolicies" />
+    <aura:attribute name="caseWrapper" type="ETSBE_TTSCaseWrapper" access="public" default="[]"/>
+    <aura:handler name="change" value="{!v.caseWrapper}" action="{!c.wrapperChange}"/>
+    <aura:attribute name="isModalOpen" type="boolean" default="false"/>
+
+    <aura:handler name="init" value="{!this}" action="{!c.init}" />
+
+    <aura:attribute name="data" type="Object" />
+    <aura:attribute name="dataORG" type="Object" />
+    <aura:attribute name="columns" type="List" />
+    <aura:attribute name="sortBy" type="String" />
+    <aura:attribute name="sortDirection" type="String" />
+    <aura:attribute name="policyList" type="list" access="public" />
+    <aura:handler name="change" value="{!v.policyList}" action="{!c.dataChange}" />
+    <!-- below attributes will be used for the table -->
+    <aura:attribute name="totalRecordsCount" type="Integer" />
+    <aura:attribute name="selectedRows" type="List" />
+    <aura:attribute name="initialLoading" type="Boolean" default="true" />
+
+    <!-- Data Table filter attributes -->
+    <aura:attribute name="filterIsActive" type="Boolean" default="true" />
+    <aura:handler name="change" value="{!v.filterIsActive}" action="{!c.doFilter}" />
+    <aura:attribute name="filterIsMedicalOnly" type="Boolean" default="true" />
+    <aura:handler name="change" value="{!v.filterIsMedicalOnly}" action="{!c.doFilter}" />
+
+    <!--	Events	-->
+    <aura:registerEvent name="policyClick" type="c:ETSBE_PolicyClick" />
+    <aura:registerEvent name="ETSBE_PolicyClickforAlerts" type="c:ETSBE_PolicyClickForAlerts" />
+    <!--Financials-->
+    <aura:registerEvent name="networkStatus" type="c:ETSBE_NetworkStatus" />
+
+    <!--US1761826 - UHC/Optum Exclusion UI-->
+    <aura:attribute name="allowCallouts" type="Boolean" default="true"/>
+    <aura:attribute name="lstExlusions" type="List" access="public"/>
+    <aura:registerEvent name="show_hideComponents" type="c:SAE_HideComponentsForExclusions" />
+
+    <!--TTS Modal Case Creation : US1852201-->
+    <!--<aura:attribute name="isModalOpen" type="boolean" default="false"/>-->
+    <aura:attribute name="cseTopic" type="String" access="public"/>
+    <aura:attribute name="cseType" type="String" access="public"/>
+    <aura:attribute name="cseSubtype" type="String" access="public"/>
+    <aura:attribute name="topicOptions" type="List" access="public"/>
+    <aura:attribute name="typeOptions" type="List" access="public"/>
+    <aura:attribute name="subtypeOptions" type="List" access="public"/>
+     <aura:attribute name="IsCaseSaved" type="Boolean" default="false"/>
+      <!-- US1933887 - UHG Access - Sanka D. -->
+     <aura:attribute name="uhgAccess" type="boolean" default="false"/>
+    <aura:attribute name="memberTabId" type="String" access="public"/>
+    <aura:attribute name="providerTabId" type="String" access="public"/>
+
+    <!--US2137922: Added by Ravindra-->
+    <aura:attribute type="Integer" name="policySelectedIndex" default="0"/>
+
+    <aura:attribute name="loaded" type="Boolean" default="false" />
+    <aura:if isTrue="{! v.loaded }">
+        <!--lightning:spinner alternativeText="Loading" /-->
+    </aura:if>
+
+    <!-- US2137922: Page Feature Unique - Thanish - 7th Nov 2019 -->
+        <aura:attribute name="AutodocPageFeature" type="String"/>
+        <aura:attribute name="initialClick" type="boolean" default="true"/>
+        <aura:attribute name="componentId" type="String"/>
+
+    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda -->
+    <aura:attribute name="selectedColumn" type="String" />
+    <aura:attribute name="selectedOption" type="String" default="CLIP" />
+    <aura:attribute name="columnOptions" type="String[]" default="['CLIP', 'CLIP', 'CLIP', 'CLIP', 'CLIP', 'CLIP', 'CLIP']" />
+    <aura:handler name="change" value="{!v.selectedColumn}" action="{!c.columnOptionsChange}"/>
+    <aura:handler name="change" value="{!v.selectedOption}" action="{!c.columnOptionsChange}"/>
+
+    <!-- US2061732 - Added by Avish -->
+    <aura:registerEvent name="ETSBE_AuthSRNCreateEvent" type="c:ETSBE_AuthSRNCreateEvent" />
+
+    <div> <!-- US2138277 - Thanish - 24th Oct 2019 -->
+        <div style="width:100%" class="slds-is-relative slds-grid slds-card card_padding"> <!-- US2045625 - Thanish - 2nd Oct 2019 -->
+        <!-- US1888880 - Malinda : Spinner -->
+    	<lightning:spinner class="slds-hide" aura:id="policy-spinner"
+   						alternativeText="Loading.." title="Loading.."
+   						variant="brand" size="large"/>
+        <div class="slds-col slds-size_12-of-12">
+            <span>
+                <div> <!-- US2045625 - Thanish - 2nd Oct 2019 -->
+                    <div style="float:left" class="card_bottom_margin"> <!-- US2045625 - Thanish - 2nd Oct 2019 -->
+                        <h3 class="component_title">Policies</h3>
+                    </div>
+                    <div style="float:right" class="card_right_margin card_bottom_margin"> <!-- US2045625 - Thanish - 2nd Oct 2019 -->
+                        <lightning:input type="checkbox" label="Show only medical policies"
+                            checked="{! v.filterIsMedicalOnly }" class="chxBoxCls" />
+                    </div>
+                    <div style="float:right" class="card_right_margin card_bottom_margin"> <!-- US2045625 - Thanish - 2nd Oct 2019 -->
+                        <lightning:input type="checkbox" label="Show only active policies"
+                            checked="{! v.filterIsActive }" class="chxBoxCls" />
+                    </div>
+                </div>
+
+                <!--ORIGINAL DATA TABLE-->
+                <!--<Lightning:datatable  class="groupLabel"
+                             keyField="GroupNumber"
+                             data="{!v.data}"
+                             columns="{!v.columns}"
+                             hideTableHeader="false"
+                             resizeColumnDisabled="true"
+                             hideCheckboxColumn="false"
+                             aura:id="policiesData"
+                             sortedBy="{!v.sortBy}"
+                           sortedDirection="{!v.sortDirection}"
+                           onsort="{!c.handleSort}"
+                             selectedRows="{!v.selectedRows}"
+                             /> -->
+                <!--END-->
+                    <div class="autodocTableView noResolveCheckBox" data-auto-doc="true" data-auto-doc-case-items="true" data-auto-doc-feature="{!v.AutodocPageFeature}"
+                         data-auto-doc-section-key="Policies" data-auto-doc-policy-table="true" id="{!v.componentId}">
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-no-row-hover"
+                    style="cursor:pointer">
+                    <thead>
+                                <tr class="">
+                                    <!-- US2138277 - Thanish - 24th Oct 2019 - Removed checkbox -->
+                            <th class="table_column_header" scope="col">
+                                <div title="Group #">
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                    <span >Group #</span>&nbsp;
+                                    <c:ETSBE_TableColumnButtonMenu columnMenuID="0" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                </div>
+                            </th>
+                            <th class="table_column_header" scope="col">
+                                <div title="Plan">
+                                <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                    <span>Plan</span>&nbsp;
+                                    <c:ETSBE_TableColumnButtonMenu  columnMenuID="1" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                </div>
+                            </th>
+                            <th class="table_column_header" scope="col">
+                                <div title="Policy">
+                                     <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                     <span >Policy</span>&nbsp;
+                                     <c:ETSBE_TableColumnButtonMenu  columnMenuID="2" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                     <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                </div>
+                            </th>
+                            <th class="table_column_header" scope="col">
+                                <div title="Coverage Level">
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                    <span >Coverage Level</span>&nbsp;
+                                    <c:ETSBE_TableColumnButtonMenu  columnMenuID="3" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                </div>
+                            </th>
+                            <th class="table_column_header" scope="col">
+                                <div title="Eligible Dates">
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                    <span >Eligible Dates</span>&nbsp;
+                                    <c:ETSBE_TableColumnButtonMenu  columnMenuID="4" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                </div>
+                            </th>
+                            <th class="table_column_header" scope="col">
+                                <div title="Plan Status">
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                    <span >Plan Status</span>&nbsp;
+                                    <c:ETSBE_TableColumnButtonMenu  columnMenuID="5" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                </div>
+                            </th>
+                            <th class="table_column_header" scope="col">
+                                <div title="Referral">
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                    <span >Referral</span>&nbsp;
+                                    <c:ETSBE_TableColumnButtonMenu  columnMenuID="6" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                </div>
+                            </th>
+                            <!-- <th class="table_column_header" scope="col">
+                                <div class="slds-truncate" title="Provider Status">Provider Status</div>
+                            </th> -->
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <aura:iteration items="{!v.data}" var="p" indexVar="index">
+                                    <tr aura:id="testid" class="{! p.SelectedItem ? 'slds-hint-parent highlight' : 'slds-hint-parent'}"
+                                        data-plan="{!p.Plan}" data-group="{!p.GroupNumber}" data-trid="{!p.transactionId}"
+                                        data-contaddress="{!p.concatAddress}" data-index="{!index}" data-rolval="">
+                                        <!-- US2138277 - Thanish - 24th Oct 2019 - Removed checkbox -->
+                                <!-- US:US1842940 : Start-->
+                                        <td style="width: 10%; min-width: 10%; max-width: 10%;" onclick="{!c.handleHighlight}" data-label="Account Name" data-plan="{!p.Plan}"
+                                            data-group="{!p.GroupNumber}" data-trid="{!p.transactionId}" data-contaddress="{!p.concatAddress}"
+                                            data-index="{!index}" data-rolval="" class="table_cell_value" data-endDate="{!p.EndDate}"> <!--//US2061732 - Added by Avish -->
+                                            <aura:if isTrue="{!not(empty(p.GroupNumber))}">
+                                                <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                                <div class="{! ((equals(v.columnOptions[0], 'CLIP') ? ' truncate ' : '' )) }" >
+                                                    <div class="{! ((equals(v.columnOptions[0], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }" title="{!p.GroupNumber}"> {!p.GroupNumber}</div>
+                                                <aura:set attribute="else">
+                                                    <div class="slds-truncate">--</div>
+                                                </aura:set>
+                                                </div>
+                                                <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                            </aura:if>
+                                        </td>
+                                        <td style="width: 15%; min-width: 15%; max-width: 15%;" onclick="{!c.handleHighlight}" data-label="Account Name" data-plan="{!p.Plan}"
+                                            data-group="{!p.GroupNumber}" data-trid="{!p.transactionId}" data-contaddress="{!p.concatAddress}"
+                                            data-index="{!index}" data-rolval="" class="table_cell_value">
+                                            <aura:if isTrue="{!not(empty(p.Plan))}">
+                                                <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                                <div class="{! ((equals(v.columnOptions[1], 'CLIP') ? ' truncate ' : '' )) }" >
+                                                    <div class="{! ((equals(v.columnOptions[1], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }" title="{!p.Plan}">{!p.PlanSubString}</div>
+                                                <aura:set attribute="else">
+                                                    <div class="slds-truncate">--</div>
+                                                </aura:set>
+                                                </div>
+                                                <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                            </aura:if>
+                                        </td>
+                                        <td style="width: 16%; min-width: 16%; max-width: 16%;" onclick="{!c.handleHighlight}" data-label="Close Date" data-plan="{!p.Plan}"
+                                            data-group="{!p.GroupNumber}" data-trid="{!p.transactionId}" data-contaddress="{!p.concatAddress}"
+                                            data-index="{!index}" data-rolval="" class="table_cell_value">
+                                    <aura:if isTrue="{!not(empty(p.Policy))}">
+                                                <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                                <div class="{! ((equals(v.columnOptions[2], 'CLIP') ? ' truncate ' : '' )) }" >
+                                                    <div class="{! ((equals(v.columnOptions[2], 'CLIP') ? ' truncate ' : '' )) }" >
+                                                        <div class="{! ((equals(v.columnOptions[2], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }" title="{!p.Policy}">{!p.PolicySubString}</div>
+                                        <aura:set attribute="else">
+                                            <div class="slds-truncate">--</div>
+                                        </aura:set>
+                                                    </div>
+                                                </div>
+                                                <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                    </aura:if>
+                                </td>
+                                <!-- US1974546 - Sanka -->
+                                        <td style="width: 22%; min-width: 22%; max-width: 22%;" onclick="{!c.handleHighlight}" data-label="Coverage Level" data-plan="{!p.Plan}"
+                                            data-group="{!p.GroupNumber}" data-trid="{!p.transactionId}" data-contaddress="{!p.concatAddress}"
+                                            data-index="{!index}" data-rolval="" class="table_cell_value">
+                                    <aura:if isTrue="{!not(empty(p.CoverageType))}">
+                                        <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                        <div class="{! ((equals(v.columnOptions[3], 'CLIP') ? ' truncate ' : '' )) }" >
+                                            <div class="{! ((equals(v.columnOptions[3], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }" title="{!p.CoverageType}">{!p.CoverageType}</div>
+                                        <!-- <aura:set attribute="else">
+                                            <div class="slds-truncate"></div>
+                                        </aura:set> -->
+                                        </div>
+                                        <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                    </aura:if>
+                                </td>
+                                        <td style="width: 17%; min-width: 17%; max-width: 17%;" onclick="{!c.handleHighlight}" data-label="Confidence" data-plan="{!p.Plan}"
+                                            data-group="{!p.GroupNumber}" data-trid="{!p.transactionId}" data-contaddress="{!p.concatAddress}"
+                                            data-index="{!index}" data-rolval="" class="table_cell_value">
+                                    <aura:if isTrue="{!not(empty(p.eligibleDates))}">
+                                        <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                        <div class="{! ((equals(v.columnOptions[4], 'CLIP') ? ' truncate ' : '' )) }" >
+                                            <div class="{! ((equals(v.columnOptions[4], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }" title="{!p.eligibleDates}">{!p.eligibleDates}</div>
+                                        <aura:set attribute="else">
+                                            <div class="slds-truncate">--</div>
+                                        </aura:set>
+                                        </div>
+                                        <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                    </aura:if>
+                                </td>
+                                <!-- US:US1842940 : End -->
+                                        <td style="width: 6%; min-width: 6%; max-width: 6%;" onclick="{!c.handleHighlight}" data-label="Amount" data-plan="{!p.Plan}"
+                                            data-group="{!p.GroupNumber}" data-trid="{!p.transactionId}" data-contaddress="{!p.concatAddress}"
+                                            data-index="{!index}" data-rolval="" class="table_cell_value">
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                    <div class="{! ((equals(v.columnOptions[5], 'CLIP') ? ' truncate ' : '' )) }" >
+                                        <div class="{! ((equals(v.columnOptions[5], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }" title="{!p.planStatus}">
+                                        <lightning:icon
+                                            iconName="{! p.planStatus == 'true' ? 'action:approval' : p.planStatus == 'false' ? 'action:close': 'standard:macros'}"
+                                            alternativeText="{!p.planStatus}" size="x-small" />
+                                    </div>
+                                    </div>
+                                    <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                </td>
+                                        <td style="width: 10%; min-width: 10%; max-width: 10%;" onclick="{!c.handleHighlight}" data-label="Account Name" data-plan="{!p.Plan}"
+                                            data-group="{!p.GroupNumber}" data-trid="{!p.transactionId}" data-contaddress="{!p.concatAddress}"
+                                            data-index="{!index}" data-rolval="" class="table_cell_value">
+                                            <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: START -->
+                                            <div class="{! ((equals(v.columnOptions[6], 'CLIP') ? ' truncate ' : '' )) }" >
+                                                <div class="{! ((equals(v.columnOptions[6], 'CLIP') ? ' slds-truncate ' : ' slds-cell-wrap ' )) }" title="{!p.Referral}"> {!p.Referral}</div>
+                                            </div>
+                                            <!-- US2200492: Pilot - Member Snapshot Page Enhancement - Kavinda: END -->
+                                </td>
+                                <!-- <td data-label="Account Name" class="table_cell_value">
+                                    <div class="slds-truncate" title="">
+                                        <aura:if isTrue="{!p.providerStatusIcon != ''}">
+                                           <lightning:icon iconName="{!p.providerStatusIcon}" variant="{!p.providerStatusIconVariant}"
+                                         alternativeText="Provider Status" size="x-small" class=""/>
+                                        </aura:if>
+                                        <lightning:formattedText value="{!p.providerStatus}"
+                                            class="slds-text-align_right" />
+                                    </div>
+                                </td> -->
+                            </tr>
+                        </aura:iteration>
+                    </tbody>
+                </table>
+                        <br/>
+
+                        <!--End-->
+                    </div>
+            </span>
+        </div>
+
+    </div>
+    </div> <!-- US2138277 - Thanish - 24th Oct 2019 -->
+
+</aura:component>

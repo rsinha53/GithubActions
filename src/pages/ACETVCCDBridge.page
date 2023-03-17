@@ -1,0 +1,102 @@
+<apex:page showHeader="false" standardStylesheets="false" sidebar="false" docType="html-5.0" >
+ <apex:includeLightning />
+  <apex:includeScript value="/support/console/49.0/integration.js" />
+    <div id="lightning" />
+ 
+    <script>
+    var vccdParamsglobal;
+    var isVccdOn;
+    var eventHandler = function (result) {
+    if(isVccdOn != true){
+    isVccdOn = true;
+              $Lightning.use("c:ACETLGT_VCCD_Lighting_Out", function() {
+          $Lightning.createComponent("c:ACETLGT_VCCD_LcForVf",
+              { isCustomConsoleOpen: "test"},
+              "lightning",
+              function(cmp) {
+               $A.eventService.addHandler({ "event": "c:ACETLGT_VCCDBridgeSuppEvent", "handler": retriveEventData });
+              }
+          );
+        });
+        }
+        }
+        
+           sforce.console.onCustomConsoleComponentButtonClicked(eventHandler);
+         
+        var retriveEventData = function(event){
+        vccdParamsglobal = event.getParam("VCCDResponceObj");
+       sforce.console.getPrimaryTabIds(showTabId);
+    };
+    
+    
+    var showTabId = function showTabId(result) {
+             
+    var callRecieved =  JSON.stringify(vccdParamsglobal);
+    if(callRecieved != undefined && callRecieved != '' && callRecieved != null){
+    var vccdParams = JSON.parse(callRecieved);
+    var memberFlowUrl = "/apex/ACETMemberSearch?vccdParams=";
+    var producerFlowUrl = "/apex/ACETProducerSearch?vccdParams=";
+    var providerFlowUrl = "/apex/ACETProviderSearch?vccdParams=";
+    var groupFlowUrl = "/apex/ACETSearchEmployerGroup?vccdParams=";
+    if(callRecieved){
+        if(vccdParams != undefined && vccdParams != ''){
+            if(result.ids != ''){
+                if(vccdParams.CallerType == 'Member'){                
+                    localStorage.setItem("flashConsoleTab",'true'); 
+                    sforce.console.openPrimaryTab(null, memberFlowUrl + JSON.stringify(vccdParams) , false,'Member Search',openSuccess);               
+                }
+                else if(vccdParams.CallerType == 'Provider'){
+                    localStorage.setItem("flashConsoleTab",'true');
+                    sforce.console.openPrimaryTab(null, providerFlowUrl + JSON.stringify(vccdParams) , false,'Provider Search',openSuccess);
+                }
+                else if(vccdParams.CallerType == 'Producer' ){
+                    localStorage.setItem("flashConsoleTab",'true');
+                    sforce.console.openPrimaryTab(null, producerFlowUrl + JSON.stringify(vccdParams) , false,'Producer Search',openSuccess);
+                }
+                else if(vccdParams.CallerType == 'Group' ){
+                    localStorage.setItem("flashConsoleTab",'true');
+                    sforce.console.openPrimaryTab(null, groupFlowUrl + JSON.stringify(vccdParams) , false,'Group Search',openSuccess);
+                }
+            }   
+            
+            else {                
+                if(vccdParams.CallerType == 'Member' ){                
+                    sforce.console.openPrimaryTab(null, memberFlowUrl + JSON.stringify(vccdParams) , true,'Member Search');
+                }
+                else if( vccdParams.CallerType == 'Provider'){
+                    sforce.console.openPrimaryTab(null, providerFlowUrl + JSON.stringify(vccdParams) , true,'Provider Search');
+                }
+                else if( vccdParams.CallerType == 'Producer' ){
+                    sforce.console.openPrimaryTab(null, producerFlowUrl + JSON.stringify(vccdParams) , true,'Producer Search');
+                }
+                else if(vccdParams.CallerType == 'Group'){
+                    sforce.console.openPrimaryTab(null, groupFlowUrl + JSON.stringify(vccdParams) , true,'Group Search');
+                }
+            }         
+        }        
+    }
+    }
+   }
+             
+    var openSuccess = function openSuccess(result) {    
+    //Report whether opening the new tab was successful
+    var flashTab =  localStorage.getItem("flashConsoleTab");
+    if(flashTab != undefined && flashTab != '' && flashTab != null && flashTab == 'true'){
+        if (result.success == true) {
+            sforce.console.setTabStyle('background: #ff6c30  ;', result.id);
+            setInterval(function() {
+              var flashTabVal =  localStorage.getItem("flashConsoleTab");
+              if(flashTabVal != undefined && flashTabVal != '' && flashTabVal != null && flashTabVal == 'true')
+                  sforce.console.setTabStyle('background: #F5F5F5 ;', result.id);
+            }, 1000 );
+            setInterval(function() {
+              var flashTabVal =  localStorage.getItem("flashConsoleTab");
+              if(flashTabVal != undefined && flashTabVal != '' && flashTabVal != null && flashTabVal == 'true')
+                  sforce.console.setTabStyle('background: #ff6c30  ;', result.id);
+            }, 2000 );
+            
+        }
+    }
+};
+    </script>
+    </apex:page>

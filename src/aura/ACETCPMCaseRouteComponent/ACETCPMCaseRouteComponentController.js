@@ -1,0 +1,45 @@
+({
+    doInit : function(component, event, helper) { 
+        
+        var action = component.get( "c.fetchCsIdNBaseUrl" );
+        var rootRecId = component.get("v.recordId");
+        action.setParams({"rootRecId": rootRecId });
+        var randomnumber = Math.floor((Math.random()*100)+1);
+        var workspaceAPI = component.find("workspace");
+        action.setCallback(this, function(response){ 
+            var state = response.getState(); 
+            
+            if (state === "SUCCESS") { 
+                
+                workspaceAPI.isConsoleNavigation().then(function(resp) {
+                    var urlBaseStr = response.getReturnValue();
+                    var fields = urlBaseStr.split('-##-');
+                   //  var orgUrl = urlBaseStr + "/apex/ACETLGT_AutoRouteCase?id="+cseId;
+                    var orgUrl =fields[1]+"/lightning/cmp/c__ACETLGT_AutoRouteCase?c__id="+fields[0];
+                    
+                    if(resp){
+                        workspaceAPI.getFocusedTabInfo().then(function(resp) {
+                            
+                    sessionStorage.setItem('caseRoute '+fields[0],resp.tabId);
+                            workspaceAPI.openSubtab({
+                                parentTabId : resp.tabId,
+                                url: orgUrl,
+                                focus: true,
+                                label: "Route"
+                            })
+                        })    
+                    }else{
+                        window.open(orgUrl,"_blank","Autodoc",randomnumber,"width=800,height=700,top=300,left=450,scrollbars=yes,resizable=yes"); 
+                    }
+                    
+                })
+                .catch(function(error) {
+                    console.log(error);
+                });
+                $A.get("e.force:closeQuickAction").fire();
+            } 
+        }); 
+        $A.enqueueAction(action); 
+        
+    }
+})

@@ -1,0 +1,154 @@
+<!--
+  @description       : 
+  @author            : ChangeMeIn@UserSettingsUnder.SFDoc
+  @group             : 
+  @last modified on  : 05-28-2021
+  @last modified by  : Raviteja
+  Modifications Log 
+  Ver   Date         Author                               Modification
+  1.0   05-20-2021   ChangeMeIn@UserSettingsUnder.SFDoc   Initial Version
+-->
+<template>
+   <!-- <lightning-card>
+        <h3 slot="title">
+            <lightning-icon icon-name="standard:record" size="small"></lightning-icon> External ID Search
+        </h3>
+        <lightning-button label="Alerts" slot="actions"></lightning-button>
+    </lightning-card>-->
+    <template if:false={loaded}>
+        <lightning-spinner alternative-text="Loading"></lightning-spinner>
+    </template>
+    <div class="searchsection">
+        <lightning-card class="slds-scrollable_y">
+            <lightning-layout multiple-rows="true" >
+                <lightning-layout-item size="2" padding="around-small">
+                    <lightning-combobox required=true value={externalidtype} name="External ID Type" label="External ID Type" placeholder="--Select--" options={externalidoptions} onchange={externalidchange}></lightning-combobox>
+                </lightning-layout-item>
+                <template if:true={externalidtypeselect}>
+                    <lightning-layout-item size="2" padding="around-small">
+                        <lightning-combobox required=true value={searchtype} name="Search By" label="Search By" placeholder="--Select--" options={searchtypeoptions} onchange={searchbychange}></lightning-combobox>
+                    </lightning-layout-item>
+                </template>
+                <template if:true={searchtypeselection}>
+                    <template if:false={advocatetype}>
+                        <template if:false={taxtype}>
+                            <template if:false={orstype}>
+                                <lightning-layout-item size="2" padding="around-small">
+                                    <lightning-input type="text" required=true value={searchtypevalue} name={searchtypelabel} label={searchtypelabel} onchange={searchtypevaluechange} autocomplete="off"></lightning-input>
+                                </lightning-layout-item>
+                            </template>
+                            <template if:true={orstype}>
+                                <lightning-layout-item size="2" padding="around-small">
+                                    <lightning-input data-id="orsidval" type="text" required=true value={searchtypevalue} name={searchtypelabel} label={searchtypelabel} onchange={searchtypevaluechange} minlength="15" maxlength="15" message-when-too-short="Enter 15 characters." 
+                                     autocomplete="off" onblur={handleOnBlur}></lightning-input>
+                                </lightning-layout-item>
+                            </template>
+                        </template>
+                        <template if:true={taxtype}>
+                            <lightning-layout-item size="2" padding="around-small">
+                                <lightning-input data-id="taxidval" type="text" required=true value={searchtypevalue} name={searchtypelabel} label={searchtypelabel} onchange={searchtypevaluechange} minlength="9" maxlength="9" message-when-too-short="Enter 9 digits." 
+                                pattern="^[0-9_ ]*$" message-when-pattern-mismatch="Enter a numeric value." autocomplete="off" onblur={handleOnBlur}></lightning-input>
+                            </lightning-layout-item>
+                        </template>
+                    </template>
+                    <template if:true={advocatetype}>
+                        <lightning-layout-item size="8" padding="around-small"></lightning-layout-item>
+                        <lightning-layout-item size="2" padding="around-small">
+                            <lightning-combobox required=true value={associateofficeid} name="Office" label="Office" placeholder="--Select--" options={associateOfficeOptions} onchange={associateofficechange}></lightning-combobox>
+                        </lightning-layout-item>
+                        <lightning-layout-item size="2" padding="around-small">
+                            <lightning-combobox required=true value={associateDepartmentid} name="Department" label="Department" placeholder="--Select--" options={associateDepartmentOptions} onchange={associateDepartmentchange}></lightning-combobox>
+                        </lightning-layout-item>
+                        <lightning-layout-item size="2" padding="around-small">
+                            <lightning-combobox required=true value={associateTeamid} name="Team" label="Team" placeholder="--Select--" options={associateTeamOptions} onchange={associateTeamchange}></lightning-combobox>
+                        </lightning-layout-item>
+                        <lightning-layout-item size="2" padding="around-small">
+                            <lightning-combobox required=true value={associateid} name="AssociatenameId" label="Associate Name/ID" placeholder="--Select--" options={associateIdOptions} onchange={associateidchange}></lightning-combobox>
+                        </lightning-layout-item>
+                    </template>
+                    <template if:true={datesview}>
+                        <lightning-layout-item size="2" padding="around-small">
+                        <lightning-input data-id="fromdate" type="date" value={fromdate} name="fromdate" label="From (mm/dd/yyyy)" onchange={fromdatechange} message-when-bad-input="Your entry does not match the allowed format mm/dd/yyyy"></lightning-input>
+                        </lightning-layout-item>
+                        <lightning-layout-item size="2" padding="around-small">
+                            <lightning-input data-id="todate" type="date" value={todate} name="todate" label="To (mm/dd/yyyy)" onchange={todatechange} onblur={handleOnBlur} message-when-bad-input="Your entry does not match the allowed format mm/dd/yyyy"></lightning-input>
+                        </lightning-layout-item>
+                    </template>
+                </template>
+            </lightning-layout>
+            <lightning-layout>
+                <lightning-layout-item flexibility="auto" padding="around-small">
+                    <div class="slds-float_right">
+                        <lightning-button variant="brand" label="Search" title="Search" onclick={handleSearch}>
+                        </lightning-button>
+                        <lightning-button class="slds-m-left_x-small" label="Clear" title="Clear" onclick={handleClear}>
+                        </lightning-button>
+                    </div>
+                </lightning-layout-item>
+            </lightning-layout>
+        </lightning-card>
+    </div>
+    <template if:true={searchcheck}>
+        <div class="searchsection">
+            <lightning-card title="External ID Results">
+                <template if:true={results}>
+                    <lightning-layout>
+                        <lightning-layout-item flexibility="auto" padding="around-small">
+                            <div class="searchcss">
+                                <lightning-input type="search" variant="label-hidden" placeholder="Search" title="Search" onchange={searchtable}></lightning-input>
+                            </div>
+                        </lightning-layout-item>
+                    </lightning-layout>
+                </template>
+                <div class="slds-p-around_small">
+                    <lightning-datatable 
+                        key-field="originator_type"
+                        columns={columns}
+                        data={displaylist}
+                        hide-checkbox-column
+                        default-sort-direction={defaultSortDirection}
+                        sorted-direction={sortDirection}
+                        sorted-by={sortedBy}
+                        onsort={onHandleSort}
+                        onrowaction={handleRowAction}>
+                    </lightning-datatable>
+                
+                    <template if:true={results}>
+                        <lightning-layout horizontal-align="spread">
+                            <lightning-layout-item padding="around-small" size="4">
+                                <div style="float: left;">
+                                    Showing {firstval} to {lastval} of {totalsize} entries
+                                </div>
+                            </lightning-layout-item>
+                            <lightning-layout-item padding="around-small" size="1">
+                                <lightning-button label="First" icon-name="utility:left" icon-position="left"
+                                                onclick={onFirst} disabled={firstdisablecheck}></lightning-button>
+                            </lightning-layout-item>
+                            <lightning-layout-item class="slds-p-top_small slds-size_0.5-of-12">
+                                <lightning-button icon-name="utility:chevronleft" icon-position="left"
+                                                onclick={onPrev} disabled={firstdisablecheck}></lightning-button>
+                            </lightning-layout-item>
+                            <lightning-layout-item class="slds-p-top_small slds-size_0.5-of-12">
+                                <lightning-button icon-name="utility:chevronright" icon-position="left"
+                                                onclick={onNext} disabled={nextdisablecheck}></lightning-button>
+                            </lightning-layout-item>
+                            <lightning-layout-item padding="around-small" size="1">
+                                <lightning-button label="Last" icon-name="utility:right" icon-position="left"
+                                                onclick={onLast} disabled={nextdisablecheck}></lightning-button>
+                            </lightning-layout-item>
+                            <lightning-layout-item padding="around-small" size="4">
+
+                            </lightning-layout-item>
+                        </lightning-layout>
+                    </template>
+                    <template if:true={noresults}>
+                        <div class="slds-align_absolute-center noresultcss">
+                        <h3>No Records Found</h3>
+                        </div>
+                        <hr style="border-width: 0.1px; margin: 0px;"/>
+                    </template>
+                </div>
+            </lightning-card>
+        </div>
+    </template>
+</template>

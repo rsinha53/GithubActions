@@ -1,0 +1,185 @@
+<aura:component controller = 'PersonAccountWizard' implements="force:appHostable,lightning:actionOverride,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickActionWithoutHeader" access="global" >
+    <aura:attribute name="firstName" type="string"/>
+    <aura:attribute name="lastName" type="string"/>
+    <aura:attribute name="dateOfBirth" type="string"/>
+    <aura:attribute name="email" type="string"/>
+    <aura:attribute name="memberId" type="string"/>
+    <aura:attribute name="policyId" type="string"/>
+    <aura:attribute name ="Relationship" type ="String"/>
+    <aura:attribute name="showSpinner" type="Boolean" default="false" />
+    <lightning:workspaceAPI aura:id="workspace" />
+    <!-- <aura:attribute name="mainAccountDetails" type="Object" default="{'firstName':'', 'lastName': '', 'dateOfBirth': '','email': '','memberId':'','policyId':'' }"/> -->
+    <aura:attribute name="relatedFamilyInformation" type="List" default="[
+                                                                         {'firstname':'',
+                                                                         'lastname':'',
+                                                                         'DOB':'',
+                                                                         'relationship':''}
+                                                                         ]"/>
+    
+    <aura:attribute name="options" type="Map"/>
+    <aura:attribute name="value" type="Map"/>
+    <aura:handler name="init" action="{!c.doInit}" value="{!this}" />
+    
+    <lightning:card class="layout-background" >
+        <aura:renderIf isTrue="{!v.showSpinner}">
+            <lightning:spinner class="slds-show" aura:id="global-spinner" 
+                               alternativeText="Loading.." title="Loading.." 
+                               variant="brand" size="medium"/>
+	</aura:renderIf>
+        <div class="slds-p-around_large slds-border_top" > 
+            <center>
+                <h1 class="inlineTitle slds-p-top--large slds-p-horizontal--medium slds-p-bottom--medium slds-text-heading--medium" 
+                    style="font-size:20px">
+                    Member Details
+                </h1>
+            </center>
+            
+            <h2 class="slds-section__title slds-theme--shade primaryPaletteBorder test-id__section-header-container"> 
+                Member Information
+            </h2>
+            <div class="slds-grid slds-grid_pull-padded-medium">
+                <div class="slds-col slds-p-horizontal_medium slds-size_6-of-12">
+                    <lightning:input name="firstName" 
+                                     required="true" 
+                                     value="{!v.firstName}" 
+                                     label="First Name" 
+                                     maxlength="255"/>
+                </div>
+                <div class="slds-col slds-p-horizontal_medium slds-size_6-of-12">
+                    <lightning:input name="lastName" 
+                                     required="true"
+                                     label="Last Name" 
+                                     value="{!v.lastName}"
+                                     />
+                </div>
+            </div>
+            <div class="slds-grid slds-grid_pull-padded-medium">
+                <div class="slds-col slds-p-horizontal_medium slds-size_6-of-12">
+                    <lightning:input type="Date" 
+                                     required="true"
+                                     name="dateOfBirth"
+                                     label="Date of Birth" 
+                                     value="{!v.dateOfBirth}" 
+                                     />
+                </div>
+                <div class="slds-col slds-p-horizontal_medium slds-size_6-of-12">
+                    <lightning:input  name="email"
+                                     label="Email" 
+                                     value="{!v.email}" 
+                                     />
+                </div>
+            </div>
+            <div class="slds-grid slds-grid_pull-padded-medium">
+                <div class="slds-col slds-p-horizontal_medium slds-size_6-of-12">
+                    <lightning:input  
+                                     name="memberId"
+                                     required="true"
+                                     label="Member ID" 
+                                     value="{!v.memberId}" 
+                                     />
+                </div>
+                <div class="slds-col slds-p-horizontal_medium slds-size_6-of-12">
+                    <lightning:input 
+                                     name="policyId"
+                                     required="true"
+                                     label="Policy Id" 
+                                     value="{!v.policyId}" 
+                                     />
+                </div>             
+            </div>
+            <div class="slds-grid slds-grid_pull-padded-medium">
+                <div class="slds-col slds-p-horizontal_medium slds-size_6-of-12">
+                    
+                    <lightning:select aura:id="personRelationship" value="{!v.Relationship}" name="relationship" label="Relationship" required="true">
+                        <option value="">--None--</option>
+                        <aura:iteration items="{!v.options}" var="i" indexVar="key">
+                            <option text="{!i.value}" value="{!i.key}" selected="{!i.key==!v.Relationship}" />
+                        </aura:iteration>
+                    </lightning:select>
+                </div>  
+            </div>
+            <br/>
+            <h2 class="slds-section__title slds-theme--shade primaryPaletteBorder test-id__section-header-container"> 
+                Family Information
+            </h2>
+            <div class="c-container" >
+                <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                    <thead>
+                        <tr class="slds-line-height_reset slds-text-title_caps">
+                            <th  class="slds-is-resizable" scope="col">
+                                First Name
+                            </th>
+                            <th  class="slds-is-resizable" scope="col">
+                                Last Name
+                            </th>
+                            <th  class="slds-is-resizable" scope="col">
+                                Date of Birth
+                            </th>
+                            <th  class="slds-is-resizable" scope="col">
+                                Realtionship
+                            </th>
+                            <th  class="slds-is-resizable" scope="col">
+                                Delete
+                            </th>
+                            <th  class="slds-is-resizable" scope="col">
+                                Add
+                            </th>
+                        </tr>
+                        
+                    </thead>
+                    <tbody>
+                        <aura:iteration items="{!v.relatedFamilyInformation}" var="item" indexVar="index">
+                            <tr class="slds-line-height_reset slds-text-title_caps">
+                                <td class="slds-is-resizable" scope="col">
+                                    <lightning:input name="personFirstName"  
+                                                     placeholder="First Name" 
+                                                     value="{!item.firstname}"
+                                                     maxlength="255"
+                                                     onchange="{! c.handleChange }"/>
+                                </td>
+                                <td class="slds-is-resizable" scope="col">
+                                    <lightning:input name="personLastName" 
+                                                     placeholder="Last Name"
+                                                     value="{!item.lastname}" 
+                                                     onchange="{! c.handleChange }"/>
+                                </td>
+                                <td class="slds-is-resizable" scope="col">
+                                    <lightning:input type="Date" 
+                                                     name="personDOB"
+                                                     placeholder="Date of Birth"  
+                                                     value="{!item.DOB}"
+                                                     onchange="{! c.handleChange }"
+                                                     />
+                                </td>
+                                <td class="slds-is-resizable" scope="col">
+                                    <lightning:select aura:id="personRelationship" value="{!item.relationship}" name="Relationship" onchange="{! c.handleChange }" label="Relationship">
+                                        <option value="">--None--</option>
+                                        <aura:iteration items="{!v.options}" var="i" indexVar="key">
+                                            <option text="{!i.value}" value="{!i.key}" selected="{!i.key==!item.relationship}" />
+                                        </aura:iteration>
+                                    </lightning:select>
+                                </td>
+                                <td class="slds-is-resizable" scope="col">
+                                    <lightning:buttonIcon iconName="utility:delete" alternativeText="Settings"  class="slds-m-left_xx-small" title="Delete" name="{!index}" onclick="{!c.handleDelete}"></lightning:buttonIcon>                        
+                                </td>
+                                <td class="slds-is-resizable" scope="col">
+                                    <lightning:buttonIcon iconName="utility:add" alternativeText="Settings"  class="slds-m-left_xx-small" title="Add" name="{!index}" onclick="{!c.handleAdd}"></lightning:buttonIcon>                             
+                                </td>
+                            </tr>
+                        </aura:iteration>
+                    </tbody>            
+                </table>       
+            </div>
+            <br/>
+            <center>
+                <lightning:button variant="Brand" 
+                                  label="Save" 
+                                  onclick="{!c.save}"/>
+                <lightning:button variant="Neutral" 
+                                  label="Cancel" 
+                                  onclick="{!c.cancel}"/>
+            </center>
+        </div> 
+    </lightning:card>
+    
+</aura:component>

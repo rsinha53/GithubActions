@@ -1,0 +1,80 @@
+<aura:component>
+    <aura:attribute name="providerData" type="Object" />
+    <aura:attribute name="autodocUniqueId" type="String" />
+    <aura:attribute name="caseWrapper" type="Object" />
+    <aura:attribute name="isCommentsBox" type="Boolean" default="false" />
+    <aura:attribute name="tableDetails_prev" type="Object" />
+    <aura:attribute name="showpreview" type="Boolean" default="false" />
+    <aura:attribute name="isModalOpen" type="Boolean" default="false" />
+    <aura:attribute name="commentsValue" type="String" default="" />
+    <aura:attribute name="providerDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="disableButtons" type="Boolean" default="false"/> <!-- US3507762 - Create Overall Save Case Button on Provider Snapshot Page - Thanish - 20th May 2021 -->
+    <aura:handler name="change" value="{!v.providerData}" action="{!c.provDataChange}" />
+     <aura:handler event="c:ACET_OpenTTSPopUPFromRouting" action="{!c.openTTSPopup}"/>
+    <!-- US2543182 - Thanish - 13th May 2020 -->
+    <aura:attribute name="routingSOPLinkClicked" type="boolean" default="false"/>
+    <!-- US3516065: Enable Route Button: Provider Snapshot - Krish - 8th June 2021 -->
+    <aura:attribute name="showAddCommentsCard" type="boolean" default="false"/>
+    <aura:attribute name="disableCommentButton" type="boolean" default="false" />
+    <aura:handler name="change" value="{!v.disableButtons}" action="{!c.disableButtonsChange}" />
+    <aura:attribute name="flowDetails" type="Object" access="public" />
+    <!-- US3516065: Enable Route Button: Provider Snapshot - Krish - 8th June 2021 - Moving Comments from Provider Snap to Provider Details-->
+    <lightning:layout multipleRows="true" class="slds-var-p-bottom_small">
+        <!-- Comments -->
+        <lightning:layoutItem size="12" class="{!(v.showAddCommentsCard ? 'slds-var-p-top_small' : 'slds-var-p-top_small slds-hide')}">
+            <div aura:id="commentsCardAI" class="slds-card card_left_padding card_top_padding card_right_padding card_bottom_padding">
+                <c:ACET_HoverPopup aura:id="commentsId" moveRight="" description="" isNubbinLeft="true"
+                    descriptionList="[ 'Use the comments to include a brief','description of the issue, research performed,', 'and any attempts to resolve' ]" />
+                <p class="component_title slds-form-element__label field_label_padding"
+                    style="border-bottom:1px dashed;padding:0px" data-popupId="commentsId"
+                    onmouseover="{!c.togglePopup}" onmouseout="{!c.togglePopup}">
+                    Comments:
+                </p>
+                <b class="component_title slds-var-p-left_small">Provider Details</b>
+                <lightning:textarea name="commentsTextArea" value="{!v.commentsValue}" label="Commets"
+                    aura:id="commentsBoxId" variant="label-hidden" class="slds-var-p-top_small"
+                    onkeyup="{!c.handleKeyup }" maxlength="2000" />
+                <span class="floatToRight valueCls slds-form-element__static">Characters remaining:
+                    <lightning:formattedNumber value="{!2000-v.commentsValue.length}" /> </span>
+            </div>
+        </lightning:layoutItem>
+    </lightning:layout>
+    <!-- Provider Details -->
+    <div class="slds-card slds-var-p-top_small">
+        <div class="slds-is-absolute slds-float_right card_buttons">
+            <lightning:buttonGroup>
+                <lightning:button class="slds-button slds-button_neutral neutral_button" variant="neutral"
+                    label="Autodoc" onclick="{!c.openPreview}" disabled="{!v.disableButtons}"/> <!-- US3507762 - Create Overall Save Case Button on Provider Snapshot Page - Thanish - 20th May 2021 -->
+                <aura:if isTrue="{!!v.isCommentsBox}">
+                    <lightning:button variant="brand" class="brand_button continueBtn" label="Add Comments" onclick="{!c.addComments}"
+                        disabled="{! v.disableButtons || v.disableCommentButton}" /><!-- US3516065: Enable Route Button: Provider Snapshot - Krish - 8th June 2021 -->
+                </aura:if>
+                <lightning:button class="slds-button slds-button_brand brand_button" variant="brand" label="Route"
+                    onclick="{!c.SaveCase}" disabled="{!v.disableButtons}"/> <!-- US3507762 - Create Overall Save Case Button on Provider Snapshot Page - Thanish - 20th May 2021 -->
+            </lightning:buttonGroup>
+        </div>
+        <!-- From Aero -->
+        <div class="providerLink">
+            Locate the provider on the services that are available on <a
+                title="http://knowledgecentral.uhc.com/SPA/LinkEducationTool/index.html#/" target="_blank"
+                href="http://knowledgecentral.uhc.com/SPA/LinkEducationTool/index.html#/"> LINK</a>
+        </div>
+        <c:ACET_AutoDocCard autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueId}"
+            cardDetails="{!v.providerData}" defaultAutodoc="true" aura:id="providerDetails" />
+    </div>
+
+    <aura:if isTrue="{!v.showpreview}">
+        <c:ACET_PreviewAutoDoc tableDetails_prev="{!v.tableDetails_prev}" isModalOpen="{!v.showpreview}" />
+    </aura:if>
+
+    <aura:if isTrue="{!v.isModalOpen}">
+        <!-- US2928159 - Thanish - 2nd Oct 2020 -->
+        <c:SAE_TtsModalCaseCreation Topic="Provider Details" caseWrapper="{!v.caseWrapper}" freeFormCommentsVal="{!v.commentsValue}"
+                                    isModalOpen="{!v.isModalOpen}" providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}"
+                                    flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}" autodocUniqueId="{!v.autodocUniqueId}"
+                                    isMemberSnapshot="false" onlyRoute="true"
+                                    flowDetails = "{!v.flowDetails}"/> <!-- US3507762 - Create Overall Save Case Button on Provider Snapshot Page - Thanish - 20th May 2021 -->
+                                    <!-- US3516065: Enable Route Button: Provider Snapshot - Krish - 8th June 2021 - Adding flowDetails -->
+    </aura:if>
+</aura:component>

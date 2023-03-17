@@ -1,0 +1,129 @@
+<apex:component controller="ACETMemberOpenTopicCancelController" allowDML="true">
+     <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+     <apex:includeScript value="/soap/ajax/30.0/connection.js"/>
+     <apex:includeScript value="/support/console/28.0/integration.js"/>
+    <!-- Attribute Definitions -->
+    <apex:attribute name="interactionId" type="Id" assignTo="{!newCase.Interaction__c}" description="interaction Id"/>
+    <apex:attribute name="contactId" type="Id" assignTo="{!newCase.ContactId}" description="contact Id"/>
+    <apex:attribute name="callTopic" type="String" assignTo="{!newCase.Topic__c}"  description="call Topic"/>
+    <apex:attribute name="AdditionalInfoWrap" type="ACETHighlightsPanelAdditionalInfo" assignTo="{!additionalInfoWrapper}" description="For AdditionalInfo"/>
+    <apex:attribute name="OriginatorRelationship" type="String" assignTo="{!newCase.Originator_Relationship__c }" description="For Originator Relationship"/>
+    <!--<apex:attribute name="PrevPageCaseInfo" type="String" assignTo="{!prevCase}" description="For Prev Page Case Info"/>-->
+    <apex:attribute name="isCancel" type="Boolean" assignTo="{!isCancelTyp}" description="For Cancel component"/>
+    <apex:attribute name="isMisDirect" type="Boolean" assignTo="{!isMisDirectTyp}" description="For Misdirect component"/>    
+    
+     <apex:form >
+        
+        <apex:outputPanel rendered="{!isCancelTyp}">
+            <apex:sectionHeader title="Call Topic Detail" subtitle="Call Topic Cancellation"/>
+            <apex:pageBlock >                           
+                <apex:pageblockSection id="mainPBSection" columns="1">
+                    <apex:inputField required="true" id="remtCancelReason" value="{!newCase.Cancel_Reason__c}"/> 
+                    <apex:inputField required="false" id="remtComments" style="width:300px;" value="{!newCase.Comments__c}"/>                       
+                </apex:pageblockSection>                
+                <apex:pageBlockButtons location="bottom">   
+                <!--<apex:commandButton value="Save" action="{!createCase}" oncomplete="testCloseTab();return false"/>-->
+                
+                <apex:commandButton value="Save" onclick="return RemoteSave();"/>
+                <!--action="{!createCase}"oncomplete="testCloseTab();return false" -->                                                
+                    <apex:commandButton value="Clear" immediate="true" onclick="form.reset()"/>                    
+                </apex:pageBlockButtons>      
+            </apex:pageBlock>
+        </apex:outputPanel>
+        
+        <!-- For Misdirect functionality -->
+        <apex:outputPanel rendered="{!isMisDirectTyp}">
+            <apex:sectionHeader title="Call Topic Detail" subtitle="Misdirect Call"/>
+            <apex:pageBlock >                           
+                <apex:pageblockSection id="mainPBSection" columns="1">
+                    <apex:inputField required="true" id="remtMisdirReason" value="{!newCase.Misdirected_Reason__c}"/> 
+                    <apex:inputField required="false" id="remtMisdirComments" style="width:300px;" value="{!newCase.Comments__c}"/>                       
+                </apex:pageblockSection>                
+                <apex:pageBlockButtons location="bottom">   
+                
+                <apex:commandButton value="Save" onclick="return RemoteSave();"/>
+                
+                    <apex:commandButton value="Clear" immediate="true" onclick="form.reset()"/>                    
+                </apex:pageBlockButtons>      
+            </apex:pageBlock>
+        </apex:outputPanel>
+        <!--<a href="#" onclick="doPrimaryTabRefresh();"> Refresh</a>-->
+    </apex:form>
+    <script type="text/javascript">
+        function RemoteSave(){
+            var remtCancelReason;
+            var remtComments;
+            var remtMisdirReason;
+            var remtMisdirComments;
+            
+            var isCancel = '{!isCancelTyp}';
+            var isMisDirect = '{!isMisDirectTyp}';
+            //alert('isCancel>>'+isCancel);
+            var Case = new Object();
+            if(isCancel=='true'){
+                remtCancelReason = $("[id$='remtCancelReason']").val();
+                remtComments = $("[id$='remtComments']").val(); 
+                
+                Case.Cancel_Reason__c = remtCancelReason;
+                Case.Comments__c = remtComments;                
+                //alert('This is Cancel Component');
+            }else if(isMisDirect=='true'){
+                remtMisdirReason = $("[id$='remtMisdirReason']").val();
+                remtMisdirComments = $("[id$='remtMisdirComments']").val();
+                
+                Case.Misdirected_Reason__c = remtMisdirReason;
+                Case.Comments__c = remtMisdirComments;              
+                //alert('This is Misdirect Component');
+            }
+            Case.Interaction__c = '{!JSENCODE(newCase.Interaction__c)}';
+            Case.ContactId = '{!JSENCODE(newCase.ContactId)}';
+            Case.Topic__c = '{!JSENCODE(newCase.Topic__c)}';
+            Case.Originator_Relationship__c = '{!JSENCODE(newCase.Originator_Relationship__c)}';
+            
+            if((isCancel=='true' && remtCancelReason!=null && remtCancelReason!='') || (isMisDirect=='true' && remtMisdirReason!=null && remtMisdirReason!='')){
+                var newJCase = JSON.stringify(Case);
+                //var prevCase = '{!prevCase}';
+                Visualforce.remoting.Manager.invokeAction(
+                    '{!$RemoteAction.ACETMemberOpenTopicCancelController.createCaseRA}',
+                    newJCase,
+                    handleRemoteResponse, 
+                    {escape: true}
+                );
+                return false;
+            }else{
+                return true;
+            }
+            
+        }
+        
+        function handleRemoteResponse(result, event){
+            if(event.status) {
+                testCloseTab();
+            }else{
+                //handle errors
+                alert('Exception Occured');
+                return true;
+            }
+        }
+        function testCloseTab() {
+            //First find the ID of the current tab to close it
+            sforce.console.getEnclosingTabId(closeSubtab);
+        }
+        
+        var closeSubtab = function closeSubtab(result) {
+            //Now that we have the tab ID, we can close it
+            var tabId = result.id;
+            sforce.console.closeTab(tabId);
+        };
+        
+        /*var refreshPrimaryTab = function showTabId(result) {
+            var tabId = result.id;
+            alert('Refresh done');
+            sforce.console.refreshPrimaryTabById(tabId, true);
+        };
+
+        function doPrimaryTabRefresh() {
+            sforce.console.getEnclosingPrimaryTabId(refreshPrimaryTab);            
+        }*/
+    </script>  
+</apex:component>

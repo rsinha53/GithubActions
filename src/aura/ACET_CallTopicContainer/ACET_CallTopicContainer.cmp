@@ -1,0 +1,592 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,lightning:isUrlAddressable" access="global" >
+    
+    <aura:attribute name="showBenefitDetails" type="Boolean" default="false" />
+    <aura:attribute name="policyDetails" type="SAEPolicyDetailsResult" />
+    <aura:attribute name="AutodocPageFeature" type="String" default="memberDetails" />
+    <aura:attribute name="memberTabId" type="string" access="public" />
+    <aura:attribute name="caseWrapperMNF" type="SAETTSCaseWrapper" access="public" default="[]" />
+    <aura:attribute name="mnf" type="string" default="mnfx" access="public" />
+    <aura:attribute name="showProviderLookup" type="boolean" default="false" />
+    <aura:attribute name="interactionRec" type="Interaction__c" />
+    <aura:attribute name="noMemberToSearch" type="Boolean" default="false" />
+    <aura:attribute name="caseWrapper" type="SAETTSCaseWrapper" default="[]" />
+    <aura:attribute name="memberCardSnap" type="Object" access="public" />
+    <aura:attribute name="memberPolicies" type="SAEMemberProviderSearchCoveragesResult.CoverageLine[]" />
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0" />
+    <aura:attribute name="isShowAuthorizationResults" type="Boolean" default="false" />
+    <aura:attribute name="memberFN" type="string" access="public" />
+    <aura:attribute name="memberLN" type="string" access="public" />
+    <aura:attribute name="memberDOB" type="string" access="public" />
+    <aura:attribute name="memberCardData" type="Object" />
+    <aura:attribute name="Type" type="String" />
+    <aura:attribute name="SubType" type="String" />
+    <aura:attribute name="authContactName" type="String" />
+    <aura:attribute name="SRNFlag" type="Boolean" default="false" />
+    <aura:attribute name="policyNumber" type="String" />
+    <aura:attribute name="houseHoldMemberId" type="String" access="public" />
+    <aura:attribute name="interactionType" type="string" />
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+    <aura:attribute name="AutodocPageFeatureMemberDtl" type="String" />
+    <aura:attribute name="AutodocKeyMemberDtl" type="String"/> <!-- US2543737 - Thanish - 22nd Apr 2020 -->
+    <aura:attribute name="IsCaseSaved" type="Boolean" default="false" />
+    <aura:attribute name="AuthAutodocPageFeature" type="String" default="authPageDetails" />
+    <aura:attribute name="isShowClaimInfo" type="Boolean" default="false" />
+    <aura:attribute name="interactionCard" type="Object" access="public"/>
+    <aura:attribute name="currentPayerId" type="String" access="public"/><!--US285583-->
+    <aura:attribute name="isTierOne" type="boolean" access="public" default="false"/><!--US2973232-->
+    <aura:attribute name="isDependent" type="boolean" default="false" access="public"/>
+    <!-- US1918629: Venkat 15th Sep 2020 -->
+    
+    <aura:attribute name="isShowPaymentInfo" type="Boolean" default="false" />
+    <aura:attribute name="showFinanceComponent" type="boolean" access="public" default="false" />
+    <aura:attribute name="isAutodocForMultiplePages" type="Boolean" default="false" />
+    <aura:attribute name="interactionOverviewTabId" type="String" /> <!-- US2330408  - Avish -->
+    
+    <aura:attribute name="callTopicOrder" type="Object" />
+    
+    <aura:attribute name="insuranceTypeCode" type="String" default=""/>
+    <aura:attribute name="memberId" type="string" access="public"/>
+    <!-- US2320729 - Thanish - 2nd Mar 2020 - to toggle auto doc multiple pages attribute in provider search results programatically -->
+    <aura:attribute name="providerSearchResultsADMultiplePages" type="boolean" default="false"/>
+    
+    <!-- <aura:handler name="change" value="{!v.isShowAuthorizationResults}" action="{!c.handleOpenAuthorizationResultsClick}" />
+    <aura:handler name="change" value="{!v.showProviderLookup}" action="{!c.handleProviderClick}" />
+    <aura:handler name="change" value="{!v.showBenefitDetails}" action="{!c.handleBenefitDetailsClick}" />
+    <aura:handler name="change" value="{!v.isShowClaimInfo}" action="{!c.handleClaimInfoClick}" /> -->
+    <aura:handler name="change" value="{!v.callTopicOrder}" action="{!c.reloadContent}" />
+    
+    <!-- US2429199: MVP - Navigation of Multiple Topics on a Snapshot Page (Part 2) -->
+    <aura:attribute name="topicClicksCount" type="Integer" default="0"/>
+    
+    <!-- DE315213 -->
+    <aura:attribute name="selectedPolicy" type="SAEMemberProviderSearchCoveragesResult.FinancialsWrapper" access="public"/>
+    <aura:attribute name="selectedTabType" type="String" access="public"/>
+    <aura:attribute name="contactUniqueId" type="string" access="public" />
+    
+    <aura:attribute name="componentId" type="String" access="global"/>
+    
+    <!--US2076634 - HIPAA Guidelines Button - Sravan-->
+    <aura:attribute name="hipaaEndpointUrl" type="String" default=""/>
+    <aura:attribute name="isHippaInvokedInProviderSnapShot" type="Boolean" default="false"/>
+    
+    <aura:attribute name="planLevelBenefitsRes" type="ACET_ExtendedServiceController.PlanLevelBenefits" access="Public"/>
+    <!-- US2718112 - Thanish - 2nd Jul 2020 -->
+    <aura:attribute name="caseNotSavedTopics" type="String[]"/>
+    
+    <!--DE347387: ORS Issue - Provider information is missing in ORS routing Screen - Praveen  -->
+    <aura:attribute name="providerDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+    
+    <!--View Referrals PCP US -->
+    <aura:attribute name="showViewReferralsPCP" type="boolean" default="false" />
+    
+    <!-- New Autodoc Changes -->
+    <aura:attribute name="autodocUniqueId" type="String" default=""/>
+    <aura:attribute name="autodocUniqueIdCmp" type="String" default=""/>
+    <aura:attribute name="highlightedPolicySourceCode" type="String" default=""/>
+    <aura:attribute name="isSourceCodeChanged" type="Boolean" default="false"/>
+    <aura:attribute name="policyStatus" type="Boolean" default="false"/>
+    <aura:attribute name="eligibleDate" type="String" access="public"/>
+    
+    <!-- US2816983	Populate Selected Provider from Provider Lookup on Create SRN Page - Sarma - 29/09/2020 -->
+    <aura:attribute name="originatorType" type="string" access="public"/>
+    
+    <!-- US2931847 - Sanka -->
+    <aura:attribute name="populatedFromHeader" type="boolean" default="false" />
+    <aura:attribute name="isRoutingAllowed" type="boolean" default="true"/>
+    <!--US3068299 - Sravan-->
+    <aura:attribute name="autoDocToBeDeleted" type="Object"/>
+    <!--DE393490 - Sravan-->
+    <aura:attribute name="memberMap" type="Map" access="public"/>
+    
+    <!--US3117073 - Multiple Policies -  Creating Multiple Unique ORS Records Check In ISET - Sravan-->
+    <aura:attribute name="memberPolicyNumberMap" type="Map" default=""/>
+    
+    <!-- US2917421 - Sanka -->
+    <aura:attribute name="searchObject" type="Object"/>
+    
+    <aura:attribute name="callTopicName" type="String" default=""/>
+    <!--<aura:handler name="change" value="{!v.callTopicName}" action="{!c.navigateToCallTopic}" />-->
+    <aura:attribute name="callTopicLstSelected" type="sObject[]"/>
+    <aura:attribute name="callTopicTabId" type="String" />
+    
+    <!--Jitendra-->
+    <aura:attribute name="strPlanBenefitId" type="String"/>
+    <aura:attribute name="selectedIPAValue" type="String" default=""/>
+
+    <aura:method name="scrollIntoViewMember" action="{!c.navigateToCallTopic}" access="public">
+        <aura:attribute name="selectedCallTopic" type="String"/>
+    </aura:method>
+    
+    <aura:attribute name="componentOrder" type="Integer" default="5" />
+    <aura:attribute  name="isSaveCaseDisabled" type="Boolean" default="false" access="public"/>
+
+    <aura:attribute name="providerDetails" type="Object" access="public" />
+    <aura:attribute name="yearTypeBenefits" type="string" access="public" />
+    <aura:attribute name="displayYearBenefits" type="string" access="public" />
+    <aura:handler name="topicClick" event="c:SAE_TopicClickEvent" action="{!c.handleTopicClick}" />
+	<!-- USUS2858385 -Rizwan-->
+     <aura:attribute name="iVRDetails" type="Object" access="public" />
+    <aura:attribute name="isVCCD" type="Boolean" default="false" />
+    <!-- US3717591 -Mani-->
+     <aura:attribute name="claimEngineCodeObj" type="Object[]"/>
+    <!--US3259671 - Sravan-->
+     <aura:attribute name="flowDetails" type="Object" access="public" />
+
+    <!-- DE422393: Krish -->
+    <aura:attribute name="dependentCode" type="String" />
+
+     <!--Ketki - open membersnap shot page for newly found memeber -->
+
+     <aura:attribute name="contactName" type="Object" access="public" />
+     <aura:attribute name="isOtherSearch" type="Object" access="public" />
+     <aura:attribute name="providerNotFound" type="Object" access="public" />
+     <aura:attribute name="isProviderSearchDisabled" type="Object" access="public" />
+     <aura:attribute name="memberCardFlag" type="Object" access="public" />
+     <aura:attribute name="contactCard" type="Object" access="public" />
+     <aura:attribute name="houseHoldData" type="Object[]" />
+     <aura:attribute name="claimInput" type="Object" />
+     <aura:attribute name="cobData" type="Object" />
+      <aura:attribute name="secondaryCoverageList" type="Object[]" />
+     <aura:attribute name="cobMNRCommentsTable" type="Object"/>
+     <aura:attribute name="regionCode" type="String" />
+      <aura:attribute name="cobENIHistoryTable" type="Object"/>
+    <!--Ketki - open membersnap shot page for newly found memeber end -->
+
+    <!-- US3446590 - Thanish - 21st Apr 2021 -->
+    <aura:attribute name="transactionId" type="String" default=""/>
+    <!-- US3177995 - Thanish - 22nd Jun 2021 -->
+        <aura:attribute name="subjectCard" type="Object" access="public"/>
+    <!-- DE456362 -->
+    <aura:attribute name="currentTabId" type="String" />
+
+    <!--US3583813 - Sravan-->
+    <aura:attribute name="delegationValue" type="String" default=" "/>
+    <aura:attribute name="patientInfo" type="Object" access="public"/>
+
+    <!-- US3802608 - Thanish - 25th Aug 2021 -->
+    <aura:attribute name="showViewAppeals" type="boolean" default="false" />
+
+    <div aura:id="calltopiccontainer" style="display:flex !important; flex-direction:column !important;" id="calltopiccontainer" >
+
+        <!-- US1730906: Benefit Details Component UI: Kavinda - START -->
+        <aura:If isTrue="{!and(v.showFinanceComponent, v.showBenefitDetails)}">
+            <div aura:id="financials-comp" style="{! 'order: ' + ((v.callTopicOrder.PlanBenefits == undefined || v.callTopicOrder.PlanBenefits == '') ? 100: v.callTopicOrder.PlanBenefits) + ' !important;' }" >
+                <div id="{!v.AutodocKey + 'planBenefits'}"> <!-- US2718114 - Thanish - 2nd Jul 2020 -->
+                    <lightning:layout class="{! if(equals(v.callTopicOrder.PlanBenefits, 1), ' slds-p-top_small ', '') }"  >
+                        <lightning:layoutItem class="clsBenefitsWidth">
+
+                            <div aura:id="BenefitDetailsMbSnapshot">
+                                <!-- Don't delete  this Div -->
+                            </div>
+                            <div class="slds-p-bottom_small" aura:id="benefits-comp">
+                                <c:ACET_BenefitDetails policyDetails="{!v.policyDetails}" policySelectedIndex="{!v.policySelectedIndex}"
+                                                       memberCardData="{!v.memberCardData}" financialsData="{!v.selectedPolicy}"
+                                                       memberTabId="{!v.memberTabId}" caseWrapper="{!v.caseWrapperMNF}"
+                                                       AutodocPageFeature="{! v.AutodocPageFeature + 'Financials' }"
+                                                       AutodocKey="{! v.AutodocKey }" AutodocKeyMemberDtl="{! v.AutodocKeyMemberDtl }"
+                                                       AutodocPageFeatureMemberDtl="{!v.AutodocPageFeatureMemberDtl}"
+                                                       componentId="{!v.componentId}" caseNotSavedTopics="{!v.caseNotSavedTopics}"
+                                                       autodocUniqueIdCmp="{!v.memberTabId}"
+                                                       autodocUniqueId="{! v.autodocUniqueId + 'Financials' }"
+                                                       memberautodocUniqueId="{!v.autodocUniqueId}"
+                                                       autoDocToBeDeleted = "{!v.autoDocToBeDeleted}"
+                                                       interactionOverviewTabId="{!v.interactionOverviewTabId}"
+                                                       memberMap ="{!v.memberMap}"
+                                                       memberPolicyNumberMap="{!v.memberPolicyNumberMap}" memberCardSnap="{!v.memberCardSnap}"
+                                                       componentOrder="{!v.componentOrder}"
+                                                       displayYearBenefits="{!v.displayYearBenefits}"
+                                                       yearTypeBenefits="{!v.yearTypeBenefits}"  currentTabId="{!v.currentTabId}"
+                                                       delegationValue="{!v.delegationValue}"
+                                                       patientInfo="{!v.patientInfo}"
+                                                       interactionCard = "{!v.interactionCard}"/> <!-- US3804847 - Krish - 26th August 2021-->
+                                                        <!-- DE456362 --><!--US3117073 - Sravan--><!--DE393490 - Sravan-->
+                                <!-- US2974811 - Sarma -->
+
+                            </div>
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                    <aura:If isTrue="{!and(not(empty(v.policyDetails.resultWrapper.policyRes.sourceCode)), (v.policyDetails.resultWrapper.policyRes.sourceCode == 'CS'))}">
+                    <!-- US3125177	Plan Benefits - Benefit Accumulation HIPPA Service Type Code UI START-->
+                    <lightning:layout class="slds-p-bottom_small">
+                        <lightning:layoutItem class="benefitAccumulations clsBenefitsWidth">
+                            <div>
+                                <div class="slds-card card_padding" >
+                                    <c:ACET_BenefitAccumulation policyDetails="{!v.policyDetails}"
+                                                                policySelectedIndex="{!v.policySelectedIndex}"
+                                                                memberCardData="{!v.memberCardData}"
+                                                                financialsData="{!v.selectedPolicy}"
+                                                                memberTabId="{!v.memberTabId}" caseWrapper="{!v.caseWrapperMNF}"
+                                                                AutodocPageFeature="{! v.AutodocPageFeature + 'Financials' }"
+                                                                AutodocKey="{! v.AutodocKey }" AutodocKeyMemberDtl="{! v.AutodocKeyMemberDtl }"
+                                                                AutodocPageFeatureMemberDtl="{!v.AutodocPageFeatureMemberDtl}"
+                                                                componentId="{!v.componentId}" caseNotSavedTopics="{!v.caseNotSavedTopics}"
+                                                                autodocUniqueIdCmp="{!v.memberTabId}"
+                                                                autodocUniqueId="{! v.autodocUniqueId + 'Financials' }"
+                                                                memberautodocUniqueId="{!v.autodocUniqueId}"
+                                                                autoDocToBeDeleted = "{!v.autoDocToBeDeleted}"
+                                                                memberId="{!v.houseHoldMemberId}"
+                                                                interactionOverviewTabId="{!v.interactionOverviewTabId}"
+                                                                componentOrder="{!v.componentOrder}"
+                                                                dependentCode="{!v.dependentCode}"/> <!--DE422393: Krish-->
+                                </div>
+                            </div>
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                    <!-- US3125177	Plan Benefits - Benefit Accumulation HIPPA Service Type Code UI START-->
+                    </aura:If>
+
+                    <lightning:layout class="slds-p-bottom_small">
+                        <lightning:layoutItem class="financials clsBenefitsWidth">
+                            <div>
+                                <div class="slds-card card_padding" >
+                                    <!-- US2618180 -->
+                                    <c:ACET_Financials networkStatus="{!v.selectedTabType}"
+                                                       policyDetails="{!v.policyDetails}"
+                                                       policyList="{!v.memberPolicies}"
+                                                       policySelectedIndex="{!v.policySelectedIndex}"
+                                                       AutodocPageFeature="{! v.AutodocPageFeature + 'Financials' }"
+                                                       AutodocKey="{! v.AutodocKey }" AutodocKeyMemberDtl="{! v.AutodocKeyMemberDtl }"
+                                                       AutodocPageFeatureMemberDtl="{!v.AutodocPageFeatureMemberDtl}"
+                                                       callTopicOrder="{!v.callTopicOrder}" memberTabId="{!v.memberTabId}"
+                                                       caseNotSavedTopics="{!v.caseNotSavedTopics}" planLevelBenefitsRes="{!v.planLevelBenefitsRes}"
+                                                       autodocUniqueIdCmp="{!v.memberTabId}"
+                                                       autodocUniqueId="{! v.autodocUniqueId + 'Financials' }"
+                                                       memberautodocUniqueId="{!v.autodocUniqueId}"
+                                                       eligibleDate="{!v.eligibleDate}"
+                                                       highlightedPolicySourceCode="{!v.highlightedPolicySourceCode}"
+                                                       isSourceCodeChanged="{!v.isSourceCodeChanged}"
+                                                       policyStatus="{!v.policyStatus}" isTierOne="{!v.isTierOne}"
+                                                       policyNumber="{!v.policyNumber}"
+                                                       providerDetails="{!v.providerDetails}"
+                                                       memberFN="{!v.memberFN}"
+                                                       memberLN="{!v.memberLN}"
+                                                       memberDOB="{!v.memberDOB}"
+                                                       memberId="{!v.memberId}"
+                                                       displayYearBenefits="{!v.displayYearBenefits}"
+                                                       yearTypeBenefits="{!v.yearTypeBenefits}"
+                                                       isProviderAndMemberFlow="{!v.isRoutingAllowed}"
+                                                       isDependent="{!v.isDependent}"
+                                                       memberCardSnap ="{!v.memberCardSnap}"/>
+                                </div>
+                            </div>
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                </div>
+            </div>
+        </aura:If>
+
+        <aura:If isTrue="{!v.mnf != 'mnf'}">
+
+            <aura:if isTrue="{!v.showProviderLookup}">
+                <div  aura:id="providerLookup" style="{! 'order: ' + ((v.callTopicOrder.ProviderLookup == undefined || v.callTopicOrder.ProviderLookup == '') ? 100 : v.callTopicOrder.ProviderLookup) + ' !important;' }" >
+                    <lightning:layout multipleRows="true" class="{! ' slds-p-bottom_small ' + if(equals(v.callTopicOrder.ProviderLookup, 1), ' slds-p-top_small ', '') }" >
+                        <lightning:layoutItem size="12" >
+                            <div aura:id="provdrLookupMbSnapshot">
+                                <!-- Don't delete  this Div -->
+                            </div>
+                            <!--US2543703 Passing caseWrapperMNF wrapper to ProviderLookup Component Venkat April 2020-->
+                            <c:SAE_ProviderLookup aura:id="lookupForm" isProviderSnapshot="false" interactionRec="{!v.interactionRec}" contactUniqueId="{!v.contactUniqueId}"
+                                                  noMemberToSearch="{!v.noMemberToSearch}" caseWrapper="{!v.caseWrapper}" caseWrapperMNF="{!v.caseWrapperMNF}"
+                                                  memberDetails="{!v.memberCardSnap}" policyDetails="{!v.policyDetails}"
+                                                  policyList="{!v.memberPolicies}" policySelectedIndex="{!v.policySelectedIndex}"
+                                                  autodocPageFeature="{!v.AutodocPageFeature}" AutodocKey="{!v.AutodocKey}"
+                                                  providerSearchResultsADMultiplePages="{!v.providerSearchResultsADMultiplePages}"
+                                                  AutodocPageFeatureMemberDtl="{!v.AutodocPageFeatureMemberDtl}"
+                                                  AutodocKeyMemberDtl="{!v.AutodocKeyMemberDtl}"
+                                                  componentId="{!v.componentId}"
+                                                  isHippaInvokedInProviderSnapShot="{!v.isHippaInvokedInProviderSnapShot}"
+                                                  hipaaEndpointUrl="{!v.hipaaEndpointUrl}" caseNotSavedTopics="{!v.caseNotSavedTopics}"
+                                                  providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}"
+                                                  flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}"
+                                                  memberCardData="{!v.memberCardData}"
+                                                  interactionOverviewTabId="{!v.interactionOverviewTabId}"
+                                                  memberId="{!v.houseHoldMemberId}" isTierOne="{!v.isTierOne}"
+                                                  memberautodocUniqueId="{!v.autodocUniqueId}" autodocUniqueId="{! v.autodocUniqueId + 'providerLookup' }"
+                                                  searchObject="{!v.searchObject}" memberTabId="{! v.memberTabId }"
+                                                  populatedFromHeader="{!v.populatedFromHeader}"
+                                                  isRoutingAllowed="{!v.isRoutingAllowed}"
+                                                  autoDocToBeDeleted="{!v.autoDocToBeDeleted}"
+                                                  callTopicLstSelected="{!v.callTopicLstSelected}"
+                                                  callTopicTabId="{!v.callTopicTabId}"
+                                                  benefitPlanId="{!v.strPlanBenefitId}"
+                                                  memberMap ="{!v.memberMap}" selectedIPAValue= "{!v.selectedIPAValue}"
+                                                  memberPolicyNumberMap="{!v.memberPolicyNumberMap}"
+                                                  flowDetails="{!v.flowDetails}" transactionId="{!v.transactionId}"
+                                                  interactionCard = "{!v.interactionCard}"/> <!-- US3804847 - Krish - 26th August 2021-->
+                                                  <!-- US3446590 - Thanish - 21st Apr 2021 -->
+                                                  <!--US3117073 - Sravan--><!--DE393490 - Sravan-->
+                            <!-- US2808569 - Thanish - 27th Oct 2020 -->
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                </div>
+            </aura:if>
+        </aura:If>
+        <!-- US2041555 - Add Case History to Member Snapshot UI : Kavinda - END -->
+        <!-- US2371645 - View Referrals -->
+        <aura:if isTrue="{!v.showViewReferralsPCP}">
+            <div  aura:id="viewReferrals" style="{! 'order: ' + ((v.callTopicOrder.ViewPCPReferrals == undefined || v.callTopicOrder.ViewPCPReferrals == '') ? 100 : v.callTopicOrder.ViewPCPReferrals) + ' !important;' }" >
+                <div aura:id="ViewPCPReferralsMbSnapshot">
+                    <!-- Don't delete  this Div -->
+                </div>
+                <lightning:layout multipleRows="true" class="{! ' slds-p-bottom_small ' + if(equals(v.callTopicOrder.ViewPCPReferrals, 1), ' slds-p-top_small ', '') }" > <!--class="{! ' slds-p-bottom_small ' }"-->
+                    <lightning:layoutItem size="12" >
+                        <c:ACET_ViewPCPReferrals caseWrapper="{!v.caseWrapperMNF}"  componentId="{!v.componentId}" memberDOB="{!v.memberDOB}"
+                                                 policy="{!v.policyDetails}" memberFN="{!v.memberFN}" memberCardData="{!v.memberCardData}" isDependent="{!v.isDependent}"
+                                                 memberCardSnap ="{!v.memberCardSnap}" policyNumber="{!v.policyNumber}" houseHoldMemberId="{!v.houseHoldMemberId}"
+                                                 memberPolicies="{!v.memberPolicies}" policySelectedIndex="{!v.policySelectedIndex}"
+                                                 currentPayerId="{!v.currentPayerId}" memberautodocUniqueId="{!v.autodocUniqueId}" autodocUniqueId="{! v.autodocUniqueId + 'Referrals' }"
+                                                 autoDocToBeDeleted="{!v.autoDocToBeDeleted}"
+                                                 originatorType="{!v.originatorType}" interactionRec="{!v.interactionRec}"
+                                                 isHippaInvokedInProviderSnapShot="{!v.isHippaInvokedInProviderSnapShot}"
+                                                 hipaaEndpointUrl="{!v.hipaaEndpointUrl}"
+                                                 contactUniqueId="{!v.contactUniqueId}"
+                                                 noMemberToSearch="{!v.noMemberToSearch}"
+                                                 providerSearchResultsADMultiplePages="{!v.providerSearchResultsADMultiplePages}"
+                                                 AutodocPageFeatureMemberDtl="{!v.AutodocPageFeatureMemberDtl}"
+                                                 AutodocKeyMemberDtl="{!v.AutodocKeyMemberDtl}"
+                                                 caseNotSavedTopics="{!v.caseNotSavedTopics}"
+                                                 providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}"
+                                                 flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}"
+                                                 memberTabId="{!v.memberTabId}"
+                                                 interactionOverviewTabId="{!v.interactionOverviewTabId}"
+                                                 memberMap ="{!v.memberMap}"
+                                                 memberPolicyNumberMap="{!v.memberPolicyNumberMap}"
+                                                 interactionCard = "{!v.interactionCard}"
+                                                 contactName="{!v.authContactName}"
+                                                 selectedTabType = "{!v.selectedTabType}"
+                                                 /><!--US3117073 - Sravan--><!--DE393490 - Sravan-->
+                        <!--US2856421--><!--US285583-->
+                    </lightning:layoutItem>
+                </lightning:layout>
+            </div>
+        </aura:if>
+        <!-- US2371645 - View Referrals -->
+
+
+        <!-- US1772936 - View Authorizations and Notifications -  Results and Status UI - Kavinda: START -->
+        <aura:If isTrue="{! v.isShowAuthorizationResults }">
+
+            <div aura:id="AuthorizationResults-comp" style="{! 'order: ' + ((v.callTopicOrder.ViewAuthorizations == undefined || v.callTopicOrder.ViewAuthorizations == '') ? 100 : v.callTopicOrder.ViewAuthorizations) + ' !important;' }" >
+                <div class="{! ' slds-p-bottom_small-x ' + if(equals(v.callTopicOrder.ViewAuthorizations, 1), ' slds-p-top_small ', '') }" >
+                    <!-- US2061071 -->
+                    <!-- DE301090 -->
+                    <div aura:id="AuthorizationResultsMbSnapshot">
+                        <!-- Don't delete  this Div -->
+                    </div>
+                    <c:SAE_AuthorizationResults FirstName="{!v.memberFN}" LastName="{!v.memberLN}"
+                                                Dob="{!v.memberDOB}" tabUniqueId="{!v.memberTabId}" memberCard="{!v.memberCardData}"
+                                                subjectCard="{!v.memberCardSnap}" policy="{!v.policyDetails}" contactUniqueId="{!v.contactUniqueId}"
+                                                caseWrapper="{! v.caseWrapperMNF}" cseType="{! v.Type }" cseSubtype="{! v.SubType }"
+                                                IsCaseSaved="{! v.IsCaseSaved }" AutodocPageFeature="{!v.AuthAutodocPageFeature}"
+                                                memberTabId="{! v.memberTabId }" contactName="{!v.authContactName}"
+                                                 memberId="{!v.memberId}"
+                                                interactionType="{!v.interactionType}" AutodocKey="{!v.AutodocKey}"
+                                                interactionRec="{!v.interactionRec}"
+                                                isMedicaidPlan="{!v.policyDetails.resultWrapper.policyRes.isMedicaidPlan}"
+                                                AutodocPageFeatureMemberDtl="{!v.AutodocPageFeatureMemberDtl}"
+                                                isAutodocForMultiplePages="{!v.isAutodocForMultiplePages}"
+                                                AutodocKeyMemberDtl="{!v.AutodocKeyMemberDtl}"
+                                                policyNumber="{!v.policyNumber}"
+                                                policySelectedIndex="{!v.policySelectedIndex}"
+                                                componentId="{!v.componentId}"
+                                                isHippaInvokedInProviderSnapShot="{!v.isHippaInvokedInProviderSnapShot}"
+                                                hipaaEndpointUrl="{!v.hipaaEndpointUrl}"
+                                                caseNotSavedTopics="{!v.caseNotSavedTopics}"
+                                                interactionOverviewTabId="{!v.interactionOverviewTabId}"
+                                                noMemberToSearch="{!v.noMemberToSearch}"
+                                                providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}"
+                                                flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}"
+                                                interactionCard = "{!v.interactionCard}"
+                                                selectedTabType = "{!v.selectedTabType}"
+                                                memberPolicies = "{!v.memberPolicies}"
+                                                originatorType = "{!v.originatorType}"
+                                                memberautodocUniqueId="{!v.autodocUniqueId}"
+                                                autodocUniqueId="{! v.autodocUniqueId + 'Auth' }"
+                                                autoDocToBeDeleted = "{!v.autoDocToBeDeleted}"
+                                                callTopicLstSelected="{!v.callTopicLstSelected}"
+                                                callTopicTabId="{!v.callTopicTabId}"
+                                                memberMap ="{!v.memberMap}"
+                                                memberPolicyNumberMap="{!v.memberPolicyNumberMap}"
+                                                delegationValue="{!v.delegationValue}"
+                                                patientInfo="{!v.patientInfo}"
+                                                policyStatus="{!v.policyStatus}"/><!--DE393490 - Sravan--> <!-- US2330408 - Avish -->
+
+                    <!--US2061071--> <!-- US2816912 - 2/9/2020 - Sarma ; US2816983 - Sarma - 29/09/2020 -->
+                    <!-- US2061732 - Added by Avish -->
+                    <!-- US2325822 Interaction rec added by sarma -->
+                </div>
+            </div>
+        </aura:If>
+        <!-- US1772936 - View Authorizations and Notifications -  Results and Status UI - Kavinda: END -->
+
+        <!-- 15th Aug 2019 - US1866429 - Search Claim  Number UI : SARMA -->
+        <aura:If isTrue="{!v.isShowClaimInfo}">
+            <div aura:id="claimsInfo-comp" class="slds-p-bottom_none slds-p-top_xxx-small slds-m-bottom_none" style="{! 'order: ' + ((v.callTopicOrder.ViewClaims == undefined || v.callTopicOrder.ViewClaims == '') ? 100 : v.callTopicOrder.ViewClaims) + ' !important;' }" >
+                <div class="slds-p-bottom_none  slds-p-top_none slds-m-bottom_none slds-m-top_none" >
+                    <!--US2894389 : sravani-->
+                    <!-- US2876410 ketki 9/11 - HIPAA Guidelines Button -->
+                    <!-- US1918629 Populate TaxId In  Claim search Page Venkat  START -->
+                    <div aura:id="ClaimInformationMbSnapshot">
+                        <!-- Don't delete  this Div -->
+                    </div>
+
+                    <c:SAE_ClaimInformation memberCardData="{!v.memberCardData}" memberCardSnap="{!v.memberCardSnap}"
+                                            interactionCard="{!v.interactionCard}" climsSearchSelectedOption="Claim Number"
+                                            interactionRec="{!v.interactionRec}" caseWrapper="{!v.caseWrapper}"
+                                            caseWrapperMNF="{!v.caseWrapperMNF}" AutodocKey="{!v.AutodocKey}"
+                                            isHippaInvokedInProviderSnapShot="{!v.isHippaInvokedInProviderSnapShot}"
+                                            autodocPageFeature="{!v.autodocPageFeature}" hipaaEndpointUrl="{!v.hipaaEndpointUrl}"
+                                            memberTabId="{!v.memberTabId }" contactUniqueId="{!v.contactUniqueId}"
+                                            eligibleDate="{!v.eligibleDate}" interactionOverviewTabId="{!v.interactionOverviewTabId}"
+                                            providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}"
+                                            flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}"
+                                            policyDetails="{!v.policyDetails}" selectedPolicy="{!v.selectedPolicy}"
+                                            callTopicOrder="{!v.callTopicOrder}" caseNotSavedTopics="{!v.caseNotSavedTopics}"
+                                            memberPolicies="{!v.memberPolicies}" policyList="{!v.memberPolicies}"
+                                            planLevelBenefitsRes="{!v.planLevelBenefitsRes}"
+                                            highlightedPolicySourceCode="{!v.highlightedPolicySourceCode}"
+                                            isSourceCodeChanged="{!v.isSourceCodeChanged}"
+                                            policyStatus="{!v.policyStatus}" isTierOne="{!v.isTierOne}"
+                                            policySelectedIndex="{!v.policySelectedIndex}"
+                                            memberautodocUniqueId="{!v.autodocUniqueId}"
+                                            autodocUniqueId="{! v.autodocUniqueId + 'claim' }"
+                                            componentId="{!v.componentId}" memberDOB="{!v.memberDOB}"
+                                            memberFN="{!v.memberFN}" policyNumber="{!v.policyNumber}"
+                                            houseHoldMemberId="{!v.houseHoldMemberId}"
+                                            currentPayerId="{!v.currentPayerId}"
+                                            autoDocToBeDeleted="{!v.autoDocToBeDeleted}"
+                                            isDependent="{!v.isDependent}"
+                                            memberLN="{!v.memberLN}"
+                                            authContactName="{!v.authContactName}"
+                                            SRNFlag="{!v.SRNFlag}"
+                                            interactionType="{!v.interactionType}"
+                                            AutodocPageFeatureMemberDtl="{!v.AutodocPageFeatureMemberDtl}"
+                                            isAutodocForMultiplePages="{!v.isAutodocForMultiplePages}"
+                                            AutodocKeyMemberDtl="{!v.AutodocKeyMemberDtl}"
+                                            noMemberToSearch="{!v.noMemberToSearch}"
+                                            selectedTabType = "{!v.selectedTabType}"
+                                            originatorType = "{!v.originatorType}"
+                                            insuranceTypeCode="{!v.insuranceTypeCode}"
+                                            memberId="{!v.memberId}"
+                                            callTopicLstSelected="{!v.callTopicLstSelected}"
+                                            callTopicTabId="{!v.callTopicTabId}"
+                                            iVRDetails="{!v.iVRDetails}"
+                                            isVCCD="{!v.isVCCD}"
+                                            providerDetails="{!v.providerDetails}"
+                                            contactName = "{!v.contactName}"
+                                            isOtherSearch = "{!v.isOtherSearch}"
+                                            providerNotFound = "{!v.providerNotFound}"
+                                            isProviderSearchDisabled = "{!v.isProviderSearchDisabled}"
+                                            memberCardFlag = "{!v.memberCardFlag}"
+                                            contactCard = "{!v.contactCard}"
+                                            claimInput="{!v.claimInput}"
+                                            houseHoldData="{!v.houseHoldData}"
+                                            dependentCode="{!v.dependentCode}"
+                                            cobData="{!v.cobData}"
+                                            secondaryCoverageList="{!v.secondaryCoverageList}"
+                                            cobMNRCommentsTable="{!v.cobMNRCommentsTable}"
+                                            regionCode="{!v.regionCode}"
+                                            selectedIPAValue="{!v.selectedIPAValue}"
+                                            cobENIHistoryTable="{!v.cobENIHistoryTable}"
+                                            flowDetails="{!v.flowDetails}"
+                                            subjectCard="{!v.subjectCard}"
+                                            claimEngineCodeObj="{!v.claimEngineCodeObj}"/><!-- US3177995 - Thanish - 22nd Jun 2021 -->
+                    
+                    <!-- US2876410 ketki 9/11 - HIPAA Guidelines Button -->
+                </div>
+            </div>
+        </aura:If>
+        <!-- End of Claim info CMP -->
+        <!-- US1958804 -->
+        <aura:If isTrue="{!v.isShowPaymentInfo}">
+            <div aura:id="paymentInfo-comp" class="slds-m-top_none slds-p-top_none slds-p-bottom_none" style="{! 'order: ' + ((v.callTopicOrder.ViewPayments == undefined || v.callTopicOrder.ViewPayments == '') ? 100 : v.callTopicOrder.ViewPayments) + ' !important;' }" >
+                <div class="slds-p-bottom_none slds-p-top_none slds-m-top_small">
+                    <div aura:id="PaymentInformationMbSnapshot">
+                        <!-- Don't delete  this Div -->
+                    </div>
+                    <c:SAE_PaymentInformation PaymentSearchSelectedOption="Claim Number"
+                                              caseNotSavedTopics="{!v.caseNotSavedTopics}"
+                                              cobMNRCommentsTable="{!v.cobMNRCommentsTable}"
+                                              regionCode="{!v.regionCode}"
+                                              cobENIHistoryTable="{!v.cobENIHistoryTable}"
+                                              SRNFlag="{!v.SRNFlag}"
+                                              isHippaInvokedInProviderSnapShot="{!v.isHippaInvokedInProviderSnapShot}"
+                                              secondaryCoverageList="{!v.secondaryCoverageList}"
+                                              memberautodocUniqueId="{!v.autodocUniqueId}"
+                                              houseHoldData="{!v.houseHoldData}"
+                                              cobData="{!v.cobData}"
+                                              memberTabId="{!v.memberTabId}"
+                                              policyDetails="{!v.policyDetails}"
+                                              insuranceTypeCode="{!v.insuranceTypeCode}"
+                                              claimInput="{!v.claimInput}"
+                                              memberId ="{!v.memberId}"
+                                              policyNumber="{!v.policyNumber}"
+                                              autodocUniqueId = "{! v.autodocUniqueId + 'payment' }"
+                                              policySelectedIndex="{!v.policySelectedIndex}"
+                                              memberPolicies="{!v.memberPolicies}"
+                                              selectedPolicy ="{!v.selectedPolicy}"
+                                              callTopicLstSelected="{!v.callTopicLstSelected}"
+                                              providerDetails="{!v.providerDetails}"
+                                              hipaaEndpointUrl="{!v.hipaaEndpointUrl}"
+                                              contactUniqueId="{!v.contactUniqueId}"
+                                              interactionRec="{!v.interactionRec}"
+                                              interactionOverviewTabId="{!v.interactionOverviewTabId}"
+                                              caseWrapperMNF="{!v.caseWrapperMNF}"
+                                              componentId="{!v.componentId}"
+                                              memberDOB="{!v.memberDOB}"
+                                              memberFN="{!v.memberFN}"
+                                              memberCardData="{!v.memberCardData}"
+                                              memberCardSnap ="{!v.memberCardSnap}"
+                                              houseHoldMemberId="{!v.houseHoldMemberId}"
+                                              currentPayerId="{!v.currentPayerId}"
+                                              autoDocToBeDeleted="{!v.autoDocToBeDeleted}"
+                                              memberLN="{!v.memberLN}"
+                                              authContactName="{!v.authContactName}"
+                                              interactionType="{!v.interactionType}"
+                                              AutodocPageFeatureMemberDtl="{!v.AutodocPageFeatureMemberDtl}"
+                                              AutodocKeyMemberDtl="{!v.AutodocKeyMemberDtl}"
+                                              noMemberToSearch="{!v.noMemberToSearch}"
+                                              interactionCard="{!v.interactionCard}"
+                                              selectedTabType = "{!v.selectedTabType}"
+                                              originatorType = "{!v.originatorType}"
+                                              callTopicOrder = "{!v.callTopicOrder}"
+                                              planLevelBenefitsRes="{!v.planLevelBenefitsRes}"
+                                              eligibleDate ="{!v.eligibleDate}"
+                                              highlightedPolicySourceCode = "{!v.highlightedPolicySourceCode}"
+                                              isSourceCodeChanged="{!v.isSourceCodeChanged}"
+                                              policyStatus ="{!v.policyStatus}"
+                                              isTierOne ="{!v.isTierOne}"
+                                              callTopicTabId="{!v.callTopicTabId}"
+                                              contactName = "{!v.contactName}"
+                                              isOtherSearch = "{!v.isOtherSearch}"
+                                              providerNotFound = "{!v.providerNotFound}"
+                                              isProviderSearchDisabled = "{!v.isProviderSearchDisabled}"
+                                              memberCardFlag = "{!v.memberCardFlag}"
+                                              contactCard = "{!v.contactCard}"
+                                              providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}"
+                                              flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}"
+                                              caseWrapper="{!v.caseWrapper}"
+                                              memberMap ="{!v.memberMap}"
+                                              memberPolicyNumberMap="{!v.memberPolicyNumberMap}"
+                                              flowDetails="{!v.flowDetails}"
+                                              selectedIPAValue= "{!v.selectedIPAValue}" />
+                    <!--US3182022: Build New Tab for Claim # Hyperlink Access UI - Swapnil -->
+                    <!--US3389424: View Payments - Select Claim # Hyperlink in Payment Details - For Different Member : Swapnil (7/2/2021) -->
+                </div>
+            </div>
+        </aura:If>
+
+        <!-- US3802608 - Thanish - 25th Aug 2021 -->
+        <aura:If isTrue="{!v.showViewAppeals}">
+            <div aura:id="ViewAppealsMbSnapshot" class="card_top_margin">
+                <c:ACET_ViewAppeals memberFN="{!v.memberFN}" memberLN="{!v.memberLN}" taxId="{!v.interactionCard.taxId}" memberId="{!v.memberCardSnap.memberId}" sourceCode="{!v.highlightedPolicySourceCode}"
+                                    autodocUniqueId="{!v.autodocUniqueId + 'appeals'}" policySelectedIndex="{!v.policySelectedIndex}" caseWrapper="{! v.caseWrapperMNF}"
+                                    memberMap ="{!v.memberMap}" memberPolicyNumberMap="{!v.memberPolicyNumberMap}" flowDetails="{!v.flowDetails}"
+                                    flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}"
+                                    policy = "{!v.policyDetails}" caseNotSavedTopics="{!v.caseNotSavedTopics}"/>
+            </div>
+        </aura:If>
+    </div>
+    
+</aura:component>

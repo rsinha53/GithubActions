@@ -1,0 +1,1163 @@
+var acet = acet || {};
+var globalMap = new Map();
+	
+(function(){
+	
+	var saveAutodocSelectionsCount = 0;
+	acet.autodoc = {};
+	acet.autodoc.additionalInfo = '';
+	acet.autodoc.selectedItems = [];
+	var identifierList = [];
+	var $coverageDateList = [];
+	var $sectionFinal = '';
+	var $globalAccumsList = [];
+	var removeDuplicatesOnCaseList = [];
+	var multipleTableRowList = [];
+	var multipleTableRowFinal = [];
+	var $removeDuplicatesOnCaseMap = new Map();
+	var $removeDuplicatesOnCaseObject = {}; //Using it to enable entries() in IE
+	var autodocedRows = [];
+	var globalVar = '';
+	var globalSectionalVar = [];
+	var tableHeaderMap = {}; // added new for authorization
+	var rowAuthorizationList = {} // added new for authorization
+	
+	acet.autodoc.startAutodoc = function(sf_id){		
+		
+		var $docsection;
+		
+		//only autodoc the specified section if sf_id is provided, otherwise autodoc all sections under the page
+		if(sf_id){
+			$docsection = $("[id$='" + sf_id + "']").find("[auto-doc='true']").addBack("[auto-doc='true']");		
+		}else{
+			$docsection = $("[auto-doc='true']");   
+		}
+				
+		$docsection.each(function(){
+			//remove any autodoc tags added before
+			$(this).find(".autodoc").remove();							
+									
+			//add a checkbox right of the label for any field under page block section
+			if(!($(this).attr("auto-doc-header-only") == 'true')){
+				$(this).find(".pbSubsection").find("th.labelCol").append('<input type="checkbox" class="autodoc"/>'); 
+				//align label and checkbox added
+				$(this).find(".pbSubsection").find("td.dataCol").css("vertical-align", "middle"); 
+			}
+						
+			//add a checkbox in column header in first column
+			//.list is for standard page block table, .auto-doc-list is for acetdatatable component
+			if(!($(this).attr("auto-doc-header-only") == 'true')){
+			var rowCount = $(this).find(".pbSubsection").find(".list, .auto-doc-list").find('tbody').children().length;
+			if(rowCount<26){
+				$(this).find(".pbSubsection").find(".list, .auto-doc-list").children('thead').children('tr').prepend('<th class="autodoc"><input type="checkbox" class="autodoc"/></th>');     
+			}else{
+				$(this).find(".pbSubsection").find(".list, .auto-doc-list").children('thead').children('tr').prepend('<th class="autodoc"></th>');
+			}
+
+	 }
+			//add checkboxes for all rows in first column
+			if(!($(this).attr("auto-doc-header-only") == 'true')){			
+				$(this).find(".pbSubsection").find(".list, .auto-doc-list").children('tbody').children('tr').prepend('<td class="autodoc"><input type="checkbox" class="autodoc"/></td>'); 
+			}
+			
+			//add a checkbox on section header and enable check-all/uncheck all for all tables under the section			                   
+			$(this).find(".pbSubheader").append('<input type="checkbox" class="autodoc"/>');                                                     
+			$(this).find(".pbSubheader").find("input[type='checkbox']").change(function(){             
+				$(this).parent().parent().find("input[type='checkbox'].autodoc").prop("checked", $(this).prop("checked"));
+				$(this).parent().parent().find(".pbSubsection").find(".list, .auto-doc-list").children('tbody').find("input[type='checkbox'].autodoc").prop("checked", $(this).prop("checked")).trigger("change");
+			});  			
+			
+			//enable check-all/uncheck all function in table
+			$(this).find(".pbSubsection").find(".list, .auto-doc-list").children('thead').children('tr').children(":first-child").find("input[type='checkbox']").change(function(){
+				$(this).parents(".list, .auto-doc-list").children('tbody').find("input[type='checkbox'].autodoc").prop("checked", $(this).prop("checked")).trigger("change");
+			});	
+			
+			var authAutodoc = $(this).find('span.enableAuthorizationAutodoc').attr("auto-doc-section-state");
+			if(authAutodoc == "yes"){
+			var $source = $(this);
+			var $authSection = $(this).clone();
+			$authSection.find(".pbSubsection").find(".detailList").find('span.enableAuthorizationAutodoc').find(".list, .auto-doc-list").find('tbody').find('tr').remove();
+
+			var tableHead = $authSection.find(".pbSubsection").find(".detailList").find('span.enableAuthorizationAutodoc').find(".list, .auto-doc-list");
+			//var tableHead = $authSection.find(".pbSubsection");
+			console.log(tableHead);
+			if($authSection.find(".pbSubsection").find(".detailList").find('span.enableAuthorizationAutodoc').find(".list, .auto-doc-list").length > 0){
+			console.log($authSection);
+			tableHeaderMap[$(this).attr("auto-doc-section-key")] = tableHead.parent().html();
+			}
+			console.log(tableHeaderMap);
+			//$authorization.push($authSection);
+			}
+			
+		});	
+
+		
+		//resolved checkboxes for case items
+		var $caseItemSection;
+		
+		if(sf_id){
+			$caseItemSection = $("[id$='" + sf_id + "']").find("[auto-doc-case-items='true']").addBack("[auto-doc-case-items='true']");		
+		}else{
+			$caseItemSection = $("[auto-doc-case-items='true']");   
+		}
+		
+		$caseItemSection.each(function(){
+			//remove any case item resolved tags added before
+			$(this).find(".autodoc-case-item-resolved").remove();	
+			
+			//add a resolved header in column header in last column
+			$(this).find(".pbSubsection").find(".list, .auto-doc-list").children('thead').children('tr').append('<th class="autodoc-case-item-resolved">Resolved</th>');     
+			//add resolved checkboxes for all rows in last column
+			$(this).find(".pbSubsection").find(".list, .auto-doc-list").children('tbody').children('tr').append('<td class="autodoc-case-item-resolved"><input type="checkbox" class="autodoc-case-item-resolved"/></td>');
+			
+			//if autodoc is on by default, check on resolved checkbox by default (usually on sub tab page B)
+			if($(this).attr("auto-doc") == 'auto'){
+				$(this).find("input[type='checkbox'].autodoc-case-item-resolved").prop("checked", true);
+			}
+			
+			//sync checked status(case item resolved) with status of autodoc checkbox
+			$(this).find(".pbSubsection").find(".list, .auto-doc-list").children('tbody').children('tr').children(":first-child").find("input[type='checkbox']").change(function(){							
+				$(this).parent().parent().find("input[type='checkbox'].autodoc-case-item-resolved").prop("checked", $(this).prop("checked"));
+			});
+			
+			//check on autodoc checkbox if item is marked as resolved
+			$(this).find(".pbSubsection").find(".list, .auto-doc-list").children('tbody').children('tr').find("input[type='checkbox'].autodoc-case-item-resolved").change(function(){
+				if($(this).prop("checked")){
+					$(this).parent().parent().find("input[type='checkbox'].autodoc").prop("checked", $(this).prop("checked"));
+				}
+			});
+			
+		});
+		
+		//update autodoc selected items whenever autodoc or case item resolved checkbox is changed
+		$docsection.find(".pbSubsection").find(".list, .auto-doc-list").find("input[type='checkbox'].autodoc, input[type='checkbox'].autodoc-case-item-resolved").change(function(){
+			getSubTabIdMethodOnCheckboxSelection();
+			var authorizationSwitch = $(this).closest('span.enableAuthorizationAutodoc').attr("auto-doc-section-state");
+			if(authorizationSwitch != "yes" || authorizationSwitch == '' || authorizationSwitch == undefined ){
+				acet.autodoc.saveAutodocSelections();
+				}
+			var sectionState = $(this).closest('span.enableSectionAutodoc').attr("auto-doc-section-state");
+			if(sectionState == 'yes'){
+				acet.autodoc.saveAutodocSaveAccums();
+			}
+			var GrpEligSectionState = $(this).closest('span.enableSectionAutodocGrpEligbility').attr("auto-doc-section-state");
+			if(GrpEligSectionState == 'yes'){
+				acet.autodoc.saveAutodocSaveAccums();
+			}
+			var tableId = $(':checkbox:checked').closest('table').attr('id');
+			var paginationSwitch = $(this).closest('span.enablePagination').attr("auto-doc-pagination");
+			if(paginationSwitch == "true"){
+				acet.autodoc.getPaginationData($(this),tableId);
+			}
+			if(authorizationSwitch == "yes"){
+				acet.autodoc.saveAuthorizationSection();
+				}
+			
+		});
+		getSubTabIdMethodOnCheckboxSelection();
+		//resume previous selections after page section rerender
+		acet.autodoc.initAutodocSelections();
+	};
+	function getSubTabIdMethodOnCheckboxSelection(){
+		//First find the ID of the current tab to close it
+		sforce.console.getEnclosingTabId(getIdSubTab);
+	}
+	
+	var getIdSubTab = function getIdSubTab(result) {
+		//Now that we have the tab ID, we can close it
+		var sbTbIdInfo = result.id;
+		globalVar = sbTbIdInfo;
+		localStorage.setItem("subTabIdInfo",sbTbIdInfo);
+
+	};
+	
+		acet.autodoc.saveAuthorizationSection = function(){
+		identifierList = JSON.parse(localStorage.getItem("rowCheckHold")) || [];
+		var $autodoc = $("<div></div>");
+		$("[auto-doc-section-key]").each(function(){
+			
+			var sectionName = $(this).attr("auto-doc-section-key");
+			$(this).find("[auto-doc-section-column-indexes]").addBack().each(function(){
+				var arrColIndexes = [];
+				$(this).attr("auto-doc-section-column-indexes").split(",").forEach(function(e){
+					arrColIndexes.push(parseInt(e));					
+				});
+				$(this).find(".list, .auto-doc-list").children('tbody').children('tr').each(function(){
+					
+					var rowCloneVar = sectionName;
+					var $chkAutodoc = $(this).find("input[type='checkbox'].autodoc");
+					if($chkAutodoc && $chkAutodoc.is(":checked")){
+						var $rowClone = $(this).clone();
+						$rowClone.find("input,select,textarea").each(function(){				
+							if($(this).css("display") !== "none"){					
+								if($(this).is(":checkbox") || $(this).is(":radio")){
+									if($(this).is(":checked")){
+										$(this).replaceWith('<img src="/img/checkbox_checked.gif" alt="Checked" width="21" height="16" class="checkImg" title="Checked" />');						
+									}else{						
+										$(this).replaceWith('<img src="/img/checkbox_unchecked.gif" alt="Not Checked" width="21" height="16" class="checkImg" title="Not Checked" />');
+										
+									}                           
+								}else{
+									if($(this).is("select")){	
+										//jquery issue, sometimes, changed value in select element is not updated in cloned element.
+										$(this).replaceWith($source.find("[id='" + $(this).attr("id") + "']").val());	
+									}else{				
+										$(this).replaceWith($(this).val().replace(/\r?\n/g, '<br />'));		
+									}
+								}
+							}
+						});
+						var identifier = sectionName;
+						for(var i = 0; i < arrColIndexes.length; i++){								
+							if(arrColIndexes[i] > 0 && arrColIndexes[i] < $(this).find("td").length){
+								var $td = $(this).find("td").eq(arrColIndexes[i]);																
+								if($td) {
+									identifier = identifier + '|' + ($td.find("input").val() || $td.text());	
+								}									
+							}
+						}
+						
+						identifier = globalVar + '|' + identifier;
+						rowAuthorizationList[identifier] = sectionName+'|'+$rowClone.closest('tr')[0].outerHTML;
+						console.log(rowAuthorizationList);
+						identifierList.push(identifier);
+						console.log("identifierList..."+identifierList);
+						$chkCaseItemResolved = $(this).find("input[type='checkbox'].autodoc-case-item-resolved").is(":checked");						
+						acet.autodoc.selectedItems[identifier] = $chkCaseItemResolved;
+						localStorage.setItem("rowCheckHold",JSON.stringify(GetUnique(identifierList)));
+					}else if($chkAutodoc.is(":not(:checked)")){
+						var identifier = sectionName;
+						for(var i = 0; i < arrColIndexes.length; i++){								
+							if(arrColIndexes[i] > 0 && arrColIndexes[i] < $(this).find("td").length){
+								var $td = $(this).find("td").eq(arrColIndexes[i]);																
+								if($td){
+									identifier = identifier + '|' + ($td.find("input").val() || $td.text());	
+								}									
+							}
+						}
+						var $rowClone = $(this).clone();
+						$rowClone.find("input,select,textarea").each(function(){				
+							if($(this).css("display") !== "none"){					
+								if($(this).is(":checkbox") || $(this).is(":radio")){
+									if($(this).is(":checked")){
+										$(this).replaceWith('<img src="/img/checkbox_checked.gif" alt="Checked" width="21" height="16" class="checkImg" title="Checked" />');						
+									}else{						
+										$(this).replaceWith('<img src="/img/checkbox_unchecked.gif" alt="Not Checked" width="21" height="16" class="checkImg" title="Not Checked" />');
+										
+									}                           
+								}else{
+									if($(this).is("select")){	
+										//jquery issue, sometimes, changed value in select element is not updated in cloned element.
+										$(this).replaceWith($source.find("[id='" + $(this).attr("id") + "']").val());	
+									}else{				
+										$(this).replaceWith($(this).val().replace(/\r?\n/g, '<br />'));		
+									}
+								}
+							}
+						});
+						identifier = globalVar + '|' + identifier;
+						if(rowAuthorizationList.hasOwnProperty(identifier)){
+							delete rowAuthorizationList[identifier];
+						}
+						console.log(rowAuthorizationList);
+						identifierList = JSON.parse(localStorage.getItem("rowCheckHold")) || [];
+						if(identifierList.indexOf(identifier) > -1) {
+							identifierList.splice(identifierList.indexOf(identifier), 1);
+							acet.autodoc.selectedItems.splice(acet.autodoc.selectedItems.indexOf[identifier],1);
+							localStorage.setItem("rowCheckHold",JSON.stringify(GetUnique(identifierList)));
+						}
+					}
+				
+				});
+			});
+			
+		
+		});
+		
+	};
+	
+	acet.autodoc.getPaginationData = function($checkedRow,tableId){
+		multipleTableRowList = JSON.parse(localStorage.getItem("table")) || [];
+		console.log(multipleTableRowList);
+		for(var i =0;i<multipleTableRowList.length; i++){
+			for(var j=0;j<multipleTableRowList[i].length;){
+				$removeDuplicatesOnCaseObject[multipleTableRowList[i][j]] = multipleTableRowList[i][++j];
+				j++;
+			}
+		}
+		console.log($removeDuplicatesOnCaseObject);
+		$("[auto-doc-section-key]").each(function(){
+			var setAttributeTabId = $(this).find(".enablePagination");
+			setAttributeTabId.attr("auto-doc-section-tabid",globalVar);
+			var sectionName = $(this).attr("auto-doc-section-key");
+			$(this).find("[auto-doc-section-column-indexes]").addBack().each(function(){
+				var arrColIndexes = [];
+				$(this).attr("auto-doc-section-column-indexes").split(",").forEach(function(e){
+					arrColIndexes.push(parseInt(e));					
+				});
+				$(this).find(".list, .auto-doc-list").children('tbody').children('tr').each(function(){
+					var $chkAutodoc = $(this).find("input[type='checkbox'].autodoc");
+					if($chkAutodoc && $chkAutodoc.is(":checked")){
+						var identifier = sectionName;
+						for(var i = 0; i < arrColIndexes.length; i++){								
+							if(arrColIndexes[i] > 0 && arrColIndexes[i] < $(this).find("td").length){
+								var $td = $(this).find("td").eq(arrColIndexes[i]);																
+								if($td) {
+									identifier = identifier + '|' + ($td.find("input").val() || $td.text());	
+								}									
+							}
+						}
+						if(globalVar != '' || globalVar != undefined){
+							identifier = globalVar + '|' + identifier;
+						}
+						console.log("identifier......"+identifier);
+						var $rowClone = $(this).clone();
+						$rowClone.find("input,select,textarea").each(function(){				
+							if($(this).css("display") !== "none"){					
+								if($(this).is(":checkbox") || $(this).is(":radio")){
+									if($(this).is(":checked")){
+										$(this).replaceWith('<img src="/img/checkbox_checked.gif" alt="Checked" width="21" height="16" class="checkImg" title="Checked" />');						
+									}else{						
+										$(this).replaceWith('<img src="/img/checkbox_unchecked.gif" alt="Not Checked" width="21" height="16" class="checkImg" title="Not Checked" />');
+										
+									}                           
+								}else{
+									if($(this).is("select")){	
+										//jquery issue, sometimes, changed value in select element is not updated in cloned element.
+										$(this).replaceWith($source.find("[id='" + $(this).attr("id") + "']").val());	
+									}else{				
+										$(this).replaceWith($(this).val().replace(/\r?\n/g, '<br />'));		
+									}
+								}
+							}
+						});
+						if(!$removeDuplicatesOnCaseObject.hasOwnProperty(identifier)){
+							$removeDuplicatesOnCaseObject[identifier] = sectionName+globalVar+'%'+$rowClone.closest('tr')[0].outerHTML;
+						}else{
+							delete $removeDuplicatesOnCaseObject[identifier];
+							$removeDuplicatesOnCaseObject[identifier] = sectionName+globalVar+'%'+$rowClone.closest('tr')[0].outerHTML;
+						}
+						$chkCaseItemResolved = $(this).find("input[type='checkbox'].autodoc-case-item-resolved").is(":checked");						
+						acet.autodoc.selectedItems[identifier] = $chkCaseItemResolved;
+						localStorage.table = JSON.stringify(Object.entries($removeDuplicatesOnCaseObject));
+						console.log(localStorage.getItem("table"));
+					}else if($chkAutodoc.is(":not(:checked)")){
+						var identifier = sectionName;
+						for(var i = 0; i < arrColIndexes.length; i++){								
+							if(arrColIndexes[i] > 0 && arrColIndexes[i] < $(this).find("td").length){
+								var $td = $(this).find("td").eq(arrColIndexes[i]);																
+								if($td) {
+									identifier = identifier + '|' + ($td.find("input").val() || $td.text());	
+								}									
+							}
+						}
+						if(globalVar != '' || globalVar != undefined){
+							identifier = globalVar + '|' + identifier;
+						}
+						if($removeDuplicatesOnCaseObject.hasOwnProperty(identifier)){
+							delete $removeDuplicatesOnCaseObject[identifier];
+							localStorage.table = JSON.stringify(Object.entries($removeDuplicatesOnCaseObject));
+						}
+					}
+					
+				});
+				
+			});
+		});
+		
+	};
+	acet.autodoc.saveAutodocSaveAccums = function(){
+		var $sectionFinalList = [];
+		var accumAsOfSave = $("[id$='accumsdateSearch']").val();
+		var grpEligPopulation = $("[id$='grpEligPopulationId']").val() + $("[id$='grpEligDateId']").val();
+		
+		$("[auto-doc='true']").each(function(){
+			var $source = $(this);
+			var $section = $(this).clone(); 
+			
+			$section.find("input,select,textarea").each(function(){				
+				$(this).val($source.find("[id='" + $(this).attr("id") + "']").val());				
+			});
+			$sectionFinal = '';
+			if($section.attr("auto-doc") == 'true'){
+				if(!($section.attr("auto-doc-header-only") == 'true')){														
+					$section.find(".pbSubsection").find(".detailList").each(function(){							
+						var $table = $(this);
+						//reorder fields in page block section
+						if($table.find(".list, .auto-doc-list").length == 0){
+							var $tr = $("<tr></tr>");
+							$table.find("tr").each(function(){                   
+								$(this).find("th.labelCol").find("input:checkbox:checked").each(function(){
+									if($tr.children().length == 4){
+										$table.append($tr);
+										$tr = $("<tr></tr>");    
+									}						
+									$tr.append($(this).parent().clone());						
+									$tr.append($(this).parent().next().clone());   
+								}); 					
+								$(this).remove(); 
+							});
+							$table.append($tr);								
+						}else{
+							//page block table, remove unchecked rows
+							var $chks = $table.find(".list, .auto-doc-list").children("tbody").find(".autodoc").find("input:checkbox:not(:checked)");
+							$chks.closest("tr").remove(); 
+							
+						}								
+					});															
+				}else{
+					//autodoc on header only, clear whole section if header is not checked on
+					$section.find(".pbSubheader").find("input:checkbox:not(:checked)").each(function(){							
+						$(this).parent().parent().html('');
+					});
+				}
+			}
+			console.log($section.html());
+			//hide sheveron icon and expand section if section is collapsed
+			$section.find(".pbSubheader").find(".showListButton, .hideListButton").hide();
+			$section.find(".pbSubsection").show();
+			
+			//remove input required class
+			$section.find(".requiredBlock").remove();
+			$section.find(".requiredInput").removeClass("requiredInput");
+			
+			//console.log('found>>>'+$section.find(".pbSubsection").find(".detailList").find(".checkImg"));
+			$section.find(".pbSubsection").find(".detailList").find(".checkImg").remove();
+			//$section.find(".pbSubsection").find(".detailList").find("tbody tr:first").remove();			
+			//exclude element with autodoc equals false
+			$section.find("[auto-doc-item='false']").remove();
+			//remove all script tags
+			$section.find("script").remove();
+			//remove auto generagted element for autodoc
+			$section.find(".autodoc").remove();
+			//convert input field into text node
+			$section.find("input,select,textarea").each(function(){				
+				if($(this).css("display") !== "none"){					
+					if($(this).is(":checkbox") || $(this).is(":radio")){
+						if($(this).is(":checked")){
+							$(this).replaceWith('<img src="/img/checkbox_checked.gif" alt="Checked" width="21" height="16" class="checkImg" title="Checked" />');						
+						}else{						
+							$(this).replaceWith('<img src="/img/checkbox_unchecked.gif" alt="Not Checked" width="21" height="16" class="checkImg" title="Not Checked" />');
+							
+						}                           
+					}else{
+						if($(this).is("select")){	
+						    //jquery issue, sometimes, changed value in select element is not updated in cloned element.
+							$(this).replaceWith($source.find("[id='" + $(this).attr("id") + "']").val());	
+						}else{				
+							$(this).replaceWith($(this).val().replace(/\r?\n/g, '<br />'));		
+						}
+					}
+				}
+			});
+			$section.find(".tertiaryPalette").remove();
+			if(accumAsOfSave != '' && accumAsOfSave != undefined){
+				$sectionFinal = accumAsOfSave + '|' + $section.html();
+			}else{			
+				$sectionFinal = grpEligPopulation + '|' + $section.html();
+			}
+			console.log($sectionFinal);
+			
+		});
+		$sectionFinalList.push($sectionFinal);
+	    localStorage.setItem("localAccumsData",$sectionFinalList);
+		
+	};
+	acet.autodoc.saveAutodocSelections = function(){
+		identifierList = JSON.parse(localStorage.getItem("rowCheckHold")) || [];
+		var $autodoc = $("<div></div>");
+		var accumAsOfSave = $("[id$='accumsdateSearch']").val();
+		var grpEligPopulation = '';
+		if($("[id$='grpEligPopulationId']").val() != undefined && $("[id$='grpEligDateId']").val() != undefined){
+			var grpEligPopulation = $("[id$='grpEligPopulationId']").val()+'|'+$("[id$='grpEligDateId']").val();
+		}
+		//var grpEligPopulation = $("[id$='grpEligPopulationId']").val() + $("[id$='grpEligDateId']").val();
+		$("[auto-doc-section-key]").each(function(){
+			var sectionName = $(this).attr("auto-doc-section-key");
+			
+			$(this).find("[auto-doc-section-column-indexes]").addBack().each(function(){
+				var arrColIndexes = [];
+				$(this).attr("auto-doc-section-column-indexes").split(",").forEach(function(e){
+					arrColIndexes.push(parseInt(e));					
+				});
+				$(this).find(".list, .auto-doc-list").children('tbody').children('tr').each(function(){
+					var $chkAutodoc = $(this).find("input[type='checkbox'].autodoc");
+					if($chkAutodoc && $chkAutodoc.is(":checked")){
+						var identifier = sectionName;
+						for(var i = 0; i < arrColIndexes.length; i++){								
+							if(arrColIndexes[i] > 0 && arrColIndexes[i] < $(this).find("td").length){
+								var $td = $(this).find("td").eq(arrColIndexes[i]);																
+								if($td) {
+									identifier = identifier + '|' + ($td.find("input").val() || $td.text());	
+								}									
+							}
+						}
+						if(accumAsOfSave != '' && accumAsOfSave != undefined && sectionName!= "pbsec1"){
+							identifier = accumAsOfSave + '|' + identifier;
+						}else if(grpEligPopulation != '' && grpEligPopulation != undefined && sectionName!= "pbsec1"){
+							identifier = grpEligPopulation + '|' + identifier;
+						}else{
+							identifier = globalVar + '|' + identifier;
+						}
+						console.log("identifier......2"+identifier);
+						identifierList.push(identifier);
+						console.log(identifierList);
+						$chkCaseItemResolved = $(this).find("input[type='checkbox'].autodoc-case-item-resolved").is(":checked");						
+						acet.autodoc.selectedItems[identifier] = $chkCaseItemResolved;
+						localStorage.setItem("rowCheckHold",JSON.stringify(GetUnique(identifierList)));
+						console.log(localStorage.getItem("rowCheckHold"));
+					}else if($chkAutodoc.is(":not(:checked)")){
+						var identifier = sectionName;
+						for(var i = 0; i < arrColIndexes.length; i++){								
+							if(arrColIndexes[i] > 0 && arrColIndexes[i] < $(this).find("td").length){
+								var $td = $(this).find("td").eq(arrColIndexes[i]);																
+								if($td){
+									identifier = identifier + '|' + ($td.find("input").val() || $td.text());	
+								}									
+							}
+						}
+						if(accumAsOfSave != '' && accumAsOfSave != undefined && sectionName!= "pbsec1"){
+							identifier = accumAsOfSave + '|' + identifier;
+						}else if(grpEligPopulation != '' && grpEligPopulation != undefined && sectionName!= "pbsec1"){
+							identifier = grpEligPopulation + '|' + identifier;
+						}else{
+							identifier = globalVar + '|' + identifier;
+						}
+						//console.log("identifier......"+identifier);
+						identifierList = JSON.parse(localStorage.getItem("rowCheckHold")) || [];
+						if(identifierList.indexOf(identifier) > -1) {
+							identifierList.splice(identifierList.indexOf(identifier), 1);
+							localStorage.setItem("rowCheckHold",JSON.stringify(GetUnique(identifierList)));
+						}
+						
+					}
+					
+				});
+				
+			});
+		});
+		console.log(localStorage.getItem("rowCheckHold"));
+					
+	};
+	
+	acet.autodoc.initAutodocSelections = function(){
+		var subTabId = localStorage.getItem("subTabIdInfo");
+		console.log(localStorage.getItem("rowCheckHold"));
+		var accumAsOfInit = $("[id$='accumsdateSearch']").val();
+		var grpEligPopulation = '';
+		if($("[id$='grpEligPopulationId']").val() != undefined && $("[id$='grpEligDateId']").val() != undefined){
+			var grpEligPopulation = $("[id$='grpEligPopulationId']").val()+'|'+$("[id$='grpEligDateId']").val();
+		}
+		//var grpEligPopulation = $("[id$='grpEligPopulationId']").val() + $("[id$='grpEligDateId']").val();
+		$("[auto-doc-section-key]").each(function(){
+			var sectionName = $(this).attr("auto-doc-section-key");			
+			$(this).find("[auto-doc-section-column-indexes]").addBack().each(function(){				
+				var arrColIndexes = [];
+				$(this).attr("auto-doc-section-column-indexes").split(",").forEach(function(e){
+					arrColIndexes.push(parseInt(e));					
+				});
+				$(this).find(".list, .auto-doc-list").children('tbody').children('tr').each(function(){	   var identifier = sectionName;
+					for(var i = 0; i < arrColIndexes.length; i++){								
+						if(arrColIndexes[i] > 0 && arrColIndexes[i] < $(this).find("td").length){
+							var $td = $(this).find("td").eq(arrColIndexes[i]);
+							if($td) {
+								identifier = identifier + '|' + ($td.find("input").val() || $td.text());	
+							}									
+						}
+					}
+					if(accumAsOfInit != '' && accumAsOfInit != undefined && sectionName!= "pbsec1"){
+						identifier = accumAsOfInit + '|' + identifier;
+					}else if(grpEligPopulation != '' && grpEligPopulation != undefined && sectionName!= "pbsec1"){
+						identifier = grpEligPopulation + '|' + identifier;
+					}else{
+						identifier = globalVar + '|' + identifier;
+					}
+					console.log("identifier......"+identifier);
+					var retrieveDat = JSON.parse(localStorage.getItem("rowCheckHold")) || [];
+					if (retrieveDat.indexOf(identifier) > -1) {
+						$(this).find("input[type='checkbox'].autodoc").prop("checked",true);					
+ 						$(this).find("input[type='checkbox'].autodoc-case-item-resolved").prop("checked", acet.autodoc.selectedItems[identifier]);
+					}
+				/*	if(typeof acet.autodoc.selectedItems[identifier] != undefined){
+						$(this).find("input[type='checkbox'].autodoc-case-item-resolved").prop("checked", acet.autodoc.selectedItems[identifier]);
+					} */						
+				});
+			});
+		});
+	};
+	if (!Object.keys) {
+		Object.keys = (function() {
+			'use strict';
+			var hasOwnProperty = Object.prototype.hasOwnProperty,
+				hasDontEnumBug = !({ toString: null }).propertyIsEnumerable('toString'),
+				dontEnums = [
+				  'toString',
+				  'toLocaleString',
+				  'valueOf',
+				  'hasOwnProperty',
+				  'isPrototypeOf',
+				  'propertyIsEnumerable',
+				  'constructor'
+				],
+				dontEnumsLength = dontEnums.length;
+
+			return function(obj) {
+			  if (typeof obj !== 'function' && (typeof obj !== 'object' || obj === null)) {
+				throw new TypeError('Object.keys called on non-object');
+			  }
+
+			  var result = [], prop, i;
+
+			  for (prop in obj) {
+				if (hasOwnProperty.call(obj, prop)) {
+				  result.push(prop);
+				}
+			  }
+
+			  if (hasDontEnumBug) {
+				for (i = 0; i < dontEnumsLength; i++) {
+				  if (hasOwnProperty.call(obj, dontEnums[i])) {
+					result.push(dontEnums[i]);
+				  }
+				}
+			  }
+			  return result;
+			};
+		}());
+	}
+	if (!Object.entries)
+		Object.entries = function( obj ){
+		var ownProps = Object.keys( obj ),
+			i = ownProps.length,
+			resArray = new Array(i); // preallocate the Array
+		while (i--)
+		  resArray[i] = [ownProps[i], obj[ownProps[i]]];
+
+		return resArray;
+	};
+	acet.autodoc.saveStateAutodocOnSearch = function(){
+		globalSectionalVar = [];
+		console.log(globalSectionalVar);
+		if(localStorage.getItem("localAccumsData") != null){
+			var tempVar = (localStorage.getItem("localAccumsData")).split("|");
+			if(!globalMap.has(tempVar[0])){
+				globalMap[tempVar[0]] = tempVar[1];
+			}else{
+				delete globalMap[tempVar[0]];
+				globalMap[tempVar[0]] = tempVar[1];
+			}
+		}
+		$globalAccumsList = Object.keys(globalMap).map(function(e) {return globalMap[e]});
+		var tempglobalaccums = GetUnique($globalAccumsList);
+		var tempglobalstr='';
+		for(var elem in tempglobalaccums){
+			tempglobalstr=tempglobalstr+tempglobalaccums[elem];      	 
+		}
+		localStorage.setItem("globalAccumsData",tempglobalstr);		
+		globalSectionalVar.push(localStorage.getItem("globalAccumsData"));
+		//localStorage.setItem("globalAccumsDataFinal",GetUnique(globalSectionalVar));
+		console.log(globalSectionalVar);
+		localStorage.removeItem("localAccumsData");
+		
+	};
+	
+	function GetUnique(inputArray)
+	{
+		var outputArray = [];
+		for(var i = 0; i < inputArray.length; i++)
+			{	
+				if ((jQuery.inArray(inputArray[i], outputArray)) == -1)
+				{
+					outputArray.push(inputArray[i]);
+				}
+			}
+	return outputArray;
+	}
+	acet.autodoc.saveAutodoc = function(){
+	var tempMapAuthorization = new Map();
+		for (var key in rowAuthorizationList) {
+			var localVal ='';
+			var splitString = rowAuthorizationList[key].split("|");
+			if(!tempMapAuthorization.has(splitString[0])){
+				tempMapAuthorization.set(splitString[0],splitString[1]);
+			}else{
+				localVal = tempMapAuthorization.get(splitString[0])+''+splitString[1];
+				tempMapAuthorization.set(splitString[0],localVal);
+			}
+		}
+		var tempHTML;
+		var tempJQConvert;
+		var authorizationFinal = {};
+		console.log(tableHeaderMap);
+		for(var key in tableHeaderMap) {
+			if(tableHeaderMap[key]!=null || tableHeaderMap[key]!=undefined){
+				tempHTML = tableHeaderMap[key];
+				tempJQConvert = $(tempHTML);
+				if(tempMapAuthorization.get(key)!=null){
+					//tempJQConvert.find(".pbSubsection").find(".detailList").find('span.enableAuthorizationAutodoc').find(".list, .auto-doc-list").find('tbody').append(tempMapAuthorization.get(key));
+					tempJQConvert.find('tbody').append(tempMapAuthorization.get(key))
+				}
+				authorizationFinal[key] = tempJQConvert[0].outerHTML;
+			}
+			
+		}
+		console.log(authorizationFinal);		
+		var $autodoc = $("<div></div>");
+		multipleTableRowFinal = [];
+		$("[auto-doc='auto'],[auto-doc='true']").each(function(){	
+			var $source = $(this);
+			var $section = $(this).clone(); 
+			
+			//fix jquery issue, selected value is not cloned
+			$section.find("input,select,textarea").each(function(){				
+				$(this).val($source.find("[id='" + $(this).attr("id") + "']").val());				
+			});
+			
+			//remove unchecked fields or rows		
+			if($section.attr("auto-doc") == 'true'){
+				//autodoc on header and section details
+				if(!($section.attr("auto-doc-header-only") == 'true')){	   
+					$section.find(".pbSubsection").find(".detailList").each(function(){							
+						var $table = $(this);
+						//reorder fields in page block section
+						if($table.find(".list, .auto-doc-list").length == 0){
+							var $tr = $("<tr></tr>");
+							$table.find("tr").each(function(){                   
+								$(this).find("th.labelCol").find("input:checkbox:checked").each(function(){
+									if($tr.children().length == 4){
+										$table.append($tr);
+										$tr = $("<tr></tr>");    
+									}						
+									$tr.append($(this).parent().clone());						
+									$tr.append($(this).parent().next().clone());   
+								}); 					
+								$(this).remove(); 
+							});
+							$table.append($tr);								
+						}else{
+							var $chks = $table.find(".list, .auto-doc-list").children("tbody").find(".autodoc").find("input:checkbox:not(:checked)");
+							$chks.closest("tr").remove();
+						}								
+					});															
+				}else{
+					//autodoc on header only, clear whole section if header is not checked on
+					$section.find(".pbSubheader").find("input:checkbox:not(:checked)").each(function(){    
+						$(this).parent().parent().html('');
+					});
+				}
+			}
+						 				
+			//hide sheveron icon and expand section if section is collapsed
+			$section.find(".pbSubheader").find(".showListButton, .hideListButton").hide();
+			$section.find(".pbSubsection").show();
+			
+			//remove input required class
+			$section.find(".requiredBlock").remove();
+			$section.find(".requiredInput").removeClass("requiredInput");
+			
+			//console.log('found>>>'+$section.find(".pbSubsection").find(".detailList").find(".checkImg"));
+			$section.find(".pbSubsection").find(".detailList").find(".checkImg").remove();
+						
+			//remove auto generagted element for autodoc
+			$section.find(".autodoc").remove();
+			
+			//exclude element with autodoc equals false
+			$section.find("[auto-doc-item='false']").remove();
+			
+			//remove all script tags
+			$section.find("script").remove();
+			
+			
+			//convert input field into text node
+			$section.find("input,select,textarea").each(function(){				
+				if($(this).css("display") !== "none"){					
+					if($(this).is(":checkbox") || $(this).is(":radio")){
+						if($(this).is(":checked")){
+							$(this).replaceWith('<img src="/img/checkbox_checked.gif" alt="Checked" width="21" height="16" class="checkImg" title="Checked" />');						
+						}else{						
+							$(this).replaceWith('<img src="/img/checkbox_unchecked.gif" alt="Not Checked" width="21" height="16" class="checkImg" title="Not Checked" />');
+						}                           
+					}else{
+						if($(this).is("select")){	
+						    //jquery issue, sometimes, changed value in select element is not updated in cloned element.
+							$(this).replaceWith($source.find("[id='" + $(this).attr("id") + "']").val());	
+						}else{				
+							$(this).replaceWith($(this).val().replace(/\r?\n/g, '<br />'));		
+						}
+					}
+				}
+			}); 
+
+			if(localStorage.getItem("table")!=null){
+				var arrColIndexes = [];
+				var identifierList = [];
+				$section.find(".enablePagination").children().find("table").find("tbody").empty();
+				var aMap = {};
+				var multipleTableRowArray = JSON.parse(localStorage.getItem("table")) || [];
+				for(var i=0; i< multipleTableRowArray.length; i++){
+					for(var j=0; j<multipleTableRowArray[i].length; ){
+						identifierList.push(multipleTableRowArray[i][j]);
+						var temp = multipleTableRowArray[i][++j];
+						multipleTableRowFinal.push(temp);
+						j++;
+					}
+					
+				}
+
+				var tempList = GetUnique(multipleTableRowFinal);
+				for(var y=0; y< tempList.length; y++){
+					console.log(tempList[y]);
+					if(tempList[y] != undefined){
+						var splitString = tempList[y].split("%");
+						aMap[splitString[0]] = aMap[splitString[0]] || [];
+						aMap[splitString[0]].push(splitString[1]);
+					}
+				}
+				for (var key in aMap) {
+					var keyTabId = $section.find(".enablePagination").attr("auto-doc-section-combinedkey")+$section.find(".enablePagination").attr("auto-doc-section-tabid");
+					if( keyTabId == key){
+					$section.find(".enablePagination").children().find("table").find("tbody").empty();
+					var arrayJoin = aMap[key].toString();
+					$section.find(".enablePagination").children().find("table").find("tbody").append(arrayJoin);
+					}
+						
+				}
+				
+				
+				
+			}
+			
+			if(authorizationFinal!=null){
+				var sectionName = $section.attr("auto-doc-section-key");
+				var iterateMap = Object.entries(authorizationFinal);
+				for(var i=0;i<iterateMap.length;i++){
+					for(var j=0;j<iterateMap[i].length;){
+						if(iterateMap[i][j] == sectionName){
+							$section.find(".pbSubsection").remove();
+							console.log($section);
+							$section.append(iterateMap[i][++j]);
+						}
+						j++;
+					}
+					console.log($section);
+					
+				}
+				
+			}
+			
+			$section.find(".autodoc").remove();
+
+			//append section content
+			
+			if($section.attr("auto-doc") == 'auto' || $section.find(".pbSubsection").find("th.labelCol").length > 0 || $section.find(".list, .auto-doc-list").children("tbody").find("tr").length > 0){
+				
+				$autodoc.append($section);
+			} 
+
+			
+									
+		});  
+					
+		//append additonal autodoc
+		if(acet.autodoc.additionalInfo){
+			$autodoc.append(acet.autodoc.additionalInfo);
+		}
+		//display highlight panel when it is collapsed
+		var $span = $autodoc.find(".highlights-panel-collapsible");
+		// Replace all the span's with a div
+		$span.replaceWith(function () {
+			return $('<div/>', {
+				class: 'highlights-panel-collapsible',
+				html: this.innerHTML
+			});
+		});
+		if(localStorage.getItem("globalAccumsData") != null){
+			globalSectionalVar.push(localStorage.getItem("globalAccumsData"));
+			console.log(globalSectionalVar);
+			$autodoc.find(".enableSectionAutodoc").remove();
+			$autodoc.find(".enableSectionAutodocGrpEligbility").remove();
+			//var $additionalAccumsSection = localStorage.getItem("globalAccumsData");
+			$autodoc.append(GetUnique(globalSectionalVar));
+			localStorage.removeItem("globalAccumsData");	
+
+		}
+		
+		$additionalAccumsSection = '';
+		$autodoc.append("<br/><br/>");	
+		//Auto-Doc for Benefit codes :start
+		$autodoc.append("<br/><br/>");
+
+		$acccordianAutoDoc = $("[html-auto-doc-accordian='true']"); 
+		$acccordianAutoDoc.each(function(){
+        	if($(this).is(":checkbox")){
+            	if($(this).is(":checked")){			
+					$autodoc.append("<div class='pbSubheader brandTertiaryBgr first tertiaryPalette'><h3>Benefit Details</h3></div>");				
+					$autodoc.append("<table cellspacing='10px' width='100%'><tbody><tr><td class='colStyle'><label class='outputLabelPanel'>Benefit As Of</label>"+$("#benefitDateSearch").val()+"</td></tr><tbody></table>");		
+					
+					return false;
+                }
+            }        
+        });
+
+		$acccordianAutoDoc.each(function(){
+        	if($(this).is(":checkbox")){
+            	if($(this).is(":checked")){
+					$autodoc.append("<li style='margin-left:20px'>"+$(this).val()+"</li>");
+                }
+            }        
+        });
+		
+		//Auto-Doc for Benefit codes :End	
+		//assign autodoc content
+		$("[id$='autodocHidden']").val($autodoc.html());    
+		//assign autodoc comment
+		$("[id$='autodocCommentHidden']").val($("#autodocComments").val());
+		//assign autodoc case item key ids
+		$("[id$='autodocCaseItemsHidden']").val(acet.autodoc.getCaseItemInfo($autodoc));	
+		//$autodoc.find(".enablePagination").find("#datatable").find("tbody").empty();
+		return $autodoc.html();
+	};
+	
+	acet.autodoc.getCaseItemInfo = function($autodoc){
+		var keyIds = [];
+		
+		//dummy case item from call topic section
+		$autodoc.find("[auto-doc-case-item='true']").each(function(){			
+			var isResolved = $(this).find(".autodoc-case-item-resolved").find("img").attr("title") == "Checked";
+			keyIds.push("::" + isResolved);			
+		});
+
+		//case Items for GroupEligibility call topic        
+		$autodoc.find(".enableSectionAutodocGrpEligbility").each(function(){
+			$(this).find(".list, .auto-doc-list").children("tbody").find("tr").each(function(){
+				var isResolved = $(this).children().last(".autodoc-case-item-resolved").find("img").attr("title") == "Checked";	
+				var keyidchck = $.trim($(this).children().first().text()).substring(0, 1);
+				if(keyidchck == "_"){
+   					var finalKeyId = $.trim($(this).children().first().text()).substring(1);
+					keyIds.push(finalKeyId + "::" + isResolved);
+				}else{			
+					keyIds.push($.trim($(this).children().first().text()) + "::" + isResolved);
+				}
+			});	
+
+		});
+
+		//case items from call topic search results
+		$autodoc.find("[auto-doc-case-items='true']").each(function(){
+			var idx = 0;
+			var idxprovName = 0;
+
+      $(this).find(".pbSubsection").find(".list, .auto-doc-list").children("thead").find("tr").find("th").each(function(index){                
+              
+          if($(this).text() == 'Tax ID')
+          {
+              console.log('matched');
+              idx = index;
+              console.log('Inside::'+idx);
+          }else if($(this).text() == 'Provider')
+          {
+              console.log('matched provider');
+              idxprovName = index;
+              console.log('Inside::'+idxprovName);
+          } else if($(this).text() == 'Provider ID')
+          {
+              console.log('matched provider: ' +$(this).html());
+              idxprovName = index + 1;
+              //provName + 1 because we want provider name, not provider id, but the header "name" is too generic
+              console.log('Inside::'+idxprovName);
+
+          }
+      }); 
+      if(idx != 0 || idxprovName != 0){
+		      if(idx!=0)
+		      {
+		          $(this).find(".pbSubsection").find(".list, .auto-doc-list").children("tbody").find("tr").each(function(){               
+                      var adding = '';
+                      var taxId = $(this).children().eq(idx).text();
+                      console.log('TAX ID ::: '+taxId);
+                      adding = adding + ";;" + taxId;
+                      if(idxprovName != 0){
+                      	var prov = $(this).children().eq(idxprovName).text();
+                      	console.log('Provider Name ::: '+prov);
+                      	adding = adding + ";;" + prov;
+                      }
+                      var isResolved = $(this).children().last(".autodoc-case-item-resolved").find("img").attr("title") == "Checked";             
+                      keyIds.push($.trim($(this).children().first().text()) + adding +"::" + isResolved);
+              });
+		      }
+		      
+      } else
+			{
+	      console.log('outside::'+idx);
+				$(this).find(".pbSubsection").find(".list, .auto-doc-list").children("tbody").find("tr").each(function(){				
+					var isResolved = $(this).children().last(".autodoc-case-item-resolved").find("img").attr("title") == "Checked";				
+					keyIds.push($.trim($(this).children().first().text()) + "::" + isResolved);
+					console.log("2nd"+isResolved);
+				});
+				$(this).find(".list, .auto-doc-list").children("tbody").find("tr").each(function(){
+					var isResolved = $(this).children().last(".autodoc-case-item-resolved").find("img").attr("title") == "Checked";				
+					keyIds.push($.trim($(this).children().first().text()) + "::" + isResolved);
+					console.log("3rd"+isResolved);
+				});
+			}				
+		});
+
+		$benefitAutoDoc = $("[html-auto-doc-accordian='true']"); 
+		
+
+		$benefitAutoDoc.each(function(){
+        	if($(this).is(":checkbox")){
+            	if($(this).is(":checked")){		
+					//alert('2 :: '+$(this).val());
+					keyIds.push($(this).val() + "::" + true);
+					localStorage.setItem("benefitCaseItem",JSON.stringify(GetUnique(keyIds)));
+					
+                }
+            }        
+        });		
+		if(localStorage.getItem("benefitCaseItem")!= null){
+			var benefitCaseItem_array =[];
+			benefitCaseItem_array = JSON.parse(localStorage.getItem("benefitCaseItem"));
+			keyIds.push(benefitCaseItem_array.join("||") || []);
+		}
+		
+		return keyIds.join("||");
+	};
+	
+	
+	acet.autodoc.saveAutodocComments = function(){	
+		//assign autodoc comment
+		$("[id$='autodocCommentHidden']").val($("#autodocComments").val());
+		return $("#autodocComments").val();
+	};
+		
+	acet.autodoc.createCommentsbox = function(){		
+		var html =  '<div id="autodocCommentsContainer" style="position:fixed;bottom:0;right:0;width:400px;height:100px;background-color:#E1E0DA;padding-left:10px;padding-right:10px;border:3px solid #D18361;">'
+					+ 	'<div id="autodocCommentsHeader" style="width:100%;height:24px;background-color:#E1E0DA;padding-top:4px;">'
+					+ 		'<div style="float:left;">'
+					+ 			'<img src="/resource/1479166730000/ACETResources/img/comments.png" style="vertical-align:middle;margin-right:2px;"/>'
+					+ 			'<span>Comments</span>'
+					+ 		'</div>'
+					+ 		'<div style="float:right;">'
+					+ 			'<img id="btnMinimize" src="/resource/1479166730000/ACETResources/img/minimize.png" />'					
+					+ 		'</div>'
+					+ 	'</div>'
+					+ 	'<textarea id="autodocComments" style="width:100%;height:50px;overflow:auto;border:none;"/>'
+					+   '<div id="autodocCommentsFooter" style="width:100%;height:20px;background-color:#E1E0DA;bottom:0" />'
+					+ '</div>';
+
+		$("form").append(html);
+		
+		$("#autodocCommentsContainer").draggable({
+			create: function(event, ui){                    
+				//fix for IE, does not work when left and top is auto                
+				$("#autodocCommentsContainer").css('left', $(window).width() - $(this).width() - 25 + 'px');
+				$("#autodocCommentsContainer").css('top', $(window).height() - $(this).height() - 4 + 'px');                                         
+			}            
+		}).resizable({
+			handles: "n, e, s, w, ne, se, sw, nw"                
+		}); 
+		
+		$("#autodocCommentsContainer").on( "resize", function(event, ui){                
+			$("#autodocComments").height(ui.size.height - 51);                
+			ui.size.height = Math.max(51, ui.size.height);
+			ui.size.width = Math.max(150, ui.size.width);													 
+		});  
+		
+		$("#autodocCommentsContainer").on( "drag", function(event, ui){			
+			if(ui.position.top + $(this).height() > $(window).height()){                    
+				ui.position.top = $(window).height() - $(this).height();    
+			}
+			
+			if(ui.position.left + $(this).width() > $(window).width()){
+				ui.position.left = $(window).width() - $(this).width();
+			}
+		});
+				
+		$("#btnMinimize").on('click', function(){                
+			$("#autodocCommentsContainer").resizable("disable").draggable("disable");
+			//$("#autodocCommentsContainer").attr("bottom",0);
+			$("#autodocCommentsContainer").height(28);
+			$("#autodocComments").height(0);
+			$("#autodocCommentsFooter").height(0);
+			$("#autodocCommentsContainer").css('left', 'auto');
+			$("#autodocCommentsContainer").css('top', 'auto');
+			$("#autodocCommentsContainer").css("bottom",'0px');
+			$("#autodocCommentsContainer").css('right', '0px');						
+					
+		});
+		
+		$("#autodocCommentsHeader").on('dblclick', function(){   
+			if($("#autodocComments").height() == 0){
+				$("#autodocCommentsContainer").resizable("enable").draggable("enable");
+				$("#autodocCommentsContainer").height(100);
+				$("#autodocComments").height(50);
+				$("#autodocCommentsFooter").height(20);
+				$("#autodocCommentsContainer").css('left', $(window).innerWidth() - $("#autodocCommentsContainer").width() -25  + 'px');
+				$("#autodocCommentsContainer").css('top', $(window).innerHeight() - $("#autodocCommentsContainer").height() -4 + 'px'); 
+				//$("#autodocCommentsContainer").css("bottom",'0px');
+				//$("#autodocCommentsContainer").css('right', '0px');                       
+			}else{             
+				$("#autodocCommentsContainer").resizable("disable").draggable("disable");                    
+				$("#autodocCommentsContainer").height(28);
+				$("#autodocComments").height(0);
+				$("#autodocCommentsFooter").height(0); 
+				//$("#autodocCommentsContainer").css('left', $(window).width() - $(this).width() + 'px');
+				//$("#autodocCommentsContainer").css('top', $(window).height() - $(this).height() + 'px');
+				$("#autodocCommentsContainer").css('left', 'auto');
+				$("#autodocCommentsContainer").css('top', 'auto');
+				$("#autodocCommentsContainer").css("bottom",'0px');
+				$("#autodocCommentsContainer").css('right', '0px');
+				
+			}               
+		});
+		
+		//do not invoke page action when the focus is in comment box and enter key is pressed
+		$('#autodocComments').keypress(function(e){            
+            if(e.which == 13) {                                          
+                e.stopPropagation();                                          
+            }
+        });
+		
+	};
+		
+}());
+	function closeSubtabOnReady(){
+		//First find the ID of the current tab to close it
+		sforce.console.getEnclosingTabId(getIdSubTab);
+	}
+	var getIdSubTab = function getIdSubTab(result) {
+		//Now that we have the tab ID, we can close it
+		var sbTbIdInfo = result.id;
+		globalVar = sbTbIdInfo;
+		localStorage.setItem("subTabIdInfo",sbTbIdInfo);
+	};
+//add static acet-id for automation testing team to locate html element
+$(document).ready(function() { 
+	closeSubtabOnReady()
+	//add static acet-id for automation testing team to locate html element
+	$(".dataCol").find("input,select,textarea").each(function(){                
+		$(this).attr('acet-id',$(this).parent().prev().find("label").text().trim().replace(/\s+/g, '-'));                
+	}); 
+	
+	$(".btn").each(function(){
+		$(this).attr('acet-id', $(this).val().trim().replace(/\s+/g, '-'));    
+	});
+	
+	$(".list, .auto-doc-list").each(function(){
+		var $pbSubsection = $(this).parents(".pbSubsection");
+		if($pbSubsection.length){            
+			$(this).attr('acet-id', $pbSubsection.prev().find("h3").text().trim().replace(/\s+/g, '-'));    
+		}else{                 
+			$(this).attr('acet-id', $(this).parents(".pbBody").prev().find("h2").text().trim().replace(/\s+/g, '-'));                
+		}     
+	});	
+	$("[auto-doc-section-key]").each(function(){
+		if($(this).attr("auto-doc-section-key") =="pbsAdditionalAddresses"){
+			if($(this).find(".pbSubheader").find("input[type='checkbox'].autodoc").length>0){
+				$(this).find(".pbSubheader").find("input").remove();    
+			}
+		}
+	});
+});              
+

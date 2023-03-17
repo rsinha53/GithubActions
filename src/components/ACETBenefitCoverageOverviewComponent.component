@@ -1,0 +1,587 @@
+<apex:component controller="ACETBenefitCoverageOverviewController" id="covergaeOverviewMainComponent">
+        
+    <apex:attribute type="ACETGroupPlanBenefitWrapper" name="attrBenefitSubscriptionService" description="It hold Data Wrapper Values" assignTo="{!ACETPlanBenefitSearchResults}"/>
+    <apex:attribute type="String" name="attrCoverageLevel" description="Coverage Levels" assignTo="{!covrgLevel}"/>
+    <apex:attribute type="Boolean" name="attrIsPlanBenefitCallTopic" description="Coverage Levels"/>
+    <apex:attribute type="Boolean" name="attrIsGroupPlanCallTopic" description="Coverage Levels"/>
+    <apex:attribute type="String" name="attrEndDate" description="End Date" assignTo="{!EndDate}"/>
+    <apex:attribute type="String" name="attrEffectiveDate" description="EffectiveDate" assignTo="{!EffectiveDate}"/>
+    <apex:attribute type="String" name="attrPlanType" description="PlanTypeCode" assignTo="{!PlanType}"/>
+    <apex:attribute type="ACETAccumAsOfWrapper" name="attrdateSearch" description="for a date search" assignTo="{!dateSearch}"/>
+    <apex:attribute type="String" name="customerPurchaseidattribute" description="for getssb callout " assignTo="{!customerPurchaseid}"/>
+
+    <style>
+        .error{
+        border-color: #c00 !important;
+        box-shadow: 0px 0px 3px #c00;
+        }
+        .errorMsg {
+        color: #c00 !important;
+        margin-left: 0.5%;
+        }
+        .headerColor{
+            background-color:#f2f3f3 !important;"
+        }
+    </style>
+    <script>
+    function customDatePicker() {
+    
+         $( "#accumsdateSearch" ).datepicker(
+           {
+            
+             changeMonth: true,
+             changeYear: true,
+             dateFormat:"m/dd/yy",
+           });
+    }
+    function validate() {
+        var $dateSearch = $("[id$='accumsdateSearch']");
+        var effectiveDate = '{!EffectiveDate}';
+        var pattern =/^(0?[1-9]|1[012])[\/\-](0?[1-9]|[12][0-9]|3[01])[\/\-]\d{4}$/;
+        var convertedEffectiveDate = new Date(effectiveDate);
+        var endDate = '{!EndDate}';
+        var convertedEndDate = new Date(endDate);
+        var selectedDate = new Date($dateSearch.val());
+        $dateSearch.removeClass("error").parent().find(".errorMsg").remove();
+        var result = true;
+        //alert();
+        if(!pattern.test($dateSearch.val())){
+            var errorMsg = "Invalid Date";
+            $dateSearch.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>');
+            result = false;    
+        }
+        else if(selectedDate < convertedEffectiveDate || selectedDate > convertedEndDate){
+            // else if(selectedDate > convertedEndDate){
+   
+            // alert('test fail');
+            var errorMsg = "Date selected outside of coverage period.";
+            $dateSearch.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>');
+            result = false;
+        }
+        
+        
+        if(result){
+            //alert('true found'+result);
+            makeJSCallout();
+            
+        }else{
+            //document.getElementById('{!$Component.pbsec.pbsditm.statusId}').style.display='none';
+        }
+        
+    }
+    
+    $(document).ready(function(){
+        // acet.autodoc.startAutodoc();
+        //acet.autodoc.createCommentsbox();
+        //acet.autodoc.subTabIds = []; 
+           
+    }); 
+    
+    $(document).ready(function(){
+        //customDatePicker();
+        populateDate();
+    });
+    
+    
+    function makeJSCallout(){
+        //alert('Calling');
+        var accumAsOf = $("[id$='accumsdateSearch']").val();
+        //alert('accumsDateAsOd'+accumAsOf);
+        //var accumAsOf=document.getElementById('{!$Component.pbsec.pbsditm.accumsdateSearch}').value;
+        //alert(accumAsOf);
+        afOnDateChange1(accumAsOf);
+        
+    }
+    
+    /*function drawCallback(settings){
+        //display autodoc checkboxes                    
+        acet.autodoc.startAutodoc(); 
+    }*/
+    
+    function populateCurrentDate() {
+        //var currentDate = $("[id$='populateCurrentDate']").val();
+        var today = new Date();
+        var dd = today.getDate();
+        var mm = today.getMonth()+1; //January is 0!
+        
+        var yyyy = today.getFullYear();
+        if(dd<10){
+            dd='0'+dd;
+        } 
+       /* if(mm<10){
+            mm='0'+mm;
+        } */
+        var today = mm+'/'+dd+'/'+yyyy;
+        console.log('today Date:::'+today);
+        $("[id$='accumsdateSearch']").val(today);
+        //document.getElementById("accumsdateSearch").innerHtml = today;
+        return false;
+    }
+    </script>
+     
+    <apex:actionFunction name="populateDate" action="{!populateDate}" rerender="populateDate" oncomplete="customDatePicker();"/>
+    <apex:pageBlockSection id="pbsec" title="Coverage Overview" columns="1" rendered="{!attrIsPlanBenefitCallTopic}"  html-auto-doc="true" html-auto-doc-section-key="pbsec" html-auto-doc-section-column-indexes="1,2,3,5,6,7,8" >
+    <apex:outputPanel styleClass="enableSectionAutodoc" html-auto-doc-section-state="yes">
+        <apex:pageBlockSection columns="2" id="pbsec1" html-auto-doc-section-key="pbsec1" html-auto-doc-section-column-indexes="1,2,3">
+            <apex:pageBlockSectionItem rendered="{!if(attrPlanType !='EPO' && attrPlanType !='HMO',true,false)}">
+                <apex:outputPanel id="OONReimbursement" styleClass="OONReimbursement">   
+                <div style="font-weight: bold;padding: 5px;/* background-color: #f2f3f3; */width: 24.5%;">
+                     OON Reimbursement                    
+                </div> 
+                <apex:pageBlockTable value="{!OONReimbursementList}" var="OON" headerClass="headerColor" id="OONResultsId" style="width:60%;" >
+                    
+                    <apex:column value="{!OON.OONPricingType}" headervalue="OON Pricing Type" headerClass="whiteLeft-bg"/>
+                    <apex:column value="{!OON.Percentile}" headerValue="Percentile"  headerClass="whiteLeft-bg"  style="text-align:left !important;"/>
+                </apex:pageBlockTable> 
+                </apex:outputPanel>
+            </apex:pageBlockSectionItem>
+        </apex:pageBlockSection> <br style="display:{!IF(OONReimbursementList.size != 0,'none','')}"/><br style="display:{!IF(OONReimbursementList.size != 0,'none','')}"/>          
+        <apex:pageBlockSectionItem id="pbsditm"> 
+            
+            <apex:outputPanel style="margin-left:1%;" id="populateDate" >
+           
+                <label style="font-weight:bold;">Accumulator As Of </label>&nbsp;&nbsp;&nbsp;&nbsp;
+                <input type="text" id="accumsdateSearch" placeholder="MM/DD/YYYY" label="Date" value="{!accumsDateSearch}" style="width: 6%;"/>
+                <!-- <apex:inputField value="{!accumsdate.tst_Date_Field__c}" id="accumsdateSearch" label="Date"/>  -->              
+                <apex:commandLink value="{!currentDate}" onclick="populateCurrentDate(); return false;" id="populateCurrentDate1">
+                </apex:commandLink>
+                <apex:commandButton value="Search" onclick="validate();acet.autodoc.saveStateAutodocOnSearch();return false;" oncomplete="acet.autodoc.startAutodoc('pbsec');" status="statusId"/>
+                
+                <apex:actionStatus id="statusId" > 
+                    <apex:facet name="start">
+                            <div id="loadingDivPanel" style = "display: inline;margin : 0 auto;width : 50%">
+                                <img src="{!URLFOR($Resource.ACETResources, '/img/m/loading16x16.gif')}" />
+                                <b>Loading.... Please Wait...</b>
+                            </div> 
+                    </apex:facet>
+                </apex:actionStatus>
+            </apex:outputPanel>
+        </apex:pageBlockSectionItem>
+        <apex:outputpanel style="display:none"  id="cpgmsg1">
+            <apex:pageMessage severity="info" strength="1" summary="Data not available, refer to Cirrus"/> 
+        </apex:outputpanel>  
+        <apex:outputpanel id="covergaeOverview">
+        <div style="font-weight: bold;padding: 5px;/* background-color: #f2f3f3; */width: 24.5%;">
+            Individual Accumulator &nbsp; <apex:image value="/s.gif" styleclass="helpIcon" id="helpText"  title="{!$Label.ACETPlanBenefitDetailHoverText}" />              
+        </div>     
+        <apex:pageBlockTable value="{!IndividualAccs}" var="IndividualAcc" id="pbsIndividualAcc"  headerClass="headerColor">
+                       
+            
+            <apex:column value="{!IndividualAcc.TypeCode}" styleClass="whiteLeft-bg highlightFont" headerClass="whiteLeft-bg"/>
+            <apex:column headerValue="Ded Limit" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg"> 
+                
+                {!IF(
+                AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.MaxDeductible != 'N/A'),
+                'N/A',
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='N/A',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.MaxDeductible != 'N/A'),
+                'N/A',
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.MaxDeductible != 'N/A'),
+                '$' + IndividualAcc.MaxDeductible + '(Aggregate)',
+                IF(AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='Embedded Accum',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.MaxDeductible != 'N/A'),
+                '$' + IndividualAcc.MaxDeductible + '(Embedded)',
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='Embedded Accum',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.MaxDeductible != 'N/A'),
+                '$' + IndividualAcc.MaxDeductible + '(Embedded)',
+                IF(AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='N/A',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.MaxDeductible != 'N/A'),
+                'N/A',
+                IF(AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Aggregate',IndividualAcc.MaxDeductible != 'N/A'),
+                'N/A',
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Aggregate',IndividualAcc.MaxDeductible != 'N/A'),
+                'N/A',
+                IF(AND(IndividualAcc.MaxDeductible == 'N/A'),
+                IndividualAcc.MaxDeductible,
+                '$'+ IndividualAcc.MaxDeductible
+                )
+                )
+                )
+                )
+                )
+                )
+                )
+                )
+                )}
+            </apex:column>                      
+            <apex:column headerValue="Ded Satisfied" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg">
+                {!IF(
+                AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.YTDDeductible !='N/A'),
+                '$' + IndividualAcc.YTDDeductible,
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.YTDDeductible !='N/A'),
+                '$' + IndividualAcc.YTDDeductible,
+                IF(AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='Embedded Accum',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.YTDDeductible !='N/A'),
+                '$' + IndividualAcc.YTDDeductible,
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='Embedded Accum',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.YTDDeductible !='N/A'),
+                '$' + IndividualAcc.YTDDeductible,
+                IF(AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='N/A',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.YTDDeductible !='N/A'),
+                'N/A',
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='N/A',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.YTDDeductible !='N/A'),
+                '$' + IndividualAcc.YTDDeductible,
+                IF(AND(IndividualAcc.YTDDeductible == 'N/A'),
+                IndividualAcc.YTDDeductible,
+                '$' + IndividualAcc.YTDDeductible
+                )
+                )
+                )
+                )
+                )
+                )
+                )}
+            </apex:column>    
+            
+            <apex:column headerValue="Ded Remaining" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg"> 
+                {!IF(
+                AND(IndividualAcc.RemDeductible == 'N/A'),
+                'N/A',
+                IF(AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Embedded Accum'),
+                'N/A',
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Embedded Accum'),
+                '$' + IndividualAcc.RemDeductible,
+                IF(AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='Embedded Accum',IndividualAcc.primaryAccumDescOOP=='Embedded Accum'),
+                '$' + IndividualAcc.RemDeductible,
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='Embedded Accum',IndividualAcc.primaryAccumDescOOP=='Embedded Accum'),
+                '$' + IndividualAcc.RemDeductible,
+                IF(AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Aggregate'),
+                'N/A',
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Aggregate'),
+                'N/A',
+                IF(AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='N/A',IndividualAcc.primaryAccumDescOOP=='Embedded Accum'),
+                'N/A',
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='N/A',IndividualAcc.primaryAccumDescOOP=='Embedded Accum'),
+                '$' + IndividualAcc.RemDeductible,
+                '$' + IndividualAcc.RemDeductible
+                )
+                )
+                )
+                )
+                )
+                )
+                )
+                )
+                )}
+                
+            </apex:column>
+            
+            <apex:column headerValue="Coinsurance %" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg" id="Coinsurance">
+                {!IndividualAcc.coinsurance}
+                <apex:image value="{!$Resource.OOPMetDollorSign}" rendered="{!AND(IndividualAcc.RemOOP == '0.00',IndividualAcc.MaxOOP != 'N/A', IndividualAcc.MaxOOP != '0.00')}" style="height:20px;margin-left:4px;position:relative;top:4px;"/>   
+            </apex:column>
+            <apex:column headerValue="OOP Limit" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg">
+                {!IF(
+                AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.MaxOOP != 'N/A'),
+                '$' + IndividualAcc.MaxOOP + '(Embedded)',
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.MaxOOP != 'N/A'),
+                '$' + IndividualAcc.MaxOOP + '(Embedded)',
+                IF(AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='Embedded Accum',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.MaxOOP != 'N/A'),
+                '$' + IndividualAcc.MaxOOP + '(Embedded)',
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='Embedded Accum',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.MaxOOP != 'N/A'),
+                '$' + IndividualAcc.MaxOOP + '(Embedded)',
+                IF(AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Aggregate',IndividualAcc.MaxOOP != 'N/A'),
+                'N/A',
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Aggregate',IndividualAcc.MaxOOP != 'N/A'),
+                'N/A',
+                IF(AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='N/A',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.MaxOOP != 'N/A'),
+                '$' + IndividualAcc.MaxOOP + '(Embedded)',                
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='N/A',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.MaxOOP != 'N/A'),
+                '$' + IndividualAcc.MaxOOP + '(Embedded)',
+                IF(AND(IndividualAcc.MaxOOP == 'N/A'),
+                IndividualAcc.MaxOOP,
+                '$' + IndividualAcc.MaxOOP
+                )
+                )
+                )
+                )
+                )
+                )
+                )
+                )
+                )}
+            </apex:column>
+            
+            <apex:column headerValue="OOP Satisfied" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg">
+                {!IF(
+                AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.YTDOOP !='N/A'),
+                '$' + IndividualAcc.YTDOOP,
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.YTDOOP !='N/A'),
+                '$' + IndividualAcc.YTDOOP,
+                IF(AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='Embedded Accum',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.YTDOOP !='N/A'),
+                '$' + IndividualAcc.YTDOOP,
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='Embedded Accum',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.YTDOOP !='N/A'),
+                '$' + IndividualAcc.YTDOOP,
+                IF(AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='N/A',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.YTDOOP !='N/A'),
+                '$' + IndividualAcc.YTDOOP,
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='N/A',IndividualAcc.primaryAccumDescOOP=='Embedded Accum',IndividualAcc.YTDOOP !='N/A'),
+                '$' + IndividualAcc.YTDOOP,
+                IF(AND(IndividualAcc.YTDOOP == 'N/A'),
+                IndividualAcc.YTDOOP,
+                '$' + IndividualAcc.YTDOOP
+                )
+                )
+                )
+                )
+                )
+                )
+                )}
+            </apex:column>
+            <apex:column headerValue="OOP Remaining" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg">
+                {!IF(
+                AND(IndividualAcc.RemOOP == 'N/A'),
+                'N/A',
+                IF(AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Embedded Accum'),
+                '$' + IndividualAcc.RemOOP,
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Embedded Accum'),
+                '$' + IndividualAcc.RemOOP,
+                IF(AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='Embedded Accum',IndividualAcc.primaryAccumDescOOP=='Embedded Accum'),
+                '$' + IndividualAcc.RemOOP,
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='Embedded Accum',IndividualAcc.primaryAccumDescOOP=='Embedded Accum'),
+                '$' + IndividualAcc.RemOOP,
+                IF(AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Aggregate'),
+                'N/A',
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='Aggregate',IndividualAcc.primaryAccumDescOOP=='Aggregate'),
+                'N/A',
+                IF(AND(covrgLevel=='FAM',IndividualAcc.primaryAccumDeduct=='N/A',IndividualAcc.primaryAccumDescOOP=='Embedded Accum'),
+                '$' + IndividualAcc.RemOOP,
+                IF(AND(covrgLevel=='IND',IndividualAcc.primaryAccumDeduct=='N/A',IndividualAcc.primaryAccumDescOOP=='Embedded Accum'),
+                '$' + IndividualAcc.RemOOP,
+                '$' + IndividualAcc.RemOOP 
+                )
+                )
+                )
+                )
+                )
+                )
+                )
+                )
+                )}
+            </apex:column>
+        </apex:pageBlockTable>
+        <br/>
+        <div style="font-weight: bold;padding: 5px;/* background-color: #f2f3f3; */width: 24.5%;">
+            Family Accumulator &nbsp; <apex:image value="/s.gif" styleclass="helpIcon"   title="{!$Label.ACETPlanBenefitDetailHoverText}" />              
+        </div>
+        <apex:pageBlockTable value="{!FamilyAccs}" var="FamilyAcc" id="pbsFamilyAcc" headerClass="headerColor" >
+            <apex:column value="{!FamilyAcc.TypeCode}" styleClass="whiteLeft-bg highlightFont" headerClass="whiteLeft-bg"/>
+            <apex:column headerValue="Ded Limit" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg">
+                {!IF(
+                AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='Aggregate',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.MaxDeductible != 'N/A'),
+                '$' + FamilyAcc.MaxDeductible + '(Aggregate)',
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='Aggregate',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.MaxDeductible != 'N/A'),
+                '$' + FamilyAcc.MaxDeductible + '(Aggregate)',
+                IF(AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='Embedded Accum',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.MaxDeductible != 'N/A'),
+                '$' + FamilyAcc.MaxDeductible + '(Embedded)',
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='Embedded Accum',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.MaxDeductible != 'N/A'),
+                '$' + FamilyAcc.MaxDeductible + '(Embedded)',
+                IF(AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='Aggregate',FamilyAcc.primaryAccumDescOOP=='Aggregate',FamilyAcc.MaxDeductible != 'N/A'),
+                '$' + FamilyAcc.MaxDeductible + '(Aggregate)',
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='Aggregate',FamilyAcc.primaryAccumDescOOP=='Aggregate',FamilyAcc.MaxDeductible != 'N/A'),
+                '$' + FamilyAcc.MaxDeductible + '(Aggregate)',
+                IF(AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='N/A',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.MaxDeductible != 'N/A'),
+                'N/A',
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='N/A',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.MaxDeductible != 'N/A'),
+                'N/A',
+                IF(AND(FamilyAcc.MaxDeductible == 'N/A'),
+                FamilyAcc.MaxDeductible,
+                '$' + FamilyAcc.MaxDeductible 
+                )
+                )
+                )
+                )
+                )
+                )
+                )
+                )
+                )}
+                
+            </apex:column>
+            <apex:column headerValue="Ded Satisfied" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg">
+                {!IF(
+                AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='Aggregate',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.YTDDeductible !='N/A'),
+                '$' + FamilyAcc.YTDDeductible,
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='Aggregate',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.YTDDeductible !='N/A'),
+                'N/A',
+                IF(AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='Embedded Accum',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.YTDDeductible !='N/A'),
+                '$' + FamilyAcc.YTDDeductible,
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='Embedded Accum',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.YTDDeductible !='N/A'),
+                'N/A',
+                IF(AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='N/A',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.YTDDeductible !='N/A'),
+                '$' + FamilyAcc.YTDDeductible,
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='N/A',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.YTDDeductible !='N/A'),
+                'N/A',
+                IF(AND(FamilyAcc.YTDDeductible == 'N/A'),
+                FamilyAcc.YTDDeductible,
+                '$' + FamilyAcc.YTDDeductible
+                )
+                )
+                )
+                )
+                )
+                )
+                )}
+            </apex:column>
+            <apex:column headerValue="Ded Remaining" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg">
+                {!IF(
+                AND(FamilyAcc.RemDeductible == 'N/A'),
+                'N/A',
+                IF(AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='Aggregate',FamilyAcc.primaryAccumDescOOP=='Embedded Accum'),
+                '$' + FamilyAcc.RemDeductible,
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='Aggregate',FamilyAcc.primaryAccumDescOOP=='Embedded Accum'),
+                'N/A',
+                IF(AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='Embedded Accum',FamilyAcc.primaryAccumDescOOP=='Embedded Accum'),
+                '$' + FamilyAcc.RemDeductible,
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='Embedded Accum',FamilyAcc.primaryAccumDescOOP=='Embedded Accum'),
+                'N/A',
+                IF(AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='N/A',FamilyAcc.primaryAccumDescOOP=='Embedded Accum'),
+                '$' + FamilyAcc.RemDeductible,
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='N/A',FamilyAcc.primaryAccumDescOOP=='Embedded Accum'),
+                'N/A',
+                '$' + FamilyAcc.RemDeductible   
+                )
+                )
+                )
+                )
+                )
+                )
+                )}
+            </apex:column>
+            <apex:column headerValue="Coinsurance %" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg">
+                {!FamilyAcc.Coinsurance}
+                <apex:image value="{!$Resource.OOPMetDollorSign}" rendered="{!AND(FamilyAcc.RemOOP == '0.00',FamilyAcc.MaxOOP != 'N/A',FamilyAcc.MaxOOP != '0.00')}" style="height:20px;margin-left:4px;position:relative;top:4px;"/>   
+            </apex:column>
+            <apex:column headerValue="OOP Limit" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg">
+                {!IF(
+                AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='Aggregate',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.MaxOOP != 'N/A'),
+                '$' + FamilyAcc.MaxOOP + '(Embedded)',
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='Aggregate',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.MaxOOP != 'N/A'),
+                '$' + FamilyAcc.MaxOOP + '(Embedded)',
+                IF(AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='Embedded Accum',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.MaxOOP != 'N/A'),
+                '$' + FamilyAcc.MaxOOP + '(Embedded)',
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='Embedded Accum',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.MaxOOP != 'N/A'),
+                '$' + FamilyAcc.MaxOOP + '(Embedded)',
+                IF(AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='Aggregate',FamilyAcc.primaryAccumDescOOP=='Aggregate',FamilyAcc.MaxOOP != 'N/A'),
+                '$' + FamilyAcc.MaxOOP + '(Aggregate)',
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='Aggregate',FamilyAcc.primaryAccumDescOOP=='Aggregate',FamilyAcc.MaxOOP != 'N/A'),
+                '$' + FamilyAcc.MaxOOP + '(Aggregate)',
+                IF(AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='N/A',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.MaxOOP != 'N/A'),
+                '$' + FamilyAcc.MaxOOP + '(Embedded)',
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='N/A',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.MaxOOP != 'N/A'),
+                '$' + FamilyAcc.MaxOOP + '(Embedded)',
+                IF(AND(FamilyAcc.MaxOOP == 'N/A'),
+                FamilyAcc.MaxOOP,
+                '$' + FamilyAcc.MaxOOP
+                )
+                )
+                )
+                )
+                )
+                )
+                )
+                )
+                )}
+            </apex:column>
+            <apex:column headerValue="OOP Satisfied" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg">
+                {!IF(
+                AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='Aggregate',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.YTDOOP != 'N/A'),
+                '$' + FamilyAcc.YTDOOP,
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='Aggregate',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.YTDOOP != 'N/A'),
+                'N/A',
+                IF(AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='Embedded Accum',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.YTDOOP != 'N/A'),
+                '$' + FamilyAcc.YTDOOP,
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='Embedded Accum',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.YTDOOP != 'N/A'),
+                'N/A',
+                IF(AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='N/A',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.YTDOOP != 'N/A'),
+                '$' + FamilyAcc.YTDOOP,
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='N/A',FamilyAcc.primaryAccumDescOOP=='Embedded Accum',FamilyAcc.YTDOOP != 'N/A'),
+                'N/A',
+                IF(AND(FamilyAcc.YTDOOP == 'N/A'),
+                FamilyAcc.YTDOOP,
+                '$' + FamilyAcc.YTDOOP
+                )
+                )
+                )
+                )
+                )
+                )
+                )}
+            </apex:column>    
+            <apex:column headerValue="OOP Remaining" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg">
+                {!IF(
+                AND(FamilyAcc.RemOOP == 'N/A'),
+                'N/A',
+                IF(AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='Aggregate',FamilyAcc.primaryAccumDescOOP=='Embedded Accum'),
+                '$' + FamilyAcc.RemOOP,
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='Aggregate',FamilyAcc.primaryAccumDescOOP=='Embedded Accum'),
+                'N/A',
+                IF(AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='Embedded Accum',FamilyAcc.primaryAccumDescOOP=='Embedded Accum'),
+                '$' + FamilyAcc.RemOOP,
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='Embedded Accum',FamilyAcc.primaryAccumDescOOP=='Embedded Accum'),
+                'N/A',
+                IF(AND(covrgLevel=='FAM',FamilyAcc.primaryAccumDeduct=='N/A',FamilyAcc.primaryAccumDescOOP=='Embedded Accum'),
+                '$' + FamilyAcc.RemOOP,
+                IF(AND(covrgLevel=='IND',FamilyAcc.primaryAccumDeduct=='N/A',FamilyAcc.primaryAccumDescOOP=='Embedded Accum'),
+                'N/A',
+                '$' + FamilyAcc.RemOOP   
+                )
+                )
+                )
+                )
+                )
+                )
+                )}
+            </apex:column>    
+        </apex:pageBlockTable>
+        </apex:outputpanel> 
+        </apex:outputpanel> 
+    </apex:pageBlockSection>
+    
+    <apex:pageBlockSection title="Coverage Overview" columns="1" rendered="{!attrIsGroupPlanCallTopic}" html-auto-doc="true"> 
+        
+        <!--
+            <apex:pageBlockSectionItem >
+                <apex:pageBlockTable value="{!coPayList}" var="cp" headerClass="copayCSS headerCustom" id="copayResultsId" style="width:50%;text-align:center;">
+                    <apex:facet name="header">Copay</apex:facet>
+                    <apex:column value="{!cp.label}" styleClass="whiteLeft-bg highlightFont" headerClass="whiteLeft-bg"/>
+                    <apex:column value="{!cp.value}" headerClass="whiteLeft-bg" styleClass="whiteLeft-bg" style="text-align:right !important;"/>
+                </apex:pageBlockTable>  
+            </apex:pageBlockSectionItem>
+            -->
+            <apex:pageBlockSectionItem rendered="{!if(attrPlanType !='EPO' && attrPlanType !='HMO',true,false)}">
+                <apex:outputPanel >
+                <div style="font-weight: bold;padding: 5px;/* background-color: #f2f3f3; */width: 24.5%;">
+                     OON Reimbursement                    
+                 </div>
+                <apex:pageBlockTable value="{!OONReimbursementList}" var="OON" headerClass="headerColor" id="OONResultsId" style="width:25%;" >                  
+                    <apex:column value="{!OON.OONPricingType}" headervalue="OON Pricing Type" headerClass="whiteLeft-bg"/>
+                    <apex:column value="{!OON.Percentile}" headerValue="Percentile"  headerClass="whiteLeft-bg"  style="text-align:left !important;"/>
+                </apex:pageBlockTable> 
+                </apex:outputPanel>
+            </apex:pageBlockSectionItem>
+            <apex:outputpanel style="font-weight: bold;padding: 5px;/* background-color: #f2f3f3; */width: 24.5%;">
+                Individual Accumulator &nbsp; <apex:image value="/s.gif" styleclass="helpIcon" id="helpText"  title="{!$Label.ACETPlanBenefitDetailHoverText}" />              
+            </apex:outputpanel> 
+             <apex:pageBlockTable value="{!IndividualAccs}" var="i" id="individualId"  style="width:45%;" headerClass="headerColor">
+                
+                <apex:column value="{!i.TypeCode}" styleClass="whiteLeft-bg highlightFont" headerClass="whiteLeft-bg"/>
+                <apex:column headerValue="Ded Limit" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg">
+                    {!IF(i.GroupMaxDed!='N/A','$' + i.GroupMaxDed,'N/A')}
+                </apex:column>
+                <apex:column value="{!i.coinsurance}" headerValue="Coinsurance %" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg"/>
+                <apex:column headerValue="OOP Limit" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg">
+                    {!IF(i.GroupMaxOOP!='N/A','$' + i.GroupMaxOOP,'N/A')}
+                </apex:column>
+                
+            </apex:pageBlockTable> 
+            <br/>
+         
+            <apex:outputpanel style="font-weight: bold;padding: 5px;/* background-color: #f2f3f3; */width: 24.5%;">
+                Family Accumulator &nbsp; <apex:image value="/s.gif" styleclass="helpIcon"   title="{!$Label.ACETPlanBenefitDetailHoverText}" />              
+            </apex:outputpanel>
+            <apex:pageBlockTable value="{!FamilyAccs}" var="fd"  id="familyId" style="width:45%;" headerClass="headerColor">
+               
+                <apex:column value="{!fd.TypeCode}" styleClass="whiteLeft-bg highlightFont" headerClass="whiteLeft-bg"/>
+                <apex:column headerValue="Ded Limit" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg">
+                    {!IF(fd.GroupMaxDed!='N/A','$' + fd.GroupMaxDed,'N/A')}
+                </apex:column>
+                <apex:column value="{!fd.coinsurance}" headerValue="Coinsurance %" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg"/>
+                <apex:column headerValue="OOP Limit" styleClass="whiteLeft-bg" headerClass="whiteLeft-bg">
+                    {!IF(fd.GroupMaxOOP!='N/A','$' + fd.GroupMaxOOP,'N/A')}
+                </apex:column>
+            </apex:pageBlockTable>
+        </apex:pageBlockSection>
+</apex:component>

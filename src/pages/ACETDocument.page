@@ -1,0 +1,425 @@
+<apex:page sidebar="False" controller="ACETDocumentController" id="pageid" docType="html-5.0" action="{!fetchDoc}" >
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+    <apex:includeScript value="/support/console/38.0/integration.js" />
+    
+    <style>         
+        .cover {
+            border: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+            z-index: -1;
+        }
+        
+        /** fix the border in IE, since the container of the modal window is stil cut by pdf viewer */
+        .ui-dialog {
+            padding: 0px;
+        }
+        
+        #outer {
+            border-left: solid 2px #666;
+            border-right: solid 2px #666;
+        }
+        
+        .ui-dialog .ui-dialog-buttonpane {
+            border-left: solid 2px #666;
+            border-right: solid 2px #666;
+            border-bottom: solid 2px #666;  
+        }
+        
+        .ui-dialog .ui-dialog-titlebar {
+            border-left: solid 2px #666;
+            border-right: solid 2px #666;
+            border-top: solid 2px #666;
+        }
+        .imgclass {
+            background-image: url('/img/help/helpOrbs.gif');
+            background-repeat: no-repeat;
+            width: 16px;
+            height: 15px;
+            background-position: right;
+        }
+    </style>
+    <script>    
+     var claimId = '{!JSENCODE($CurrentPage.parameters.claimId)}'; 
+     
+     function b64toBlob(b64Data, contentType, sliceSize) {
+        contentType = contentType || '';
+        sliceSize = sliceSize || 512;
+    
+        var byteCharacters = atob(b64Data);
+        var byteArrays = [];
+    
+        for (var offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+            var slice = byteCharacters.slice(offset, offset + sliceSize);
+        
+            var byteNumbers = new Array(slice.length);
+            for (var i = 0; i < slice.length; i++) {
+              byteNumbers[i] = slice.charCodeAt(i);
+            }
+        
+            var byteArray = new Uint8Array(byteNumbers);
+        
+            byteArrays.push(byteArray);
+        }
+    
+        var blob = new Blob(byteArrays, {type: contentType});
+        return blob;
+    }
+    
+    function downloadDoc(){
+        if(window.navigator.msSaveOrOpenBlob) {         
+            var docId = '{!JSENCODE($CurrentPage.parameters.docId)}';
+            console.log('docId '+docId);
+            var contentType = '{!JSENCODE($CurrentPage.parameters.docContentType)}';
+            console.log('contentType '+contentType);
+            var docName = '{!JSENCODE($CurrentPage.parameters.docName)}';
+            console.log('docName '+docName);
+            var attachmentId = '{!AttachmentId}';
+            console.log('attachmentId '+attachmentId);
+            
+            var filename = (docName ? docName : docId);     
+            console.log('filename '+filename);
+            Visualforce.remoting.Manager.invokeAction(
+                '{!$RemoteAction.ACETDocumentController.getDocContent}',
+                attachmentId,
+                function(result, event){
+                   console.log("result:");
+                   console.log(result);
+                   
+                   var blob = b64toBlob(result, contentType);
+                    console.log('blob '+blob);
+                    window.navigator.msSaveOrOpenBlob(blob,filename);
+                    //saveAs(blob,filename);
+                 
+                },
+                {escape: true}
+            );
+        }
+        
+    }
+       
+    function onResendButtonClicked(){
+        var parentTabId = '{!JSENCODE($CurrentPage.parameters.parentTabId)}';
+        
+        //document is opend from claim detail page
+        if(claimId){
+            resendDialog.dialog("open");
+            //fix for IE so the title bar and button bar of the jquery modal window will not be covered by pdf viewer 
+            $("#outer").css("position","static");          
+        }
+        else{
+        
+            //document is opened from communication search page, leverage document delivery function from communication search page.
+            sforce.console.getEnclosingTabId(function(result){                                        
+                var res = {};   
+                res.subTabId = result.id;   
+                res.parentTabId = parentTabId;        
+                res.selectedDocId = '{!JSENCODE(documentId)}'; 
+                console.log(res.selectedDocId);
+                sforce.console.fireEvent('ReceiveDocumentStatus_', JSON.stringify(res));            
+           }); 
+        }
+               
+        return false;
+    }
+    
+    function onSubmitButtonClicked(){
+        resendDialog.dialog("close");
+        acfResend();
+    }
+    
+    var resendDialog;
+    $(document).ready(function(){
+    $("#outer").css("display"," ");
+
+    var today = new Date();   
+        if(!resendDialog){
+            resendDialog = $("[id$='outer']").dialog({
+                   autoOpen: false,
+                   height: 400,
+                   width: 830,
+                   modal: true,
+                   closeOnEscape: true,
+                   title: "Deliver To",
+                   buttons: {
+                     "Cancel" : function(){
+                        resendDialog.dialog("close");
+                     },
+                     "Submit": function(){
+                         onSubmitButtonClicked();                                                      
+                     }
+                   }
+            }); 
+        }
+        toggleAddressPanel();       
+        setupSubmitButtonStatus(); 
+
+         if(claimId){
+        CallinitDocDelivery();
+                    
+        }
+    });
+            
+    function onResendCompleted(){       
+        resendDialog.dialog("close");
+        
+        //send document delivery result to claim detail page
+        //var claimId = '{!JSENCODE($CurrentPage.parameters.claimId)}';
+        sforce.console.fireEvent('ReceiveDocDeliveryResult_'.concat(claimId), docDeliveryResult);
+        
+        //close itself
+        sforce.console.getEnclosingTabId(function(result) {
+            sforce.console.closeTab(result.id);
+        }); 
+    }
+    
+    function toggleAddressPanel(){
+        $("input:radio").change(function(){
+       // alert();
+            var selectedAddress = $("[id$='addRadio']").find(":checked").val();
+            if(selectedAddress == 'AddressOnFile'){
+                $("[id$='addressOnFile']").show();  
+                $("[id$='addressAlternate']").hide();       
+            }else{
+                $("[id$='addressOnFile']").hide();  
+                $("[id$='addressAlternate']").show();
+            }   
+            
+             setupSubmitButtonStatus();
+        });                
+    }
+    
+    function setupSubmitButtonStatus(){
+        $('.ui-dialog button:nth-child(2)').button('enable'); 
+                        
+        var showOriginatorMsg = '{!showOriginatorMsg}';
+        var showSubmitBtnAOF = '{!showSubmitBtnAOF}';
+        
+        //no valid originator is found
+        if(showOriginatorMsg == 'true'){
+            $('.ui-dialog button:nth-child(2)').button('disable');          
+        }else{
+            //address on file is empty
+            var selectedAddress = $("[id$='addRadio']").find(":checked").val();
+            if(selectedAddress == 'AddressOnFile' && showSubmitBtnAOF == 'true'){
+                $('.ui-dialog button:nth-child(2)').button('disable');      
+            }           
+        }
+    }
+    
+    $(document).ready(function(){ 
+        var profileName = '{!JSENCODE(profileName)}';
+        if(profileName == 'Research User'){
+            $("[id$='resendbtn']").addClass("btnDisabled").removeClass("btn").attr("disabled","disabled");
+        }else{
+            $("[id$='resendbtn']").addClass("btn").removeClass("btnDisabled").removeAttr("disabled");
+        }  
+    });
+    
+    </script>
+        <apex:pageBlock > 
+            <apex:pageMessages id="messages"></apex:pageMessages>
+            <apex:pageBlockButtons location="top">
+                <apex:outputPanel layout="none" rendered="{!IsNotId && documentType != 'Renewal Letter' && documentType != 'Renewal Package' && documentType != 'Summary Plan Description'}"> 
+                    <input type="button" class="btn" id="resendbtn" value="Resend" style="float:right" onclick="return onResendButtonClicked()"/>
+                </apex:outputPanel>
+               <!-- <apex:outputPanel layout="none" rendered="{!NOT(ISNULL(AttachmentId))}"> 
+                    <input type="button" class="btn" id="download" value="Download" style="float:right" onclick="return downloadDoc();"/>
+                </apex:outputPanel>   -->                                      
+            </apex:pageBlockButtons>                                
+        </apex:pageBlock> 
+                            
+        <div id="outer" style="display: none">
+        <apex:outputPanel id="popup">      
+             <apex:form id="theform" >  
+            
+             <apex:inputHidden value="{!selectAddress}" id="selectAdd"/>
+             <apex:actionFunction name="CallinitDocDelivery" action="{!initDocDelivery}"  reRender="addressOnFile,addressAlternate,AddressBlock"/>
+
+             <apex:actionFunction name="acfResend" action="{!resendSelectedDocs}"  rerender="popup" oncomplete="onResendCompleted();"></apex:actionFunction>     
+             <apex:outputPanel id="AddressView">
+                 <div >
+                     <apex:PageBlock id="AddressBlock" mode="mainDetail" >
+                     <script>
+                     toggleAddressPanel();
+                     </script>
+                         <apex:pageBlockSection columns="1" >
+                             <apex:outputLabel rendered="{!showSubmitBtnAOF && selectAddress=='AddressOnFile' }" style="font-weight:bold;color:red" value="Select Alternate Address to resend." id="notfound"/>
+                             <apex:outputLabel rendered="{!showOriginatorMsg && selectAddress=='AddressOnFile' }" style="font-weight:bold;color:red" value="Originator cannot receive this document type."/><apex:outputPanel >
+                                 <apex:selectRadio id="addRadio" value="{!selectAddress}">
+                                     <apex:selectOption itemValue="AddressOnFile" itemLabel="Address on File" />
+                                     <apex:selectOption itemValue="AlternateAddress" itemLabel="Alternate Address" />                                    
+                                 </apex:selectRadio>
+                             </apex:outputPanel>
+                         </apex:pageBlockSection>
+                         <apex:pageBlockSection >
+                             <apex:outputPanel >
+                                 <apex:outputPanel id="addressOnFile" style="display:{!IF(selectAddress == 'AddressOnFile' , 'block', 'none')};">
+                                     <apex:pageBlockSection columns="2">
+                                         <apex:pageBlockSection columns="2">
+                                             <apex:pageBlockSectionItem >
+                                                 <apex:outputLabel value="First Name"/>
+                                                 <apex:inputText value="{!AddOnFilePersonWrap.personFirstName}"  disabled="True"/>
+                                             </apex:pageBlockSectionItem>
+                                             <apex:pageBlockSectionItem >
+                                                 <apex:outputLabel value="Middle Intial"/>
+                                                 <apex:inputText value="{!AddOnFilePersonWrap.personMiddleName}" disabled="True"/>
+                                             </apex:pageBlockSectionItem>  
+                                         </apex:pageBlockSection>
+                                         <apex:pageBlockSection columns="2">
+                                             <apex:pageBlockSectionItem >
+                                                 <apex:outputLabel value="Last Name"/>
+                                                 <apex:inputText value="{!AddOnFilePersonWrap.personLastName}"  disabled="True"/>
+                                             </apex:pageBlockSectionItem>
+                                             <apex:pageBlockSectionItem >
+                                                 <apex:outputLabel value="Suffix">
+                                                    <img src="/s.gif" class="imgclass" title="{!$Label.ACETSuffixHelpText}" alt="HelpTextIcon.png" width="50" height="50"/>  
+                                                        </apex:outputLabel>
+                                                 <apex:inputText value="{!AddOnFilePersonWrap.personSuffix}"  disabled="True"/>
+                                             </apex:pageBlockSectionItem> 
+                                         </apex:pageBlockSection>
+                                     </apex:pageBlockSection>
+                                     <apex:pageBlockSection columns="1">
+                                         <apex:pageBlockSectionItem >
+                                             <apex:outputLabel value="Organization"/>
+                                             <apex:inputText value="{!AddOnFilePersonWrap.personOrganization}"  disabled="True" style="width:300px"/>
+                                         </apex:pageBlockSectionItem>
+                                         <apex:pageBlockSectionItem >
+                                             <apex:outputLabel value="Address 1"/>
+                                             <apex:inputText id="addOnFileAddress1" value="{!AddOnFilePersonWrap.personAddOne}"  disabled="True" style="width:300px"/>
+                                         </apex:pageBlockSectionItem>
+                                         <apex:pageBlockSectionItem >
+                                             <apex:outputLabel value="Address 2"/>
+                                             <apex:inputText value="{!AddOnFilePersonWrap.personAddtwo}"  disabled="True" style="width:300px"/>
+                                         </apex:pageBlockSectionItem>
+                                         <apex:pageBlockSectionItem >
+                                             <apex:outputLabel value="City"/>
+                                             <apex:inputText id="addOnFileCity" value="{!AddOnFilePersonWrap.personCity}"  disabled="True" style="width:300px"/>
+                                         </apex:pageBlockSectionItem>
+                                         <apex:pageBlockSectionItem >
+                                             <apex:outputLabel value="State"/>
+                                             <apex:inputText id="addOnFileState" value="{!AddOnFilePersonWrap.personState}"  disabled="True" style="width:300px"/>
+                                         </apex:pageBlockSectionItem>
+                                         <apex:pageBlockSectionItem >
+                                             <apex:outputLabel value="Zip"/>
+                                             <apex:inputText id="addOnFileZipCode" value="{!AddOnFilePersonWrap.personZipCode}"  disabled="True" style="width:300px"/>
+                                         </apex:pageBlockSectionItem>
+                                     </apex:pageBlockSection>    
+                                     <apex:pageBlockSection >
+                                     </apex:pageBlockSection>
+                                     <apex:pageBlockSection columns="1">
+                                         <apex:outputLabel rendered="{!!showSubmitBtnAOF}" value="Select Submit to send or Cancel to cancel the request."/>
+                                     </apex:pageBlockSection>
+                                 </apex:outputPanel>
+                                 <!-- Alternate Address Start -->
+                                 <apex:outputPanel id="addressAlternate" style="display:{!IF(selectAddress == 'AddressOnFile' , 'none', 'block')};">
+                                     <apex:pageBlockSection columns="2">
+                                         <apex:pageBlockSection columns="2">
+                                             <apex:pageBlockSectionItem >
+                                                 <apex:outputLabel value="First Name"/>
+                                                 <apex:inputText value="{!personFirstNameAA}"  id="firstName" disabled="{!documentType == 'Member EOB'}" maxLength="35"/>
+                                             </apex:pageBlockSectionItem>
+                                             <apex:pageBlockSectionItem >
+                                                 <apex:outputLabel value="Middle Intial"/>
+                                                 <apex:inputText value="{!personMiddleNameAA}" id="middleName" disabled="{!documentType == 'Member EOB'}"  maxLength="1"/>
+                                             </apex:pageBlockSectionItem>  
+                                         </apex:pageBlockSection>
+                                         <apex:pageBlockSection columns="2">
+                                             <apex:pageBlockSectionItem >
+                                                 <apex:outputLabel value="Last Name"/>
+                                                 <apex:inputText value="{!personLastNameAA}" id="lastName" disabled="{!documentType == 'Member EOB'}" maxLength="35"/>
+                                             </apex:pageBlockSectionItem>
+                                             <apex:pageBlockSectionItem >
+                                                 <apex:outputLabel value="Suffix">
+                                                    <img src="/s.gif" class="imgclass" title="{!$Label.ACETSuffixHelpText}" alt="HelpTextIcon.png" width="50" height="50"/>  
+                                                     </apex:outputLabel>
+                                                 <apex:inputText value="{!personSuffixAA}"  id="Suffix" disabled="{!documentType == 'Member EOB'}" maxLength="6"/>
+                                             </apex:pageBlockSectionItem> 
+                                         </apex:pageBlockSection>
+                                     </apex:pageBlockSection>
+                                     <apex:pageBlockSection columns="1">
+                                         <apex:pageBlockSectionItem >
+                                         <apex:outputLabel value="Organization"/>
+                                         <apex:inputText value="{!personOrganizationAA}"  id="organization"  style="width:300px" maxLength="35"/>                                    
+                                         </apex:pageBlockSectionItem>
+                                         <apex:pageBlockSectionItem >
+                                             <apex:outputLabel value="Address 1"/>
+                                             <apex:outputPanel >
+                                                 <div class="requiredInput">
+                                                     <div class="requiredBlock"></div>
+                                                     <apex:inputText value="{!personAddoneAA}"  id="alternateAddress1" style="width:300px" maxLength="25"/>
+                                                 </div>
+                                             </apex:outputPanel>
+                                         </apex:pageBlockSectionItem>
+                                         <apex:pageBlockSectionItem >
+                                             <apex:outputLabel value="Address 2"/>
+                                             <apex:inputText value="{!personAddtwoAA}" id="Address2" style="width:300px" maxLength="25"/>
+                                         </apex:pageBlockSectionItem>
+                                         <apex:pageBlockSectionItem >
+                                             <apex:outputLabel value="City"/>
+                                             <apex:outputPanel >
+                                                 <div class="requiredInput">
+                                                     <div class="requiredBlock"></div>
+                                                     <apex:inputText value="{!personCityAA}"  id="alternateCity" style="width:300px" maxLength="20"/>
+                                                 </div>
+                                             </apex:outputPanel>
+                                         </apex:pageBlockSectionItem>
+                                         <apex:pageBlockSectionItem >
+                                             <apex:outputLabel value="State"/>
+                                             <apex:outputPanel >
+                                                 <div class="requiredInput">
+                                                     <div class="requiredBlock"></div>
+                                                     <apex:inputText value="{!personStateAA}"  id="alternateState" style="width:300px" maxLength="2"/>
+                                                 </div>
+                                             </apex:outputPanel>
+                                         </apex:pageBlockSectionItem>
+                                         <apex:pageBlockSectionItem >
+                                             <apex:outputLabel value="Zip"/>
+                                             <apex:outputPanel >
+                                                 <div class="requiredInput">
+                                                     <div class="requiredBlock"></div>
+                                                     <apex:inputText value="{!personZipCodeAA}"  id="alternateZipCode" style="width:300px" maxLength="9"/>
+                                                 </div>
+                                             </apex:outputPanel>
+                                         </apex:pageBlockSectionItem>
+                                     </apex:pageBlockSection>    
+                                     <apex:pageBlockSection columns="1">
+                                         <apex:outputLabel value="Select Submit to send or Cancel to cancel the request."/>
+                                     </apex:pageBlockSection>
+                                 </apex:outputPanel>
+                                 <!-- Alternate Address END -->
+                             </apex:outputPanel>
+                         </apex:pageBlockSection>
+                         <!-- 
+                         <apex:pageBlockButtons location="bottom" id="buttonBlock"  >
+                             <apex:commandButton value="Submit" onClick="return onBulkResendClicked();" disabled="{!(selectAddress == 'AddressOnFile' && (showSubmitBtnAOF || showOriginatorMsg))}" rerender="popup" status="redStatusId"/>                            
+                             <apex:commandButton value="Cancel" action="{!btnCancel}" rerender="popup" status="redStatusId"/>
+                             <apex:actionStatus id="redStatusId" >
+                                 <apex:facet name="start" >
+                                     <img src="/img/loading.gif" />                    
+                                 </apex:facet>
+                             </apex:actionStatus>
+                         </apex:pageBlockButtons>
+                         -->
+                     </apex:PageBlock>
+                 </div>
+             </apex:outputPanel>
+             <script>var docDeliveryResult = '{!documentDeliveryResult}';</script>
+           </apex:form>    
+        </apex:outputPanel>  
+                <iframe class="cover" src="about:blank"></iframe> 
+     </div>
+     <apex:outputPanel layout="none" rendered="{!NOT(ISNULL(DocTempUrl))}">     
+       <iframe id="file" name="file" width="100%" height="800px" style="border:none;" src="{!DocTempUrl}"></iframe>
+    </apex:outputPanel>
+         <apex:outputPanel layout="none" rendered="{!ISNULL(DocTempUrl)}">       
+
+        <iframe id="file" name="file" width="100%" height="800px" src="{!Doc360URL}" ></iframe>  
+             </apex:outputPanel>
+
+    </apex:page>

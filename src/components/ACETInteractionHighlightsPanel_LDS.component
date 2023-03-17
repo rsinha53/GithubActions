@@ -1,0 +1,1955 @@
+<apex:component controller="ACETInteractionHighlightsPanelController"
+    allowDML="true"   id="theHighLightPanel">
+    <apex:attribute type="Interaction__c" name="InteractionAtt"
+        description="Interaction record created for provider or member flow"
+        assignTo="{!Interaction}" required="false" />   
+    <apex:attribute type="Contact" name="SubjectAtt"
+        description="subject record associated with the flow"
+        assignTo="{!Subject}" required="false" />
+    <apex:attribute type="Alert__c[]" name="TotalAlerts"
+        description="total  Alerts related to the Member"
+        assignTo="{!lstMemAlertOtherPage}" required="false" />
+    <apex:attribute type="Alert__c[]" name="TotalProviderAlerts"
+        description="total  Alerts related to the Provider"
+        assignTo="{!lstProviderAlertDetailPage}" required="false" />  
+    <apex:attribute type="Alert__c[]" name="TotalProducerAlerts"
+        description="total  Alerts related to the Producer"
+        assignTo="{!lstProducerAlertDetailPage}" required="false" />
+     <apex:attribute type="Alert__c[]" name="TotalGroupAlerts"
+        description="total  Alerts related to the Group"
+        assignTo="{!lstGroupAlertDetailPage}" required="false" />
+    <apex:attribute type="ACETHighlightsPanelAdditionalInfo"
+        name="AdditionalInfoAtt"
+        description="other fields displayed in panel from oil"
+        assignTo="{!AdditionalInfo}" required="false" />
+    <apex:attribute type="String" name="SurrogateKey"
+        description="SurrogateKey of the Member" required="false" />
+    <apex:attribute type="ACETGroupDetail" name="GroupDetailAtt"
+        description="Group Details" assignTo="{!groupDetails}"
+    required="false" />
+    <apex:attribute type="String" name="groupNameAtt"
+    description="Group Name" assignTo="{!groupName}"
+    required="false" />
+    
+    <apex:attribute type="Boolean" name="showALertAtt"
+        description="Show the Group Alert" assignTo="{!isshowALert}" required="false" id="showgroupAlert"/>
+    <apex:attribute type="String" name="selectedOriginator"
+            description="selected originator on member detail page"
+            required="false" id="seledtedOriginator" />
+
+    <apex:attribute type="String" name="sniEligibility"
+                    description="special Needs SNI Eligibility status"
+                    required="false" id="sniEligibility" />        
+    
+    <!--<apex:includeScript value="{!URLFOR($Resource.ACETUIResources, '/JS/bootstrap.min.js')}"/> -->
+
+    <script type="text/javascript">
+        var alertModalWindow = $("[id$='thePage:frmid:popupPanel:theHighLightPanel:alertModalWindow']");
+        var alertGroupModalWindow = $("[id$='alertGroupModalWindow']");
+        
+        var toggleHighlightsPanel = function()  {
+            $(".highlights-panel-collapsible").slideToggle(400, function(){
+            
+                if ($(".panel-arrow-down").hasClass("show-arrow"))  {
+                    $(".panel-arrow-down").addClass("hide-arrow").removeClass("show-arrow");
+                    $(".panel-arrow-up").addClass("show-arrow").removeClass("hide-arrow");
+                    $(".highlights-panel-container").css({"border-bottom":"2px solid #ccc", "border-top":"none"});
+                } else  {
+                    $(".panel-arrow-down").removeClass("hide-arrow").addClass("show-arrow");
+                    $(".panel-arrow-up").removeClass("show-arrow").addClass("hide-arrow");
+                    $(".highlights-panel-container").css({"border-top":"2px solid #ccc", "border-bottom":"none"});
+                }
+            });
+        };
+         
+        $(document).ready(function() {
+            $("[id$='interactionId']").on('click', function(){
+                //console.log('Clicked Interaction...');       
+                sforce.console.getEnclosingPrimaryTabId(function(result) {
+                    sforce.console.openSubtab(result.id, '/'+'{!Interaction.Id}', true, '{!Interaction.Name}', null);
+                });
+                return false;
+            });
+            getAllAlerts();
+            //console.log('-----------InConsole----------->{!AdditionalInfo}'); 
+        });      
+     
+        function renderHippaLabel() {
+          //console.log('{!JSENCODE(selectedOriginator)}@@ ' + '{!JSENCODE(selectedOriginator)}' + ' @@{!JSENCODE(Interaction.Originator_Type__c)}@@ ' + '{!JSENCODE(Interaction.Originator_Type__c)}');
+            //For HIPPA Disclosure
+            if (("{!JSENCODE(selectedOriginator)}" == null || "{!JSENCODE(selectedOriginator)}" == "None" 
+                || "{!JSENCODE(selectedOriginator)}" == "")  && "{!JSENCODE(Interaction.Originator_Type__c)}" == "Member")  {
+                $("[id$='hippaPanel']").css("display","none");
+            } else  {
+                $("[id$='hippaPanel']").css("display","block");
+            }
+            
+            var onM = '<svg id = "svgon" style = "margin-bottom:-1%;fill:{!JSENCODE($Label.ACETHippaHelpIconColorCode)};" version="1.1" xmlns="http://www.w3.org/2000/svg" width="14" height="18" viewBox="0 0 24 28"><path d="M14 21.5v-3c0-0.281-0.219-0.5-0.5-0.5h-3c-0.281 0-0.5 0.219-0.5 0.5v3c0 0.281 0.219 0.5 0.5 0.5h3c0.281 0 0.5-0.219 0.5-0.5zM18 11c0-2.859-3-5-5.688-5-2.547 0-4.453 1.094-5.797 3.328-0.141 0.219-0.078 0.5 0.125 0.656l2.063 1.563c0.078 0.063 0.187 0.094 0.297 0.094 0.141 0 0.297-0.063 0.391-0.187 0.734-0.938 1.047-1.219 1.344-1.437 0.266-0.187 0.781-0.375 1.344-0.375 1 0 1.922 0.641 1.922 1.328 0 0.812-0.422 1.219-1.375 1.656-1.109 0.5-2.625 1.797-2.625 3.313v0.562c0 0.281 0.219 0.5 0.5 0.5h3c0.281 0 0.5-0.219 0.5-0.5v0c0-0.359 0.453-1.125 1.188-1.547 1.188-0.672 2.812-1.578 2.812-3.953zM24 14c0 6.625-5.375 12-12 12s-12-5.375-12-12 5.375-12 12-12 12 5.375 12 12z"></path></svg>';
+
+            $("[id$='hippaLbl']").find(".spanhippaIco").html(onM);
+            $("[id$='hippaLbl']").css("cursor","pointer");
+            $(".spanhippaIco").mouseover(function() {
+                if($("#hippaMsgBox").css("display") == 'none')  {
+                    getCategory();  //this action function is defined in the HIPPA Disclosure Component
+                    $(".spanhippaIco").html(onM);
+                    $("#hippaMsgBox").css("display", "block");
+                }
+            });
+            //For HIPPA Disclosure ends 
+            
+            $(".onshore-indicator").mousemove(function()    {
+                var tooltip = $(this).parent().find(".tooltip-modal");
+                $(tooltip).css("display","block");
+                var posX = event.clientX + 'px';
+                var posY = event.clientY + 'px';
+                $(tooltip).css("top",posY);                
+                $(tooltip).css("left",posX);                                
+            
+            });
+            
+            $(".onshore-indicator").mouseout(function() {
+                var tooltip = $(this).parent().find(".tooltip-modal");
+                $(tooltip).css("display","none");
+            });
+        }     
+    
+        function getProducerAlertjs()   {
+             var alertProdSize = "{!lstProducerAlertDetailPage.size}";
+             if (alertProdSize == 0 || alertProdSize == '') {
+                 //console.log('inside the Producer alert');
+                 getProducerAlert();
+             }    
+        } 
+       
+        function getGroupAlertjs()  {
+             var alertGroupSize = "{!lstGroupAlertDetailPage.size}";
+             if (alertGroupSize == 0 || alertGroupSize == '')   {
+                 //console.log('inside the Group alert');
+                 getGroupAlert();
+             }    
+        }
+        
+        function getMemberAlertjs() {
+            var alertListSize = "{!lstMemAlertOtherPage.size}";
+            if (alertListSize == 0 || alertListSize == '')  {
+                //console.log('inside the alert');
+                getMemberAlert();
+            }    
+        }
+        
+        function getProviderALertjs()   {
+             var alertProviderSize = "{!lstProviderAlertDetailPage.size}";
+             if (alertProviderSize  == 0 || alertProviderSize == '')    {
+             //console.log('alertProviderSize '+alertProviderSize );
+                 getProviderAlert();
+             }    
+        }
+        
+        function closealertModalWindow()    {
+            $("[id$='alertModalWindow']").css("display","none");
+            $("[id$='alertProviderModalWindow']").css("display","none");    
+            $("[id$='alertGroupModalWindow']").css("display","none");
+            $("[id$='alertProducerModalWindow']").css("display","none");
+            rerenderalertModalWindow();
+        } 
+         
+        function OpenInteractionSubTab(RecordId, RecordName){
+            sforce.console.getEnclosingPrimaryTabId(function(result) {
+                  sforce.console.openSubtab(result.id, '/'+RecordId, true,RecordName, null);
+              });
+              return false;
+        }
+        function openCirrusWindow(CIRRUSURL) {
+            console.log('CIRRUSURL::'+CIRRUSURL);
+            window.open(CIRRUSURL, 'CIRRUS', 'toolbars=0,width=1200,height=800,left=0,top=0,scrollbars=1,resizable=1'); 
+            
+        }
+    </script>
+    <style>
+    
+    
+    .highlights-panel-ie-flex-wrap {
+        max-width: 15rem;   
+    }
+    
+    .hide-arrow {
+        display: none;
+    }
+    
+    .show-arrow {
+        display: block;
+    }
+    
+    .outputLabelPanel {
+        font-weight: bold;
+        margin-right: 20px;
+    }
+    
+    .colStyle {
+        width: 27%;
+    }
+    
+    .custPopup {
+        background-color: white;
+        border-width: 2px;
+        border-style: solid;
+        z-index: 9999;
+        left: 30%;
+        padding: 10px;
+        position: absolute;
+        margin-left: -150px;
+        top: 100px;
+    }
+    
+    .popupBackground {
+        background-color: black;
+        opacity: 0.20;
+        filter: alpha(opacity = 20);
+        position: absolute;
+        width: 100%;
+        height: 1000%;
+        top: 0;
+        left: 0;
+        z-index: 9998;
+    }
+    .custPopup_Group{
+        background-color: white;
+        border-width: 2px;
+        border-style: solid;
+        z-index: 9999;
+        left: 30%;
+        padding: 10px;
+        position: absolute;
+        margin-left: -150px;
+        top: 20%;
+    }
+    .onshore-indicator{
+            border-bottom: 1px dotted black;
+        }
+        
+        .tooltip-modal{
+        background-color: #f5f5f5;
+            z-index: 9999;
+            padding: 10px;
+            position: absolute;
+            display: none;
+            /* opacity: .5; */
+            width: 15%;
+            /* border-radius: 5px; */
+            box-shadow: 1px 1px 1px #bbbbbb;
+            border-style: ridge; 
+            border-width: 1px;  
+        }
+    .stage-left {
+          padding:0rem;
+    }
+    .slds-text-heading_small {
+        font-size:  0.5rem;
+        line-height: 1.25;
+    }
+    .collapse
+    {
+       display:none;
+    }
+    .collapse.in
+    {
+        display:block;
+    } 
+    
+    .collapsing
+    {
+        position:relative;
+        height:0;
+        overflow:hidden;
+            -webkit-transition-timing-function:ease;
+            -o-transition-timing-function:ease;
+               transition-timing-function:ease;
+            -webkit-transition-duration:.35s;
+            -o-transition-duration:.35s;
+               transition-duration:.35s;
+            -webkit-transition-property:height,visibility;
+            -o-transition-property:height,visibility;
+               transition-property:height,visibility;
+     }
+     
+    a.changeText.collapsed:before
+    {
+        content:'Show More' ;
+        display:block;
+        min-width: 80px;
+        white-space: nowrap;
+    }
+    
+    a.changeText:before
+    {
+        content:'Show Less' ;
+        display:block;
+        min-width: 80px;
+        white-space: nowrap;
+    }
+    .inBorder
+    {
+       width: 10px;
+       margin-bottom : 0px; 
+    }
+    
+   
+    </style>
+    
+   <script type="text/javascript" src="{!ACETDynatraceDetails.srcURL}" 
+        data-dtconfig="{!ACETDynatraceDetails.dtConfig}|reportUrl={!ACETDynatraceDetails.reportURL}|tp=500,50,0,1" crossorigin="anonymous"></script> 
+    <apex:actionFunction name="rerenderalertModalWindow"
+        action="{!btnHideWindowAlertWinodw}" rerender="temp" />
+        <!--- added by Harish on 03/24/2017 for User Story - US554987----> 
+    <apex:actionFunction name="getCirrusUrl" action="{!fetchCirrusSSOURL}" rerender="null" oncomplete="openCirrusWindow('{!CIRRUSURL}'); return false;" >
+           <apex:param name="memId" value=""/>
+           <apex:param name="grpId" value=""/>
+           <apex:param name="subjType" value=""/>
+    </apex:actionFunction>       
+    <apex:actionFunction name="getMemberAlert" action="{!getMemberAlert}"
+            reRender="theGridMem,membAlert,membAlertPro" onComplete="getProviderALertjs()"/>
+    <apex:actionFunction name="getProducerAlert" action="{!getProducerAlert}"
+            reRender="theGroupPanel,groupIdLink,theGridProducerEmployeGroup" onComplete="getGroupAlertjs();"/>        
+    <apex:actionFunction name="getGroupAlert" action="{!getGroupAlert}"
+            reRender="theGroupPanel,groupIdLink,theGridProducerEmployeGroup" onComplete="getMemberAlertjs();"/> 
+    <apex:actionFunction name="getProviderAlert"
+            action="{!getProviderAlert}" reRender="theGridPro,theGroupPanel,groupIdLink,theGridProducerEmployeGroup,theGridMem,membAlert,membAlertPro" />       
+    <apex:actionFunction name="setshowGroupALertAF" action="{!clickGroupAlert}" reRender="alertGroupModalWindow" 
+            oncomplete="$('[id$=isshowGroupALertID]').show();" />
+    <apex:actionFunction name="getAllAlerts" action="{!getAllAlerts}" 
+            reRender="ProviderId,theGridPro,theGridProducerGroup,theGridProducerEmployeGroup,theGridMem,membAlert,membAlertPro,theGroupPanel,groupIdLink,theGridProducerEmployeGroup" 
+            onComplete="renderHippaLabel();"/>
+    <apex:actionFunction name="setshowProducerALertAF" action="{!clickProducerAlert}" reRender="alertProducerModalWindow" 
+            oncomplete="$('[id$=isshowProducerALertID]').show();" />
+
+    <apex:outputPanel id="partialHLP">        
+    <apex:panelGrid columns="3" width="100%" columnClasses="colStyle"
+                cellspacing="10px"
+                rendered="{!(Interaction.Third_Party__c != null || Interaction.Originator_Type__c == 'Provider')  && Interaction.Originator_Type__c != 'Member' && NOT(Interaction.Originator_Type__c == 'Group/Employer' ||  Interaction.Originator_Type__c == 'Broker' || Interaction.Originator_Type__c == 'UHG' ||  Interaction.Originator_Type__c == 'General Agent' || Interaction.Originator_Type__c == 'Producer' || Interaction.Originator_Type__c == 'Third Party')}"
+                id="theGridPro">
+    <apex:panelGroup >
+        <div class="slds-form-element__row " style="display:{!IF((AdditionalInfo.MemberId != null),'none','Block')}">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium slds-text-heading_small highlights-panel-ie-flex-wrap" >         
+                            <apex:outputtext value="{!IF(( Interaction.Originator_Type__c == 'Provider') ,Interaction.Originator_Name__c, IF(Interaction.Originator_Type__c == 'Other' || (Interaction.Third_Party__c != null ) , Interaction.Third_Party__r.FullName__c , Interaction.Originator__r.Account.Name))}" escape="false"/>
+                      </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-form-element__row " style="display:{!IF(NOT((AdditionalInfo.MemberId != null)),'none','Block')}">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium slds-text-heading_small highlights-panel-ie-flex-wrap" >         
+                             <apex:outPutText rendered="{!IF(AdditionalInfo.GroupN == Null, true,false) }"  value="{!URLENCODE(Subject.FirstName)} {!URLENCODE(Subject.LastName)}" />
+                    </div>
+                </div>
+            </div>
+        </div> 
+        <div class="slds-form-element__row ">  
+            <div class="slds-form-element"> 
+                <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" > 
+                      <apex:outputlink value="#" onclick="return OpenInteractionSubTab('{!Interaction.id}', '{!Interaction.Name}');" style="font-size:0.75rem">{!Interaction.Name}</apex:outputlink> 
+                     </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-form-element__row " style="display:{!IF(Interaction.Originator_Type__c == 'Provider','block','none')}">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-small">        
+                      <div class="slds-col slds-p-horizontal_small slds-text-heading_small" > 
+                                <apex:commandLink action="{!clickProviderAlert}"
+                                    value="Provider Alerts ({!if(lstProviderAlertDetailPage.size == null ,providerAlertCount,lstProviderAlertDetailPage.size)})"
+                                    styleClass="outputLabelPanel" reRender="alertProviderModalWindow" style="font-size:0.75rem;margin-right:0.5pc;" />
+                     </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-form-element__row " style="display:{!IF(Interaction.Originator_Type__c == 'Provider' && AdditionalInfo.MemberId == null,'block','none')}">  <!-- Added by Krishna -->
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" > 
+                                <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','','Member'); return false;"
+                        value="Launch Cirrus"
+                        styleClass="outputLabelPanel" style="font-size:0.75rem;margin-right:0.5pc;"/> 
+                     </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-form-element__row " style="display:{!IF((NOT(ISNULL(AdditionalInfo.providerType)) && AdditionalInfo.MemberId != null) ,'block','none')}">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" > 
+                                <apex:commandLink action="{!clickMemberAlert}"
+                        value="Member Alerts ({!if(lstMemAlertOtherPage.size == null,memberAlertCount,lstMemAlertOtherPage.size)})"
+                        styleClass="outputLabelPanel" reRender="alertModalWindow,thePage:frmid:popupPanel:theHighLightPanel:alertModalWindow" style="font-size:0.75rem;margin-right:0.5pc;"/> 
+                     </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-form-element__row " style="display:{!IF((NOT(ISNULL(AdditionalInfo.providerType)) && AdditionalInfo.MemberId != null) ,'block','none')}">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" > 
+                                <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','','Member'); return false;"
+                        value="Launch Cirrus"
+                        styleClass="outputLabelPanel" style="font-size:0.75rem;margin-right:0.5pc;"/> 
+                     </div>
+                </div>
+            </div>
+        </div>
+    <div class="slds-form-element__row " style="display:{!IF(AdditionalInfo.isProducerNotFound == '1' && AdditionalInfo.isGroupNotFound != '1'&& AdditionalInfo.isMemNotFound != '1'&&AdditionalInfo.MemberId == null&&AdditionalInfo.isMembersearch!='1','block','none')}">  <!----Added by Krishna for Producer not found flows--->
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" > 
+                        <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','{!AdditionalInfo.groupFlowGroupNumber}','Group/Employer'); return false;"
+                              value="Launch Cirrus" styleClass="outputLabelPanel" style="font-size:0.75rem;margin-right:0.5pc;"/> 
+                     </div>
+                </div>
+            </div>
+        </div>
+            <div class="slds-form-element__row " style="display:{!IF(AdditionalInfo.isProducerNotFound == '1' && AdditionalInfo.isGroupNotFound != '1'&& AdditionalInfo.isMemNotFound != '1'&&AdditionalInfo.MemberId == null&&AdditionalInfo.isMembersearch=='1','block','none')}">  <!----Added by Krishna for Producer not found flows--->
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" > 
+                       <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','','Member'); return false;"
+                        value="Launch Cirrus" styleClass="outputLabelPanel" style="font-size:0.75rem;margin-right:0.5pc;"/>
+                     </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-form-element__row " style="display:{!IF(AdditionalInfo.isProducerNotFound == '1' && AdditionalInfo.isGroupNotFound != '1'&& AdditionalInfo.isMemNotFound != '1'&&AdditionalInfo.MemberId != null,'block','none')}">  <!----Added by Krishna for Producer not found flows--->
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" > 
+                      <apex:commandLink action="{!clickMemberAlert}"
+                            value="Member Alerts ({!if(lstMemAlertOtherPage.size == null,'0',lstMemAlertOtherPage.size)})"
+                            styleClass="outputLabelPanel" reRender="alertModalWindow,thePage:frmid:popupPanel:theHighLightPanel:alertModalWindow" /> 
+                            <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','','Member'); return false;"
+                        value="Launch Cirrus"
+                        styleClass="outputLabelPanel" style="font-size:0.75rem;margin-right:0.5pc;"/>
+                     </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-form-element__row " style="display:{!IF(AdditionalInfo.isMemNotFound == '1' && AdditionalInfo.isGroupNotFound != '1' && AdditionalInfo.isProviderNotFound != '1','block','none')}">  <!----Added by Krishna for Member not found flows--->
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" > 
+                                <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','','Member'); return false;"
+                        value="Launch Cirrus"
+                        styleClass="outputLabelPanel" style="font-size:0.75rem;margin-right:0.5pc;"/> 
+                     </div>
+                </div>
+            </div>
+        </div>
+         <div class="slds-form-element__row " style="display:{!IF(AdditionalInfo.isProviderNotFound == '1' && AdditionalInfo.MemberId == null && (Interaction.Originator__r.Tax_ID__c != null || Interaction.Third_Party__r.Tax_ID__c != null),'block','none')}">  <!----Added by Derek for Provider not found flows--->
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" > 
+                                <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','','Member'); return false;"
+                        value="Launch Cirrus"
+                        styleClass="outputLabelPanel" style="font-size:0.75rem;margin-right:0.5pc;"/> 
+                     </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-form-element__row " style="display:{!IF(AdditionalInfo.isGroupNotFound == '1' && AdditionalInfo.MemberId == null && AdditionalInfo.isMembersearch!='1','block','none')}">  <!----Added by Krishna for Group not found flows--->
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" > 
+                          <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','{!AdditionalInfo.GroupNumber}','Group/Employer'); return false;"
+                              value="Launch Cirrus" styleClass="outputLabelPanel" style="font-size:0.75rem;margin-right:0.5pc;"/> 
+                     </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-form-element__row " style="display:{!IF(AdditionalInfo.isGroupNotFound == '1' && AdditionalInfo.MemberId == null && AdditionalInfo.isMembersearch=='1','block','none')}">  <!----Added by Krishna for Group not found flows--->
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" > 
+                          <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','','Member'); return false;"
+                        value="Launch Cirrus"
+                        styleClass="outputLabelPanel" style="font-size:0.75rem;margin-right:0.5pc;"/>
+                     </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-form-element__row " style="display:{!IF(AdditionalInfo.isGroupNotFound == '1' && AdditionalInfo.MemberId != null,'block','none')}">  <!----Added by Krishna for Group not found flows--->
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" > 
+                                <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','','Member'); return false;"
+                        value="Launch Cirrus"
+                        styleClass="outputLabelPanel" style="font-size:0.75rem;margin-right:0.5pc;"/> 
+                     </div>
+                </div>
+            </div>
+        </div>
+        <hr style="margin:0.3pc;"></hr>
+        <div class="slds-form-element__row slds-p-bottom_small" style="display:{!IF((NOT(ISNULL(AdditionalInfo.providerType)) && (AdditionalInfo.MemberId != null || AdditionalInfo.isMemNotFound == '1')),'block','none')}">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-small">        
+                      <div class="slds-col slds-p-horizontal_small slds-text-heading_small" style="font-weight: bold;margin-top:0rem;margin-bottom:0rem">                        
+                          <apex:outPutText value="Provider Information" /><br/>
+                      </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-form-element__row" style="display:{!IF((NOT(ISNULL(AdditionalInfo.providerType))),'block','none')}">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap" >  
+                     <apex:outputLabel value="Contact Name"
+                        styleClass="outputLabelPanel" ></apex:outputLabel><br/>
+                    <apex:outPutText value="{!IF(Interaction.Contact_Name__c == null, AdditionalInfo.contactName, Interaction.Contact_Name__c)}" />
+                     </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-form-element__row slds-p-top_small" style="display:{!IF((NOT(ISNULL(AdditionalInfo.providerType)) ),'block','none')}">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap" >         
+                             <apex:outputLabel value="Provider Name" styleClass="outputLabelPanel" ></apex:outputLabel><br/>
+                                <apex:outputtext value="{!IF(( Interaction.Originator_Type__c == 'Provider') ,Interaction.Originator__r.Name, IF(Interaction.Originator_Type__c == 'Other' || (Interaction.Third_Party__c != null ) , Interaction.Third_Party__r.FullName__c , Interaction.Originator__r.Account.Name))}" escape="false"/>                </div>
+                </div>
+            </div>
+        </div> 
+        <div class="slds-form-element__row slds-p-top_small" style="display:{!IF((NOT(ISNULL(AdditionalInfo.providerType))),'block','none')}">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                            <apex:outputLabel value="Tax ID" styleClass="outputLabelPanel" style="font-size:0.75rem"></apex:outputLabel><br/>
+                            <apex:outPutText value="{!IF(Interaction.Originator_Type__c == 'Other' && (Interaction.Third_Party__c != null || Interaction.Originator_Type__c == 'Provider'), Interaction.Third_Party__r.Tax_ID__c, Interaction.Originator__r.Tax_ID__c)}" />
+                      </div>
+                </div>
+            </div>
+        </div> 
+        <div class="slds-form-element__row slds-p-top_small" style="display:{!IF((NOT(ISNULL(AdditionalInfo.providerType))),'block','none')}">  
+            <div class="slds-form-element"> 
+                <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                            <apex:outputLabel value="Phone Number" styleClass="outputLabelPanel" style="font-size:0.75rem"></apex:outputLabel><br/>
+                            <apex:outPutText value="{!AdditionalInfo.providerPhoneNumber}" />
+                      </div>
+                </div>
+            </div>
+        </div> 
+        <div class="slds-form-element__row slds-p-top_small" style="display:{!IF((NOT(ISNULL(AdditionalInfo.providerType))),'block','none')}">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                            <apex:outputLabel value="Provider ID" styleClass="outputLabelPanel" style="font-size:0.75rem;display:{!IF((Interaction.Originator_Type__c != 'Other'),'','none')}"></apex:outputLabel><br/>
+                            <apex:outPutText value="{!AdditionalInfo.providerId}" />
+                      </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-form-element__row slds-p-top_small" style="display:{!IF((NOT(ISNULL(AdditionalInfo.providerType))),'block','none')}">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                            <apex:outputLabel value="Primary Specialty" styleClass="outputLabelPanel" style="font-size:0.75rem;display:{!IF((Interaction.Originator_Type__c != 'Other'),'','none')}"></apex:outputLabel><br/>
+                            <apex:outPutText value="{!AdditionalInfo.primarySpecialty}" escape="false"/> 
+                      </div>
+                </div>
+            </div>
+        </div> 
+    </apex:panelGroup> 
+    </apex:panelGrid>
+    <apex:panelGrid columns="1" width="100%" columnClasses="colStyle" cellspacing="10px" rendered="{!Interaction.Originator_Type__c == 'Member'}"
+                id="theGridMem">
+        <apex:panelGroup >
+        <div class="slds-form-element__row slds-p-bottom_small" style="padding:0rem;">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-x-small">        
+                      <div class="slds-col slds-p-horizontal_small slds-text-heading_small highlights-panel-ie-flex-wrap" >                        
+                        <apex:outPutText rendered="{!IF(AdditionalInfo.GroupN == Null, true,false) }"  value="{!Subject.FirstName} {!Subject.LastName}" />
+                        <apex:outputText rendered="{!IF(AdditionalInfo.GroupN == Null && AdditionalInfo.Relationship != Null, true,false) }" value=" - {!AdditionalInfo.Relationship}" /> 
+                      </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slds-form-element__row slds-p-bottom_small" style="padding:0rem;">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-small">        
+                      <div class="slds-col slds-p-horizontal_small" >                       
+                        <apex:outputlink value="#" onclick="return OpenInteractionSubTab('{!Interaction.id}', '{!Interaction.Name}');">{!Interaction.Name}</apex:outputlink> 
+                      </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slds-form-element__row slds-p-bottom_small" style="padding:0rem;">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-small">        
+                      <div class="slds-col slds-p-horizontal_small" > 
+                         <apex:outputPanel id="MemberId">
+                        <apex:commandLink action="{!clickMemberAlert}"
+                        value="Member Alerts ({!if(lstMemAlertOtherPage.size == null,memberAlertCount,lstMemAlertOtherPage.size)})"
+                        styleClass="outputLabelPanel" reRender="alertModalWindow,thePage:frmid:popupPanel:theHighLightPanel:alertModalWindow" />  
+                        </apex:outputPanel>
+                      </div>
+                </div>
+            </div>
+        </div>  
+        <div class="slds-form-element__row " style="padding:0rem;">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-small">        
+                      <div class="slds-col slds-p-horizontal_small" > 
+                                <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','','Member'); return false;"
+                        value="Launch Cirrus"
+                        styleClass="outputLabelPanel" style="font-size:0.75rem;margin-right:0.5pc;"/> 
+                     </div>
+                </div>
+            </div>
+        </div>
+        <hr style="margin:0.3pc;"></hr>
+        <apex:outputpanel styleclass="slds-form-element__row " id="originatorNameId">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">            
+                      <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap" id = "originatorNameLabel">
+                        <apex:outputLabel value="Originator Name" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outputText rendered="{!IF(Interaction.Third_Party__c== '', false,true) }"
+                            value="{!Interaction.Third_Party__r.First_Name__c} {!Interaction.Third_Party__r.LastName__c}"></apex:outputText>
+                            <apex:outPutText rendered="{!IF(Interaction.Third_Party__c== '', true,false) }"
+                            value="{!Interaction.Originator__r.Name}" />
+                      <apex:outputText value=" - {!AdditionalInfo.OriginatorRelationship}" /> 
+                      </div>                     
+                </div>
+            </div>
+        </apex:outputpanel>      
+        
+        <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                         <apex:outputLabel value="Member ID" styleClass="outputLabelPanel" ></apex:outputLabel><br/>
+                         <apex:outPutText id="memberidHPLvalue" value="{!AdditionalInfo.MemberId}" />  
+                      </div>
+                </div>
+            </div>
+        </div>
+        <apex:outputPanel rendered="{!AdditionalInfo.MemberId != null}" id="hp1_hippaPanel">
+           <div class="slds-form-element__row slds-p-top_small">  
+               <div class="slds-form-element"> 
+                   <div class="slds-grid slds-grid_pull-padded-medium">        
+                       <div class="slds-col slds-p-horizontal_medium" style="margin-bottom:0rem">  
+                            <apex:outputLabel id="hp1_hippaLbl" value="HIPAA DISCLOSURE: "  styleClass="outputLabelPanel">
+                                <span class= "spanhippaIco"></span>
+                            </apex:outputLabel>
+                       </div>
+                    </div>
+                </div>
+            </div>
+         </apex:outputPanel>
+        <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                        <apex:outputLabel value="Date of Birth"
+                        styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outPutText value="{!AdditionalInfo.DOB}" /> 
+                      </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                        <apex:outputLabel value="Age"
+                        styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outPutText value="{!AdditionalInfo.Age}" /> 
+                      </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                         <apex:outputLabel value="Effective Date"
+                        styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outPutText value="{!AdditionalInfo.EffectiveDate}" />  
+                      </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                        <apex:outputLabel value="End Date" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outPutText value="{!AdditionalInfo.EndDate}" />  
+                      </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                        <apex:outputLabel value="Product" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outPutText value="{!AdditionalInfo.Product}" />  
+                      </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                        <apex:outputLabel value="Gated Plan " 
+                        styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outPutText value="{!AdditionalInfo.GatedPlan}" />  
+                      </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                        <apex:outputLabel value="Network" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outPutText value="{!AdditionalInfo.Network}" /> 
+                      </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                        <apex:outputLabel value="Situs State" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outPutText value="{!AdditionalInfo.SitusState}" />  
+                      </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                        <apex:outputLabel value="Group Number " 
+                        styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outPutText value="{!AdditionalInfo.GroupNumber}" />  
+                      </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap" >
+                        <apex:outputLabel value="Group Name" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outPutText value="{!AdditionalInfo.GroupName}" />  
+                      </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                        <apex:outputLabel value="Benefit Plan ID"
+                        styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outPutText value="{!AdditionalInfo.BenefitPlanId}" />
+                      </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                        <apex:outputLabel value="Benefit Bundle Option ID"
+                        styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outPutText value="{!AdditionalInfo.BenefitBundleOptionId}" />
+                      </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                        <apex:outputLabel value="Special Needs Status"
+                        styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outPutText value="{!sniEligibility}" id="secondsniEligibilityText"/>
+                      </div>
+                </div>
+            </div>
+        </div>
+		<div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                          <div class="slds-col slds-wrap slds-grid" >
+                        	<apex:outputLabel value="COVID-19 Vaccine"
+                        		styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                          	<apex:image value="/s.gif" styleclass="helpIcon"   title="{!$Label.ACETLGT_JohnsonTooltip}" />
+                          </div>
+                       	<apex:repeat value="{!AdditionalInfo.covidVaccineDosageList}" var="dose">
+                            <apex:outPutText styleclass="slds-form-element__static" value="{!dose}"/>
+                        </apex:repeat>
+                      </div>
+                </div>
+            </div>
+        </div>													   
+      </apex:panelGroup>
+    </apex:panelGrid>
+    <!-- Member Not Found section begins-->
+    <apex:panelGrid columns="1" width="100%" columnClasses="colStyle"
+                    cellspacing="10px"
+                rendered="{!Interaction.Originator_Type__c == $Label.ACETProviderNotFoundOriginatorType && Interaction.Third_Party__c == null}"
+                    id="theGridMemNotFound">
+        <apex:panelGroup >
+            <div class="slds-form-element__row slds-p-bottom_small" style="padding:0rem;">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-x-small">        
+                          <div class="slds-col slds-p-horizontal_small slds-text-heading_small highlights-panel-ie-flex-wrap" >                        
+                            <apex:outPutText rendered="{!IF(AdditionalInfo.GroupN == Null, true,false) }"  value="{!AdditionalInfo.FirstName} {!AdditionalInfo.LastName}" />
+                          </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="slds-form-element__row slds-p-bottom_small" style="padding:0rem;">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-small">        
+                          <div class="slds-col slds-p-horizontal_small" >                       
+                            <apex:outputlink value="#" onclick="return OpenInteractionSubTab('{!Interaction.id}', '{!Interaction.Name}');">{!Interaction.Name}</apex:outputlink> 
+                          </div>
+                    </div>
+                </div>
+            </div>
+           
+            <div class="slds-form-element__row slds-p-bottom_small" style="padding:0rem;">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-small">        
+                          <div class="slds-col slds-p-horizontal_small" > 
+                             <apex:outputPanel id="MemberIdNotFound">
+                            <apex:commandLink action="{!clickMemberAlert}"
+                            value="Member Alerts ({!if(lstMemAlertOtherPage.size == null,'0',lstMemAlertOtherPage.size)})"
+                            styleClass="outputLabelPanel" reRender="alertModalWindow,thePage:frmid:popupPanel:theHighLightPanel:alertModalWindow" />  
+                            </apex:outputPanel>
+                          </div>
+                    </div>
+                </div>
+            </div>  
+            <div class="slds-form-element__row " style="padding:0rem;">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-small">        
+                          <div class="slds-col slds-p-horizontal_small" > 
+                                    <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','','Member'); return false;"
+                            value="Launch Cirrus"
+                            styleClass="outputLabelPanel" style="font-size:0.75rem;margin-right:0.5pc;"/> 
+                         </div>
+                    </div>
+                </div>
+            </div>
+        </apex:panelGroup>
+    </apex:panelGrid>
+    <!-- Member Not Found section ends-->  
+    
+    <!-- Added by Avish as a part of US813401 on 12042017 -->
+    <!-- Producer Not Found section begins-->
+    <apex:panelGrid columns="1" width="100%" columnClasses="colStyle"
+                    cellspacing="10px"
+                rendered="{!AdditionalInfo.isProducerNotFound == '1'}"
+                    id="theGridProducerNotFound">
+        <apex:panelGroup >
+        
+            <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium" >
+                             <apex:outputLabel value="Producer ID" styleClass="outputLabelPanel" ></apex:outputLabel><br/>
+                             <apex:outPutText value="{!AdditionalInfo.producerIDPNF}" />  
+                          </div>
+                    </div>
+                </div>
+            </div>        
+        
+            <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium" >
+                             <apex:outputLabel value="Producer Name" styleClass="outputLabelPanel" ></apex:outputLabel><br/>
+                             <apex:outPutText value="{!AdditionalInfo.producerName}" />  
+                          </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium" >
+                             <apex:outputLabel value="Contact Name" styleClass="outputLabelPanel" ></apex:outputLabel><br/>
+                             <apex:outPutText value="{!AdditionalInfo.contactName}" />  
+                          </div>
+                    </div>
+                </div>
+            </div>            
+            
+            <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium" >
+                             <apex:outputLabel value="Phone Number" styleClass="outputLabelPanel" ></apex:outputLabel><br/>
+                             <apex:outPutText value="{!AdditionalInfo.phoneNumberPNF}" />  
+                          </div>
+                    </div>
+                </div>
+            </div>            
+           
+        </apex:panelGroup>
+    </apex:panelGrid>
+    <!-- Producer Not Found section ends-->     
+       
+    <!-- Producer Highlight Panel Starts ------ -->
+    <apex:panelGrid columns="3" width="100%" columnClasses="colStyle"
+        cellspacing="10px" id="theGridProducerGroup"
+        rendered="{!(Interaction.Originator_Type__c == 'Producer')&&(AdditionalInfo.GroupN == null)}">
+        <apex:panelGroup >
+            <div class="slds-form-element__row slds-p-bottom_xxx-small ">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-small">        
+                          <div class="slds-col slds-p-horizontal_medium slds-text-heading_small highlights-panel-ie-flex-wrap" >  
+                            <apex:outPutText rendered="{!IF(Interaction.Third_Party__c== '' && AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId == null, true,false) }"  value="{!AdditionalInfo.producerSubject}" />
+                            <apex:outPutText rendered="{!IF(AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null && Interaction.Originator__r.EID__c != null, true,false) }"  value="{!Subject.FirstName} {!Subject.LastName}" />
+                            <apex:outputText rendered="{!IF(AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null && Interaction.Originator__r.EID__c != null && Subject != Null && AdditionalInfo.Relationship != Null, true,false) }" value="- {!AdditionalInfo.Relationship}" />
+                         </div>
+                    </div>
+                </div>
+            </div>  
+           
+            <div class="slds-form-element__row slds-p-bottom_xxx-small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium" >  
+                             <apex:outputlink value="#" onclick="return OpenInteractionSubTab('{!Interaction.id}', '{!Interaction.Name}');">{!Interaction.Name}</apex:outputlink> 
+                             <apex:commandLink onclick="setshowProducerALertAF();return false;" action="{!clickProducerAlert}"
+                             value="Producer Alerts ({!if(lstProducerAlertDetailPage.size == null,producerAlertCount,lstProducerAlertDetailPage.size)})"
+                             styleClass="outputLabelPanel" reRender="alertProducerModalWindow" />
+                             <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','{!AdditionalInfo.groupFlowGroupNumber}','Group/Employer'); return false;"
+                              value="Launch Cirrus" styleClass="outputLabelPanel" style="font-size:0.75rem;margin-right:0.5pc;" rendered="{!AdditionalInfo.MemberId == null}"/> 
+                             <apex:commandLink action="{!clickMemberAlert}"
+                                value="Member Alerts ({!if(lstMemAlertOtherPage.size == null,memberAlertCount,lstMemAlertOtherPage.size)})"
+                                styleClass="outputLabelPanel" reRender="alertModalWindow,thePage:frmid:popupPanel:theHighLightPanel:alertModalWindow" 
+                                rendered="{!AdditionalInfo.MemberId != null}"/>  
+                             <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','','Member');return false;"
+                                value="Launch Cirrus" styleClass="outputLabelPanel" style="font-size:0.75rem;margin-right:0.5pc;" rendered="{!AdditionalInfo.MemberId != null}"/>                               
+                         </div>
+                    </div>
+                </div>
+            </div> 
+             
+            <hr style="margin:0.3pc;"></hr> 
+                             
+            <div class="slds-form-element__row ">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap" >  
+                              <apex:outputLabel value="Name" styleClass="outputLabelPanel"/><br/>
+                             <apex:outPutText rendered="{!IF(Interaction.Third_Party__c== '', true,false) }" value="{!AdditionalInfo.producerName}" />
+                         </div>
+                    </div>
+                </div>
+            </div>                  
+            <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium" >  
+                                <apex:outputLabel value="Producer ID" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                                <apex:outPutText value="{!Interaction.Originator__r.EID__c}" />  
+                         </div>
+                    </div>
+                </div>
+            </div>                  
+            <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap" >  
+                            <apex:outputLabel value="Originator"
+                            styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                            <apex:outPutText rendered="{!IF(Interaction.Third_Party__c== '', true,false) }"
+                            value="{!Interaction.Originator__r.Name}" />
+                         </div>
+                    </div>
+                </div>
+            </div>
+        </apex:panelGroup>
+    </apex:panelGrid>
+
+    <apex:panelGrid columns="3" width="100%" columnClasses="colStyle"
+                cellspacing="10px" id="theGridProducerEmployeGroup"
+                rendered="{!(Interaction.Originator_Type__c == 'Producer')&&(AdditionalInfo.GroupN != null||(AdditionalInfo.isMemNotFound == '1'))}">
+         <apex:panelGroup >
+        
+        <!--Changes start by Abhinav -->
+         
+        <!--  <div class="slds-form-element__row slds-p-bottom_xxx-small slds-text-heading_small">  
+            <div class="slds-form-element"> 
+                <div class="slds-grid slds-grid_pull-padded-small">        
+                    <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap">
+                        <apex:outputText rendered="{!IF((Subject == Null && groupDetails != Null && groupDetails.genGroupInfo != Null && groupDetails.genGroupInfo.groupName != Null), true,false) }"
+                        value="{!groupDetails.genGroupInfo.groupName}"></apex:outputText>
+                         <apex:outputText rendered="{!IF((Subject != Null), true,false) }" value="{!Subject.FirstName} {!Subject.LastName}"></apex:outputText>                         
+                         <apex:outputText rendered="{!IF((Subject.FirstName == Null && Subject.LastName == null && groupDetails.genGroupInfo.groupName == Null), true, false) }" value="{!AdditionalInfo.FirstName} {!AdditionalInfo.LastName}"></apex:outputText>
+                         
+                       </div>
+                    
+                </div>
+            </div>
+        </div>-->
+        <div class="slds-form-element__row slds-p-bottom_xxx-small slds-text-heading_small">  
+            <div class="slds-form-element"> 
+                <div class="slds-grid slds-grid_pull-padded-small">        
+                    <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap">
+                        <apex:outputText rendered="{!IF((Subject == Null && groupName != Null), true,false) }"
+                        value="{!groupName}"></apex:outputText>
+                         <apex:outputText rendered="{!IF((Subject != Null), true,false) }" value="{!Subject.FirstName} {!Subject.LastName}"></apex:outputText>                         
+                         <apex:outputText rendered="{!IF((Subject.FirstName == Null && Subject.LastName == null && groupName == Null), true, false) }" value="{!AdditionalInfo.FirstName} {!AdditionalInfo.LastName}"></apex:outputText>
+                         
+                       </div>
+                    
+                </div>
+            </div>
+        </div>
+        
+        <!--Changes end by Abhinav -->
+             
+        <div class="slds-form-element__row slds-p-bottom_xxx-small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                    <div class="slds-col slds-p-horizontal_medium">
+                        <apex:outputlink value="#" onclick="return OpenInteractionSubTab('{!Interaction.id}', '{!Interaction.Name}');">{!Interaction.Name}</apex:outputlink>                    
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+        
+        <div class="slds-form-element__row slds-p-bottom_xxx-small">  
+            <div class="slds-form-element"> 
+                <div class="slds-grid slds-grid_pull-padded-medium">            
+                    <div class="slds-col slds-p-horizontal_medium">
+                         <apex:commandLink action="{!clickProducerAlert}"
+                         value="Producer Alerts ({!if(lstProducerAlertDetailPage.size == null,producerAlertCount,lstProducerAlertDetailPage.size)})"
+                         styleClass="outputLabelPanel" reRender="alertProducerModalWindow" />
+                        <apex:commandLink onclick="setshowGroupALertAF();return false;" action="{!clickGroupAlert}"
+                        value="Group Alerts ({!if(lstGroupAlertDetailPage.size == null,groupAlertCount,lstGroupAlertDetailPage.size)})"
+                        styleClass="outputLabelPanel" reRender="alertGroupModalWindow">
+                        </apex:commandLink>
+                        <apex:commandLink action="{!clickMemberAlert}"
+                        value="Member Alerts ({!if(lstMemAlertOtherPage.size == null,memberAlertCount,lstMemAlertOtherPage.size)})"
+                        styleClass="outputLabelPanel" reRender="alertModalWindow,thePage:frmid:popupPanel:theHighLightPanel:alertModalWindow" 
+                        rendered="{!AdditionalInfo.MemberId != null}"/>
+                        <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','','Member'); return false;"
+                        value="Launch Cirrus"
+                        styleClass="outputLabelPanel" style="font-size:0.75rem;margin-right:0.5pc;" rendered="{!AdditionalInfo.MemberId != null}"/>
+                        <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','{!AdditionalInfo.groupFlowGroupNumber}','Group/Employer'); return false;"
+                        value="Launch Cirrus"
+                        styleClass="outputLabelPanel" style="font-size:0.75rem;margin-right:0.5pc;" rendered="{!AdditionalInfo.MemberId == null}"/> 
+                    </div>
+                </div>
+            </div>
+        </div> 
+         
+         <hr style="margin:0.3pc;"></hr>
+         <div class="slds-form-element__row slds-p-bottom_small" style="padding:0rem;" >  
+                <div class="slds-form-element"> 
+                    <div class="slds-grid slds-grid_pull-padded-small">        
+                        <div class="slds-col slds-p-horizontal_small slds-text-heading_small" style="font-weight: bold;margin-top:0rem;margin-bottom:0rem">                        
+                            <apex:outPutText value="Producer Information" /><br/>
+                        </div>
+                    </div>
+                </div>
+         </div>
+         <div class="slds-form-element__row ">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                        <apex:outputLabel value="Name" styleClass="outputLabelPanel"></apex:outputLabel>
+                      </div>
+                </div>
+            </div>
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap" >
+                         <apex:outPutText rendered="{!IF(Interaction.Third_Party__c== '', true,false) }" value="{!AdditionalInfo.producerName}"/>
+                      </div>
+                </div>
+            </div>
+        </div>
+         <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                         <apex:outputLabel value="Producer ID" styleClass="outputLabelPanel"></apex:outputLabel>
+                      </div>
+                </div>
+            </div>
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                          <apex:outPutText value="{!Interaction.Originator__r.EID__c}" />  
+                      </div>
+                </div>
+            </div>
+        </div>
+          <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                         <apex:outputLabel value="Originator" styleClass="outputLabelPanel"></apex:outputLabel>
+                      </div>
+                </div>
+            </div>
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap" >
+                         <apex:outPutText rendered="{!IF(Interaction.Third_Party__c== '', true,false) }" value="{!Interaction.Originator__r.Name}" />
+                      </div>
+                </div>
+            </div>
+        </div>
+          <hr style="margin:0.3pc;"></hr> 
+        <apex:outputPanel >
+            <div class="slds-form-element__row slds-p-bottom_small" style="padding:0rem;" >  
+                    <div class="slds-form-element"> 
+                        <div class="slds-grid slds-grid_pull-padded-small">        
+                            <div class="slds-col slds-p-horizontal_small slds-text-heading_small" style="font-weight: bold;margin-top:0rem;margin-bottom:0rem">                        
+                                <apex:outPutText value="Group Information" /><br/>
+                            </div>
+                        </div>
+                    </div>
+             </div>
+         </apex:outputPanel>
+        <apex:outputPanel rendered="{!Interaction.Originator__r.EID__c == null}" >
+             <div class="slds-form-element__row ">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium" >
+                             <apex:outputLabel value="Name" styleClass="outputLabelPanel"></apex:outputLabel>
+                          </div>
+                    </div>
+                </div>
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap" >
+                             <apex:outPutText value="{!AdditionalInfo.producerName}" />
+                          </div>
+                    </div>
+                </div>
+            </div>
+             <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium" >
+                             <apex:outputLabel value="Originator" styleClass="outputLabelPanel"></apex:outputLabel>
+                          </div>
+                    </div>
+                </div>
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap" >
+                             <apex:outPutText rendered="{!IF(Interaction.Third_Party__c== '', true,false) }" value="{!Interaction.Originator__r.Name}" />
+                          </div>
+                    </div>
+                </div>
+            </div>
+        </apex:outputPanel>
+        <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                <div class="slds-grid slds-grid_pull-padded-medium">        
+                    <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap">
+                        <apex:outputLabel value="Group" styleClass="outputLabelPanel"></apex:outputLabel>
+                        <br/>
+                        <apex:outPutText value="{!AdditionalInfo.GroupN}" />
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+        <!-- below is for Member Detail through Group Search through Producer-->
+        <apex:outputPanel rendered="{!(AdditionalInfo.MemberId != null)||(AdditionalInfo.isMemNotFound == '1')}">
+            
+        </apex:outputPanel>
+        <!-- below is for Group Detail page through Producer -->
+        <apex:outputPanel rendered="{!(AdditionalInfo.MemberId == null && AdditionalInfo.isMemNotFound != '1')}">
+            
+        </apex:outputPanel>
+        </apex:panelGroup>
+        <!--Sandeep-->
+    </apex:panelGrid>
+    
+    <!-- Producer Highlight Panel Ends ----------->
+    <apex:panelGrid columns="3" width="100%" columnClasses="colStyle" cellspacing="10px"
+        rendered="{!(Interaction.Originator_Type__c == 'Group/Employer' ||  Interaction.Originator_Type__c == 'Broker' || Interaction.Originator_Type__c == 'UHG' ||  Interaction.Originator_Type__c == 'General Agent' || Interaction.Originator_Type__c == 'Third Party')}"
+        id="theGroupPanel">
+        
+        <apex:panelGroup >
+            
+        <!--<div class="slds-form-element__row slds-p-bottom_xxx-small slds-text-heading_small">  
+            <div class="slds-form-element"> 
+                <div class="slds-grid slds-grid_pull-padded-small">        
+                    <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap">
+                        <apex:outputText rendered="{!IF((Subject == Null && groupDetails != Null && groupDetails.genGroupInfo != Null && groupDetails.genGroupInfo.groupName != Null), true,false) }"
+                        value="{!groupDetails.genGroupInfo.groupName}"></apex:outputText>
+                        <apex:outputText rendered="{!IF((Subject == Null && groupDetails == Null && groupDetails.genGroupInfo == Null), true,false) }"
+                        value="{!AdditionalInfo.groupSName}"></apex:outputText>
+                        <apex:outPutText rendered="{!IF(Subject != Null, true,false) }"
+                        value="{!Subject.FirstName} {!Subject.LastName}" />
+                        <apex:outputText rendered="{!IF(Subject != Null && AdditionalInfo.Relationship != Null, true,false) }" value="- {!AdditionalInfo.Relationship}" />
+                        <apex:outputText rendered="{!IF((Subject.FirstName == Null && Subject.LastName == null && groupDetails.genGroupInfo.groupName == Null), true, false) }" value="{!AdditionalInfo.FirstName} {!AdditionalInfo.LastName}"></apex:outputText>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>-->
+        
+        <div class="slds-form-element__row slds-p-bottom_xxx-small slds-text-heading_small">  
+            <div class="slds-form-element"> 
+                <div class="slds-grid slds-grid_pull-padded-small">        
+                    <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap">
+                        <apex:outputText rendered="{!IF((Subject == Null && groupName != Null), true,false) }"
+                        value="{!groupName}"></apex:outputText>
+                        <apex:outputText rendered="{!IF((Subject == Null && groupName == Null), true,false) }"
+                        value="{!AdditionalInfo.groupSName}"></apex:outputText>
+                        <apex:outPutText rendered="{!IF(Subject != Null, true,false) }"
+                        value="{!Subject.FirstName} {!Subject.LastName}" />
+                        <apex:outputText rendered="{!IF(Subject != Null && AdditionalInfo.Relationship != Null, true,false) }" value="- {!AdditionalInfo.Relationship}" />
+                        <apex:outputText rendered="{!IF((Subject.FirstName == Null && Subject.LastName == null && groupName == Null), true, false) }" value="{!AdditionalInfo.FirstName} {!AdditionalInfo.LastName}"></apex:outputText>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+        
+        <div class="slds-form-element__row slds-p-bottom_xxx-small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                    <div class="slds-col slds-p-horizontal_medium">
+                        <apex:outputlink value="#" onclick="return OpenInteractionSubTab('{!Interaction.id}', '{!Interaction.Name}');">{!Interaction.Name}</apex:outputlink>                    
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+        <div class="slds-form-element__row slds-p-bottom_xxx-small">  
+                <div class="slds-form-element"> 
+                    <div class="slds-grid slds-grid_pull-padded-medium">            
+                    <div class="slds-col slds-p-horizontal_medium">
+                        <apex:commandLink onclick="setshowGroupALertAF();return false;" action="{!clickGroupAlert}"
+                        value="Group Alerts ({!if(lstGroupAlertDetailPage.size == null,groupAlertCount,lstGroupAlertDetailPage.size)})"
+                        styleClass="outputLabelPanel" reRender="alertGroupModalWindow">
+                        </apex:commandLink>
+                        <apex:commandLink action="{!clickMemberAlert}"
+                        value="Member Alerts ({!if(lstMemAlertOtherPage.size == null,memberAlertCount,lstMemAlertOtherPage.size)})"
+                        styleClass="outputLabelPanel" reRender="alertModalWindow,thePage:frmid:popupPanel:theHighLightPanel:alertModalWindow" 
+                        rendered="{!AdditionalInfo.MemberId != null}"/> 
+                        <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','{!AdditionalInfo.groupFlowGroupNumber}','Group/Employer'); return false;"
+                        value="Launch Cirrus"
+                        styleClass="outputLabelPanel" style="font-size:0.75rem;margin-right:0.5pc;" rendered="{!AdditionalInfo.MemberId == null}"/>
+                        <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','','Member'); return false;"
+                        value="Launch Cirrus"
+                        styleClass="outputLabelPanel" style="font-size:0.75rem;margin-right:0.5pc;" rendered="{!AdditionalInfo.MemberId != null}"/> 
+                    </div>
+                </div>
+            </div>
+        </div> 
+             <hr style="margin:0.3pc;"></hr> 
+        
+        <apex:outputPanel rendered="{!(AdditionalInfo.MemberId != null)||(AdditionalInfo.isMemNotFound == '1')}">
+            <div class="slds-form-element__row slds-p-bottom_small" style="padding:0rem;" >  
+                <div class="slds-form-element"> 
+                    <div class="slds-grid slds-grid_pull-padded-x-small">        
+                        <div class="slds-col slds-p-horizontal_small slds-text-heading_small" style="font-weight: bold;">                        
+                            <apex:outPutText value="Group Information" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </apex:outputPanel>
+        <div class="slds-form-element__row ">  
+                <div class="slds-form-element"> 
+                    <div class="slds-grid slds-grid_pull-padded-medium">            
+                    <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap">
+                    <apex:outputLabel value="Name" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                    <apex:outputText rendered="{!IF((AdditionalInfo.contactName != Null && AdditionalInfo.contactName != '' && Interaction.Third_Party__c != ''), true,false) }"
+                        value="{!AdditionalInfo.contactName} - {!AdditionalInfo.RelationshipType}"></apex:outputText>
+                    <apex:outPutText rendered="{!IF((AdditionalInfo.contactName != Null && AdditionalInfo.contactName != '' && Interaction.Third_Party__c== ''), true,false) }"
+                    value="{!AdditionalInfo.contactName} - {!AdditionalInfo.RelationshipType}" />
+                    </div>
+                    
+                </div>
+            </div>
+        </div> 
+        <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                    
+                    <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap">
+                        <apex:outputLabel value="Originator"
+                        styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outputText rendered="{!IF(Interaction.Third_Party__c!= '' && Interaction.Originator__r.Name == '', true, false) }"
+                        value="{!Interaction.Third_Party__r.First_Name__c} {!Interaction.Third_Party__r.LastName__c} - {!AdditionalInfo.RelationshipType}"></apex:outputText>
+                        <apex:outPutText rendered="{!IF(Interaction.Originator__r.Name != '', true, false) }"
+                        value="{!Interaction.Originator__r.Name}"/>
+                        <apex:outPutText rendered="{!IF(Interaction.Originator__r.Name != '', true,false) }"
+                        value=" - {!Interaction.Originator_Type__c}"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                <div class="slds-grid slds-grid_pull-padded-medium">        
+                    <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap">
+                        <apex:outputLabel value="Group" styleClass="outputLabelPanel"></apex:outputLabel>
+                        <br/>
+                        <apex:outPutText value="{!AdditionalInfo.GroupN}" />
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+        <!-- below is for Member Detail through Group Search-->
+        <apex:outputPanel rendered="{!(AdditionalInfo.MemberId != null)||(AdditionalInfo.isMemNotFound == '1')}">
+            
+        </apex:outputPanel>
+        <!-- below is for Group Detail page -->
+        <apex:outputPanel rendered="{!(AdditionalInfo.MemberId == null && AdditionalInfo.isMemNotFound != '1')}">
+            
+        </apex:outputPanel>
+
+
+            
+    </apex:panelGroup>     
+</apex:panelGrid>
+<!--Flow HightLight Panel Start-->
+
+ <apex:panelGrid width="100%" columnClasses="colStyle"
+                cellspacing="10px" rendered="{!NOT(ISNULL(Subject))  && (NOT(AdditionalInfo.GroupN == null) || NOT(Interaction.Third_Party__r.Tax_ID__c == null) || NOT(Interaction.Originator__r.Tax_ID__c == null) )}"> 
+ <apex:panelGroup >
+     <apex:outputPanel rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null), true,false) }">
+           <div class="slds-form-element__row slds-p-bottom_small" style="display:{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null), 'none','block') }">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >  
+                        <apex:outPutText rendered="{!IF(AdditionalInfo.GroupN == Null, true,false) }"  value="{!Subject.FirstName} {!Subject.LastName}" />
+                        <apex:outputText rendered="{!IF(AdditionalInfo.GroupN == Null, true,false) }" value=" - {!AdditionalInfo.Relationship}" />
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+      </apex:outputPanel>
+
+     
+     <hr style="margin:0.3pc;"/>
+     
+     <apex:outputPanel rendered="{!(AdditionalInfo.MemberId != null)}">
+       <div class="slds-form-element__row slds-p-bottom_small" style="padding:0.2rem;">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-small">        
+                      <div class="slds-col slds-p-horizontal_small slds-text-heading_small" style="font-weight: bold;margin-bottom:0rem">                        
+                          <apex:outPutText value="Member Information" /><br/>
+                      </div>
+                </div>
+            </div>
+        </div>
+        
+     </apex:outputPanel>
+     <apex:outputPanel rendered="{!AdditionalInfo.MemberId != null}" id="memberidHPLvalueNMem">
+        <div class="slds-form-element__row ">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium"  >  
+                          <apex:outputLabel value="Member ID" styleClass="outputLabelPanel" ></apex:outputLabel><br/>
+                          <apex:outPutText value="{!AdditionalInfo.MemberId}" />
+                    </div>
+                </div>
+            </div>
+        </div>
+     </apex:outputPanel>
+         <apex:outputPanel rendered="{!AdditionalInfo.MemberId != null}" id="hp2_hippaPanel">
+           <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >  
+                        <apex:outputLabel id="hp2_hippaLbl" value="HIPAA DISCLOSURE: "  styleClass="outputLabelPanel">
+                            <span class= "spanhippaIco"></span>
+                        </apex:outputLabel>
+                      </div>
+                </div>
+            </div>
+        </div>
+     </apex:outputPanel>
+      <apex:outputPanel rendered="{!AdditionalInfo.MemberId != null}">
+           <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >  
+                          <apex:outputLabel value="Date of Birth" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                          <apex:outPutText value="{!AdditionalInfo.DOB}" />
+                    </div>
+                </div>
+            </div>
+        </div>
+     </apex:outputPanel>
+     <apex:outputPanel rendered="{!AdditionalInfo.MemberId != null}">
+           <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >  
+                          <apex:outputLabel value="Age" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                          <apex:outPutText value="{!AdditionalInfo.Age}" />
+                    </div>
+                </div>
+            </div>
+        </div>
+     </apex:outputPanel>
+     <apex:outputPanel rendered="{!AdditionalInfo.MemberId != null}">
+           <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >  
+                          <apex:outputLabel value="Effective Date" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                       <apex:outPutText value="{!AdditionalInfo.EffectiveDate}" />
+                    </div>
+                </div>
+            </div>
+        </div>
+     </apex:outputPanel>
+     <apex:outputPanel rendered="{!AdditionalInfo.MemberId != null}">
+           <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >  
+                          <apex:outputLabel value="End Date" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                          <apex:outPutText value="{!AdditionalInfo.EndDate}" />
+                    </div>
+                </div>
+            </div>
+        </div>
+     </apex:outputPanel>
+     <apex:outputPanel rendered="{!AdditionalInfo.MemberId != null}">
+           <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >  
+                          <apex:outputLabel value="Product" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                          <apex:outPutText value="{!AdditionalInfo.Product}" />
+                    </div>
+                </div>
+            </div>
+        </div>
+     </apex:outputPanel>
+     <apex:outputPanel rendered="{!AdditionalInfo.MemberId != null}">
+           <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                        <apex:outputLabel value="Gated Plan " 
+                        styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outPutText value="{!AdditionalInfo.GatedPlan}" />  
+                      </div>
+                </div>
+            </div>
+        </div>
+     </apex:outputPanel>
+     <apex:outputPanel rendered="{!AdditionalInfo.MemberId != null}">
+           <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >  
+                        <apex:outputLabel value="Network" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outPutText value="{!AdditionalInfo.Network}" />
+                    </div>
+                </div>
+            </div>
+        </div>
+     </apex:outputPanel>
+     <apex:outputPanel rendered="{!AdditionalInfo.MemberId != null}">
+           <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >  
+                        <apex:outputLabel value="Group Number " styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                          <apex:outPutText value="{!AdditionalInfo.GroupNumber}" />
+                    </div>
+                </div>
+            </div>
+        </div>
+     </apex:outputPanel>
+     <apex:outputPanel rendered="{!AdditionalInfo.MemberId != null}">
+         <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap" >  
+                       <apex:outputLabel value="Group Name" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                         <apex:outPutText value="{!AdditionalInfo.GroupName}" />
+                    </div>
+                </div>
+            </div>
+        </div>
+     </apex:outputPanel>
+     <apex:outputPanel rendered="{!AdditionalInfo.MemberId != null}">
+           <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >  
+                        <apex:outputLabel value="Benefit Plan ID" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outPutText value="{!AdditionalInfo.BenefitPlanId}" />
+                    </div>
+                </div>
+            </div>
+        </div>
+     </apex:outputPanel>
+     <apex:outputPanel rendered="{!AdditionalInfo.MemberId != null}">
+           <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >  
+                        <apex:outputLabel value="Benefit Bundle Option ID" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outPutText value="{!AdditionalInfo.BenefitBundleOptionId}" />
+                    </div>
+                </div>
+            </div>
+        </div>
+         <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                        <apex:outputLabel value="Special Needs Status"
+                        styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                        <apex:outPutText value="{!sniEligibility}" id="sniEligibilityText"/>
+                      </div>
+                </div>
+            </div>
+        </div>
+		 <div class="slds-form-element__row slds-p-top_small">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-medium">        
+                      <div class="slds-col slds-p-horizontal_medium" >
+                          <div class="slds-col slds-wrap slds-grid" >
+                        	<apex:outputLabel value="COVID-19 Vaccine"
+                        	styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                          	<apex:image value="/s.gif" styleclass="helpIcon"   title="{!$Label.ACETLGT_JohnsonTooltip}" />
+                          </div>
+                              <apex:repeat value="{!AdditionalInfo.covidVaccineDosageList}" var="dose">
+                            <apex:outPutText styleclass="slds-form-element__static" value="{!dose}"/>
+                        </apex:repeat>
+                      </div>
+                </div>
+            </div>
+        </div>	  
+     </apex:outputPanel>
+  </apex:panelGroup>
+      
+ </apex:panelGrid>
+ 
+ 
+ <apex:panelGrid width="100%" columnClasses="colStyle" cellspacing="10px" rendered="{!(AdditionalInfo.isMemNotFound == '1')}">
+     <apex:panelGroup >
+     
+ <!--added by Abhinav Balla as part of US800993 Member Not found panel for other flows Start-->
+ 
+    <hr style="margin:0.3pc;" rendered="{Interaction.Originator_Type__c != 'Other'}"/>
+     
+     <apex:outputPanel rendered="{!Interaction.Originator_Type__c != 'Other'}">
+       <div class="slds-form-element__row slds-p-bottom_small" style="padding:0.2rem;">  
+            <div class="slds-form-element"> 
+                 <div class="slds-grid slds-grid_pull-padded-small">        
+                      <div class="slds-col slds-p-horizontal_small slds-text-heading_small" style="font-weight: bold;margin-bottom:0rem">                        
+                          <apex:outPutText value="Member Information" /><br/>
+                      </div>
+                </div>
+            </div>
+        </div>
+        
+     </apex:outputPanel>
+     
+     <apex:outputPanel >
+        <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap" >
+                             <apex:outputLabel value="Name" styleClass="outputLabelPanel" ></apex:outputLabel><br/>
+                             <apex:outPutText value="{!AdditionalInfo.FirstName} {!AdditionalInfo.LastName}" />  
+                          </div>
+                    </div>
+                </div>
+            </div> 
+            <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap" >
+                             <apex:outputLabel value="Member ID" styleClass="outputLabelPanel" ></apex:outputLabel><br/>
+                             <apex:outPutText value="{!AdditionalInfo.MemberID}" />  
+                          </div>
+                    </div>
+                </div>
+            </div> 
+            <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap" >
+                             <apex:outputLabel value="Employer Name" styleClass="outputLabelPanel" ></apex:outputLabel><br/>
+                             <apex:outPutText value="{!AdditionalInfo.EmployerName}" />  
+                          </div>
+                    </div>
+                </div>
+            </div>
+            <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium" >
+                             <apex:outputLabel value="Group Number" styleClass="outputLabelPanel" ></apex:outputLabel><br/>
+                             <apex:outPutText value="{!AdditionalInfo.GroupNumber}" />  
+                          </div>
+                    </div>
+                </div>
+            </div>
+            <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium" >
+                            <apex:outputLabel value="DOB" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                            <apex:outPutText value="{!AdditionalInfo.DOB}" /> 
+                          </div>
+                    </div>
+                </div>
+            </div>
+            <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium" >
+                            <apex:outputLabel value="Zip Code" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                            <apex:outPutText value="{!AdditionalInfo.Zip}" /> 
+                          </div>
+                    </div>
+                </div>
+            </div>
+        <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium" >
+                            <apex:outputLabel value="State" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                            <apex:outPutText value="{!AdditionalInfo.State}" /> 
+                          </div>
+                    </div>
+                </div>
+            </div>
+        <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium" >
+                            <apex:outputLabel value="Phone Number" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                            <apex:outPutText value="{!AdditionalInfo.PhoneNumber}" /> 
+                          </div>
+                    </div>
+                </div>
+            </div>  
+     </apex:outputPanel>
+     <!--added by Abhinav Balla as part of US800993 Member Not found panel for other flows End-->
+ 
+    </apex:panelGroup>
+ </apex:panelGrid>
+ 
+<!--Flow HightLight Panel End-->
+
+<!--  Group FLow highlight panel Starts -->
+ <apex:panelGrid width="100%" columnClasses="colStyle" cellspacing="10px" rendered="{!IF((Interaction.Third_Party__r.LastName__c == '' || Interaction.Third_Party__r.LastName__c == null) && Interaction.Third_Party__r.Employer_Name__c != '' && Interaction.Third_Party__r.Employer_Name__c != null , true,false) }">
+     <apex:panelGroup >
+     
+    <hr style="margin:0.3pc;" rendered="{Interaction.Originator_Type__c != 'Other'}"/>
+          
+     <apex:outputPanel >
+            <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium highlights-panel-ie-flex-wrap" >
+                             <apex:outputLabel value="Employer Name" styleClass="outputLabelPanel" ></apex:outputLabel><br/>
+                             <apex:outPutText value="{!AdditionalInfo.EmployerName}" />  
+                          </div>
+                    </div>
+                </div>
+            </div>
+            <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium" >
+                             <apex:outputLabel value="Contact Name" styleClass="outputLabelPanel" ></apex:outputLabel><br/>
+                             <apex:outPutText value="{!AdditionalInfo.contactName}" />  
+                          </div>
+                    </div>
+                </div>
+            </div>            
+            <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium" >
+                             <apex:outputLabel value="Group Number" styleClass="outputLabelPanel" ></apex:outputLabel><br/>
+                             <apex:outPutText value="{!AdditionalInfo.GroupNumber}" />  
+                          </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium" >
+                            <apex:outputLabel value="Zip Code" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                            <apex:outPutText value="{!AdditionalInfo.Zip}" /> 
+                          </div>
+                    </div>
+                </div>
+            </div>
+        <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium" >
+                            <apex:outputLabel value="State" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                            <apex:outPutText value="{!AdditionalInfo.State}" /> 
+                          </div>
+                    </div>
+                </div>
+            </div>
+        <div class="slds-form-element__row slds-p-top_small">  
+                <div class="slds-form-element"> 
+                     <div class="slds-grid slds-grid_pull-padded-medium">        
+                          <div class="slds-col slds-p-horizontal_medium" >
+                            <apex:outputLabel value="Phone Number" styleClass="outputLabelPanel"></apex:outputLabel><br/>
+                            <apex:outPutText value="{!AdditionalInfo.PhoneNumber}" /> 
+                          </div>
+                    </div>
+                </div>
+            </div>  
+     </apex:outputPanel>
+      
+    </apex:panelGroup>
+ </apex:panelGrid>
+ </apex:outputPanel>
+ <!--  Group FLow highlight panel end -->
+
+
+<apex:outputPanel id="alertModalWindow" >
+    <div class ="slds-scope" style="background-color:white">
+        <apex:outputPanel style="display:{!IF(NOT(isShowALert),'','none')}" rendered="{!NOT(ISNULL(Subject))}"  >
+            <apex:outputPanel styleClass="popupBackground" layout="block" 
+                              rendered="{!if((lstMemAlertOtherPage != null && lstMemAlertOtherPage.size>0 ),True,isALertModal)}" />
+            <apex:outputPanel styleClass="custPopup" layout="block"
+                              rendered="{!if((lstMemAlertOtherPage!=null && lstMemAlertOtherPage.size>0 ),True,isALertModal)}">
+                <div style="overflow:auto;width:1000px;height:320px">
+                    <div class="slds-panel" title="Member Alerts" style="width:100%" >
+                        <div class="slds-modal__header">
+                            <h1 class="slds-text-heading--medium" style="font-weight:bold">MEMBER ALERTS</h1>
+                        </div>  
+                    </div>
+                    <apex:outputPanel style="width:100%">
+                        <div class=" slds-table slds-table_bordered slds-table_cell-buffer slds-text-title slds-table_fixed-layout" columns="1" >
+                            <apex:dataTable value="{!if(lstMemAlert==null,lstMemAlertOtherPage,lstMemAlert)}" var="mAl" rendered="{!lstMemAlert.size != 0}" style="width:100%;">
+                                <apex:column headerValue="TYPE" value="{!mAl.Type__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:10%;" />                              
+                                <apex:column headerValue="GROUP #"  value="{!mAl.Group_Number__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:11%;" />
+                                <apex:column headerValue="BBO ID"  value="{!mAl.Benefit_Bundle_Option_ID__c}" style="width:13%; vertical-align:Top; word-wrap: break-word;white-space: normal;" />
+                                <!--<apex:column headerclass="inBorder"> 
+                                <apex:facet name="header">BENEFIT BUNDLE <br/> OPTION ID</apex:facet>
+                                   <apex:outputText value="{!mAl.Benefit_Bundle_Option_ID__c}" style="vertical-align:text-top;word-wrap: break-word;white-space: normal;width:7%;" />
+                                </apex:column>    -->                        
+                                <apex:column headerValue="  ID #"   value="{!mAl.ID_Number__c}" style="vertical-align:Top;align:center; word-break: break-all;white-space: normal;width:14%;" />
+                                <apex:column headerValue="TITLE" value="{!mAl.Alert_Title__c }" style="vertical-align:text-top;word-wrap: break-word;white-space: normal;width:16%;" />
+                                <apex:column headerValue="COMMENTS" value="{!mAl.Alert_Comments__c}" style="vertical-align:Top;word-wrap: break-word;white-space: normal;width:36%;"/>
+                                <apex:column headerValue="EFFECTIVE" value="{!mAl.Effective_Date__c}" style="vertical-align:Top;word-wrap: break-word;white-space: normal;width:1%;" />
+                                <apex:column headerValue="END" value="{!mAl.End_Date__c}" style="vertical-align:Top;word-wrap: break-word;white-space: normal;width:1%;" />
+                            </apex:dataTable>
+                        
+                        </div>
+                    </apex:outputPanel>
+                    <apex:outputPanel rendered="{!lstMemAlert.size == 0}">
+                        <div class="slds-panel__section" columns="2">
+                            <apex:outputText value="Member does not have any active alerts." ></apex:outputText>                                                    
+                        </div> 
+                    </apex:outputPanel>
+                    <div class="slds-modal__footer slds-grid">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td align="right">
+                                        <apex:commandButton id="closeAlertBtnMemberId" value="Close Alerts" onclick="closealertModalWindow()" reRender="temp" style="float:right;height:2.5pc;width:9pc;margin-left:10px;background: rgb(0, 112, 210); padding: 4px;color:white;font-size:12px;" styleClass="slds-button slds-button--brand slds-not-selected">
+                                        </apex:commandButton>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </apex:outputPanel>
+        </apex:outputPanel>
+    </div>
+</apex:outputPanel>
+<apex:outputPanel id="alertGroupModalWindow" >
+    <div class ="slds-scope" style="background-color:white">
+        <apex:outputPanel id="isshowGroupALertID" style="display:{!IF(NOT(isShowALert),'','none')}">
+            <apex:outputPanel styleClass="popupBackground" layout="block"
+                              rendered="{!if((lstGroupAlertDetailPage!= null && lstGroupAlertDetailPage.size>0 ),True,isGroupALertModal)}" />
+            <apex:outputPanel styleClass="custPopup_Group" layout="block"
+                              rendered="{!if((lstGroupAlertDetailPage!= null && lstGroupAlertDetailPage.size>0 ),True,isGroupALertModal)}">
+                <div style="overflow:auto;width:1000px;height:320px">
+                    <div class="slds-panel" title="Group Alerts" style="width:100%" >
+                        <div class="slds-modal__header">
+                            <h1 class="slds-text-heading--medium" style="font-weight:bold">GROUP ALERTS</h1>
+                        </div>
+                    </div>
+                    <apex:outputPanel style="width:100%" >
+                        <div class="slds-panel__section slds-table slds-table_bordered slds-table_cell-buffer slds-text-title" columns="1">
+                            <apex:dataTable value="{!if(lstGroupAlert==null,lstGroupAlertDetailPage,lstGroupAlert)}" var="gAl" rendered="{!lstGroupAlert.size != 0}" style="width:100%;">
+                                <apex:column headerValue="TYPE" value="{!gAl.Type__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:10%;" />
+                                <apex:column headerValue="GROUP #" value="{!gAl.Group_Number__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:11%;"  />
+                                <apex:column headerValue="BBO ID" value="{!gAl.Benefit_Bundle_Option_ID__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:13%;"  />
+                                <apex:column headerValue=" ID #" value="{!gAl.ID_Number__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:14%;"  />
+                                <apex:column headerValue="TITLE" value="{!gAl.Alert_Title__c }" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:16%;"  />
+                                <apex:column headerValue="COMMENTS" value="{!gAl.Alert_Comments__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:36%;" />
+                                <apex:column headerValue="EFFECTIVE" value="{!gAl.Effective_Date__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:1%;"  />
+                                <apex:column headerValue="END" value="{!gAl.End_Date__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:1%;"  />
+                            </apex:dataTable>
+                        </div>
+                    </apex:outputPanel>
+                    <apex:outputPanel rendered="{!lstGroupAlert.size == 0}">
+                        <div class="slds-panel__section" columns="2">
+                            <apex:outputText value="Group does not have any active alerts." ></apex:outputText>                                                    
+                        </div> 
+                    </apex:outputPanel>
+                    <div class="slds-modal__footer slds-grid">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td align="right">
+                                        <apex:commandButton id="closeAlertBtnGroupId" value="Close Alerts" onclick="closealertModalWindow()" reRender="temp" style="float:right;height:2.5pc;width:9pc;margin-left:10px;background: rgb(0, 112, 210); padding: 4px;color:white;font-size:12px;" styleClass="slds-button slds-button--brand slds-not-selected">
+                                        </apex:commandButton>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </apex:outputPanel>
+        </apex:outputPanel>
+    </div>
+    
+</apex:outputPanel>
+ <apex:outputPanel id="alertProviderModalWindow" style="display:{!IF(NOT(isShowALert),'','none')}">
+ <div class ="slds-scope" style="background-color:white">
+        <apex:outputPanel styleClass="popupBackground" layout="block"
+            rendered="{!if((lstProviderAlertDetailPage != null && lstProviderAlertDetailPage.size>0 ),True,isProviderALertModal)}" />
+        <apex:outputPanel styleClass="custPopup" layout="block"
+            rendered="{!if((lstProviderAlertDetailPage != null && lstProviderAlertDetailPage.size>0 ),True,isProviderALertModal)}">
+            <div style="overflow:auto;width:1000px;height:300px">
+                
+                 <div class="slds-panel" title="Provider Alerts" style="width:100%">
+                        <div class="slds-modal__header">
+                            <h1 class="slds-text-heading--medium" style="font-weight:bold">PROVIDER ALERTS</h1>
+                        </div>
+                    </div>
+                   <apex:outputPanel style="width:100%" >
+                        <div class="slds-panel__section slds-table slds-table_bordered slds-table_cell-buffer slds-text-title" columns="1">
+                    <apex:dataTable value="{!if(lstProviderAlert==null,lstProviderAlertDetailPage,lstProviderAlert)}" var="mAl"  rendered="{!lstProviderAlert.size != 0}" style="width:100%">
+                                <apex:column headerValue="TYPE" value="{!mAl.Type__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:10%;" />
+                                <apex:column headerValue="GROUP #" value="{!mAl.Group_Number__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:10%;"  />                               
+                                <apex:column headerValue="ID #" value="{!mAl.ID_Number__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:14%;"  />
+                                <apex:column headerValue="TITLE" value="{!mAl.Alert_Title__c }" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:20%;"  />
+                                <apex:column headerValue="COMMENTS" value="{!mAl.Alert_Comments__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:39%;" />
+                                <apex:column headerValue="EFFECTIVE" value="{!mAl.Effective_Date__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:3%;"  />
+                                <apex:column headerValue="END" value="{!mAl.End_Date__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:4%;"  />
+
+                   </apex:dataTable>
+                       </div>
+                    </apex:outputPanel>
+                    <apex:outputLabel styleClass="outputLabelPanel"
+                        Rendered="{!lstProviderAlert.size == 0}" value="Provider does not have any active alerts."/>
+                    
+                      <div class="slds-modal__footer slds-grid">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td align="right">
+                                        <apex:commandButton id="closeAlertBtnprovId" value="Close Alerts" onclick="closealertModalWindow()" reRender="temp" style="float:right;height:2.5pc;width:9pc;margin-left:10px;background: rgb(0, 112, 210); padding: 4px;color:white;font-size:12px;" styleClass="slds-button slds-button--brand slds-not-selected">
+                                        </apex:commandButton>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+            </div>
+
+        </apex:outputPanel>
+     </div>
+    </apex:outputPanel>
+<apex:outputPanel id="alertProducerModalWindow" >
+    <div class ="slds-scope" style="background-color:white">
+        <apex:outputPanel id="isshowProducerALertID" style="display:{!IF(NOT(isShowALert),'','none')}">
+            <apex:outputPanel styleClass="popupBackground" layout="block"
+                              rendered="{!if((lstProducerAlertDetailPage != null && lstProducerAlertDetailPage.size>0 ),True,isProducerALertModal)}" />
+            <apex:outputPanel styleClass="custPopup" layout="block"
+                              rendered="{!if((lstProducerAlertDetailPage != null && lstProducerAlertDetailPage.size>0 ),True,isProducerALertModal)}">
+                <div style="overflow:auto;width:1000px;height:300px">
+                    <div class="slds-panel" title="Producer Alerts" style="width:100%">
+                        <div class="slds-modal__header">
+                            <h1 class="slds-text-heading--medium" style="font-weight:bold">PRODUCER ALERTS</h1>
+                        </div>  
+                    </div>
+                    <apex:outputPanel style="width:100%">
+                        <div class="slds-panel__section slds-table slds-table_bordered slds-table_cell-buffer slds-text-title" columns="1">
+                            <apex:dataTable value="{!if(lstproducerAlert == null,lstProducerAlertDetailPage,lstproducerAlert)}" var="pAl" rendered="{!lstProviderAlert.size != 0}" style="width:100%">
+                                <apex:column headerValue="TYPE" value="{!pAl.Type__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:10%;" />
+                                <apex:column headerValue="ID #" value="{!pAl.ID_Number__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:10%;" />
+                                <apex:column headerValue="TITLE" value="{!pAl.Alert_Title__c }" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:20%;" />
+                                <apex:column headerValue="COMMENTS" value="{!pAl.Alert_Comments__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:50%;"/>
+                                <apex:column headerValue="EFFECTIVE" value="{!pAl.Effective_Date__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:5%;" />
+                                <apex:column headerValue="END" value="{!pAl.End_Date__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:5%;" />
+                            </apex:dataTable>
+                        </div>
+                    </apex:outputPanel>
+                    <apex:outputPanel rendered="{!lstproducerAlert.size == 0}">
+                        <div class="slds-panel__section" columns="2">
+                            <apex:outputText value="Producer does not have any active alerts." ></apex:outputText>                                                    
+                        </div> 
+                    </apex:outputPanel>
+                    <div class="slds-modal__footer slds-grid">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td align="right">
+                                        <apex:commandButton id="closeAlertBtnProducerId" value="Close Alerts" onclick="closealertModalWindow()" reRender="temp" style="float:right;height:2.5pc;width:9pc;margin-left:10px;background: rgb(0, 112, 210); padding: 4px;color:white;font-size:12px;" styleClass="slds-button slds-button--brand slds-not-selected">
+                                        </apex:commandButton>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </apex:outputPanel>
+        </apex:outputPanel>
+    </div>
+</apex:outputPanel>
+
+ <!----- End------->
+</apex:component>

@@ -1,0 +1,598 @@
+<aura:component access="global">
+    <!-- US1807554 - Provider Facility Snapshot - Mohammed Thanish -->
+    <!-- 15.08.2019 -->
+    <!-- Attributes -->
+    <aura:attribute name="AutodocKey" type="string" access="public"/>
+    <aura:attribute name="isPhysician" type="Boolean" default="false" />
+    <aura:attribute name="isFacility" type="Boolean" default="false" />
+
+    <!-- US1816890 - Sanka -->
+    <aura:attribute name="ProviderCardDetails" type="Object" />
+
+    <!-- US2091974 - Sanka - Case Creation -->
+    <aura:attribute name="isModalOpen" type="boolean" default="false" />
+    <aura:attribute name="caseWrapper" type="Object" access="public" />
+    <aura:attribute name="subjectDetails" type="Object" access="public" />
+    <aura:handler name="init" value="{!this}" action="{!c.init}" />
+    <aura:handler name="change" value="{!v.ProviderCardDetails}" action="{!c.providerDataChange}" />
+    <aura:attribute name="interactionId" type="String" access="public" />
+    <aura:attribute name="isProviderOnly" type="Boolean" access="public" />
+
+    <!-- US1934400 - Thanish - 8th Nov 2019 - Provider Autodoc -->
+    <aura:attribute name="autodocPageFeature" type="String" />
+    <!--US1970508 - Ravindra - start-->
+    <aura:attribute name="isProviderSearchDisabled" type="Boolean" default="false" />
+    <aura:attribute name="providerNotFound" type="Boolean" default="false" />
+    <aura:attribute name="noMemberToSearch" type="Boolean" default="false" />
+    <aura:attribute name="mnf" type="Boolean" default="false" />
+    <aura:attribute name="interactionRec" type="Interaction__c"/>
+	<aura:attribute name="isProviderLookup" type="boolean" default="false"/>
+    <!--US1970508 - Ravindra - end-->
+
+    <aura:attribute name="pageNumber" type="Integer" access="public" />
+     <aura:handler name="closeModalBox" event="c:SAE_TtsModalCloseEvent" action="{!c.closeModal}"/>
+
+    <!--US2099077 - Praveen - Start -->
+    <aura:handler event="c:ACET_OpenTTSPopUPFromRouting" action="{!c.openTTSPopup}"/>
+    <!--US2099077 - Praveen - End -->
+
+    <!-- US2543182 - Thanish - 13th May 2020 -->
+    <aura:attribute name="routingSOPLinkClicked" type="boolean" default="false"/>
+
+    <!-- US2349049 -->
+    <aura:attribute name="isPreviewModalOpen" type="boolean" default="false"/>
+
+    <!-- US2320729 - Thanish - 2nd Mar 2020 - to toggle auto doc multiple pages attribute in provider search results programatically -->
+    <aura:attribute name="providerSearchResultsADMultiplePages" type="boolean" default="false"/>
+
+    <!-- US2435572 - ORS Case Creation -->
+    <aura:attribute name="credentialList" type="String" default=" "/>
+    <aura:attribute name="commentsValue" type="String" default=""/>
+    <aura:attribute name="disableCommentButton" type="String" default="false"/>
+     <aura:attribute name="isCommentsBox" type="Boolean" default="false"/>
+    <aura:registerEvent name="ACET_OpenFreeFormComment" type="c:ACET_OpenFreeFormComment"/>
+
+    <!--US2076634 - HIPAA Guidelines Button - Sravan-->
+    <aura:attribute name="isHippaInvokedInProviderSnapShot" type="Boolean" default="false"/>
+
+    <!--DE347387: ORS Issue - Provider information is missing in ORS routing Screen - Praveen   -->
+    <aura:attribute name="providerDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+
+    <!-- US2045625 - Thanish - 2nd Oct 2019 -->
+    <aura:if isTrue="{!v.isFacility}">
+        <!-- US1934400 - Thanish - 6th Nov 2019 - Provider Autodoc -->
+        <div class="slds-box slds-card data-auto-main-element card_padding prependSection titleCheckBox" data-auto-doc="true"
+            data-auto-doc-feature="{!v.autodocPageFeature}"
+            data-auto-doc-case-item="true"
+            data-auto-doc-section-key="{! 'Facility : ' + v.ProviderCardDetails.ProviderName}"
+            data-auto-doc-section-column-indexes="1,2" style="height:100%">
+            <div class="autodocNotTableView" data-auto-doc-feature="{!v.autodocPageFeature}">
+				<lightning:spinner class="slds-show" aura:id="provider-physician" 
+                    alternativeText="Loading.." title="Loading.." 
+                    variant="brand" style="position:initial;" size="medium"/>
+
+            <!-- US2320729 - Thanish - 2nd Mar 2020 -->
+            <lightning:layout>
+                <lightning:layoutItem size="12">
+                <div class="component_title slds-text-heading_small card_bottom_margin" style="height: 32px;">
+                    Facility : {!v.ProviderCardDetails.ProviderName}
+                    <div style="float: right; font-weight: normal;">
+                        <aura:if isTrue="{!!v.isProviderLookup}">
+                                <lightning:buttonGroup>
+                                    <lightning:button class="slds-button slds-button_neutral neutral_button" variant="neutral"
+                                                      label="Autodoc" onclick="{!c.openPreview}" />
+                                    <aura:if isTrue="{!!v.isCommentsBox}">
+                                        <lightning:button variant="brand" class="brand_button continueBtn" label="Add Comments" disabled="true"/>
+                                    </aura:if>
+                            		<lightning:button class="slds-button slds-button_brand brand_button" variant="brand"
+                                                      label="Save Case" onclick="{!c.SaveCase}" />
+                                </lightning:buttonGroup>
+                        </aura:if>
+                    </div>
+                    <!-- US2349049 - Autodoc Preview -->
+                </div>
+                    <!-- US2320729 - Thanish - 2nd Mar 2020 -->
+                </lightning:layoutItem>
+            </lightning:layout>
+            <lightning:layout class="bottomSpace">
+                <span style="font-weight:normal !important;font-size: 16px;">Educate the provider on the services that are available on&nbsp; </span>
+                <span>
+                    <a title="http://knowledgecentral.uhc.com/SPA/LinkEducationTool/index.html#/" target="_blank" href="http://knowledgecentral.uhc.com/SPA/LinkEducationTool/index.html#/"
+                       style="font-weight:normal !important; font-size: 16px;"> LINK</a>
+                </span> 
+                </lightning:layout>
+
+                <div class="slds-grid slds-wrap slds-form-element">
+                    <div class="slds-col slds-size_3-of-12 slds-p-around_xx-small card_bottom_margin" style="padding:0px;">
+                        
+                        <div class="header-column">
+                            <!-- US2421967 - Thanish - 5th Mar 2020 -->
+                            <p class="{!'field-title slds-form-element__label field_label_padding ' + (!v.isProviderLookup ? 'preselect' : 'defaultSelected')}">Tax ID (TIN)</p>
+                            <p class="valueCls" name="name">
+                                <div class="slds-form-element__static data-auto-first-element">
+                                    <aura:if isTrue="{!v.ProviderCardDetails.TaxId}">
+                                        {!v.ProviderCardDetails.TaxId}
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col slds-size_3-of-12 card_bottom_margin" style="padding:0px;">
+                            <div class="header-column">
+                                <!-- US2421967 - Thanish - 5th Mar 2020 -->
+                                <p class="{!'field-title slds-form-element__label field_label_padding ' + (!v.isProviderLookup ? 'preselect' : 'defaultSelected')}" >NPI</p>
+                                <p class="valueCls" name="name">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!empty(v.ProviderCardDetails.NPI)}">
+                                            {!v.ProviderCardDetails.NPI}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </p>
+                            </div>
+                        </div>
+                    <div class="slds-p-around_xx-small slds-col slds-size_3-of-12 card_bottom_margin" style="padding:0px;">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding" >Provider ID</p>
+                                <p class="valueCls" name="name">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.ProviderCardDetails.ProviderId}">
+                                            {!v.ProviderCardDetails.ProviderId}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </p>
+                            </div>
+                        </div>
+                    <div class="slds-p-around_xx-small slds-col slds-size_3-of-12 card_bottom_margin" style="padding:0px;">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding" >Medicare Provider ID</p>
+                                <p class="valueCls" name="name">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!empty(v.ProviderCardDetails.MedicareProviderId)}">
+                                            {!v.ProviderCardDetails.MedicareProviderId}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </p>
+                            </div>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col slds-size_3-of-12" style="padding:0px;">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding" >Medical Group</p>
+                                <p class="valueCls" name="name">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.ProviderCardDetails.MedicalGroup}">
+                                            {!v.ProviderCardDetails.MedicalGroup}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </p>
+                            </div>
+                        </div>
+                    <div class="slds-p-around_xx-small slds-col slds-size_3-of-12" style="padding:0px;">
+                            <div class="header-column">
+                                <p class="field-title slds-form-element__label field_label_padding" >Address</p>
+                                <p class="valueCls" name="name">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.ProviderCardDetails.Address}">
+                                            <!-- US1918689 - Thanish - 13th Nov 2019 -->
+                                            <aura:iteration items="{!v.ProviderCardDetails.Address}" var="addLine">
+                                                {!addLine}<br/>
+                                            </aura:iteration>
+                                            <!-- End of Code US1918689 - Thanish - 13th Nov 2019 -->
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </p>
+                            </div>
+                        </div>
+                    <div class="slds-p-around_xx-small slds-col slds-size_3-of-12" style="padding:0px;">
+                            <div class="header-column">  <!-- US2018128	Enhancement - Update Number to # -->
+                                <p class="field-title slds-form-element__label field_label_padding" >Phone #</p>
+                                <p class="valueCls" name="name">
+                                    <div class="slds-form-element__static">
+                                        <aura:if isTrue="{!v.ProviderCardDetails.PhoneNumber}">
+                                            {!v.ProviderCardDetails.PhoneNumber}
+                                            <aura:set attribute="else">
+                                                --
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </p>
+                            </div>
+                        </div>
+                      
+                     <div class="slds-p-around_xx-small slds-col slds-size_3-of-12 " style="padding:0px;">
+                    </div>
+                </div>
+                </div>
+            </div>
+    </aura:if>
+    <!-- End of Code - US2045625 - Thanish - 2nd Oct 2019 -->
+
+    <!-- US1807421 - Provider Snapshot - Sanka Dharmasena -->
+    <!-- 15.08.2019 -->
+    <aura:if isTrue="{!v.isPhysician}">
+        <!-- US1934400 - Thanish - 6th Nov 2019 - Provider Autodoc -->
+        <div class="slds-box slds-card card_padding prependSection titleCheckBox data-auto-main-element" data-auto-doc="true"
+            data-auto-doc-case-item="true"
+            data-auto-doc-feature="{!v.autodocPageFeature}"
+            data-auto-doc-section-key="{! 'Physician : ' + v.ProviderCardDetails.ProviderName}"
+            data-auto-doc-section-column-indexes="1,2" style="height:100%">
+            <div class="autodocNotTableView" data-auto-doc-feature="{!v.autodocPageFeature}">
+				<lightning:spinner class="slds-show" aura:id="provider-physician" 
+                    alternativeText="Loading.." title="Loading.." 
+                    variant="brand" style="position:initial;" size="medium"/>
+
+            <!-- US2320729 - Thanish - 2nd Mar 2020 -->
+            <lightning:layout>
+                <lightning:layoutItem size="12">
+                    <div class="component_title slds-text-heading_small card_bottom_margin" style="height: 32px;">
+                        Physician/Other : {!v.ProviderCardDetails.ProviderName} <!--US2095932:Enhancement - Provider Snapshot/Provider Lookup Details - Physician - Update Header -Sravan -->
+                        <div style="float: right; font-weight: normal;">
+                            <aura:if isTrue="{!!v.isProviderLookup}">
+                                <lightning:buttonGroup>
+                                    <!-- US2349049 - Autodoc Preview -->
+                                    <lightning:button class="slds-button slds-button_neutral neutral_button" variant="neutral"
+                                                      label="Autodoc" onclick="{!c.openPreview}" />
+                                    <aura:if isTrue="{!!v.isCommentsBox}">
+                                        <lightning:button variant="brand" class="brand_button continueBtn" label="Add Comments" disabled="true"/>
+                                    </aura:if>
+                                    <lightning:button class="slds-button slds-button_brand brand_button" variant="brand"
+                                                      label="Save Case" onclick="{!c.SaveCase}" />
+                                </lightning:buttonGroup>
+                            </aura:if>
+                        </div>
+                    </div>
+                    <!-- US2320729 - Thanish - 2nd Mar 2020 -->
+                </lightning:layoutItem>
+            </lightning:layout>
+
+            <lightning:layout >
+                <span style="font-weight:normal !important;font-size: 16px;">Educate the provider on the services that are available on&nbsp; </span>
+                <span>
+                    <a title="http://knowledgecentral.uhc.com/SPA/LinkEducationTool/index.html#/" target="_blank" href="http://knowledgecentral.uhc.com/SPA/LinkEducationTool/index.html#/"
+                       style="font-weight:normal !important; font-size: 16px;"> LINK</a>
+                </span> 
+                </lightning:layout>
+                <div class="slds-grid slds-wrap slds-form-element">
+
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_3-of-12 slds-hint-parent card_bottom_margin"
+                        style="padding:0px;">
+                        <div class="header-column">
+                           <!-- US2421967 - Thanish - 5th Mar 2020 -->
+                            <p class="{!'field-title slds-form-element__label field_label_padding ' + (!v.isProviderLookup ? 'preselect' : 'defaultSelected')}" >
+                                Tax ID (TIN)</p>
+                            <p class="valueCls" name="name">
+                                <div class="data-auto-first-element slds-form-element__static">
+                                    <aura:if isTrue="{!v.ProviderCardDetails.TaxId}">
+                                        {!v.ProviderCardDetails.TaxId}
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_3-of-12 card_bottom_margin"
+                        style="padding:0px;">
+                        <div class="header-column">
+                            <!-- US2421967 - Thanish - 5th Mar 2020 -->
+                            <p class="{!'field-title slds-form-element__label field_label_padding ' + (!v.isProviderLookup ? 'preselect' : 'defaultSelected')}" >NPI</p>
+                            <p class="valueCls" name="name">
+                                <div class="slds-form-element__static">
+                                    <aura:if isTrue="{!v.ProviderCardDetails.NPI}">
+                                        {!v.ProviderCardDetails.NPI}
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_3-of-12 card_bottom_margin"
+                        style="padding:0px;">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding" >Provider ID
+                            </p>
+                            <p class="valueCls" name="name">
+                                <div class="slds-form-element__static">
+                                    <aura:if isTrue="{!v.ProviderCardDetails.ProviderId}">
+                                        {!v.ProviderCardDetails.ProviderId}
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_3-of-12 card_bottom_margin"
+                        style="padding:0px;">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding" >Medicare
+                                Provider ID</p>
+                            <p class="valueCls" name="name">
+                                <div class="slds-form-element__static">
+                                    <aura:if isTrue="{!v.ProviderCardDetails.MedicareProviderId}">
+                                        {!v.ProviderCardDetails.MedicareProviderId}
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_3-of-12 card_bottom_margin"
+                        style="padding:0px;">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding" >Medical
+                                Group</p>
+                            <p class="valueCls" name="name">
+                                <div class="slds-form-element__static">
+                                    <aura:if isTrue="{!v.ProviderCardDetails.MedicalGroup}">
+                                        {!v.ProviderCardDetails.MedicalGroup}
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_3-of-12 card_bottom_margin"
+                        style="padding:0px;">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding" >Address</p>
+                            <p class="valueCls" name="name">
+                                <div class="slds-form-element__static">
+                                    <aura:if isTrue="{!v.ProviderCardDetails.Address}">
+                                        <!-- US1918689 - Thanish - 13th Nov 2019 -->
+                                        <aura:iteration items="{!v.ProviderCardDetails.Address}" var="addLine">
+                                            {!addLine}<br/>
+                                        </aura:iteration>
+                                        <!-- End of Code US1918689 - Thanish - 13th Nov 2019 -->
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_3-of-12 card_bottom_margin"
+                        style="padding:0px;">
+                        <div class="header-column"> <!-- US2018128	Enhancement - Update Number to # - Sarma-->
+                            <p class="field-title slds-form-element__label field_label_padding" >Phone
+                                #</p>
+                            <p class="valueCls" name="name">
+                                <div class="slds-form-element__static">
+                                    <aura:if isTrue="{!v.ProviderCardDetails.PhoneNumber}">
+                                        {!v.ProviderCardDetails.PhoneNumber}
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_3-of-12 card_bottom_margin"
+                        style="padding:0px;">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding" >Patient
+                                Range</p>
+                            <p class="valueCls" name="name">
+                                <div class="slds-form-element__static">
+                                    <aura:if isTrue="{!v.ProviderCardDetails.PatientRange.length > 0}">
+                                        <aura:iteration items="{!v.ProviderCardDetails.PatientRange}" var="range" indexVar="index">
+                                            <aura:if isTrue="{!(v.ProviderCardDetails.PatientRange.length - 1) == index}">
+                                                {!range}
+                                                <aura:set attribute="else">
+                                                    {!range + ', '}
+                                                </aura:set>
+                                            </aura:if>
+                                        </aura:iteration>
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_3-of-12" style="padding:0px;">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding" >Premium
+                                Designation</p>
+                            <p class="valueCls" name="name">
+                                <div class="slds-form-element__static">
+                                    <aura:if isTrue="{!v.ProviderCardDetails.PremiumDesignation}">
+                                        {!v.ProviderCardDetails.PremiumDesignation}
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_3-of-12" style="padding:0px;">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding" >Premium
+                                Speciality</p>
+                            <p class="valueCls" name="name">
+                                <div class="slds-form-element__static">
+                                    <aura:if isTrue="{!v.ProviderCardDetails.PremiumSpeciality}">
+                                        {!v.ProviderCardDetails.PremiumSpeciality}
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_3-of-12" style="padding:0px;">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding" >
+                                Effective Date/Cancel Date
+                            </p>
+                            <p class="valueCls" name="name">
+                                <div class="slds-form-element__static">{!v.ProviderCardDetails.EffectiveDate}
+                                    <aura:if isTrue="{!or(v.ProviderCardDetails.EffectiveDate,v.ProviderCardDetails.CancelDate)}">
+                                        {!v.ProviderCardDetails.EffectiveDate} - {!v.ProviderCardDetails.CancelDate}
+                                        <aura:set attribute="else">
+                                            --
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_3-of-12 card_bottom_margin" style="padding:0px;">
+                        <!-- <c:ACET_HoverPopup aura:id="ptiId"
+                                           isNubbinLeft="false"
+                                           moveLeft="-400" 
+                                           moveRight="-405"
+                                           description="See below for description:" 
+                                           descriptionList="[ 'Y = Select the physician/practitioner record.','N = Select the group record.', 'E = Select the individual record if found, otherwise select the group record.', 
+                                                            'M = Multiple groups exist for a physician or allied health professional.','O = This value will only be used for 100% Non-Par groups.',
+                                                            'G = Select the individual if PAR, if not select the group']" />
+                        
+                        <div class="header-column">
+                            <p data-popupId="ptiId" onmouseover="{!c.togglePopup}" onmouseout="{!c.togglePopup}" class="field_label field_label_padding slds-form-element__label" style="cursor:pointer">
+                                <span class="dashedLine">PTI</span>
+                            </p>
+                            <p class="field_value valueCls">
+                                <div class="slds-form-element__static">
+                                    <aura:if isTrue="{!v.ProviderCardDetails.pti}">
+                                        {!v.ProviderCardDetails.pti}
+                                        <aura:set attribute="else"></aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div-->
+                    </div>
+<!--                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_3-of-12" style="padding:0px;">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding" >Contact Name</p>
+                            <p class="valueCls" name="Contact Name">
+                                <div class="slds-form-element__static">
+                                    <aura:if isTrue="{!v.subjectDetails.contactName}">
+                                        {!v.subjectDetails.contactName}
+                                        <aura:set attribute="else">
+                                            
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_3-of-12" style="padding:0px;">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding" >Contact Number</p>
+                            <p class="valueCls" name="Contact Number">
+                                <div class="slds-form-element__static">
+                                    <aura:if isTrue="{!v.subjectDetails.contactNumber}">
+                                        {!v.subjectDetails.contactNumber}
+                                        <aura:set attribute="else">
+                                            
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_3-of-12" style="padding:0px;">
+                        <div class="header-column">
+                            <p class="field-title slds-form-element__label field_label_padding" >Ext</p>
+                            <p class="valueCls" name="Ext">
+                                <div class="slds-form-element__static">
+                                    <aura:if isTrue="{!v.subjectDetails.contactExt}">
+                                        {!v.subjectDetails.contactExt}
+                                        <aura:set attribute="else">
+                                            
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </p>
+                        </div>
+                    </div> -->
+                    <div class="slds-p-around_xx-small slds-col_bump-right slds-size_3-of-12" style="padding:0px;">
+                        <div class="header-column">
+                            <p class="" ></p>
+                            <p class="valueCls" name="Ext">
+                                <div class="slds-form-element__static">
+
+
+                                </div>
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <!-- End of Code - US1934400 - Thanish - 6th Nov 2019 - Provider Autodoc -->
+    </aura:if>
+
+    <!-- Autodoc Metallica Code Merge - Thanish - 19th Feb 2020 -->
+    <aura:if isTrue="{!v.isModalOpen}">
+        <c:SAE_TtsModalCaseCreation Topic="Provider Details" caseWrapper="{!v.caseWrapper}"
+            isModalOpen="{!v.isModalOpen}" isProvider="true" pagefeature="{!v.autodocPageFeature}"
+                                    pageNumber="{!v.pageNumber}" AutodocKey="{!v.AutodocKey}" freeFormCommentsVal="{!v.commentsValue}"
+                                    providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}"
+                                    flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}"/>
+    </aura:if>
+
+    <!-- US2349049 -->
+    <aura:if isTrue="{!v.isPreviewModalOpen}">
+        <c:ACET_AutoDocPreview isModalOpen="{!v.isPreviewModalOpen}" pagefeature="{!v.autodocPageFeature}" AutodocKey="{!v.AutodocKey}" pageNumber="{!v.pageNumber}"/>
+    </aura:if>
+
+    <!-- US2543182 - Thanish - 13th May 2020 -->
+    <aura:if isTrue="{!v.routingSOPLinkClicked}">
+        <div>
+            <div class="slds-box slds-card hide" data-auto-doc="auto" data-auto-doc-feature="{!v.autodocPageFeature}" data-auto-doc-section-key="Network Management Request">
+                <div  class="autodocNotTableView" data-auto-doc-feature="{!v.autodocPageFeature}">
+                    <div class="slds-grid slds-wrap slds-form-element">
+
+                        <div class="slds-p-around_xx-small slds-col_bump-right" >
+                            <div class="header-column" >
+                                <p class="field-title slds-form-element__label" title="Network">
+                                    <input style="margin-right: 3px;" class="autodoc" type="checkbox" checked="true"/>
+                                </p>
+                                <p class="valueCls">
+                                    <div class="slds-form-element__static">Provider Call Advocate Network Management/Credentialing/Demographic SOP Link - <b>Clicked</b></div>
+                                </p>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aura:if>
+
+</aura:component>

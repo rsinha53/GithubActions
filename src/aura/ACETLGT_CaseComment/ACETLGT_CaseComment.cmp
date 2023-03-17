@@ -1,0 +1,210 @@
+<aura:component implements="flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId" access="global" controller="ACETLGT_CaseCommentController">
+    <aura:attribute name="conComLst" type="List" />
+    <aura:attribute name="issueId" type="String" />
+    <aura:attribute name="macessId" type = "String"/>
+    <aura:attribute name="dataTblId" type="String"/>
+    <aura:attribute type="casecomment[]" name="caseCommentList"/>
+    <aura:attribute type="ACETLGT_CaseCommentController.OrsResultWrapper" name="OrsResultWrapperVariable" />
+    <aura:attribute name="isModalOpen" type="boolean" default="false"/>
+    <aura:attribute name ="isAlertOpen" type ="boolean" default = "false" />
+    <aura:attribute name ="mode" type ="String" default = "edit"/>
+    <aura:attribute name = "comment" type ="String" />
+    <aura:attribute name = "enableCheckbox" type ="boolean" default = "false" />
+    <aura:attribute name ="completeCaseComment" type ="String" />
+    <aura:attribute name ="completeCommentViewModalOpen" type ="boolean" default = "false" />
+    <aura:attribute name="isPublicComment" type="String" default="" description="stores whether case commet is public or not"></aura:attribute>
+    <lightning:overlayLibrary aura:id="overlayLib"/>
+    <!--<aura:handler name="init" action="{!c.doInit}" value="{!this}" access="global"/>-->
+    <aura:attribute name="options" type="List" default="[
+                                                        {'label': 'Add to Service Request', 'value': 'Add_to_Service_Request'}
+                                                        ]"/>
+    <aura:attribute name="publicOptions" type="List" default="[
+                                                              {'label': 'Public', 'value': 'Public'}
+                                                              ]"/>
+    <aura:attribute name="value" type="List"/>
+    <aura:attribute name="fields" type="String[]" default="['ORS_Macess__c','__c']"/>
+    <ltng:require styles="{! $Resource.datatable + '/DataTables-1.10.16/media/css/jquery.dataTables.min.css'}"
+                  scripts="{!join(',',
+                           $Resource.jquery224 ,
+                           $Resource.datatable + '/DataTables-1.10.16/media/js/jquery.dataTables.min.js')
+                           }" afterScriptsLoaded="{!c.doInit}"/>
+    <lightning:card>
+      <aura:set attribute="title">
+            <div class="slds-text-title_bold"><b>Comments</b></div>
+        </aura:set>
+        <aura:set attribute="actions">
+            <lightning:button label="New" onclick="{!c.openModel}" />
+        </aura:set>
+        <!--<div style="width:60%;margin-left:1%;">
+            <lightning:recordForm aura:id="orsForm"
+                                  recordId="{!v.recordId}"
+                                  objectApiName="Case"
+                                  fields="{!v.fields}"
+                                  columns="1"
+                                  onsuccess="{!c.onSuccess}"
+                                  onsubmit="{!c.onSubmit}"
+                                  onload="{!c.onLoad}"
+                                  onerror="{!c.onError}"
+                                  mode="{!v.mode}"/>
+
+        </div>-->
+      <div class="slds-m-around_medium" style="overflow-x:auto;">
+            <table id="{! v.dataTblId }" class="slds-table slds-table_bordered slds-table_cell-buffer" cellspacing="0" width="100%">
+               <thead>
+                    <tr>
+                        <th style="display:none;">DateTime</th>
+                        <th style="padding-left: 10px !important;">Source</th>
+                        <th style="padding-left: 10px !important;">Date/Time</th>
+                        <th style="padding-left: 10px !important;">Author</th>
+                        <th style="padding-left: 10px !important;">Comment</th>
+                        <th style="padding-left: 10px !important;">Owner</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <aura:iteration items="{!v.OrsResultWrapperVariable.resultWrapper}" var="caseComment" indexVar="index">
+                         <tr data-selected-Index="{!index}" aura:id = "caseComment">
+                            <td style="display:none;"><div  title="{!caseComment.commentDateTime}" style="text-align: center;">{!caseComment.commentDateTime}</div></td>
+                            <td><div  style="text-align: left">{!caseComment.source}</div></td>
+                            <td><div  title="{!caseComment.CreatedDate}" style="text-align: left">{!caseComment.commmentDate}&nbsp;&nbsp;{!caseComment.commentTime}</div></td>
+                            <td><div  style="text-align: left">{!caseComment.userId}</div></td>
+                            
+                                <td><div >
+                                    <p class="slds-truncate" style="white-space: pre-wrap;"><span title='{!caseComment.commment}' 
+                                                                                                    style=" display: block;
+                                                                                                                     width: 30rem;
+                                                                                                                     height: 3.4rem;
+                                                                                                                     overflow: hidden;
+                                                                                                                     text-overflow: ellipsis;
+                                                                                                                     ">{!caseComment.commment}</span>
+                                            <aura:if isTrue ="{!greaterthan(caseComment.commment.length,210)}">
+                                            <a href="javascript:void(0)" data-selected-Index="{!index}" onclick="{!c.displayCompleteComment}" >View More</a></aura:if></p></div> 
+                                </td>
+                            <td><div class="slds-truncate" style="text-align: left">{!caseComment.ownerName}</div></td>
+                        </tr>
+                    </aura:iteration>
+                </tbody>
+            </table>
+        </div>
+
+        <aura:if isTrue="{!v.isModalOpen}">
+
+            <!-- Modal/Popup Box starts here-->
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+
+                <div class="slds-m-around_xx-small">
+                    <aura:if isTrue="{!v.isAlertOpen}">
+                        <!-- Modal/Popup Box starts here-->
+                        <section role="dialog" tabindex="-1" aria-label="Meaningful description of the modal content" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                            <div class="slds-modal__container modal_size">
+                                <header class="slds-modal__header">
+                                    <lightning:buttonIcon iconName="utility:close"
+                                                          onclick="{! c.closeAlertModel}"
+                                                          alternativeText="close"
+                                                          variant="bare-inverse"
+                                                          class="slds-modal__close"/>
+                                </header>
+                                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                                    <p>Do you want to send your note to the ORS Service Request?  
+                                        If not, then please uncheck the 'Add to Service Request' checkbox.</p>
+                                </div>
+                                <footer class="slds-modal__footer">
+                                    <lightning:button variant="brand"
+                                                      label="OK"
+                                                      title="OK"
+                                                      onclick="{!c.closeAlertModel}"/>
+                                </footer>
+
+                            </div>
+                        </section>
+                        <div class="slds-backdrop slds-backdrop_open"></div>
+                    </aura:if>
+                </div>
+                <div class="slds-modal__container">
+                    <!-- Modal/Popup Box Header Starts here-->
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeModel }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Comments</h2>
+                    </header>
+
+
+
+
+                    <!--Modal/Popup Box Body Starts here-->
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <div aura:id ="commentValidity">
+                            <lightning:textarea name="input1" label="Body" class="customRequired"  onchange = "{!c.OnClickValidation}" aura:id ="commentSection" maxlength="2900"	 value = "{!v.OrsResultWrapperVariable.comment}"/>
+                            <div class="slds-form-element__help slds-p-left_xx-small none" aura:id ="commentValidationMessage">Complete this field</div>
+                        </div>
+                        <!--<lightning:checkboxGroup aura:id = "addToService"
+                                                 options="{! v.options }"
+                                                 value="{! v.value }"
+                                                 onchange="{! c.handleChange }"/>-->
+                        <lightning:input type="checkbox" label= "Add to Service Request" name="addToService" aura:id="addToService" onchange = "{!c.onCheckBoxClick}" disabled = "{!v.enableCheckbox == true ? true : false}"/>
+                        <lightning:checkboxGroup options="{! v.publicOptions }"
+                                                 value="{! v.value }"
+                                                 onchange="{! c.handleChange }"/>
+                    </div>
+                    <!--Modal/Popup Box Footer Starts here-->
+
+                    <footer class="slds-modal__footer">
+                        <lightning:button variant="neutral"
+                                          label="Cancel"
+                                          title="Cancel"
+                                          onclick="{! c.closeModel }"/>
+                        <lightning:button variant="brand"
+                                          label="Save"
+                                          title="Save"
+                                          onclick="{!c.submitDetails}"/>
+                    </footer>
+
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </aura:if>
+        <!--- For complete comment view -->
+        
+         <aura:if isTrue="{!v.completeCommentViewModalOpen}">
+            
+            <!-- Modal/Popup Box starts here-->
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                
+                <div class="slds-modal__container">
+                    <!-- Modal/Popup Box Header Starts here-->
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeCommentModel }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>
+                    </header>
+                    
+                    
+                    
+                    
+                   
+                    <!--Modal/Popup Box Body Starts here-->
+                    <div class="slds-modal__content slds-p-around_medium " id="modal-content-id-1">
+                        
+		              <lightning:textarea name="input5" class= "commentTextArea" disabled="true" value="{!v.completeCaseComment}"  />                           
+                    </div>
+                    <!--Modal/Popup Box Footer Starts here-->
+                    
+                    <footer class="slds-modal__footer">
+                        <lightning:button variant="neutral"
+                                          label="Close"
+                                          title="Close"
+                                          onclick="{! c.closeCommentModel }"/>
+                    </footer>
+                    
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </aura:if>
+        
+    </lightning:card>
+
+</aura:component>

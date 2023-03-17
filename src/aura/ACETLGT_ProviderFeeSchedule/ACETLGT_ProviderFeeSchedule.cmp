@@ -1,0 +1,422 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction,lightning:isUrlAddressable" access="global" controller="ACETLGT_ProviderFeeScheduleController">
+	<aura:attribute name="claimTypeOptions" type="List" default="[
+                                                                   {'label': 'Professional-CMS1500', 'value': 'Professional-CMS1500'},
+                                                                   {'label': 'Facility-UB04', 'value': 'Facility-UB04'}
+                                                                  ]"/>
+	<aura:attribute name="claimType" type="String" default="Professional-CMS1500"/>
+	<aura:attribute name="diagnosisCode1" type="String"/>
+	<aura:attribute name="diagnosisCode2" type="String"/>
+	<aura:attribute name="diagnosisCode3" type="String"/>
+	<aura:attribute name="diagnosisCode4" type="String"/>
+	<aura:attribute name="diagnosisCode5" type="String"/>
+	<aura:attribute name="diagnosisCode6" type="String"/>
+	<aura:attribute name="diagnosisCode7" type="String"/>
+	<aura:attribute name="diagnosisCode8" type="String"/>
+	<aura:attribute name="diagnosisCode9" type="String"/>
+	<aura:attribute name="diagnosisCode10" type="String"/>
+	<aura:attribute name="diagnosisCode11" type="String"/>
+	<aura:attribute name="diagnosisCode12" type="String"/>
+	<aura:attribute name="inputList" type="List"/>
+	<aura:attribute name="startDateValue" type="Date" default=""/>
+	<aura:attribute name="endDateValue" type="Date" default=""/>
+	<aura:attribute name="cptCodeValue" type="String"/>
+	<aura:attribute name="modifier1" type="String"/>
+	<aura:attribute name="modifier2" type="String"/>
+	<aura:attribute name="modifier3" type="String"/>
+	<aura:attribute name="modifier4" type="String"/>
+	<aura:attribute name="posOptions" type="List"/>
+	<aura:attribute name="doCollapse" type="Boolean" access="public"/>
+	<aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+	<aura:attribute name="rowIndex" type="Integer"/>
+	<aura:attribute name="pricingSetId" type="String"/>
+	<aura:attribute name="diagnosisCode" type="ACETLGT_FeeScheduleWrapper" />
+	<aura:attribute name="TypeOfBill" type="String"/>
+	<aura:attribute name="DRG_Code" type="String"/>
+	<aura:attribute name="Invoice_Amount" type="String"/>
+	<aura:attribute name="Admission_Date" type="String"/>
+	<aura:attribute name="Discharge_Date" type="String"/>
+	<!--<aura:attribute name="providerFeeScheduleResults" type = "Map<Integer,ACETLGT_ProviderFeeScheduleJSON2APEX.claimLines[]>"/>-->
+	<aura:attribute name="providerFeeScheduleMap" type = "Map"/>
+    <aura:attribute name="lstKey" type="List"/>
+    <aura:attribute name="Spinner" type="boolean" default="false"/>
+    <aura:attribute name="providerMap" type="List"/>
+	<aura:attribute name="addServiceLines" type="integer"/>
+	<aura:attribute name="addServiceLinesMax" type="string" default="1...60"/>
+	<aura:attribute name="addServiceLinesMaxError" type="string" default="Max number of lines is 75, enter 60 or less"/>
+	<aura:attribute name="addServiceLinesDisabled" type="boolean" default="false"/>
+	<aura:attribute name="addServiceLinesRemaining" type="integer" default="60"/>
+	<aura:method name="addServiceLinesOnEnter" action="{!c.addServiceLines}" description="trigger add service lines method on enter key" />
+	    <aura:attribute name="requiredfields" default="true" type="boolean"/>
+     <aura:attribute name="AutodocKey" type="string" access="public"/>
+     <aura:attribute name="GUIkey" type="string" access="public"/>
+     <div id="{!v.AutodocKey + v.GUIkey}" class="{!v.AutodocKey}">
+	<div onclick="{!c.providerFeeScheduleToggle}">
+		<lightning:accordion allowMultipleSectionsOpen="true" activeSectionName="{! ((v.doCollapse) ? 'ProviderFeeSection' : '') }" class="titleBold">
+			<lightning:accordionSection name="ProviderFeeSection" label="Provider Fee Schedule">
+				<div class="slds-grid slds-gutters slds-border_bottom slds-p-bottom_small">
+					<div class="slds-col slds-size_1-of-4">
+						<lightning:select aura:id="claimTypeId" name="claimTypeName" label="Claim Form Type" value="{!v.claimType}" onchange="{!c.onchangeclaimtype}">
+							<aura:iteration items="{!v.claimTypeOptions}" var="opt">
+								<option value="{!opt.value}">{!opt.label}</option>
+							</aura:iteration>
+						</lightning:select>
+					</div>
+				</div>
+				<div class="slds-grid slds-gutters">
+					<div class="slds-col ">
+						<br/>
+						<label class="slds-form-element__label slds-text-heading_small" >
+							<b>Diagnosis Codes</b>
+						</label>
+					</div>
+				</div>
+				<div class="slds-grid slds-gutters_xxx-small slds-p-top_small">
+					<div class="slds-col slds-size_8-of-12 ">
+                        					<div class="slds-box slds-box_xx-small">
+
+						<table class="slds-table slds-no-row-hover" width="70%" >
+							<th class="slds-p-bottom_none">1(A).</th>
+							<th class="slds-p-bottom_none">2(B).</th>
+							<th class="slds-p-bottom_none">3(C).</th>
+							<th class="slds-p-bottom_none">4(D).</th>
+							<th class="slds-p-bottom_none">5(E).</th>
+							<th class="slds-p-bottom_none">6(F).</th>
+							<tr>
+								<td>
+									<span onkeypress="{!c.diagCodeValidations}">
+										<lightning:input aura:id="diagCode1" value="{!v.diagnosisCode.diagnosisCode1}"/>
+									</span>
+								</td>
+								<td>
+									<span onkeypress="{!c.diagCodeValidations}">
+										<lightning:input aura:id="diagCode2" value="{!v.diagnosisCode.diagnosisCode2}" />
+									</span>
+								</td>
+								<td>
+									<span onkeypress="{!c.diagCodeValidations}">
+										<lightning:input aura:id="diagCode3" value="{!v.diagnosisCode.diagnosisCode3}" />
+									</span>
+								</td>
+								<td>
+									<span onkeypress="{!c.diagCodeValidations}">
+										<lightning:input aura:id="diagCode4" value="{!v.diagnosisCode.diagnosisCode4}" />
+									</span>
+								</td>
+								<td>
+									<span onkeypress="{!c.diagCodeValidations}">
+										<lightning:input aura:id="diagCode5" value="{!v.diagnosisCode.diagnosisCode5}" />
+									</span>
+								</td>
+								<td>
+									<span onkeypress="{!c.diagCodeValidations}">
+										<lightning:input aura:id="diagCode6" value="{!v.diagnosisCode.diagnosisCode6}" />
+									</span>
+								</td>
+							</tr>
+							<th class="slds-p-bottom_none">7(G).</th>
+							<th class="slds-p-bottom_none">8(H).</th>
+							<th class="slds-p-bottom_none">9(I).</th>
+							<th class="slds-p-bottom_none">10(J).</th>
+							<th class="slds-p-bottom_none">11(K).</th>
+							<th class="slds-p-bottom_none">12(L).</th>
+							<tr>
+								<td>
+									<span onkeypress="{!c.diagCodeValidations}">
+										<lightning:input aura:id="diagCode7" value="{!v.diagnosisCode.diagnosisCode7}" />
+									</span>
+								</td>
+								<td>
+									<span onkeypress="{!c.diagCodeValidations}">
+										<lightning:input aura:id="diagCode8" value="{!v.diagnosisCode.diagnosisCode8}" />
+									</span>
+								</td>
+								<td>
+									<span onkeypress="{!c.diagCodeValidations}">
+										<lightning:input aura:id="diagCode9" value="{!v.diagnosisCode.diagnosisCode9}" />
+									</span>
+								</td>
+								<td>
+									<span onkeypress="{!c.diagCodeValidations}">
+										<lightning:input aura:id="diagCode10" value="{!v.diagnosisCode.diagnosisCode10}" />
+									</span>
+								</td>
+								<td>
+									<span onkeypress="{!c.diagCodeValidations}">
+										<lightning:input aura:id="diagCode11" value="{!v.diagnosisCode.diagnosisCode11}" />
+									</span>
+								</td>
+								<td>
+									<span onkeypress="{!c.diagCodeValidations}">
+										<lightning:input aura:id="diagCode12" value="{!v.diagnosisCode.diagnosisCode12}" />
+									</span>
+								</td>
+							</tr>
+						</table>
+                        </div>
+					</div>
+				</div>
+				 <aura:if isTrue="{!v.claimType =='Facility-UB04'}">
+                     <div class="slds-p-top_small">
+                         <div style="">
+					<div  class="slds-box slds-box_xx-small  slds-p-top_small" style="">
+						<div class="slds-grid slds-gutters">
+							<div class="slds-col">
+										<span onkeypress="{!c.allowNumbersAndDot}">
+                                          
+									<lightning:input onpaste="{!c.allowNumbersAndDot}" type="text" label="Type Of Bill" aura:id="TypeOfBill_auraid" required="{!v.requiredfields}"  value="{!v.TypeOfBill}" onchange="{!c.onchangeTypeOfBill}" messageWhenValueMissing	="Error: You must enter a value." />
+                                            </span>
+							</div>
+       
+							<div class="slds-col">
+										<span onkeypress="{!c.allowNumbersAndDot}">
+									<lightning:input onpaste="{!c.allowNumbersAndDot}" type="text" label="DRG Code" aura:id="DRG_Code_auraid" onchange="{!c.onchangeDRGCode}" value="{!v.DRG_Code}"/>
+								</span>
+							</div>
+							<div class="slds-col">
+										<span onkeypress="{!c.allowNumbersAndDot}">
+									<lightning:input onpaste="{!c.allowNumbersAndDot}" type="text" label="Invoice Amount" aura:id="Invoice_Amount_auraid" value="{!c.Invoice_Amount}"/>
+								</span>
+							</div>
+							<div class="slds-col">
+								<span>
+									<lightning:input type="date" label="Admission Date" aura:id="Admission_Date_auraid" value="{!c.Admission_Date}"  onchange="{!c.onchangeAdmissionDate}" dateStyle="short" messageWhenBadInput="Valid Format: MM/DD/YYYY" required="{!v.requiredfields}" messageWhenValueMissing="Error: You must enter a value."/>
+								</span>
+							</div>
+							<div class="slds-col">
+								<span>
+									<lightning:input type="date"  label="Discharge Date" aura:id="Discharge_Date_auraid" onchange="{!c.OnchangeDischargeDate}" value="{!c.Discharge_Date}" dateStyle="short" messageWhenBadInput="Valid Format: MM/DD/YYYY"/>
+								</span>
+							</div>
+						</div>
+					</div>
+                         </div>
+                         </div>
+				</aura:if>
+					
+				<div class="slds-p-top_small" >
+                   <div class="slds-box slds-box_xx-small slds-p-top_small " style="overflow:auto;">
+                    <table id="testidsam" class="slds-table slds-table_cell-buffer slds-no-row-hover searchTab datepicker-table"  cellspacing="5" style="overflow:auto;">
+						<thead>
+							<tr>
+								<th colspan = "2">
+									<p style="margin-left:24%">
+                       Date(s) Of Service 
+                   </p>
+									<br/>
+									<p style="margin-left:10%;display:inline">
+										<abbr title="required" class="slds-required">*</abbr>
+                   Start 
+                  
+									</p>
+									<p style="margin-left:38%;display:inline">
+										<abbr title="required" class="slds-required">*</abbr>
+                   End 
+                 
+									</p>
+								</th >
+								<aura:if isTrue="{!v.claimType =='Facility-UB04'}">
+									<th text-align="center" style="width:80px">
+										<p>
+											<center>
+												<abbr title="required" class="slds-required">*</abbr>Rev Code
+											</center>
+										</p>
+									</th >
+									<th text-align="center" style="width:80px">
+										<p>
+											<center>
+												<abbr >CPT/HCPCS</abbr>
+											</center>
+										</p>
+									</th >
+									<aura:set attribute="else">
+										<th text-align="center" style="width:80px">
+											<p>
+												<center>
+													<abbr title="required" class="slds-required">*</abbr>CPT/HCPCS
+												</center>
+											</p>
+										</th >
+									</aura:set>
+								</aura:if>
+								<th colspan="4">
+									<p>
+										<center>Modifiers </center>
+									</p>
+								</th >
+								<aura:if isTrue="{!v.claimType !='Facility-UB04'}">
+									<th >
+										<p>
+											<center>
+												<abbr title="required" class="slds-required">*</abbr>POS
+											</center>
+										</p>
+									</th >
+								</aura:if>
+								<th style="width:80px">
+									<p>
+										<center>Rx National 
+											<br/>Drug Code
+										</center>
+									</p>
+								</th >
+								<th style="width:80px">
+									<p>
+										<center>
+											<abbr title="required" class="slds-required">*</abbr>Days/Units
+										</center>
+									</p>
+								</th >
+								<th style="width:80px">
+									<p>
+										<center>
+											<abbr title="required" class="slds-required">*</abbr>Charged Amount
+										</center>
+									</p>
+								</th >
+								<th style="text-align:center;" colspan = "2">
+									<p>
+										<center>Action</center>
+									</p>
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+							<aura:iteration items="{!v.inputList}" var="claimData" indexVar ="rowNum">
+								<tr data-Index="{!rowNum}" onkeypress="{!c.chargeValidation}" data-Charges="{!claimData.billedAmount}">
+									<td onchange="{!c.requiredfieldval}" data-Index="{!rowNum}" data-auraid="startDateId" data-required="{!claimData.startDate}">
+										<!--<ui:inputDate aura:id="startDateId" required="{!claimData.startDateRequired}" value="{!claimData.startDate}" displayDatePicker="true" format="MM/DD/YYYY" class="slds-input inputDateWidth"/>-->
+							            <div class="slds-form-element" aura:id="startDateIddiv">	
+                                          <lightning:input label="{!rowNum}" type="date" name="startDate" value="{!claimData.dateOfServiceFrom}"   aura:id="startDateId" dateStyle="short" class="inputDateWidth" variant="label-hidden"   />
+                                        </div>
+                                    </td>
+									<td  onchange="{!c.requiredfieldval}" data-Index="{!rowNum}" data-auraid="endDateId" data-required="{!claimData.endDateRequired}">
+										<!--<ui:inputDate aura:id="endDateId" value="{!claimData.endDate}" required="{!claimData.endDateRequired}" displayDatePicker="true" format="MM/DD/YYYY" class="slds-input inputDateWidth"/> -->
+                                        <div class="slds-form-element" aura:id="endDateIddiv">	
+                                           <lightning:input type="date" name="endDate" value="{!claimData.dateOfServicethru}"  aura:id="endDateId" dateStyle="short"  class="inputDateWidth" variant="label-hidden" />
+                                        </div>
+                                    </td>
+									<aura:if isTrue="{!v.claimType =='Facility-UB04'}">
+									<td  onchange="{!c.requiredfieldval}" data-Index="{!rowNum}" data-auraid="revcodeid" data-required="{!claimData.revcodeRequired}">
+									       <span onkeypress="{!c.allowNumbersAndDot}">
+								              <div class="slds-form-element" aura:id="revcodeiddiv">	
+                                                <lightning:input onpaste="{!c.allowNumbersAndDot}" aura:id="revcodeid" value="{!claimData.revCode}"  variant="label-hidden" class="inputcptwidth"  maxlength="4"/>
+                                              </div>
+                                            </span>
+							        </td>
+								     <td>
+											<span onkeypress="{!c.allowAlphaNumericCharacters}">
+												<lightning:input onpaste="{!c.allowNumbersAndDot}" aura:id="cptCodeId" value="{!claimData.procedureCode}"  variant="label-hidden" class="inputcptwidth"  maxlength="5"/>
+											</span>
+									</td>
+									<aura:set attribute="else">
+									<td  onchange="{!c.requiredfieldval}" data-Index="{!rowNum}" data-auraid="cptCodeId" data-required="{!claimData.cptRequired}">
+												<span onkeypress="{!c.allowAlphaNumericCharacters}">
+                                                  <div class="slds-form-element" aura:id="cptCodeIddiv">	
+                                                     <lightning:input onpaste="{!c.allowNumbersAndDot}" aura:id="cptCodeId" value="{!claimData.procedureCode}"  variant="label-hidden" class="inputcptwidth"  maxlength="5"/>
+												</div>
+                                              </span>
+								     </td>
+								    </aura:set>
+									</aura:if>
+									<td>
+										<span onkeypress="{!c.allowAlphaNumericCharacters}">
+											<lightning:input onpaste="{!c.allowNumbersAndDot}" aura:id="modifierId1" value="{!claimData.modifierCode1}" variant="label-hidden" class="inputModifierWidth" maxlength="2"/>
+										</span>
+									</td>
+									<td>
+										<span onkeypress="{!c.allowAlphaNumericCharacters}">
+											<lightning:input  onpaste="{!c.allowNumbersAndDot}" aura:id="modifierId2" value="{!claimData.modifierCode2}" variant="label-hidden" class="inputModifierWidth" maxlength="2"/>
+										</span>
+									</td>
+									<td>
+										<span onkeypress="{!c.allowAlphaNumericCharacters}">
+											<lightning:input onpaste="{!c.allowNumbersAndDot}" aura:id="modifierId3" value="{!claimData.modifierCode3}" variant="label-hidden" class="inputModifierWidth" maxlength="2"/>
+										</span>
+									</td>
+									<td>
+										<span onkeypress="{!c.allowAlphaNumericCharacters}">
+											<lightning:input onpaste="{!c.allowNumbersAndDot}" aura:id="modifierId4" value="{!claimData.modifierCode4}"  variant="label-hidden" class="inputModifierWidth" maxlength="2"/>
+										</span>
+									</td>
+									<aura:if isTrue="{!v.claimType !='Facility-UB04'}">
+									<td  onchange="{!c.requiredfieldval}" data-Index="{!rowNum}"  data-auraid="posId" data-required="{!claimData.posRequired}">
+										<div class="slds-form-element" aura:id="posmessgediv">	
+                                        <lightning:select aura:id="posId" name="posName" variant="label-hidden" value="{!claimData.placeOfServiceCode}"  class="inputPosWidth" >
+												<aura:iteration items="{!v.posOptions}" var="opt">
+													<option text="{!opt.label}" value="{!opt.value}" selected="{!opt.selected}" />
+												</aura:iteration>
+								         </lightning:select>
+                                            <div  class="slds-form-element__help " id="error-message-unique-id" >
+                                               <ui:outputText aura:id="posmessgedivtext" value=""/>
+                                            </div>
+                                        </div> 
+										</td>
+									</aura:if>
+                                   
+									<td>
+										<lightning:input aura:id="drugCode" value="{!claimData.rxNationalDrugCode}"  variant="label-hidden" class="inputDrugCodeWidth" maxlength="11"/>
+									</td>
+									<td  onchange="{!c.requiredfieldval}" data-Index="{!rowNum}" data-auraid="daysOrUnits" data-required="{!claimData.daysRequired}">
+										<span onkeypress="{!c.allowNumbersAndDot}">
+                                            <div class="slds-form-element" aura:id="daysOrUnitsdiv">	
+                                               <lightning:input onpaste="{!c.allowNumbersAndDot}" aura:id="daysOrUnits" value="{!claimData.serviceUnits}"  variant="label-hidden" class="inputDaysWidth"  />
+                                            </div>	
+                                        </span>
+									</td>
+									<td  onchange="{!c.requiredfieldval}" data-Index="{!rowNum}" data-auraid="charges" data-required="{!claimData.chargesRequired}">
+										<span onkeypress="{!c.allowNumbersAndDot}">
+                                         <div class="slds-form-element" aura:id="chargesdiv">	
+                                            <lightning:input  onpaste="{!c.allowNumbersAndDot}" aura:id="charges" value="{!claimData.billedAmount}" variant="label-hidden" class="inputChargesWidth"  />
+                                         </div>
+                                        </span>
+									</td>
+									<td>
+										<a href="javascript:void(0)" data-Index="{!rowNum}" onclick="{!c.copyServiceLine}">
+											<b>
+												<u>Copy</u>
+											</b>
+										</a>
+									</td>
+									<td>
+										<a href="javascript:void(0)"  data-Index="{!rowNum}" onclick="{!c.clearServiceLine}">
+											<b>
+												<u>Clear</u>
+											</b>
+										</a>
+									</td>
+								</tr>
+							</aura:iteration>
+						</tbody>
+					</table>
+                    </div>
+                    <div class="slds-grid slds-m-top--small" style="height:32px" onkeypress="{!c.keyCheck}">
+                        <lightning:input aura:id="addServiceLinesInput" type="number" name="seven" value="{!v.addServiceLines}" variant="label-hidden" placeholder="{!v.addServiceLinesMax}" disabled="{!v.addServiceLinesDisabled}"  max="{!v.addServiceLinesRemaining}" min="1" messageWhenRangeOverflow="{!v.addServiceLinesMaxError}" maxlength="2" class="slds-col slds-size_1-of-12 slds-m-right--x-small slds-m-left--small"/>  <!-- messageWhenRangeOverflow="{!v.addServiceLinesMaxError}" max="{!v.addServiceLinesRemaining}" min="1" -->
+                        <lightning:button aura:id="addLines" iconName="utility:add" iconPosition="left" variant="brand" label="Add" title="Add" onclick="{!c.addServiceLines}" class=" slds-col slds-m-right--x-small button_border slds-size_1-of-12"/>
+		                <aura:if isTrue="{!!v.addServiceLinesDisabled}">
+		                	<span class="slds-col slds-size_10-of-12 slds-grid_vertical-align-center slds-p-top_x-small">Total Rows: {!v.inputList.length}</span>
+		                </aura:if>
+						<aura:if isTrue="{!v.addServiceLinesDisabled}">
+		                	<span class="slds-col slds-size_10-of-12 slds-grid_vertical-align-center slds-p-top_x-small">Total Rows: 75 (Max)</span>
+		                </aura:if>
+		                </div>
+                    </div>
+				<div class="slds-grid slds-gutters slds-m-top_xx-small slds-align_absolute-center" >
+					<div class=" " >
+						<lightning:button iconName="utility:search" iconPosition="left"  variant="brand" label="Search" title="Search" onclick="{!c.searchResults}"  class="slds-m-top--large slds-col slds-m-right--small button_border" />
+						<lightning:button iconName="utility:clear" iconPosition="left" variant="brand" label="Clear" title="Clear" onclick="{!c.clearResults}" class="slds-m-top--large slds-m-right--small slds-col button_border"/>
+					</div>
+				</div>
+               <div id="results">
+                    <aura:if isTrue="{!v.Spinner}">
+                        <lightning:spinner alternativeText="Loading, Please Wait..." title="Loading, Please Wait..." variant="brand" size="small"/>
+                    </aura:if>
+              <aura:if isTrue="{!!empty(v.providerFeeScheduleMap)}">
+                 <c:ACETLGT_ProviderFeeScheduleResults dataMap="{!v.providerMap}" claimType="{!v.claimType}" AutodocKey="{!v.AutodocKey}" GUIkey="{!v.GUIkey}"></c:ACETLGT_ProviderFeeScheduleResults>
+             </aura:if>
+          </div>
+			</lightning:accordionSection>
+		</lightning:accordion>
+	</div>
+    </div>
+     </aura:component>

@@ -1,0 +1,267 @@
+<aura:component controller="ADBClientEventTrackerController" implements="force:appHostable,flexipage:availableForAllPageTypes">
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:attribute name="policy" type="String" />
+    <aura:attribute name="icueMemberId" type="String" />
+    <aura:attribute name="icueMembIdMessage" type="String" />
+    <aura:attribute name="isButtonActive" type="Boolean" default="false" />
+    <aura:attribute name="memberId" type="String"/>
+    <aura:attribute name="memberFirstName" type="String" />
+    <aura:attribute name="memberLastName" type="String" />
+    <aura:attribute name="memberDateofBirth" type="String" />
+    <aura:attribute name="memberPolicy" type="String" />
+    <aura:attribute name="memberXrefId" type="String" />
+    <aura:attribute name="availableChecklists" type="object"/>
+    <aura:attribute name="modalChecklists" type="object"/>
+    <aura:attribute name="popUpTasks" type="object"/>
+    <aura:attribute name="completedChecklists" type="object"/>
+    <aura:attribute name="existingChecklist" type="object"/>    
+    <aura:attribute name="saveRequestDetails" type="object"/>
+    <aura:attribute name="saveRequestChoiceList" type="object"/>
+    <aura:attribute name="isChecked" type="Boolean" default="true"/>
+    <aura:attribute name="showExistingChecklists" type="Boolean" default="true" />
+    <aura:attribute name="showChecklistModal" type="Boolean" default="false" />
+    <aura:attribute name="showExistingModal" type="Boolean" default="false" />
+    <aura:attribute name="taskLabel" type="String"/>
+    <aura:attribute name="templateId" type="String"/>
+    <aura:attribute name="assessmentID" type="String"/>
+    <aura:attribute name="completedTasks" type="Integer"/>
+    <aura:attribute name="totalnoofChoices" type="Integer"/>
+    <aura:attribute name="totalTasks" type="String"/>
+    <aura:attribute name="lastUpdated" type="String" />
+    <aura:attribute name="updatedBy" type="String" />
+    <aura:attribute name="showSpinner" type="boolean" default="false"/>
+    <aura:attribute name="showPopupSpinner" type="boolean" default="false"/>
+    <aura:attribute name="saveFailed" type="boolean" default="false" />
+    <aura:attribute name="agentMSID" type="String" />
+    <aura:attribute name="availableErrorMessage" type="String" />
+    <aura:attribute name="completedErrorMessage" type="String" />
+    <aura:attribute name="popupCompErrorMessage" type="String" />
+    <aura:attribute name="saveErrorMessage" type="String" />
+    <!--	Capturing from getTemplateById	-->
+    <aura:attribute name="builderAssessmentId" type="String" />
+    <aura:attribute name="builderAssessmentVersionNumber" type="String" />
+    <aura:attribute name="assessmentTemplateID" type="String" />
+    <aura:attribute name="notEligbileForChecklist" type="boolean" /> <!--US3150996 Non FedEx changes-->
+    <aura:attribute name="isInfoAvailableMessage" type="boolean" default="false"/>
+    <aura:attribute name="isInfoExistingMessage" type="boolean" default="false"/>
+    <aura:if isTrue="{!v.showSpinner}">
+        <div class="slds-align--absolute-center">
+            <lightning:spinner aura:id="cet_spinner" variant="brand" size="large"/>
+        </div>
+    </aura:if>
+    <!--US3150996 Non FedEx changes start-->
+    <aura:if isTrue="{!v.notEligbileForChecklist}">
+        <lightning:layout horizontalAlign="left" multipleRows="true">
+            <div class="informationMsg ">
+                <ui:message title="" severity="info" closable="false" class=" ">
+                    <b>{!$Label.c.ADB_CETNotEligibleMessage}</b>
+                </ui:message>
+            </div>
+        </lightning:layout>
+        <aura:set attribute="else">
+            <!--US3150996 Non FedEx changes end-->
+            <lightning:layout horizontalAlign="center" multipleRows="true">
+                <lightning:layoutItem size="12" padding="around-small" > 
+                    <aura:if isTrue="{!not(empty(v.availableErrorMessage))}">
+                        <aura:if isTrue="{!v.isInfoAvailableMessage}">
+                            <div class="informationMsg ">
+                                <ui:message title="" severity="info" closable="false" class=" ">
+                                    <b>{!v.availableErrorMessage}</b>
+                                </ui:message>
+                            </div>
+                            <aura:set attribute="else">
+                                <div class="noDataMsg slds-p-left_medium slds-m-top_xx-small">
+                                    {!v.availableErrorMessage}
+                                </div>
+                            </aura:set>
+                        </aura:if>
+                        <aura:set attribute="else">
+                            <div class="slds-scrollable">
+                                <table class="tableWidth slds-table slds-table_fixed-layout" >
+                                    <thead>
+                                        <tr class="slds-line-height_reset">
+                                            <th class="thCustom " scope="col" >
+                                                <div class="slds-text-align_left"><b>Available Checklists</b></div>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody> 
+                                        <aura:iteration items="{!v.availableChecklists}" var="checklists" indexVar="index">
+                                            <tr class="slds-hint-parent">
+                                                <td data-label="checklist">
+                                                    <div class="slds-float--left ">
+                                                        <img data-conId ="{!checklists.promptText}" data-index="{!index}" src="{!$Resource.ADBClientEventTrackerImages + '/InformationIcon.png'}" style="width:12px;height:12px;"
+                                                             onclick="{!c.showAvailableModal}"/>&nbsp;&nbsp;<lightning:formattedRichText value="{!checklists.promptText}" />
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </aura:iteration> 
+                                    </tbody>
+                                </table>
+                            </div>
+                        </aura:set>
+                    </aura:if>
+                </lightning:layoutItem>
+                <lightning:layoutItem size="12" padding="around-small" > 
+                    <div class="slds-scrollable"> 
+                        <aura:if isTrue="{!v.showExistingChecklists}">  
+                            <table class="tableWidth slds-table slds-table_fixed-layout" >
+                                <thead>
+                                    <tr class="slds-line-height_reset">
+                                        <th class="thCustom " scope="col" >
+                                            <div class="slds-float--left ">
+                                                <img src="{!$Resource.ADB_Chevron + '/ADB_Chevron/Right.png'}" style="width:15px;height:15px;"
+                                                     onclick="{!c.showCard}"/>
+                                            </div>
+                                            <div class="slds-text-align_left"><b>Existing Checklists</b></div>
+                                        </th>
+                                    </tr>
+                                </thead>
+                            </table>
+                            <aura:set attribute="else">
+                                <table class="tableWidth slds-table slds-table_fixed-layout" >
+                                    <thead>
+                                        <tr class="slds-line-height_reset">
+                                            <th class="thCustom " scope="col" >
+                                                <div class="slds-float--left ">
+                                                    <img src="{!$Resource.ADB_Chevron + '/ADB_Chevron/Down.png'}" style="width:15px;height:15px;"
+                                                         onclick="{!c.hideCard}"/>
+                                                </div>
+                                                <div class="slds-text-align_left"><b>Existing Checklists</b></div>
+                                            </th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <aura:if isTrue="{!not(empty(v.completedErrorMessage))}">
+                                            <aura:if isTrue="{!v.isInfoExistingMessage}">
+                                                <div class="informationMsg ">
+                                                    <ui:message title="" severity="info" closable="false" class=" ">
+                                                        <b>{!v.completedErrorMessage}</b>
+                                                    </ui:message>
+                                                </div>
+                                                <aura:set attribute="else">
+                                                    <div class="noDataMsg slds-p-left_medium slds-m-top_xx-small">
+                                                        {!v.completedErrorMessage}
+                                                    </div>
+                                                </aura:set>
+                                            </aura:if> 
+                                        </aura:if>
+                                        <aura:iteration items="{!v.existingChecklist}" var="exChecklist" indexVar="Key">
+                                            <tr class="slds-hint-parent" id="{!Key}">
+                                                <td data-label="existingchecklist">
+                                                    <div class="slds-text-align_left wordWraped" data-index="{!Key}">
+                                                        <lightning:formattedRichText value="{!exChecklist}" />
+                                                    </div>
+                                                </td>
+                                                <td data-label="checklistButton">
+                                                    <div class="slds-text-align_right">
+                                                        <lightning:button label="Details" name="{!exChecklist}" variant="neutral" onclick="{!c.openExistingDetail}"/>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </aura:iteration> 
+                                    </tbody>
+                                </table>
+                            </aura:set>
+                        </aura:if>
+                    </div>
+                </lightning:layoutItem>
+                <aura:if isTrue="{!v.showChecklistModal}">
+                    <section role="dialog" class="slds-modal slds-fade-in-open slds-modal_medium" style="z-index:9999">
+                        <aura:if isTrue="{!v.showPopupSpinner}">
+                            <div class="slds-align--absolute-center">
+                                <lightning:spinner aura:id="cetpopup_spinner" variant="brand" size="large"/>
+                            </div>
+                        </aura:if>
+                        <div class="slds-modal__container">
+                            <header class="slds-modal__header">                            
+                                <lightning:layout  multipleRows="true">
+                                    <lightning:layoutItem size="6" padding="around-small" >
+                                        <div class="slds-text-align_left"><b>Client Event Details</b></div>
+                                    </lightning:layoutItem>
+                                    <lightning:layoutItem size="6" padding="around-small" >
+                                        <!-- Close Button-->
+                                        <div class="close-button" align="right">
+                                            <img src="{!$Resource.ADBAllProgramsCardImages + '/closebutton.png'}" style="height: 12px; width: 12px;"
+                                                 onclick="{! c.closeModal}"/>
+                                        </div>
+                                        <!-- / Close Button-->                                                                
+                                    </lightning:layoutItem>
+                                    <lightning:layoutItem size="3"></lightning:layoutItem>
+                                    <lightning:layoutItem size="6">
+                                        <aura:if isTrue="{!v.saveFailed}">
+                                            <div class="save-failed slds-p-left_medium slds-m-top_xx-small">
+                                                {!v.saveErrorMessage}
+                                            </div>
+                                        </aura:if>
+                                        <aura:if isTrue="{!not(empty(v.popupCompErrorMessage))}">
+                                            <div class="save-failed slds-p-left_medium slds-m-top_xx-small">
+                                                {!v.popupCompErrorMessage}
+                                            </div>
+                                        </aura:if>
+                                        <aura:if isTrue="{!not(empty(v.icueMembIdMessage))}">
+                                            <div class="save-failed slds-p-left_medium slds-m-top_xx-small">
+                                                {!v.icueMembIdMessage}
+                                            </div>
+                                        </aura:if>
+                                    </lightning:layoutItem>
+                                    <lightning:layoutItem size="3"></lightning:layoutItem>
+                                    <lightning:layoutItem size="6">
+                                        <div class="slds-text-align_left"><b>&nbsp;&nbsp;<lightning:formattedRichText value="{!v.taskLabel}" /></b></div>
+                                    </lightning:layoutItem>
+                                    <lightning:layoutItem size="6">
+                                        <aura:if isTrue="{!v.showExistingModal}">
+                                        <div>
+                                            <div style="float:right">
+                                                <div align="left"> <i>{!v.completedTasks} of {!v.totalTasks} Tasks Completed</i></div>
+                                                <div align="left"> <i>Last Updated: </i><ui:outputText class="existinglist" value="{!v.lastUpdated}"/></div>
+                                                <div align="left"> <i>Updated By: </i><ui:outputText class="existinglist" value="{!v.updatedBy}"/></div>
+                                            </div>
+                                        </div>
+                                        </aura:if>
+                                    </lightning:layoutItem>
+                                    <lightning:layoutItem size="12">
+                                        <div class="slds-table--header-fixed_container"  style="height:300px;">
+                                            <div class="slds-scrollable" style="height:100%;">  
+                                                <table class="slds-table slds-table_fixed-layout slds-table_bordered slds-m-left_medium slds-table--header-fixed" >
+                                                    <thead>
+                                                        <tr class="slds-line-height_reset">
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <aura:iteration items="{!v.popUpTasks}" var="popUps" indexVar="index">
+                                                            <tr class="slds-hint-parent">
+                                                                <td data-label="popUps" >
+                                                                    <div class="slds-float--left " data-index="{!index}">
+                                                                        <ui:inputCheckbox aura:id="checklistbox" name="{!popUps.choiceID + '|' + popUps.questionID}" value="{!popUps.completed}" disabled="{!and(popUps.completed, !popUps.isNew)}"  change="{!c.handleCheckbox}" />&nbsp;&nbsp;
+                                                                        <label class="slds-checkbox__label" for="{!popUps.choiceID}">
+                                                                            <span class="slds-checkbox_faux"><lightning:formattedRichText value="{!popUps.choiceText}" /></span>                                
+                                                                        </label>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        </aura:iteration> 
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </lightning:layoutItem>
+                                </lightning:layout>
+                                <lightning:layout horizontalAlign="right">
+                                    <lightning:layoutItem size="12" padding="around-small" > 
+                                        <div align="right">
+                                            <lightning:button variant="neutral" label="Save" onclick="{!c.sendServiceDetails}" disabled="{!v.isButtonActive}"/>&nbsp;&nbsp;
+                                            <lightning:button variant="neutral" label="Cancel" onclick="{!c.closeModal}"/>
+                                        </div>
+                                    </lightning:layoutItem>
+                                </lightning:layout>
+                            </header>
+                        </div>
+                    </section>
+                    <div class="slds-backdrop slds-backdrop_open"></div>
+                </aura:if>
+            </lightning:layout>
+        </aura:set> <!--US3150996 Non FedEx changes-->
+    </aura:if>
+</aura:component>

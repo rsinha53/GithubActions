@@ -1,0 +1,264 @@
+<aura:component implements="flexipage:availableForAllPageTypes" controller="ACETLGT_CoveragesController">
+    <aura:attribute name="covdata" type="list"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doIInit}" />
+    <aura:attribute name="EID" type="String" access="public"/>
+    <aura:attribute name="AutodocKey" type="string" access="public"/>
+    <aura:attribute name="parentPEOId" type="string" access="public"/>
+    <aura:attribute name="mydata" type="list"/>
+    <aura:attribute name="mycolumns" type="string[]"/>
+    <aura:attribute name="memId" type="String"/>    <aura:attribute name="isToggled" type="boolean" default="true" />
+    <aura:attribute name="isInactiveOnly" type="boolean" default="true" />
+    <aura:attribute name="originatorType" type="String" access="public"/>
+    <aura:attribute name="origType" type="String" access="public"/>
+    <aura:attribute name="levelFundedMessage" type="String" access="public"/>
+    <aura:attribute name="isOnshore" type="Boolean" access="public"/>
+    <aura:attribute name="covGroupNumber" type="String"></aura:attribute>
+    <aura:attribute name="covEffectiveDate" type="String"></aura:attribute>
+    <aura:attribute name="bookOfBusinessError" type="Boolean" default="false"/>
+    <aura:attribute name="affiliationIndicator" type="Boolean" default="false" />   <!--    Dual Indicator : US1840846   -->
+    <!--
+    <aura:registerEvent name="cmpEvent" type="c:ACETLGT_MemberCoverageSelect"/>
+    <aura:registerEvent name="appEvent" type="c:ACETLGT_FamilyMemberSelect"/>
+	-->
+     <lightning:navigation aura:id="navRestrictLink"/>
+    <!--New--> 
+    <aura:handler name="destroy" value="{!this}" action="{!c.handleDestroy}" />    <aura:registerEvent name="startSpinnerEvent" type="c:ACETLGT_SpinnerLoader"/>
+    <aura:registerEvent name="famEvent" type="c:ACETLGT_FamilyMembersEvent"/> 
+    <aura:attribute name="Memberdetail" type="sObject" access="public"/>    
+    <aura:registerEvent name="bookOfBusinessTypeCodeUpdate" type="c:ACETLGT_BookOfBusinessTypeCodeUpdateEvent"/>
+    <!--For Group Callout-->
+    <aura:registerEvent name="groupInfoEvent" type="c:ACETLGT_GroupInfoEvent"/> 
+    <aura:registerEvent name="parentPEOIdEvent" type="c:ACETLGT_ParentPEOIdEvent"/> 
+    <aura:attribute name="MemberdetailFromGroup" type="sObject" access="public"/>
+    <aura:attribute name="Spinner" type="boolean" default="true"/>
+    <!--US3584878 Start-->
+    <aura:attribute name="bookOfBusinessTypeCode" type="String" default=''/> 
+    <aura:attribute name="bookOfBusinessTypeDesc" type="String" default=''/> 
+    <aura:attribute name="customerPurchaseId" type="String" default=''/>
+    <!--US3584878 End-->
+    <div class="slds-card"> <!-- US2237162 - changed lightning card to div, removed slds-p-around_small, added slds-card -->
+        
+        <div  class="card_element_top_margin card_element_bottom_margin card_element_right_margin"> <!-- US2237162 - changed aura set to div, added card_element_bottom_margin,card_element_top_margin,card_element_right_margin -->
+            <!--PART 1 for create toggle switch/checkbox form element-->  
+            <aura:If isTrue="{!v.bookOfBusinessError}" >
+                <ui:message title="" severity="error" closable="false" class="slds-float_left slds-size_3-of-4">
+                   Book of Business not valid
+                </ui:message> 
+            </aura:If>
+            <aura:if isTrue="{!or(not(empty(v.levelFundedMessage)),v.affiliationIndicator)}">
+                <ui:message title="" severity="info" closable="false" class="dual-indicator slds-float_left slds-size_3-of-4">
+                    <aura:if isTrue="{!not(empty(v.levelFundedMessage))}">
+                        <aura:unescapedHtml value="{!v.levelFundedMessage}" /> 
+                    </aura:if>
+                    <aura:if isTrue="{!v.affiliationIndicator}">
+                        Dual Internal Coverage Exists
+                    </aura:if>
+                </ui:message>            
+            </aura:if>
+            <div aura:id="togglebutton" style="float: right;" class="slds-form-element customautoclick" onchange="{!c.selectChange}"  >
+                <label class="slds-checkbox_toggle slds-grid" >
+                    <span class="slds-form-element__label slds-m-bottom_none">Show Active</span>  
+                    <!--<ui:inputCheckbox aura:id="chkbox" value="{!v.isToggled}"  />-->
+                    <input id="toggleCheckboxCoverage" name="showCoverage" checked="{!v.isToggled}" type="checkbox" disabled="{!v.isInactiveOnly}"/>
+                        <span id="toggle-desc" class="slds-checkbox_faux_container" aria-live="assertive">
+                            <span class="slds-checkbox_faux" ></span>
+                            <span class="slds-checkbox_on">Active</span>
+                            <span class="slds-checkbox_off">All</span>
+                        </span>
+                    
+                </label>
+            </div>
+        </div> <!-- US2237162 - changed aura set to div -->
+
+        <table class="slds-table slds-table_bordered coverage-tbl slds-no-row-hover" style="width:100%; table-layout: fixed;">
+            <thead>
+                <tr>
+                    <th class="slds-cell-wrap">Active</th>
+                    <th class="slds-cell-wrap">Coverage Type</th>
+                    <th class="slds-cell-wrap" style="width:5%">Rx</th>
+                    <th class="slds-cell-wrap">Member ID</th>
+                    <th class="slds-cell-wrap">Group Number</th>
+                    <th class="slds-cell-wrap">Group Name</th>
+                    <!-- 
+         			 - Changes made : 3-July-2019 
+                     -
+                    <th class="slds-cell-wrap">Product</th>
+					 -
+                    -->
+					<th class="slds-cell-wrap">Effective Date</th>
+                    <th class="slds-cell-wrap">End Date</th>
+                    <th class="slds-cell-wrap">Source Code</th>
+                </tr>
+                
+            </thead>
+            
+            <tbody>
+                <lightning:workspaceAPI aura:id="MemberSearchResults"/>
+                <aura:if isTrue="{!v.isToggled}">
+                    
+                    <aura:iteration items="{!v.mydata}" var="dt" aura:id="item"   indexVar="index">
+                       
+
+                        <aura:if isTrue="{!dt.isActive}">
+                            
+                            <aura:if isTrue="{!dt.isPreferred}">
+                                
+                                <tr class="activecol" 
+                                    onclick="{!c.handleOnclick}" data-customerPurchaseId="{!dt.customerPurchaseId}" 
+                                    data-Index="{!dt.GUID}" data-rownum="{!index}"
+                                    data-memid="{!dt.memberId}" data-bookOfBusinessTypeCode="{!dt.bookOfBusinessTypeCode}" data-benefitPlanId="{!dt.BenefitPlanId}"  data-planOptiId="{!dt.planOptionID}" data-srk="{!dt.SurrogateKey}" data-ensrk="{!dt.EnrolleeSurrogateKey}" data-covGroup="{!dt.GroupNumber}" data-covEffDate="{!dt.EffectiveDate}" data-covEndDate="{!dt.EndDate}" data-covBenEffDate="{!dt.BenEffectiveDate}" data-covBenEndDate="{!dt.BenEndDate}" data-isTermed="{!dt.isTermed}" data-isActive="{!dt.isActive}" aura:id="{!dt.GUID}">	
+                                    <td><aura:if isTrue="{!dt.isActive}">
+                                        <lightning:icon iconName="action:approval" alternativeText="Active"  />
+                                        <aura:set attribute="else"> 
+                                            <aura:if isTrue="{!dt.isFuture}">
+                                                <lightning:icon iconName="action:lead_convert" alternativeText="Future"  />
+                                                <aura:set attribute="else"> 
+                                                    <lightning:icon iconName="action:close" alternativeText="InActive"  />
+                                                </aura:set>
+                                            </aura:if>
+                                        </aura:set>
+                                        
+                                        </aura:if>
+                                    </td>
+                                    <td><ui:outputText value="{!dt.CoverageType}"/></td>
+                                    <td><ui:outputText value="{!dt.pharmacyIndicator}"/></td>
+                                    <td><ui:outputText value="{!dt.memberId}"/></td>
+                                    <td><ui:outputText value="{!dt.GroupNumber}"/></td>
+                                    <td><ui:outputText value="{!dt.GroupName}"/></td>
+                                    <!-- 
+         						     - Changes made : 3-July-2019 
+                                     -
+                                    <td><ui:outputText value="{!dt.Product}"/></td>
+									 -
+                                    -->
+									<td><ui:outputText value="{!dt.EffectiveDate}"/></td>
+                                    <td><ui:outputText value="{!dt.EndDate}"/></td>
+                                    <td><ui:outputText value="{!dt.SourceCode}"/></td>
+                                </tr>
+                                
+                                <aura:set attribute="else">
+                                    
+                                    <tr onclick="{!c.handleOnclick}" data-bookOfBusinessTypeCode="{!dt.bookOfBusinessTypeCode}" data-Index="{!dt.GUID}" data-benefitPlanId="{!dt.BenefitPlanId}"  data-planOptiId="{!dt.planOptionID}" data-memid="{!dt.memberId}"  data-srk="{!dt.SurrogateKey}" data-ensrk="{!dt.EnrolleeSurrogateKey}" data-covGroup="{!dt.GroupNumber}" data-covEffDate="{!dt.EffectiveDate}"  data-covEndDate="{!dt.EndDate}"  data-covBenEffDate="{!dt.BenEffectiveDate}" data-covBenEndDate="{!dt.BenEndDate}" data-isTermed="{!dt.isTermed}" data-customerPurchaseId="{!dt.customerPurchaseId}" data-isActive="{!dt.isActive}" aura:id="{!dt.GUID}">	
+                                        <td><aura:if isTrue="{!dt.isActive}">
+                                            <lightning:icon iconName="action:approval" alternativeText="Active"  />
+                                            <aura:set attribute="else"> 
+                                                <aura:if isTrue="{!dt.isFuture}">
+                                                    <lightning:icon iconName="action:lead_convert" alternativeText="Future"  />
+                                                    <aura:set attribute="else"> 
+                                                        <lightning:icon iconName="action:close" alternativeText="InActive"  />
+                                                    </aura:set>
+                                                </aura:if>
+                                            </aura:set>
+                                            
+                                            </aura:if>
+                                        </td>
+                                        <td><ui:outputText value="{!dt.CoverageType}"/></td>
+                                    	<td><ui:outputText value="{!dt.pharmacyIndicator}"/></td>
+                                        <td><ui:outputText value="{!dt.memberId}"/></td>
+                                        <td><ui:outputText value="{!dt.GroupNumber}"/></td>
+                                        <td><ui:outputText value="{!dt.GroupName}"/></td>
+                                    	<!-- 
+         						     	 - Changes made : 3-July-2019 
+                                     	 -                                        
+                                        <td><ui:outputText value="{!dt.Product}"/></td>
+										 -
+                                        -->
+										<td><ui:outputText value="{!dt.EffectiveDate}"/></td>
+                                        <td><ui:outputText value="{!dt.EndDate}"/></td>
+                                        <td><ui:outputText value="{!dt.SourceCode}"/></td>
+                                    </tr>
+                                    
+                                </aura:set>
+                            </aura:if>
+                            
+                        </aura:if>
+                    </aura:iteration>
+                    
+                    <aura:set attribute="else">
+                        
+                        <aura:iteration items="{!v.mydata}" var="dt" aura:id="item">
+                            <aura:if isTrue="{!dt.isPreferred}">
+                                <tr class="activecol" onclick="{!c.handleOnclick}" data-bookOfBusinessTypeCode="{!dt.bookOfBusinessTypeCode}" data-Index="{!dt.GUID}"  data-benefitPlanId="{!dt.BenefitPlanId}" data-planOptiId="{!dt.planOptionID}" data-memid="{!dt.memberId}" data-srk="{!dt.SurrogateKey}" data-ensrk="{!dt.EnrolleeSurrogateKey}" data-covGroup="{!dt.GroupNumber}" data-covEffDate="{!dt.EffectiveDate}" data-covEndDate="{!dt.EndDate}"  data-covBenEffDate="{!dt.BenEffectiveDate}" data-covBenEndDate="{!dt.BenEndDate}" data-isTermed="{!dt.isTermed}" data-isActive="{!dt.isActive}" aura:id="{!dt.GUID}">	
+                                    <td><aura:if isTrue="{!dt.isActive}">
+                                        <lightning:icon iconName="action:approval" alternativeText="Active"  />
+                                        <aura:set attribute="else"> 
+                                            <aura:if isTrue="{!dt.isFuture}">
+                                                <lightning:icon iconName="action:lead_convert" alternativeText="Future"  />
+                                                <aura:set attribute="else"> 
+                                                    <lightning:icon iconName="action:close" alternativeText="InActive"  />
+                                                </aura:set>
+                                            </aura:if>
+                                        </aura:set>
+                                        
+                                        </aura:if>
+                                    </td>
+                                    <td><ui:outputText value="{!dt.CoverageType}"/></td>
+                                    <td><ui:outputText value="{!dt.pharmacyIndicator}"/></td>
+									<td><ui:outputText value="{!dt.memberId}"/></td>
+                                    <td><ui:outputText value="{!dt.GroupNumber}"/></td>
+                                    <td ><ui:outputText value="{!dt.GroupName}"/></td>                                    
+                                    <!-- 
+         						     - Changes made : 3-July-2019 
+                                     -
+                                    <td><ui:outputText value="{!dt.Product}"/></td>
+									 -
+                                    -->
+                                    <td><ui:outputText value="{!dt.EffectiveDate}"/></td>
+                                    <td><ui:outputText value="{!dt.EndDate}"/></td>
+                                    <td><ui:outputText value="{!dt.SourceCode}"/></td>
+                                </tr>
+                                
+                                <aura:set attribute="else">
+                                    <tr onclick="{!c.handleOnclick}" data-bookOfBusinessTypeCode="{!dt.bookOfBusinessTypeCode}" data-Index="{!dt.GUID}" data-benefitPlanId="{!dt.BenefitPlanId}"  data-planOptiId="{!dt.planOptionID}" data-memid="{!dt.memberId}"  data-srk="{!dt.SurrogateKey}" data-ensrk="{!dt.EnrolleeSurrogateKey}" data-covGroup="{!dt.GroupNumber}" data-covEffDate="{!dt.EffectiveDate}" data-covEndDate="{!dt.EndDate}"  data-covBenEffDate="{!dt.BenEffectiveDate}" data-covBenEndDate="{!dt.BenEndDate}" data-isTermed="{!dt.isTermed}" data-isActive="{!dt.isActive}" aura:id="{!dt.GUID}">	
+                                        <td><aura:if isTrue="{!dt.isActive}">
+                                            <lightning:icon iconName="action:approval" alternativeText="Active"  />
+                                            <aura:set attribute="else"> 
+                                                <aura:if isTrue="{!dt.isFuture}">
+                                                    <lightning:icon iconName="action:lead_convert" alternativeText="Future"  />
+                                                    <aura:set attribute="else"> 
+                                                        <lightning:icon iconName="action:close" alternativeText="InActive"  />
+                                                    </aura:set>
+                                                </aura:if>
+                                            </aura:set>
+                                            
+                                            </aura:if>
+                                        </td>
+                                        <td><ui:outputText value="{!dt.CoverageType}"/></td>
+                                    	<td><ui:outputText value="{!dt.pharmacyIndicator}"/></td>
+										<td><ui:outputText value="{!dt.memberId}"/></td>
+                                        <td><ui:outputText value="{!dt.GroupNumber}"/></td>
+                                        <td><ui:outputText value="{!dt.GroupName}"/></td>
+         						    	<!--
+                                         - Changes made : 3-July-2019 
+                                     	 -
+                                        <td><ui:outputText value="{!dt.Product}"/></td>
+									 	 -
+                                    	 -->
+                                        <td><ui:outputText value="{!dt.EffectiveDate}"/></td>
+                                        <td><ui:outputText value="{!dt.EndDate}"/></td>
+                                        <td><ui:outputText value="{!dt.SourceCode}"/></td>
+                                    </tr>
+                                    
+                                </aura:set>
+                            </aura:if>  
+                        </aura:iteration>
+                    </aura:set>
+                </aura:if>
+                
+            </tbody>
+        </table>
+ 				<div>
+        			<div class="outer-div">
+            			<aura:if isTrue="{!v.Spinner}">
+          				<lightning:spinner alternativeText="Loading, Please Wait..." 
+               				title="Loading, Please Wait..." 
+               				variant="brand" size="small" />
+    					</aura:if>
+       		 		</div>
+     			</div>	        
+        
+        
+    </div> <!-- US2237162 - changed lightning card to div -->
+    
+    
+</aura:component>

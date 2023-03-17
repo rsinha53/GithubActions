@@ -1,0 +1,382 @@
+<apex:page controller="ACETCorrespondenceHistoryController" sidebar="False" action="{!init}"
+           id="pageid" tabStyle="ClaimSearch__tab"> 
+    <script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    <apex:stylesheet value="{!URLFOR($Resource.ACETResources, '/css/m/memberdetail.css')}" />
+    
+    <script>
+    function setFocusOnLoad(){}
+    </script>
+    
+    
+    <apex:form id="formid">
+        <c:ACETInteractionHighlightsPanel InteractionAtt="{!wrapper.interaction}" SubjectAtt="{!wrapper.Subject}" AdditionalInfoAtt="{!wrapper.AdditionalInfo}" html-auto-doc="auto"/>       
+        <apex:pageMessages id="pgMessage" /> 
+        <apex:outputPanel rendered="true">
+            <apex:sectionHeader title="Communications" />
+            <c:ACETCaseActions attrRefreshNavigationTab="true"
+                               attrCaseDataWrapper="{!wrapper}" attrShowSaveAndCloseButton="true"
+                               attrShowSaveButton="true" attrShowMisdirectButton="true"
+                               attrShowCancelButton="true"
+                               attrSourceOriginator="{!wrapper.SourceOriginator}"
+                               attrInteractionId="{!wrapper.Interaction.Id}"
+                               attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="Communications"
+                               rendered="true" />
+            
+            <apex:pageBlock id="Block1">
+                
+                <apex:outputPanel id="changeSearchByError">
+                    <strong>
+                        <div
+                             style="color: #c00; text-align: center; list-style-type: none; font-family: Arial, Helvetica, sans-serif; font-size: 100%"
+                             id="errorMessages"></div> <apex:messages style="color:#c00;text-align:center;list-style-type:none;font-family:Arial,Helvetica,sans-serif;font-size:100%">
+                        </apex:messages>
+                    </strong>
+                </apex:outputPanel>
+                <apex:outputPanel id="changeSearchBy1">
+                    
+                    <apex:pageBlockSection columns="4" id="section1a">
+                        <apex:pageBlockSectionItem >
+                            <apex:outputLabel style="font-weight: bold;font-size: 91%;color: #4a4a56;" value="Type"></apex:outputLabel>
+                            <apex:selectList id="SearchBy" label="Type"
+                                             value="{!type}" size="1" onchange="searchByChangeFunction()">
+
+                                <apex:selectoption itemlabel="All" itemvalue="All"/>
+                            </apex:selectList>
+                        </apex:pageBlockSectionItem>
+                        <apex:pageBlockSectionItem rendered="true" id="startDateSection">
+                            <apex:outputPanel >
+                                <apex:outputLabel value="Start Date" style="margin-left:4px;font-weight: bold;font-size: 91%;color: #4a4a56;"/>
+                                <apex:outputPanel id="startDatePanel" rendered="true">
+                                    <apex:inputField id="startdate" value="{!startdate.tst_Date_Field__c}" style="margin-left:8px;padding-bottom: 4px;" rendered="true">
+                                        <div id="StartDateId"
+                                             style="color: red; position: absolute; display: none">Error:Please
+                                            Enter Start Date</div>
+                                    </apex:inputField>
+                                    <div class="errorMsg"
+                                         style="display: none; margin-left: -4px;">
+                                        <b>Error:</b>Invalid start date
+                                    </div>
+                                </apex:outputPanel>
+                                
+                            </apex:outputPanel>
+                        </apex:pageBlockSectionItem>
+                        <apex:pageBlockSectionItem rendered="true"
+                                                   id="endDateSection">
+                            <apex:outputPanel >
+                                <apex:outputLabel style="margin-left:4px;" value="End Date"/>
+                                <apex:outputPanel id="endDatePanel" rendered="true">
+                                    <apex:inputField id="enddate"
+                                                     value="{!enddate.tst_Date_Field__c}"
+                                                     style="margin-left:8px;padding-bottom: 4px;" rendered="true" />
+                                    <div class="errorMsg"
+                                         style="display: none; margin-left: -12px;">
+                                        <b>Error:</b> Invalid End Date
+                                    </div>
+                                </apex:outputPanel>
+                                
+                            </apex:outputPanel>
+                        </apex:pageBlockSectionItem>
+                    </apex:pageBlockSection>
+                    
+                    <apex:pageBlockSection columns="4" id="section1c">
+                        <apex:pageBlockSectionItem rendered="true" id="taxidSec">
+                            <apex:outputLabel style="font-weight: bold;font-size: 91%;color: #4a4a56;" value="Tax ID"></apex:outputLabel>
+                            <apex:inputText id="taxid" value="{!taxid}"
+                                            onkeypress="return isTaxNumberKey(event)"
+                                            rendered="true" style="padding-bottom: 4px;">
+                                <div id="MyTaxId" class="errorMsg"
+                                     style="color: #c00; margin-top: 20px; position: absolute; display: none">
+                                    <b>Error:</b> Enter 9 digits to search by Tax ID
+                                </div>
+                            </apex:inputText>
+                        </apex:pageBlockSectionItem>
+                        
+                        <apex:pageBlockSectionItem rendered="true"
+                                                   id="ClaimNumberSection">
+                            <apex:outputPanel >
+                                <apex:outputLabel style="margin-left: 2px;font-weight: bold;font-size: 91%;color: #4a4a56;" value="Claim #"/>
+                                <apex:outputPanel >
+                                    <apex:inputText value="{!claimnumber}" label="Claim Number"
+                                                    id="ClaimNumber" rendered="true"
+                                                    style="margin-left:7px;Width:39%;padding-bottom: 4px;" styleClass="{!ClaimNoReqd}"
+                                                    onkeypress="return isNumberKey(event)"/>
+                                    
+                                    
+                                </apex:outputPanel>
+                            </apex:outputPanel>
+                        </apex:pageBlockSectionItem>
+                        <apex:pageBlockSectionItem ></apex:pageBlockSectionItem>
+                        
+                    </apex:pageBlockSection>
+                    
+                    
+                </apex:outputPanel>
+                
+                <apex:pageBlockButtons style="padding-left:10px !important;" location="bottom">
+                    
+                    <input type="button" class="btn" id="searchBtn" value="Search"
+                        onclick="return ValidateClaimSearch();" />
+                    <input type="button" id="btnClear" class="btn" value="Clear"
+                        onclick="return ClearSearchCriteria();" />
+                    
+                </apex:pageBlockButtons>
+                
+            </apex:pageBlock>
+            <apex:outputPanel id="outpanleSearchResult">
+                
+                <apex:pageBlock id="pbSearchResult" title="Communications Search Results"
+                                rendered="true">
+                    <apex:Outputpanel layout="block">
+                    <apex:pageBlocksection columns="1" html-auto-doc="true">
+                        <apex:pageBlockTable value="{!Correspondence}" var="r"
+                                             rendered="true"
+                                             style="border:none">
+                            
+                            <apex:column headerValue="Request ID">
+                                <a href="#">{!r.RequestId}</a>
+                            </apex:column>
+                            <apex:column headerValue="Type">
+                                <apex:outputText value="{!r.type}"></apex:outputText>
+                            </apex:column>
+                            
+                            <apex:column headerValue="Request Date" >
+                                <apex:outputText value="{!r.Requestdate}"></apex:outputText>
+                                
+                            </apex:column>
+                            
+                            <apex:column headerValue="Claim #" >
+                                
+                                <a href="#">{!r.claimnumber}</a>
+                            </apex:column>
+                            
+                            <apex:column headerValue="Tax ID" >
+                                
+                                <a href="#">{!r.TaxId}</a>
+                            </apex:column>
+                            <apex:column headerValue="Request Source" >
+                                <apex:outputText value="{!r.Requestsource}"></apex:outputText>
+                                
+                            </apex:column>
+                            
+                            
+                        </apex:pageBlockTable>
+                    </apex:pageBlocksection>
+                    <apex:pageBlocksection columns="1" rendered="{!Correspondence.size == 0}">
+                        <apex:outputLabel value="No results found"></apex:outputLabel>
+                    </apex:pageBlocksection>
+                </apex:Outputpanel>
+                    <apex:outputPanel layout="block">
+                        <apex:pageBlocksection title="Delivery Details" columns="1" html-auto-doc="true">
+                            
+                            <apex:pageBlockTable style="border:none" value="{!Correspondence}" var="r" rendered="true">
+                                <apex:column headerValue="Document ID">
+                                    <a href="#">{!r.DocumentId}</a>
+                                </apex:column>
+                                <apex:column headerValue="Status">
+                                    <apex:outputText value="{!r.Status}"></apex:outputText>
+                                </apex:column>
+                                
+                                <apex:column headerValue="Sent Date" >
+                                    <apex:outputText value="{!r.Sentdate}"></apex:outputText>
+                                    
+                                </apex:column>
+                                
+                                <apex:column headerValue="Delivery Method" >
+                                    
+                                    <apex:outputText value="{!r.Deliverymethod}"></apex:outputText>
+                                </apex:column>
+                                
+                                <apex:column headerValue="Name" >
+                                    
+                                    <apex:outputText value="{!r.name}"></apex:outputText>
+                                </apex:column>
+                                <apex:column headerValue="Address 1" >
+                                    <apex:outputText value="{!r.Address1}"></apex:outputText>
+                                    
+                                </apex:column>                                
+                                <apex:column headerValue="Address 2" >
+                                    <apex:outputText value="{!r.Address2}"></apex:outputText>
+                                    
+                                </apex:column> 
+                                <apex:column headerValue="City" >
+                                    <apex:outputText value="{!r.city}"></apex:outputText>
+                                    
+                                </apex:column> 
+                                <apex:column headerValue="State" >
+                                    <apex:outputText value="{!r.state}"></apex:outputText>
+                                    
+                                </apex:column> 
+                                <apex:column headerValue="Zip" >
+                                    <apex:outputText value="{!r.zip}"></apex:outputText>
+                                    
+                                </apex:column> 
+                                <apex:column headerValue="Email" >
+                                    <apex:outputText value="{!r.email}"></apex:outputText>
+                                    
+                                </apex:column> 
+                                <apex:column headerValue="Fax" >
+                                    <apex:outputText value="{!r.fax}"></apex:outputText>
+                                    
+                                </apex:column> 
+                                
+                            </apex:pageBlockTable>
+                            
+                        </apex:pageBlocksection>
+                    </apex:outputPanel>
+                    
+                </apex:pageBlock>
+                
+            </apex:outputPanel>
+            
+            
+            
+        </apex:outputPanel>
+        <c:ACETCaseActions attrRefreshNavigationTab="true"
+                           attrCaseDataWrapper="{!wrapper}" attrShowSaveAndCloseButton="true"
+                           attrShowSaveButton="true" attrShowMisdirectButton="true"
+                           attrShowCancelButton="true"
+                           attrSourceOriginator="{!wrapper.SourceOriginator}"
+                           attrInteractionId="{!wrapper.Interaction.Id}"
+                           attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="Communications"
+                           rendered="true" />
+    </apex:form>
+    <apex:outputPanel id="loadpanel">
+        <div id="opaque" style="display: none" />
+        <div id="spinner" style="display: none">
+            <p align="center"
+               style='font-family: "Arial", Helvetica, sans-serif; font-size: 20px;'>
+                <apex:image value="/img/loading.gif" />
+                &nbsp;Please wait
+            </p>
+        </div>
+    </apex:outputPanel>
+    <style>
+        
+        #spinner {<!--
+display: none; -->
+        width: 200px;
+        height: 50px;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        text-align: center;
+        padding: 10px;
+        font: normal 16px Tahoma, Geneva, sans-serif;
+        margin-left: -100px;
+        margin-top: -100px;
+        z-index: 2;
+        overflow: auto;
+        border: 1px solid #CCC;
+        background-color: white;
+        z-index: 100;
+        padding: 5px;
+        line-height: 20px;
+        }
+        
+        #opaque {
+        position: fixed;
+        top: 0px;
+        left: 0px;
+        width: 100%;
+        height: 100%;
+        z-index: 1; <!--v
+display: none; -->
+        background-color: gray;
+        filter: alpha(opacity = 30);
+        opacity: 0.3;
+        -moz-opacity: 0.3;
+        -khtml-opacity: 0.3
+        }
+        
+        * html #opaque {
+        position: absolute;
+        }
+    </style>
+    <style type="text/css">
+        
+        
+        .body .bPageBlock, body #bodyCell .bResource .secondaryPalette, body .bPageBlock.secondaryPalette, body .individualPalette .bPageBlock.secondaryPalette, body .bodyDiv .genericTable, body .genericPageBlockTable, body .bodyDiv .bSubBlock, body .bComponentBlock .bPageBlock, body .bMyDashboard .bPageBlock, body.rlHoverFrame .bPageBlock, body.subjectSelectionPopup div.choicesBox, body.lookupTab .bPageBlock.secondaryPalette, body.popupTab .bPageBlock.secondaryPalette, body.UserTagStatsPage .bPageBlock.secondaryPalette
+    {
+        background-color: white;
+        border-bottom: 1px solid white;
+        border-left: 1px solid white;
+        border-right: 1px solid white;
+
+        
+    }
+    .apexp .apexDefaultPageBlock.bPageBlock .pbBody .pbSubheader
+    .pbSubheader .brandTertiaryBgr .first .tertiaryPalette
+    {
+        color: black;
+        
+    }
+    
+    .apexp .apexDefaultPageBlock.bPageBlock .pbBody .pbSubheader .showListButton
+    {
+        background-position: 0px 0px;
+    }
+    
+    .apexp .apexDefaultPageBlock.bPageBlock .pbBody .pbSubheader .hideListButton
+    {
+    background-position: 1px -11px;    
+    }
+    
+    h3
+    {
+        color: black;
+
+    }
+    
+    .apexp .apexDefaultPageBlock.bPageBlock .pbBody .pbSubheader 
+    {
+        font-size: 11px;
+        background-color: white !important;
+    }
+    .apexp .apexDefaultPageBlock.bPageBlock .pbBody .pbSubheader h3
+    {
+        font-size: 1.2em;
+    }
+        
+    .bPageBlock .detailList .data2Col
+    {
+        
+        padding-left: 0px;
+    }
+    .apexp .apexDefaultPageBlock.bPageBlock .pbBody .pbSubheader
+    {
+        margin-left: -15px;
+    }
+    body .bPageBlock.bDetailBlock, body .individualPalette .bPageBlock.bDetailBlock
+    {
+        margin-bottom:0px;
+    }
+    body .bPageBlock
+    {
+        margin-bottom:0px;
+    }
+    </style>
+    <apex:outputPanel rendered="true">
+        
+    </apex:outputPanel>
+    <Script>
+        $(document).ready(function(){
+        
+        
+        
+        //init autodoc 
+        acet.autodoc.startAutodoc();
+        acet.autodoc.createCommentsbox();
+        acet.autodoc.subTabIds = []; 
+        
+        
+                
+        
+    });
+    </Script>
+    
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+</apex:page>

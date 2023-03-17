@@ -1,0 +1,240 @@
+<!--Name : Jitendra Anagani 
+   Date : 01-03-2021
+   Description : The Purpose of this component is to collect Service Request Information for ORS Routing Cases-->
+<aura:component >
+    <!-- String Attributes -->
+    <aura:attribute name="whereTTSTopics" type="String" default=""/>
+    <aura:attribute name="strIssueFilter" type="String" default=""/>
+    <aura:attribute name="reasonCode" type="String" default="--"/>
+    <aura:attribute name="category" type="String" default="--"/>
+    <aura:attribute name="strSourceCode" type="String" default=""/>
+    <aura:attribute name="strIssue" type="String" default=""/>
+    <aura:attribute name="selectedSendValue" type="String" default="teamList"/>
+    <aura:attribute name="individualRadioValue" type="String" default=""/>
+    <aura:attribute name="whereConditionForAdvocate" type="String" default=""/>
+    <aura:attribute name="strComments" type="String" default=""/>
+    <aura:attribute name="strSelectedEsclatedRequest" type="String" default="No"/>
+
+    <aura:attribute name="strPaymentAmount" type="String" />
+    <aura:attribute name="strDelegatedData" type="String" />
+    <aura:attribute name="strTabLabel" type="String" default=""/>
+    <aura:attribute name="strIssueMetadataName" type="String" default="SAE_Reason_Codes__mdt"/>
+    <aura:attribute name="strIssueSearchName" type="String" default="Issue__c"/>
+    <aura:attribute name="strIssueOrderByName" type="String" default="Issue__c"/>
+    <aura:attribute name="facetsReasonCategory" type="String" default=""/>
+    <aura:attribute name="strDefaultExceptedPaymentAmount" type="String" default="10"/>
+    <!-- Boolean Attributes -->
+    <aura:attribute name="showCOCSData" type="Boolean" default="false"/>
+    <aura:attribute name="hideEntireSection" type="Boolean" default="false"/>
+    <aura:attribute name="showSpinner" type="Boolean"/>
+    <aura:attribute name="disableQuickListField" type="Boolean" default="true"/>
+    <aura:attribute name="disableRoleField" type="Boolean" default="true"/>
+    <aura:attribute name="isRoleFieldSelected" type="Boolean" default="false"/>
+    <aura:attribute name="TeamQuickListReload" type="Boolean" default="false"/>
+    <aura:attribute name="disableOfficeField" type="Boolean" default="true"/>
+    <aura:attribute name="isOfficeSelected" type="Boolean" default="false"/>
+    <aura:attribute name="disableDepartmentField" type="Boolean" default="true"/>
+    <aura:attribute name="isDepartmentSelected" type="Boolean" default="false"/>
+    <aura:attribute name="disableTeamField" type="Boolean" default="true"/>
+    <aura:attribute name="isTeamSelected" type="Boolean" default="false"/>
+    <aura:attribute name="disableIndividualField" type="Boolean" default="true"/>
+    <aura:attribute name="teamReload" type="Boolean" default="false"/>
+    <aura:attribute name="officeFieldsRequiredSymbol" type="Boolean" default="true"/>
+    <aura:attribute name="isCal" type="Boolean" default="false" />
+    <aura:attribute name="isPaymentAmountDisabled" type="Boolean" default="true" />
+    <aura:attribute name="isDoesNotKnowChecked" type="Boolean" default="false" />
+    <aura:attribute name="isCreateCaseClicked" type="Boolean" default="false"/>
+    <aura:attribute name="IsDelegatedSpeciality" type="Boolean" default="false"/>
+    <aura:attribute name="showSendToSection" type="Boolean" default="false"/>
+    <aura:attribute name="isApPolicy" type="Boolean" default="false" />
+    <aura:attribute name="showHOPandTable" type="Boolean" default="true" />
+    <aura:attribute name="showContactName" type="Boolean" default="false" />
+    <aura:attribute name="showExceptedPaymentAmount" type="Boolean" default="true" />
+	<aura:attribute name="isCalDefaulted" type="Boolean" default="false"/>
+    <aura:attribute name="isValiadContact" type="Boolean" default="true"/>
+    <!--US3182779 - Sravan-->
+    <aura:attribute name="additionalFieldsValidation" type="Boolean" default="false"/>
+    <aura:attribute name="showSpinnerForFacetsSubmit" type="Boolean" default="false" />
+    <aura:attribute name="strTatProvided" type="String" default=""/>
+    <aura:attribute name="isCalender" type="Boolean"/>
+    <!-- Object Attributes -->
+    <aura:attribute name="objServiceRequestHeader" type="object" default="{}"/>
+    <aura:attribute name="objAdditionRequestHeader" type="object" default="{}"/>
+    <aura:attribute name="objSendToHeader" type="object" default="{}"/>
+    <aura:attribute name="sendToListInputs" type="Object"/>
+    <aura:attribute name="objCOBInfo" type="Object" access="public" default="{}"/>
+    <aura:attribute name="objSubscriberAndProviderDetails" type="object" default="{}"/>
+
+    <!-- List Attributes -->
+    <aura:attribute name="lstSelectedRoutedProviders" type="List" />
+    <aura:attribute name="individualRadioOption" type="List" default="[{'label': 'Individual', 'value': 'individual'}]"/>
+    <aura:attribute name="sendToOptions" type="List" default="[
+        {'label': 'Team Quick List', 'value': 'teamList'},
+        {'label': 'Office/Department/Team', 'value': 'office'}
+        ]" />
+    <aura:attribute name="individualOptions" type="List" default="[{'label': '--None--', 'value': ''}]"/>
+    <aura:attribute name="lstEsclatedOptions" type="List" default="[
+    {'label': 'Yes', 'value': 'Yes'},
+    {'label': 'No', 'value': 'No'}
+    ]"/>
+
+    <!-- Map Attributes -->
+    <aura:attribute name="orsMap" type="Map"/>
+
+
+    <!--US3259671 - Sravan-->
+    <aura:attribute name="flowDetails" type="Object" access="public" />
+    <aura:attribute name="validateHoursOfOperation" type="Boolean" default="false"/>
+    <!--US3182829 - Sravan-->
+   <aura:attribute name="requestResource" type="String" default=""/>
+
+    <aura:handler name="change" value="{!v.whereTTSTopics}" action="{!c.setFilterCondition}"/>
+
+    <aura:if isTrue="{!v.showCOCSData}">
+
+        <lightning:tabset variant="scoped">
+            <lightning:tab label="{!v.strTabLabel}">
+                <c:ACET_ServiceRequestReqNonClaims objHeader="{!v.objServiceRequestHeader}"
+                    sendToListInputs="{!v.sendToListInputs}"
+                    reasonCode="{!v.reasonCode}"
+                    category="{!v.category}"
+
+                    lstSelectedRoutedProviders ="{!v.lstSelectedRoutedProviders}"
+                    showCOCSData = "{!v.showCOCSData}"
+                    strIssue="{!v.strIssue}"
+                    isValiadContact = "{!v.isValiadContact}"
+                    aura:id="idServiceRequest"
+                    hideEntireSection ="{!v.hideEntireSection}"
+                    whereTTSTopics ="{!v.whereTTSTopics}"
+                    IsDelegatedSpeciality = "{!v.IsDelegatedSpeciality}"
+                    strDelegatedData="{!v.strDelegatedData}"
+                    flowDetails="{!v.flowDetails}"
+                    validateHoursOfOperation="{!v.validateHoursOfOperation}"
+                    isApPolicy = "{!v.isApPolicy}"
+                    objProviderDataWithCSP = "{!v.objSubscriberAndProviderDetails}"
+                    showHOPandTable="{!v.showHOPandTable}"
+                    strIssueMetadataName="{!v.strIssueMetadataName}"
+                    strIssueSearchName="{!v.strIssueSearchName}"
+                    strIssueOrderByName="{!v.strIssueOrderByName}"
+                    facetsReasonCategory="{!v.facetsReasonCategory}"
+                    objCOBInfo= "{!v.objCOBInfo}"
+                    showContactName="{!v.showContactName}"
+                    showExceptedPaymentAmount="{!v.showExceptedPaymentAmount}"
+                    requestResource="{!v.requestResource}"/>
+                <c:ACET_AdditonalRequestReqNonClaims objHeader="{!v.objAdditionRequestHeader}"
+                    strComments = "{!v.sendToListInputs.comments}"
+                    aura:id="idAdditionalRequest"
+                    isDoesNotKnowChecked = "{!v.isDoesNotKnowChecked}"
+                    strPaymentAmount = "{!v.strPaymentAmount}"
+                    strSelectedEsclatedRequest = "{!v.strSelectedEsclatedRequest}"
+                    IsDelegatedSpeciality = "{!v.IsDelegatedSpeciality}"
+                    isApPolicy = "{!v.isApPolicy}"
+                    additionalFieldsValidation="{!v.additionalFieldsValidation}"
+                    showSpinnerForFacetsSubmit="{!v.showSpinnerForFacetsSubmit}"
+                    strTatProvided="{!v.strTatProvided}"
+                    isCalender ="{!v.isCalender}"
+                    showExceptedPaymentAmount="{!v.showExceptedPaymentAmount}"/>
+                <aura:if isTrue="{!v.showSendToSection}">
+                <c:ACET_SendToReqNonClaims objSendToHeader="{!v.objSendToHeader}"
+                    selectedSendValue = "{!v.selectedSendValue}"
+                    individualRadioValue = "{v.individualRadioValue}"
+                    whereConditionForAdvocate = "{!v.whereConditionForAdvocate}"
+                    officeFieldsRequiredSymbol = "{!v.officeFieldsRequiredSymbol}"
+                    sendToListInputs = "{!v.sendToListInputs}"
+                    disableQuickListField = "{!v.disableQuickListField}"
+                    disableRoleField = "{!v.disableRoleField}"
+                    isRoleFieldSelected = "{!v.isRoleFieldSelected}"
+                    TeamQuickListReload = "{!v.TeamQuickListReload}"
+                    disableOfficeField = "{!v.disableOfficeField}"
+                    isOfficeSelected = "{!v.isOfficeSelected}"
+                    disableDepartmentField = "{!v.disableDepartmentField}"
+                    isDepartmentSelected = "{!v.isDepartmentSelected}"
+                    disableTeamField = "{!v.disableTeamField}"
+                    isTeamSelected = "{!v.isTeamSelected}"
+                    teamReload = "{!v.teamReload}"
+                    individualOptions = "{!v.individualOptions}"
+                    disableIndividualField = "{!v.disableIndividualField}"
+                    orsMap="{!v.orsMap}"
+                    aura:id="idSendToNonClaims"
+                    showSpinner = "{!v.showSpinner}"
+                    IsDelegatedSpeciality = "{!v.IsDelegatedSpeciality}"
+                    whereTTSTopic ="{!v.whereTTSTopics}"
+                    lstSelectedRoutedProviders ="{!v.lstSelectedRoutedProviders}"
+                                           /><!--DE418730 - Sravan-->
+                </aura:if>
+            </lightning:tab>
+        </lightning:tabset>
+    </aura:if>
+    <aura:if isTrue="{!!v.showCOCSData}">
+            <div class="slds-box">
+                <div>
+                    <c:ACET_ServiceRequestReqNonClaims objHeader="{!v.objServiceRequestHeader}"
+                        sendToListInputs="{!v.sendToListInputs}"
+                        reasonCode="{!v.reasonCode}"
+                        category="{!v.category}"
+                        lstSelectedRoutedProviders ="{!v.lstSelectedRoutedProviders}"
+                        showCOCSData = "{!v.showCOCSData}"
+                        strIssue="{!v.strIssue}"
+                        aura:id="idServiceRequest"
+                        hideEntireSection ="{!v.hideEntireSection}"
+                    whereTTSTopics ="{!v.whereTTSTopics}"
+                        IsDelegatedSpeciality = "{!v.IsDelegatedSpeciality}"
+                        strDelegatedData="{!v.strDelegatedData}"
+                        flowDetails="{!v.flowDetails}"
+                    validateHoursOfOperation="{!v.validateHoursOfOperation}"
+                    isApPolicy = "{!v.isApPolicy}"
+                    objProviderDataWithCSP = "{!v.objSubscriberAndProviderDetails}"
+                    showHOPandTable="{!v.showHOPandTable}"
+                    strIssueMetadataName="{!v.strIssueMetadataName}"
+                    strIssueSearchName="{!v.strIssueSearchName}"
+                    strIssueOrderByName="{!v.strIssueOrderByName}"
+                    facetsReasonCategory="{!v.facetsReasonCategory}"
+                    objCOBInfo= "{!v.objCOBInfo}"
+                    showContactName="{!v.showContactName}"
+                    showExceptedPaymentAmount="{!v.showExceptedPaymentAmount}"
+                    requestResource="{!v.requestResource}"/>
+                    <c:ACET_AdditonalRequestReqNonClaims objHeader="{!v.objAdditionRequestHeader}"
+                         facetsReasonCategory="{!v.facetsReasonCategory}"
+                        strComments = "{!v.sendToListInputs.comments}"
+                        objCOBInfo= "{!v.objCOBInfo}"
+                        aura:id="idAdditionalRequest"
+                        isDoesNotKnowChecked = "{!v.isDoesNotKnowChecked}"
+                        strPaymentAmount = "{!v.strPaymentAmount}"
+                    IsDelegatedSpeciality = "{!v.IsDelegatedSpeciality}"
+                    isApPolicy = "{!v.isApPolicy}"
+                    additionalFieldsValidation="{!v.additionalFieldsValidation}"
+                    showSpinnerForFacetsSubmit="{!v.showSpinnerForFacetsSubmit}"
+                    strTatProvided="{!v.strTatProvided}"
+                    showExceptedPaymentAmount="{!v.showExceptedPaymentAmount}"/>
+                <aura:if isTrue="{!v.showSendToSection}">
+                    <c:ACET_SendToReqNonClaims objSendToHeader="{!v.objSendToHeader}"
+                        selectedSendValue = "{!v.selectedSendValue}"
+                        individualRadioValue = "{v.individualRadioValue}"
+                        whereConditionForAdvocate = "{!v.whereConditionForAdvocate}"
+                        officeFieldsRequiredSymbol = "{!v.officeFieldsRequiredSymbol}"
+                        sendToListInputs = "{!v.sendToListInputs}"
+                        disableQuickListField = "{!v.disableQuickListField}"
+                        disableRoleField = "{!v.disableRoleField}"
+                        isRoleFieldSelected = "{!v.isRoleFieldSelected}"
+                        TeamQuickListReload = "{!v.TeamQuickListReload}"
+                        disableOfficeField = "{!v.disableOfficeField}"
+                        isOfficeSelected = "{!v.isOfficeSelected}"
+                        disableDepartmentField = "{!v.disableDepartmentField}"
+                        isDepartmentSelected = "{!v.isDepartmentSelected}"
+                        disableTeamField = "{!v.disableTeamField}"
+                        isTeamSelected = "{!v.isTeamSelected}"
+                        teamReload = "{!v.teamReload}"
+                        individualOptions = "{!v.individualOptions}"
+                        disableIndividualField = "{!v.disableIndividualField}"
+                        orsMap="{!v.orsMap}"
+                        showSpinner = "{!v.showSpinner}"
+                        IsDelegatedSpeciality = "{!v.IsDelegatedSpeciality}"
+                        aura:id="idSendToNonClaims"
+                        whereTTSTopic ="{!v.whereTTSTopics}"
+                        lstSelectedRoutedProviders ="{!v.lstSelectedRoutedProviders}"
+                                               /><!--DE418730 - Sravan-->
+                </aura:if>
+                </div>
+            </div>
+    </aura:if>
+</aura:component>

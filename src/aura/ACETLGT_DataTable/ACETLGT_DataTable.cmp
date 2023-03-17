@@ -1,0 +1,151 @@
+<aura:component controller="ACETLGT_DataTable_Controller" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global">
+    <!-- PageFeature -->
+    <aura:attribute name="providerDT" type="String" />
+    <aura:attribute name="ProviderDTId" type="String" />
+    <!-- End -->
+    <aura:attribute name="lgt_dt_DT_Object" type="Object" />
+    <aura:attribute name="lgt_dt_serviceObj" type="Object" />
+    <aura:attribute name="lgt_dt_serviceName" type="String" />
+    <aura:attribute name="lgt_dt_columns" type="list" />
+    <aura:attribute name="lgt_dt_Responce" type="Object" />
+    <aura:attribute name="lgt_dt_isPagenationReq" type="Boolean" default="true" />
+    <aura:attribute name="lgt_dt_SortingReq" type="Boolean" default="true" />
+    <aura:attribute name="lgt_dt_SortBy" type="Integer" default="-1" />
+    <aura:attribute name="lgt_dt_SortDir" type="String" default="off" />
+    <aura:attribute name="lgt_dt_StartRecord" type="Integer" default="0" />
+    <aura:attribute name="lgt_dt_PageStartNumber" type="Integer" default="0" />
+    <aura:attribute name="lgt_dt_PageSize" type="integer" />
+    <aura:attribute name="lgt_dt_PageNumber" type="integer" default="0" />
+    <aura:attribute name="lgt_dt_totalPages" type="integer" />
+    <aura:attribute name="lgt_dt_currentPageNumber" type="integer" />
+    <aura:attribute name="lgt_dt_pageList" type="list" />
+    <aura:attribute name="lgt_dt_table_ID" type="String" />
+    <aura:attribute name="lgt_dt_table_name" type="String" />
+    <aura:attribute name="lgt_dt_searching" type="String" default="false" />
+    <aura:attribute name="lgt_dt_entries_info" type="String" />
+    <aura:attribute name="lgt_dt_Loadingspinner" type="Boolean" />
+    <aura:attribute name="lgt_dt_lock_headers" type="String" />
+    <aura:attribute name="lgt_dt_auto_doc_clm_index" type="String" default="address"/>
+	<aura:attribute name="lgt_dt_section_header" type="String" />
+    <aura:attribute name="lgt_dt_section_caseitem" type="Boolean" default="true" />
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+    <aura:attribute name="pageFeature" type="string" access="public" />
+    <aura:attribute name="uniqueKeys" type="string" access="public" default="1,2"/>
+    
+    <aura:attribute name="firstName" type="String" access="global" default="" />
+    <aura:attribute name="lastName" type="String" access="global" default="" />
+    <aura:attribute name="birthDate" type="String" access="global" default="" />
+    <aura:attribute name="srk" type="String" access="global" default="" />
+    
+    <!-- Sanka US2185476 - Additional Address -->
+    <aura:attribute name="lgt_dt_has_data" type="boolean" default="false"/>
+
+    <!-- Sanka US1958733 -->
+    <aura:attribute name="selectedProviders" type="object[]"/>
+
+    <!-- Sanka - US2192945 - Provider Lookup Launch Changes-->
+    <aura:attribute name="lgt_dt_is_ad_enabled" type="boolean" default="true"/>
+    <aura:attribute name="lgt_disable_pagination" type="boolean" default="false"/>
+    
+    <!--Conditional Error Messages-->
+    <aura:attribute name="lgt_enable_errorMsg" type="boolean" default="false"/>
+
+    <!-- US2396710 - Thanish - 26th Feb 2020 -->
+    <aura:attribute name="lgt_disable_resolved_checkbox" type="boolean" default="false"/>
+
+    <!-- US2320729 - Sanka autodoc refresh -->
+    <aura:attribute name="lgt_autodoc_refresh" type="boolean" default="true"/>
+
+    <!--US2670819 - Provider Lookup - Fixes - Sravan-->
+    <aura:attribute name="showProviderResultsInfo" type="Boolean" default="false"/>
+
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:method name="tableinit" action="{!c.tableinit}" access="PUBLIC" />
+    <aura:method name="clearTable_event" action="{!c.clearTable_event}" access="PUBLIC" />
+    <aura:registerEvent name="ACETLGT_DataTable_Callback_Event" type="c:ACETLGT_DataTable_Callback_Event" />
+    <aura:registerEvent name="ACETLGT_DataTable_SetPageNumber_Event" type="c:ACETLGT_DataTable_SetPageNumber_Event" />
+    <aura:registerEvent name="ACETLGT_DataTable_createdRow_Event" type="c:ACETLGT_DataTable_createdRow_Event" />
+    <aura:registerEvent name="ACETLGT_DataTable_initComplete_Event" type="c:ACETLGT_DataTable_initComplete_Event" />
+	<!--<aura:registerEvent name="ACETLGT_ProviderContractsEvent" type="c:ACETLGT_ProviderContractsEvent"/>-->
+	<ltng:require styles="{! $Resource.datatable + '/DataTables-1.10.16/media/css/jquery.dataTables.min.css'}" 
+                  scripts="{!join(',', 
+                           $Resource.jquery224 , 
+                           $Resource.datatable + '/DataTables-1.10.16/media/js/jquery.dataTables.min.js')
+                           }" afterScriptsLoaded="{!c.onLoad}" />
+      <aura:if isTrue="{! v.lgt_dt_Loadingspinner }">
+        <lightning:spinner alternativeText="Loading" size="medium" variant="brand" />
+    </aura:if>
+ <div id="{! v.lgt_dt_table_ID +'_tablewrapper'}">
+  
+   
+    <!--<div data-auto-doc-section-key="pbSearchResults" data-auto-doc-section-column-indexes="{!v.lgt_dt_auto_doc_clm_index}" >
+		<div data-auto-doc="true" data-auto-doc-case-items="true" data-auto-doc-pagination="true">
+			<span data-auto-doc-pagination="true" class="enablePagination" data-auto-doc-section-combinedkey="pbSearchResults" data-auto-doc-section-tabid="">-->
+    <aura:if isTrue="{!v.lgt_dt_searching}">
+        <div align="right">
+            <!-- <div class="slds-col slds-size_1-of-4 lgt_dt_searchboxcls searchBoxFix"
+                style="margin-top: -30px;margin-bottom: 5px;margin-right: 15px;">
+                Search:<input type="text" id="name" name="name" onkeyup="{!c.searchintable}" onkeydown="{!c.searchintable}" />
+            </div> -->
+            <div class="slds-col slds-size_1-of-4 lgt_dt_searchboxcls searchBoxFix"
+                style="margin-top: -30px;margin-bottom: 5px;margin-right: 15px;">
+                <input placeholder="Search" type="text" id="name" name="name" onkeyup="{!c.searchintable}" onkeydown="{!c.searchintable}" />
+            </div>
+        </div>
+    </aura:if>
+    <div style="overflow-x:auto;">
+        <!-- DE318086 - Thanish - 9th Apr 2020 -->
+        <div class="{!(v.lgt_disable_resolved_checkbox) ? 'autodocTableView selectedSection noResolveCheckBox' : 'autodocTableView selectedSection'}" data-auto-doc="{!v.lgt_dt_is_ad_enabled}" data-auto-doc-pagination="true"
+            data-auto-doc-case-items="{!v.lgt_dt_section_caseitem}" data-auto-doc-feature="{!v.pageFeature}" id="{! v.lgt_dt_table_ID + '_section'}" data-auto-doc-uniqueids="{!v.uniqueKeys}"
+             data-auto-doc-section-key="{!v.lgt_dt_section_header}">
+            <table id="{!v.lgt_dt_table_ID}"
+                class="dynamic_table slds-table autodocPagination slds-no-row-hover slds-table_bordered slds-table_cell-buffer auto-doc-list"
+                style="width:100% !important;">
+            </table>
+        </div>
+    </div>
+    <!--</span>
+		</div>
+	</div>-->
+    <aura:if isTrue="{!v.lgt_dt_isPagenationReq}">
+        <div align="left" id="{!v.lgt_dt_table_ID+'_entries_info_div_id'}"
+            class="slds-p-around_x-small lgt_dt_entries_info_div_cls">{!v.lgt_dt_entries_info}
+        </div>
+        <div align="center" class="" style="margin-top: -18px;">
+            <lightning:layout multipleRows="true" horizontalalign="center">
+                <lightning:layoutItem padding="around-small" flexibility="auto" class="lgt_dt_pagenation_container">
+                    <lightning:button label="First" iconName="utility:left" iconPosition="left" 
+                    onclick="{!c.onFirst}" disabled="{! v.lgt_dt_currentPageNumber == 1}" />
+                    <lightning:button iconName="utility:chevronleft" iconPosition="left" 
+                    onclick="{!c.onPrev}" disabled="{! v.lgt_dt_currentPageNumber == 1}" />
+					<span class="slds-p-horizontal_x-small">
+						<a  name="1" 
+                       class="selected_page_cls" style="color:orange">{!v.lgt_dt_currentPageNumber}</a>
+					</span>
+					<span class="slds-p-horizontal_xxx-small">
+                        <a>...</a>
+					</span>
+                    <aura:iteration items="{!v.lgt_dt_pageList}" var="item">
+                        <span class="slds-p-horizontal_x-small">
+                            <a id="selectpage" onclick="{!c.processMe}" name="{!item}"
+                                class="{! (v.lgt_dt_currentPageNumber == item) ? 'selected' : ''}">{!item}</a>
+                        </span>
+                    </aura:iteration>
+                    <aura:if isTrue="{!and(v.lgt_dt_totalPages > '11',v.lgt_dt_totalPages != v.lgt_dt_currentPageNumber)}">
+                        <span class="slds-p-horizontal_xxx-small">
+                            <a>...</a>
+                        </span>
+                        <span class="slds-p-horizontal_x-small">
+                            <a name="1" class="selected_page_cls" onclick="{!c.onLast}">{!v.lgt_dt_totalPages}</a>
+                        </span>
+                    </aura:if>
+                    <lightning:button iconName="utility:chevronright" iconPosition="right"
+                        disabled="{! (v.lgt_dt_currentPageNumber == v.lgt_dt_totalPages) || v.lgt_disable_pagination}" onclick="{!c.onNext}" />
+                    <lightning:button label="Last" iconName="utility:right" iconPosition="right"
+                        disabled="{! (v.lgt_dt_currentPageNumber == v.lgt_dt_totalPages) || v.lgt_disable_pagination}" onclick="{!c.onLast}" />
+                </lightning:layoutItem>
+            </lightning:layout>
+        </div>
+    </aura:if>
+    </div>
+</aura:component>

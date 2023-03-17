@@ -1,0 +1,340 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes" access="global">
+
+    <!--US1918611 - Claim Search Results UI
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}" /> -->
+    <!--US2817735-->
+    <aura:attribute name="showComments" type="boolean" default="false" access="public"/>
+    <!--US2817735-->
+   <!--<aura:attribute name="claimsList" type="Object[]" />-->
+   <aura:attribute name="filteredClaims" type="Object" />
+   <aura:attribute name="arrowDirection" type="string" default="arrowdown" description="Use for change arrow sign direction on header based on click"/>
+   <aura:attribute name="isAsc" type="boolean" default="true" description="boolean flag for pass sorting condition to apex class"/>
+   <aura:attribute name="sortBy" type="string" default="firstName" description="Use for show/hide arraow sign on header based on conditions"/>
+   <aura:attribute name="selectRow" type="Integer" default="0" />
+   <aura:attribute name="defaultRecords" type="Integer" default="5" />
+   <aura:attribute name="numStart" type="Integer" default="0" />
+   <aura:attribute name="selectedItem" type="string" />
+   <aura:attribute name="interactionRec" type="Interaction__c"/>
+    <!--US1974673: Bharat -->
+    <aura:attribute name="firstRun" type="string" default='true'/>
+    <aura:attribute name="mouseStart" type="string" />
+    <aura:attribute name="newWidth" type="string" />
+    <aura:attribute name="currentEle" type="Object" />
+  <!-- <aura:attribute name="arrowDirection" type="string" default="arrowdown" description="Use for change arrow sign direction on header based on click"/>-->
+    <!--<aura:attribute name="isAsc" type="boolean" default="true" description="boolean flag for pass sorting condition to apex class"/> -->
+    <aura:attribute name="selectedTabsoft" type="string" default="firstName" description="Use for show/hide arraow sign on header based on conditions"/>
+   <!--US1956058 : Malinda-->
+   <aura:registerEvent name="claimDetailsEvent" type="c:SAE_ClaimDetailsEvent"/>
+   <aura:attribute name="selectedRows" type="String[]"/>
+
+    <aura:attribute name="isHippaInvokedInProviderSnapShot" type="Boolean" default="false"/>
+    <aura:attribute name="AutodocKey" type="string" access="public"/>
+    <aura:attribute name="AutodocPageFeature" type="String" />
+   <aura:attribute name="commentsValue" type="String" default=""  access="public"/>
+     <aura:attribute name="interactionOverviewTabId" type="String" />
+    <aura:attribute name="caseWrapperMNF" type="SAETTSCaseWrapper" access="public"/>
+    <aura:attribute name="caseWrapper" type="SAETTSCaseWrapper" access="public" />
+    <aura:handler name="change" value="{!v.caseWrapper}" action="{!c.wrapperChange}"/>
+    <aura:attribute name="isModalOpen" type="boolean" default="false"/>
+    <aura:handler name="closeModalBox" event="c:SAE_TtsModalCloseEvent" action="{!c.closeModal}"/>
+       <aura:attribute name="claimsList" type="Object[]" />
+    <aura:attribute name="claimsFullList" type="Object[]" />
+    <aura:attribute name="selectedClaimsForORS" type="Object[]" />
+     <!-- US2876410 ketki 9/11:  Launch Claim Detail Page-->
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute type="Map" name="TabMap" />
+    <aura:handler event="lightning:tabClosed" action="{! c.onTabClosed }" />
+
+    <aura:attribute name="contactUniqueId" type="string" access="public" />
+    <aura:attribute name="memberTabId" type="string" access="public" default="abc"/>
+    <aura:attribute name="hipaaEndpointUrl" type="String" default=""/>
+    <!-- US2876410 ketki 9/11:  Launch Claim Detail Page-->
+        <!--US1918617 Venkat added: dont change below change action  Pagination 54 to 69-->
+    <aura:handler name="change" value="{!v.claimsList}" action="{!c.handleClaimSearchViewResultEvent}" />
+    <aura:attribute name="claimLst" type="Object[]" />
+        <aura:attribute name="data" type="Object"/>
+   <aura:attribute name="newClaimLst" type="List" />
+    <aura:attribute name="claimSearchResultPag" type="Object[]"/>
+        <aura:attribute name="claimSearchFlag" type="Boolean" default="false"/>
+
+    <aura:attribute name="paginationBtnDisable" type="Boolean" default="false" />
+
+
+    <aura:attribute name="currentPageNumber" type="Integer" default="1"/>
+    <aura:attribute name="currentStartNumber" type="Integer" default="0"/>
+    <aura:attribute name="currentEndNumber" type="Integer"/>
+    <aura:attribute name="pageSize" type="Integer" default="50"/>
+    <aura:attribute name="totalPages" type="Integer" default="0"/>
+    <aura:attribute name="pageList" type="List"/>
+    <aura:attribute name="sortDirection" type="String" default="desc"/>
+
+
+   <div style="width:99.5%" class="slds-is-relative">
+      <div class="slds-card__header slds-grid slds-p-top_medium">
+        <header class="slds-media slds-media_center slds-has-flexi-truncate">
+          <div class="slds-media__body slds-p-left_x-small">
+           <!-- <h2 class="slds-card__header-title">
+                <span class="slds-text-heading_large slds-text-title_bold">Claim Results</span>
+            </h2>-->
+               <p class="component_title ">Claim Results</p>
+       </div>
+          <div class="slds-no-flex">
+            <lightning:buttonGroup>
+                  <!--US2817735-->
+                    <lightning:button class="slds-button slds-button_neutral neutral_button" variant="neutral" label="Autodoc"/>
+                        <aura:if isTrue="{!!v.showComments}">
+                            <lightning:button class="slds-button slds-button_neutral neutral_button "
+                                              variant="neutral" label="Add Comments" onclick="{!c.commentsShow}"/>
+                            <aura:set attribute="else">
+                                <lightning:button variant="brand" label="Add Comments" disabled="true"/>
+                            </aura:set>
+                        </aura:if>
+                		<!--US2817735-->
+                    <lightning:button class="slds-button slds-button_brand" variant="brand" label="Save Case" onclick="{!c.openModal}"/>
+              </lightning:buttonGroup>
+          </div>
+        </header>
+      </div>
+      <div class="slds-card__body slds-card__body_inner">
+          <div class="slds-grid slds-wrap">
+              <div class="slds-col slds-size_12-of-12">
+                  <div style="display: inline-flex;float: right;">
+                      <lightning:input aura:id="DeductibleId" checked="false" type="checkbox" label="Deductible Only" style="padding-top: 20px;" onclick="{!c.deductibleSelect}"/> <!-- Bharath Added:10/5/2020 -->
+                      <lightning:input aura:id="AppliedId" checked="false" type="checkbox" label="Applied to OOP" style="padding-top: 20px;" onclick="{!c.appliedSelect}"/> <!-- Bharath Added:10/5/2020 -->
+                   <!--   <lightning:input placeholder="Search" type=""/>-->
+                       <lightning:input  name="fieldToSearch" aura:id="SearchID" placeholder="Search"
+                            onchange="{!c.searchValueFunc}"/>
+                  </div>
+              </div>
+          </div>
+        <div class="slds" style="width:100%">
+            <div class="slds-col slds-size_12-of-12">
+              <div class="slds-p-top_small slds-p-bottom_large slds-p-left_small" >
+  	<div class="container" onmouseup="{!c.resetColumn}">
+              <!--US1918617 Venkat added: 118-->
+               <div class="slds-scrollable" style="height:18rem">
+                      <table class="slds-table slds-table--bordered slds-table--cell-buffer slds-table_resizable-cols">
+                        <thead>
+                            <tr class="slds-text-title--caps">
+                                <th scope="col" style="width: 2%;"></th>
+                                <th class="slds-is-sortable slds-text-title--caps" scope="col" data-fieldName="claimNumber" onclick="{!c.handleSort}">
+                                    <a href="javascript:void(0);" class="slds-th__action slds-text-link--reset">
+                                        <span class="slds-assistive-text">Sort</span>
+                                        <span class="slds-truncate" title="CLAIM #" style="margin-left: 0;">CLAIM #</span>
+                                        <c:SAE_TableColumnButtonMenu columnMenuID="0" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                        <aura:if isTrue="{! and(v.arrowDirection == 'arrowdown', v.selectedTabsoft == 'claimNumber') }">&nbsp;  &#9660; </aura:if>
+                                        <aura:if isTrue="{! and(v.arrowDirection != 'arrowdown', v.selectedTabsoft == 'claimNumber') }"> &nbsp;  &#9650; </aura:if>
+                                    </a>
+                                </th> <!-- onclick="{!c.sortDepartment}" -->
+
+                                <th class="slds-is-sortable slds-text-title--caps" scope="col" data-fieldName="taxID" onclick="{!c.handleSort}">
+                                    <a href="javascript:void(0);" class="slds-th__action slds-text-link--reset">
+                                        <span class="slds-assistive-text">Sort</span>
+                                        <span class="slds-truncate" title="TAX ID" style="margin-left: 0;">TAX ID</span>
+                                        <c:SAE_TableColumnButtonMenu columnMenuID="0" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                        <aura:if isTrue="{! and(v.arrowDirection == 'arrowdown', v.selectedTabsoft == 'taxID') }">&nbsp;  &#9660;</aura:if>
+                                        <aura:if isTrue="{! and(v.arrowDirection != 'arrowdown', v.selectedTabsoft == 'taxID') }">&nbsp;  &#9650;</aura:if>
+                                    </a>
+                                </th>
+
+                            <th class="slds-is-sortable slds-text-title--caps" scope="col" data-fieldName="providerID" onclick="{!c.handleSort}">
+                                    <a href="javascript:void(0);" class="slds-th__action slds-text-link--reset">
+                                        <span class="slds-assistive-text">Sort</span>
+                                        <span class="slds-truncate" title="PROVIDER ID" style="margin-left: 0;">PROVIDER ID</span>
+										<c:SAE_TableColumnButtonMenu columnMenuID="0" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                    <aura:if isTrue="{! and(v.arrowDirection == 'arrowdown', v.selectedTabsoft == 'providerID') }">&nbsp;  &#9660;</aura:if>
+                                    <aura:if isTrue="{! and(v.arrowDirection != 'arrowdown', v.selectedTabsoft == 'providerID') }">&nbsp;  &#9650;</aura:if>
+                                    </a>
+                                </th>
+
+                                <th class="slds-is-sortable slds-text-title--caps" scope="col" data-fieldName="providerName" onclick="{!c.handleSort}">
+                                    <a href="javascript:void(0);" class="slds-th__action slds-text-link--reset">
+                                        <span class="slds-assistive-text">Sort</span>
+                                        <span class="slds-truncate" title="PROVIDER NAME" style="margin-left: 0;">PROVIDER NAME</span>
+                                        <c:SAE_TableColumnButtonMenu columnMenuID="0" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                        <aura:if isTrue="{! and(v.arrowDirection == 'arrowdown', v.selectedTabsoft == 'providerName') }">&nbsp;  &#9660;</aura:if>
+                                        <aura:if isTrue="{! and(v.arrowDirection != 'arrowdown', v.selectedTabsoft == 'providerName') }">&nbsp;  &#9650;</aura:if>
+                                    </a>
+                                </th>
+
+                                <th class="slds-is-sortable slds-text-title--caps" scope="col" data-fieldName="DOSStart" onclick="{!c.handleSort}">
+                                    <a href="javascript:void(0);" class="slds-th__action slds-text-link--reset">
+                                        <span class="slds-assistive-text">Sort</span>
+                                        <span class="slds-truncate" title="SERVICE DATES" style="margin-left: 0;">SERVICE DATES</span>
+                                        <c:SAE_TableColumnButtonMenu columnMenuID="0" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                        <aura:if isTrue="{! and(v.arrowDirection == 'arrowup', v.selectedTabsoft == 'DOSStart') }">&nbsp;  &#9660;</aura:if>
+                                        <aura:if isTrue="{! and(v.arrowDirection != 'arrowup', v.selectedTabsoft == 'DOSStart') }">&nbsp;  &#9650;</aura:if>
+                                    </a>
+                                </th>
+
+                                <th class="slds-is-sortable slds-text-title--caps" scope="col" data-fieldName="charged" onclick="{!c.handleSort}">
+                                    <a href="javascript:void(0);" class="slds-th__action slds-text-link--reset">
+                                        <span class="slds-assistive-text">Sort</span>
+                                        <span class="slds-truncate" title="CHARGED" style="margin-left: 0;">CHARGED</span>
+                                        <c:SAE_TableColumnButtonMenu columnMenuID="0" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                        <aura:if isTrue="{! and(v.arrowDirection == 'arrowdown', v.selectedTabsoft == 'charged') }">&nbsp;  &#9660;</aura:if>
+                                        <aura:if isTrue="{! and(v.arrowDirection != 'arrowdown', v.selectedTabsoft == 'charged') }">&nbsp;  &#9650;</aura:if>
+                                    </a>
+                                </th>
+
+                            <th class="slds-is-sortable slds-text-title--caps" scope="col" data-fieldName="status" onclick="{!c.handleSort}">
+                                    <a href="javascript:void(0);" class="slds-th__action slds-text-link--reset">
+                                        <span class="slds-assistive-text">Sort</span>
+                                        <span class="slds-truncate" title="STATUS" style="margin-left: 0;">STATUS</span>
+                                        <c:SAE_TableColumnButtonMenu columnMenuID="0" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                   		<aura:if isTrue="{! and(v.arrowDirection == 'arrowdown', v.selectedTabsoft == 'status') }">&nbsp;  &#9660;</aura:if>
+                                    	<aura:if isTrue="{! and(v.arrowDirection != 'arrowdown', v.selectedTabsoft == 'status') }">&nbsp;  &#9650;</aura:if>
+                                    </a>
+                                </th>
+
+                                <th class="slds-is-sortable slds-text-title--caps" scope="col" data-fieldName="receivedDate" onclick="{!c.handleSort}">
+                                    <a href="javascript:void(0);" class="slds-th__action slds-text-link--reset">
+                                        <span class="slds-assistive-text">Sort</span>
+                                        <span class="slds-truncate" title="RECEIVED DATE" style="margin-left: 0;">RECEIVED DATE</span>
+                                        <c:SAE_TableColumnButtonMenu columnMenuID="0" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                        <aura:if isTrue="{! and(v.arrowDirection == 'arrowdown', v.selectedTabsoft == 'receivedDate') }">&nbsp;  &#9660;</aura:if>
+                                        <aura:if isTrue="{! and(v.arrowDirection != 'arrowdown', v.selectedTabsoft == 'receivedDate') }">&nbsp;  &#9650;</aura:if>
+                                    </a>
+                                </th>
+                                <th class="slds-is-sortable slds-text-title--caps" scope="col" data-fieldName="processDate" onclick="{!c.handleSort}">
+                                    <a href="javascript:void(0);" class="slds-th__action slds-text-link--reset">
+                                        <span class="slds-assistive-text">Sort</span>
+                                        <span class="slds-truncate" title="PROCESSED DATE" style="margin-left: 0;">PROCESSED DATE</span>
+                                        <c:SAE_TableColumnButtonMenu columnMenuID="0" selectedColumn="{! v.selectedColumn }" selectedOption="{! v.selectedOption }" />
+                                        <aura:if isTrue="{! and(v.arrowDirection == 'arrowdown', v.selectedTabsoft == 'processDate') }">&nbsp;  &#9660;</aura:if>
+                                        <aura:if isTrue="{! and(v.arrowDirection != 'arrowdown', v.selectedTabsoft == 'processDate') }">&nbsp;  &#9650;</aura:if>
+                                    </a>
+                                </th>
+                            </tr>
+                        </thead>
+                        <!--table body start, Iterate contact list as a <tr> -->
+                          	 <!--US1918617 Venkat added: 239-->
+                        <tbody onmousemove="{!c.resetColumn}">
+                         <aura:iteration items="{!v.data}" var="clm" indexVar="i" >
+                            <!--US1956058 : Malinda-->
+                            <tr id="{! 'tr' + i }" class="{! ' dummycls ' +  (if(equals(abs(i), abs(v.selectedItem)), ' highlight ', '')) }" data-index="{!i}" data-clm="{!clm.claimNumber}" data-date="{!clm.processDate}">
+                               <td scope="row" class="slds-text-align_left">
+                                  <div class="slds-form-element">
+                                     <div class="slds-form-element__control">
+                                        <div class="slds-checkbox">
+                                           <input aura:id="CheckedClaimId" class="cbList"
+                                                  type="checkbox" id="{! 'cb' + i }"
+                                                  onchange="{!c.handleChange}"
+                                                  checked="false"
+                                                  value="{! 'cb' + i }"
+                                                 />
+                                           <!--<lightning:input aura:id="CheckedClaimId" class="cbList" checked="false" type="checkbox"/> -->
+                                            <label class="slds-checkbox__label" for="{! 'cb' + i }">
+                                              <span class="slds-checkbox_faux"></span>
+                                              <span class="slds-form-element__label"></span>
+                                           </label>
+                                        </div>
+                                     </div>
+                                  </div>
+                               </td>
+                               <td data-label="Claim Number" data-clm="{!clm.claimNumber}" onclick="{!c.selectItem}" data-row-index="{!i}">
+                                  <div class="slds-truncate slds-text-align_left" title="{! clm.ClaimNumber }"><a>{! clm.claimNumber }</a></div>
+                               </td>
+                               <td data-label="Tax ID">
+                                  <div class="slds-truncate slds-text-align_left" title="{! clm.TaxId }">{! clm.taxID }</div>
+                               </td>
+                               <td data-label="Provider ID">
+                                  <div class="slds-truncate slds-text-align_left" title="{! clm.ProviderId }">{! clm.providerID }</div>
+                               </td>
+                               <td data-label="Provider Name" >
+
+                               <div class="slds-truncate slds-text-align_left" title="{! clm.ProviderName }">{! clm.providerName }</div>
+                               </td>
+                               <td data-label="Service Date(s)" >
+                                  <div class="slds-truncate slds-text-align_left" title="{! clm.DOSStart }">{! clm.DOSStart } - {! clm.DOSEnd }</div>
+                               </td>
+                              <!-- <td data-label="DOS End">
+                                  <div class="slds-truncate slds-text-align_left" title="{! clm.DOSEnd }">{! clm.DOSEnd }</div>
+                               </td>-->
+                               <td data-label="Charged" data-Charged="{!clm.charged}">
+                                  <div class="slds-truncate slds-text-align_left" title="{! clm.Charged }">{! clm.charged }</div>
+                               </td>
+                               <td data-label="Status">
+                                  <div class="slds-truncate slds-text-align_left" title="{! clm.Status }">{! clm.status }</div>
+                               </td>
+                               <td data-label="Recieved Date">
+                                  <div class="slds-truncate slds-text-align_left" title="{! clm.RecievedDate }">{! clm.receivedDate }</div>
+                               </td>
+                               <td data-label="Process Date">
+                                  <div class="slds-truncate slds-text-align_left" title="{! clm.ProcessDate }">{! clm.processDate }</div>
+                               </td>
+                            </tr>
+                         </aura:iteration>
+                            <aura:if isTrue="{!v.claimSearchFlag}">
+                                <tr><td colspan="12" ><center>No records found.</center></td></tr>
+                            </aura:if>
+
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                  </div>
+            </div>
+          </div>
+        <!-- <lightning:layout class="slds-p-top_small-xx slds-p-left_large">
+             <lightning:layoutItem class="slds-p-right_medium">
+                   <lightning:button class="btnSize" variant="neutral" label="Previous" onclick="{! c.prevRecords }" />
+                </lightning:layoutItem>
+                <lightning:layoutItem class="slds-p-left_small-xxx">
+                      <lightning:button class="btnSize" variant="neutral" label="Next" onclick="{! c.nextRecords }" />
+                </lightning:layoutItem>
+          </lightning:layout>-->
+          <!--US1918617 Venkat added  307 to 345-->
+ <aura:if isTrue="{!v.claimSearchFlag==false}">
+          <lightning:layoutItem padding="around-small" flexibility="auto">
+                 <!-- venkat commetn  <lightning:button label="First" iconName="utility:left" iconPosition="left"
+                                    onclick="{!c.onFirst}" disabled="{! v.currentPageNumber == 1}"/> -->
+              <div class="slds-align_absolute-center" style="height:5rem">
+                    <lightning:button iconName="utility:chevronleft" iconPosition="left"
+                                      onclick="{!c.onPrev}" disabled="{! v.currentPageNumber == 1}"/>
+                    <span class="slds-p-horizontal_x-small">
+                        <a onclick="{!c.processMe}" name="1"
+                        class="{! (v.currentPageNumber == 1) ? 'selected' : ''}">1</a>
+                    </span>
+
+                    <span class="slds-p-horizontal_xxx-small">
+                        <a>...</a>
+                    </span>
+
+                    <aura:iteration items="{!v.pageList}" var="item">
+                        <span class="slds-p-horizontal_x-small">
+                            <a onclick="{!c.processMe}" name="{!item}"
+                            class="{! (v.currentPageNumber == item) ? 'selected' : ''}">{!item}</a>
+                        </span>
+                    </aura:iteration>
+
+                    <span class="slds-p-horizontal_xxx-small">
+                        <a>...</a>
+                    </span>
+                    <span class="slds-p-horizontal_x-small">
+                        <a onclick="{!c.processMe}" name="{!v.totalPages}"
+                        class="{! (v.currentPageNumber == v.totalPages) ? 'selected' : ''}">{!v.totalPages}</a>
+                    </span>
+
+                    <lightning:button iconName="utility:chevronright" iconPosition="right"
+                                      disabled="{! v.currentPageNumber == v.totalPages}" onclick="{!c.onNext}"/></div>
+             <!--VEnkat commetn       <lightning:button label="Last" iconName="utility:right" iconPosition="right"
+                                  disabled="{! or(v.currentPageNumber == v.totalPages,v.paginationBtnDisable)}" onclick="{!c.onLast}"/>-->
+                </lightning:layoutItem>
+
+          </aura:if>
+      </div>
+   </div>
+
+    <aura:if isTrue="{!v.isModalOpen}">
+            <!--US1875495 : Malinda - sending case data to the TTS popup model -->
+            <c:SAE_TtsModalCaseCreation Topic="View Claims" caseWrapper="{!v.caseWrapperMNF}"
+                                        isModalOpen="{!v.isModalOpen}"
+                                       	pagefeature="{!v.AutodocPageFeature}"
+                                        AutodocKey="{!v.AutodocKey}"
+										freeFormCommentsVal="{!v.commentsValue}"
+                                        />
+            <!-- US2119567 - Thanish - 20th Nov 2019 -->
+    </aura:if>
+
+</aura:component>

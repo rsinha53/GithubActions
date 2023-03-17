@@ -1,0 +1,223 @@
+<aura:component controller="ADBHealthAssessmentController">
+
+    <!--  Component attributes for Health Assessment - Values are coming from apex class -->
+    <aura:attribute name="completion_Date" type="String"/>
+    <aura:attribute name="condition" type="String"/>
+    <aura:attribute name="hoverRow" type="Integer" default="-1" />
+    <!-- DE321368: added below line for hover issue -  Saikolluru [04/23/2020] -->
+    <aura:attribute name="AvlhoverRow" type="Integer" default="-1" />
+    <aura:attribute name="memberId" type="String"/>
+    <!-- Big 5/Attributes for Health Assessment service-->
+    <aura:attribute name="decodedMemberId" type="String"/>
+    <aura:attribute name="memFirstName" type="String"/>
+    <aura:attribute name="memLastName" type="String"/>
+    <aura:attribute name="memberDob" type="String"/>
+    <aura:attribute name="memberPolicy" type="String"/>
+    <aura:attribute name="completedActivities" type="ADBRallyIncentiveRequestWrapper.Activities"/>
+    <aura:attribute name="pendingActivities" type="ADBRallyIncentiveRequestWrapper.Activities"/>
+    <aura:attribute name="planDetails" type="ADBRallyIncentiveRequestWrapper.Plan"/>
+    <aura:attribute name="planName" type="String"/>
+    <aura:attribute name="startDate" type="String"/>
+    <aura:attribute name="endDate" type="String"/>
+    <aura:attribute name="completionDate" type="List"/>
+    <aura:attribute name="totalCOinYield" type="Integer"/>
+    <aura:attribute name="dataNotLoaded" type="boolean" default="true"/>
+    <aura:attribute name="agentUserId" type="String"/>
+    <aura:attribute name="memberXrefId" type="String" />
+    <!-- / Component attributes for Health Assessment.-->
+    <aura:attribute name="isHealthInsShow" type="boolean" default="true"/>
+    <aura:attribute name="calloutStatus" type="String"/>
+    <aura:attribute name="isLoaded" type="boolean" default="false"/>
+
+    <aura:if isTrue="{!v.isHealthInsShow}">   
+        <!-- content renders if true --> 
+        <div class="chevron slds-grid slds-gutters slds-p-left_small">
+            <div class="slds-col slds-size_9-of-12">
+                <div class="slds-float--left ">
+                    <img id="rightArrow" src="{!$Resource.ADB_Chevron + '/ADB_Chevron/Right.png'}" style="width:20px;height:20px;"
+                         onclick="{!c.showHealthInsCard}"/>
+                </div>
+                <div class="sub-headline-chevron slds-m-left--large">Health Assessment &amp; Incentives</div>
+            </div>
+        </div>
+        <aura:set attribute="else">
+            <div class="chevron slds-grid slds-gutters slds-p-left_small">
+                <div class="slds-col slds-size_9-of-12">
+                    <div class="slds-float--left ">
+                        <img src="{!$Resource.ADB_Chevron + '/ADB_Chevron/Down.png'}" style="width:20px;height:20px;"
+                             onclick="{!c.hideHealthInsCardCard}"/>
+                    </div>
+                    <div class="sub-headline-chevron slds-m-left--large">Health Assessment &amp; Incentives</div>
+                </div>
+            </div>
+        </aura:set>
+    </aura:if>
+    <aura:if isTrue="{!v.isLoaded}">
+        <lightning:layout horizontalAlign="center" multipleRows="true">
+            <aura:if isTrue="{!v.dataNotLoaded}">
+                <div class="slds-align--absolute-center">
+            <lightning:spinner aura:id="offers_spinner" variant="brand" size="large"/>
+        </div>
+            </aura:if>
+            <!--Health Assessment contend-->
+            <lightning:layoutItem size="11" >
+                <p><a onclick="{!c.getmemberWellnessHASummary}">Health Assessment</a></p>
+                <!-- Completion Date of Health Assessment -->
+                <div>Completion Date : {!v.completion_Date}</div>
+                <!-- / Completion Date of Health Assessment -->
+                
+                <!-- Condition of Health Assessment -->
+                <div>Condition : {!v.condition}</div>
+                <!-- / Condition of Health Assessment -->
+            </lightning:layoutItem>
+            <!-- / Health Assessment contend-->
+            
+            <!--Incentives contend-->
+            <lightning:layoutItem size="11" class="slds-p-top_large">
+                <p><a onclick="{!c.getmemberWellnessDefaultAction}">Incentives</a></p>
+                <lightning:layout horizontalAlign="center" multipleRows="true">
+                    <lightning:layoutItem size="6" class="slds-p-bottom_large">
+                        <!-- Third Party Vendor Name-->
+                        <div>{!v.planName}</div>
+                        <!-- / Third Party Vendor Name-->
+                        
+                        <!-- Plan Time Duration-->
+                        <div>Plan Dates : {!v.startDate} - {!v.endDate}</div>
+                        <!-- / Plan Time Duration-->
+                    </lightning:layoutItem>
+                    
+                    <!-- Table for Completion Details-->
+                    <lightning:layoutItem size="6" class="slds-p-bottom_large">
+                        <!-- DE321359:  Incentives Font Size   Saikolluru [04/24/2020] -->
+                        <div class="slds-wrap slds-grid">
+                            <div class="slds-size_8-of-12 ">Completed</div>
+                            <div class="slds-size_4-of-12  slds-text-align_center completionDate">Completion Date</div>
+                        </div>
+                        
+                        <!-- DE321359: Incentives Font Size -  Saikolluru [04/29/2020] -->
+                        <div>
+                            <div>
+                                <!-- Iterate Health Assessment Deatails by Web Services-->
+                                <aura:iteration items="{!v.completedActivities}" var="complete" indexVar="index">
+                                    <aura:iteration items="{!v.completionDate}" var="completionDate" indexVar="act">
+                                        <aura:if isTrue="{! (index == act)}"> 
+                                            <div class="slds-wrap slds-grid">
+                                                <div class="slds-size_8-of-12">
+                                                    <div  data-index="{!index}" onmouseover="{!c.handleMouseOver}" onmouseout="{!c.handleMouseOut}" >
+                                                        {!complete.activityName}
+                                                        <!-- Hover option for Incentives-->
+                                                        <aura:if isTrue="{!v.hoverRow==index}">
+                                                            <div class="popover">
+                                                                <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left popover-content" role="tooltip">
+                                                                    <div class="slds-popover__body"> 
+                                                                        {!complete.activityDescription}
+                                                                    </div>
+                                                                </div>
+                                                            </div>    
+                                                        </aura:if>
+                                                        <!-- / Hover option for Incentives-->
+                                                    </div>
+                                                </div>
+                                                <div class="slds-size_4-of-12">
+                                                    <div class="slds-text-align_center">
+                                                        {!completionDate}
+                                                    </div>
+                                                </div>   
+                                            </div>
+                                        </aura:if>
+                                    </aura:iteration>
+                                </aura:iteration>
+                                <!-- / Iterate Health Assessment Deatails by Web Services-->
+                            </div>
+                        </div>
+                    </lightning:layoutItem>
+                    <!-- / Table for Completion Details-->
+                    
+                </lightning:layout>
+                <lightning:layout horizontalAlign="center" multipleRows="true">
+                    <lightning:layoutItem size="6" class="slds-p-top_large">
+                        <div>Individual</div>
+                        <!-- Code Block for Todays' Earning-->
+                        <div class="">
+                            <div class="block1">Earned to Date :&nbsp;</div>
+                            <div class="block1" style="color: green; font-weight: bold;">
+                                <aura:if isTrue="{!v.planDetails.awardMedia == 'DOLLARS'}">
+                               ${!v.planDetails.earnedAmount}
+                               </aura:if>
+                               <aura:if isTrue="{!v.planDetails.awardMedia == 'COINS'}">
+                                {!v.planDetails.earnedAmount} Coins
+                                </aura:if>
+                            </div>
+                            <!-- / Code Block for Todays' Earning-->
+                            <br/>
+                            <!-- Code Block for Total Earning-->
+                            <div class="block2">Total Potential Earnings :&nbsp;</div>
+                            <div class="block2" style="font-weight: bold;">
+                                <aura:if isTrue="{!v.planDetails.awardMedia == 'DOLLARS'}">
+                                    ${!v.planDetails.maxCap}
+                               </aura:if>
+                               <aura:if isTrue="{!v.planDetails.awardMedia == 'COINS'}">
+                                {!v.planDetails.maxCap} Coins
+                            </aura:if>
+                            </div>
+                            <!-- / Code Block for Total Earning-->
+                            <br/>
+                            <!-- Code Block for Coins-->
+                            <div class="block3">Coins :&nbsp;</div>
+                            <div class="block3" style="font-weight: bold;">{!v.totalCOinYield}</div>
+                            <!-- / Code Block for Coins-->
+                        </div>
+                    </lightning:layoutItem>
+                    
+                    <!-- Table for Earning Details-->
+                    <lightning:layoutItem size="6" class="slds-p-top_large">
+                        <!-- DE321359:  Incentives Font Size   Saikolluru [04/24/2020] -->
+                        <div class="slds-wrap slds-grid">
+                            <div class="slds-size_8-of-12 ">Available</div>
+                            <div class="slds-size_4-of-12   slds-text-align_center ">Potential Earnings</div>
+                        </div>
+                        <!-- DE321359:  Incentives Font Size   Saikolluru [04/24/2020] -->
+                        <div> 
+                            <div>
+                                <!-- Iterate Health Assessment Deatails by Web Services-->
+                                <aura:iteration items="{!v.pendingActivities}" var="pending" indexVar="index">
+                                    <div class="slds-wrap slds-grid">
+                                        <div class="slds-size_8-of-12 slds-p-bottom_xx-small" data-index="{!index}" onmouseover="{!c.handleAvlMouseOver}" onmouseout="{!c.handleMouseOut}" >
+                                            {!pending.activityName}
+                                            <!-- Hover option for Incentives-->
+                                            <!-- DE321368: modified below line for hover issue -  Saikolluru [04/23/2020] -->
+                                            <aura:if isTrue="{!v.AvlhoverRow==index}">
+                                                <div class="popover">
+                                                    <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left popover-content" role="tooltip" > 
+                                                        <div class="slds-popover__body"> 
+                                                            {!pending.activityDescription}
+                                                        </div>
+                                                    </div>
+                                                </div>    
+                                            </aura:if> 
+                                            <!--/ Hover option for Incentives-->
+                                        </div>
+                                        <div class="  slds-p-bottom_xx-small slds-size_4-of-12 slds-text-align_center ">
+                                            <aura:if isTrue="{!pending.reward.awardMedia == 'DOLLARS'}">
+                                                ${!pending.reward.amount}
+                                            </aura:if>
+                                            <aura:if isTrue="{!pending.reward.awardMedia == 'COINS'}">
+                                                {!pending.reward.amount} Coins
+                                            </aura:if>
+                                            <aura:if isTrue="{!pending.reward.awardMedia == 'PERCENT'}">
+                                                {!pending.reward.amount}%
+                                            </aura:if>
+                                        </div>
+                                    </div>
+                                </aura:iteration>
+                                <!-- / Iterate Health Assessment Deatails by Web Services-->
+                            </div>
+                        </div>
+                    </lightning:layoutItem>
+                    <!-- /Table for Earning Details--> 
+                </lightning:layout>
+            </lightning:layoutItem>
+            <!-- / Incentives contend-->
+        </lightning:layout>
+    </aura:if>
+</aura:component>

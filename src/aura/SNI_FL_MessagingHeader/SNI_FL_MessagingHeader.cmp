@@ -1,0 +1,153 @@
+<!-- 
+Component Name    : SNI_FL_MessasgingHeader
+Description       : Messaging header component
+Created By        : Sameera De Silva
+Created Date      : 8/11/2020
+
+Modification Log: 
+
+Developer                   Date                   Description
+1.Sameera De Silva			8/11/2020		Created Messagin header base structure
+2.Vamsi Krishna             8/13/2020       Added New Message Pop-up
+3.Nanthavarman Lingeswaran	8/13/2020		Added Add Backup Advisor Pop-up
+4.Pavithra Fernando			8/18/2020		Added message navigation parts
+5.Bindu Sakhamuri			12/02/2020		Added New Provider Message Pop-up
+-->
+
+<aura:component  controller="SNI_FLDirectMessageUtil" access="global">
+    
+    <!-- aura attributes -->
+    <aura:attribute name="IsOpenNewMsg" type="boolean" default="false" />
+    <aura:attribute name="IsOpenNewProviderMsg" type="boolean" default="false" />
+    <aura:attribute name="titleName" type="String" />
+    <aura:attribute name="openBackupAgentModal" type="Boolean"/>
+    <aura:attribute name="isBackupAgentView" type="Boolean"/>
+    <aura:attribute name="backupAgents" type="sObject[]" default="[]" />
+    <aura:attribute name="familyId" type="String"/>
+    <aura:attribute name="memberId" type="String"/>
+    <aura:attribute name="AccountName" type="String"/>
+    <aura:attribute name="isProviderMsgLevel" type="Boolean" ></aura:attribute>
+    <aura:attribute name="isSingleMA" type="Boolean" default="false"/>
+    <aura:attribute name="accountOwner" type="String" description="Store owner of the family when navigating to messages through family account page"/> <!-- AC/DC (Nanthu) - US3219701 -->
+    <aura:attribute name="isHistProvider" type="Boolean" default="false"/>
+    <!--filtering-->
+    <aura:attribute name="isFlagged" type="Boolean"  /> 
+    <aura:attribute name="isProvider" type="Boolean"/> 
+    <aura:attribute name="lstDirectMessages" type="List"></aura:attribute>
+    <aura:attribute name="recordStart" type="Integer"></aura:attribute>
+    <aura:attribute name="recordEnd" type="Integer"></aura:attribute>
+    <aura:attribute name="totalRecords" type="Integer"></aura:attribute>
+    <aura:attribute name="pageNumber" type="Integer"></aura:attribute>
+    <aura:attribute name="totalPages" type="Integer"></aura:attribute>
+    <aura:attribute name="isFamilyLevel" type="Boolean"></aura:attribute>
+    <aura:attribute name="isSpecificView" type="Boolean"  />    
+    <!-- end aura attributes -->
+    <aura:registerEvent name="lstFlaggedMessgs" type="c:SNI_FL_FlaggedEvt"></aura:registerEvent>
+    <aura:registerEvent name="selectedMessage" type="c:SNI_FL_SelectedMessageEvt"></aura:registerEvent>
+    
+    <!--Added by Nanthu-->
+    <aura:attribute name="selectedTabId" type="String"/>
+    <aura:attribute name="selectedTabName" type="String"/>
+    <lightning:notificationsLibrary aura:id="notifLib"/>
+    
+    <!-- US3241339 - Ashley Winden -->
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute name="historicalMessagesFlag" type="Boolean" default="false"/>
+    <!-- US3241339 - Charnkiat Sukpanichnant -->
+    <aura:attribute name="requestType" type="String"/>
+    <aura:attribute name="showAffiliationPopup" type="Boolean" default="false" />
+    <aura:handler name="IspopupOpened" event="c:SNI_FL_CloseSelectMemberAffiliationEvent" action="{!c.closeAffiliation}"/>
+    <aura:handler name="init" value="{!this}" action="{!c.handleHistProvider}" />
+    <!-- US3241339 - Ashley Winden -->
+    <div class="slds-grid slds-theme_shade slds-box">
+        <div>
+            <span>
+                <lightning:icon iconName="custom:custom23" alternativeText="user" title="user" size="x-large" class="image"/>
+                <aura:if isTrue="{!v.isBackupAgentView}">
+                    <b>&nbsp;&nbsp;{!v.titleName}</b>
+                    <aura:set attribute="else">
+                        <b>&nbsp;&nbsp;{!v.selectedTabName}</b>                        
+                    </aura:set> 
+                </aura:if>
+                
+            </span>
+        </div>
+        <div><span></span></div><div><span></span></div><div><span></span></div>
+        <div class="slds-col_bump-left">
+            <span >
+                <div class="slds-form-element selectStyle">
+                    <label class="slds-form-element__label">
+                        <span class="" >
+                            Filter
+                        </span> 
+                    </label>
+                    <aura:if isTrue="{!or(v.isFamilyLevel, v.isProviderMsgLevel)}" >
+                    <div class="slds-form-element__control slds-grow" style="display: inline-block;">
+                        <div>
+                            <ui:inputSelect class="slds-select DropDownBody"  aura:id="select" change="{!c.selectFilterOption}">
+                                <option value="All">All</option>
+                                <option value="Flagged">Flagged</option>
+                            </ui:inputSelect>
+                        </div>
+                    </div>
+                    <aura:set attribute="else">
+                        <div class="slds-form-element__control slds-grow" style="display: inline-block;">
+                            <div>
+                                <ui:inputSelect class="slds-select DropDownBody"  aura:id="select" change="{!c.selectFilterOption}">
+                                    <option value="All">All</option>
+                                    <option value="Flagged">Flagged</option>
+                                    <option value="Provider">Provider</option>
+                                </ui:inputSelect>
+                            </div>
+                        </div>
+                    </aura:set>
+                    </aura:if>
+                </div>
+            </span> 
+        </div>
+        <div>&nbsp;&nbsp;</div>
+        
+        <div >
+            <span >
+                <aura:if isTrue="{!v.isFamilyLevel}" >
+                    <lightning:button label="New Message" title="New Message" onclick="{! c.createNewMessage }"/>&nbsp;
+                    <aura:set attribute="else">
+                        <aura:if isTrue="{!v.isProviderMsgLevel}" >
+                            <lightning:button label="New Provider Message" title="New Provider Message" onclick="{! c.createNewProviderMessage }" />&nbsp;
+                            <aura:set attribute="else">
+                                <lightning:button label="New Provider Message" title="New Provider Message" onclick="{! c.createNewProviderMessage }" />&nbsp;
+                                <lightning:button label="New Message" title="New Message" onclick="{! c.createNewMessage }"/>&nbsp;
+                                <aura:if isTrue="{!v.isBackupAgentView}"> 
+                                    <lightning:button label="Backup Buddy" title="Backup Buddy" onclick="{! c.openBackupAdvisorModal}"/>
+                                </aura:if>
+                            </aura:set>
+                        </aura:if>
+                    </aura:set>
+                </aura:if>
+                <!-- US3241339 - Ashley Winden -->
+                <aura:if isTrue="{!v.historicalMessagesFlag}">
+                	<lightning:button label="View Older Messages" title="View Older Messages" onclick="{!c.launchOlderMessagesTab}"/>&nbsp;
+                </aura:if>
+                <!-- US3241339 - Ashley Winden -->
+            </span>
+        </div>
+    </div>
+    
+    <aura:if isTrue="{!v.IsOpenNewProviderMsg}">        
+         <c:SNI_FL_NewProviderMessagePopup IsOpenNewProviderMsg="{!v.IsOpenNewProviderMsg}"  selectedTabId="{!v.selectedTabId}" familyId="{!v.familyId}"  NewMessageBody="{!v.NewMessageBody}" SubjectValue="{!v.SubjectValue}" AccountName="{!v.AccountName}" isBackupAgentView="{!v.isBackupAgentView}" isFamilyLevel="{!v.isFamilyLevel}" isProviderMsgLevel="true"/>
+    </aura:if>
+    
+    <aura:if isTrue="{!v.IsOpenNewMsg}" >
+        
+        <c:SNI_FL_NewMessagePopup selectedTabId="{!v.selectedTabId}" familyId="{!v.familyId}" IsOpenNewMsg="{!v.IsOpenNewMsg}" NewMessageBody="{!v.NewMessageBody}" SubjectValue="{!v.SubjectValue}" AccountName="{!v.AccountName}" isBackupAgentView="{!v.isBackupAgentView}" isFamilyLevel="{!v.isFamilyLevel}" isSpecificView="{!v.isSpecificView}"  isProviderMsgLevel="false" />
+    </aura:if>
+    
+    <aura:if isTrue="{!v.openBackupAgentModal}">
+        <c:SNI_FL_AddBackupAdvisor selectedUserLookUpRecords="{!v.backupAgents}" openBackupAgentModal="{!v.openBackupAgentModal}"/>
+    </aura:if>
+    <aura:if isTrue="{!v.showAffiliationPopup}">
+        <c:SNI_FL_SelectMemberAffiliationPopup AccountID="{!v.familyId}" AccountName="{!v.AccountName}" />
+    </aura:if>
+    
+    
+</aura:component>

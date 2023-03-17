@@ -1,0 +1,150 @@
+<apex:page controller="ACETCreatePCPReferralController" sidebar="false">
+    <script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+    <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    <apex:pageMessages />
+    <apex:form >
+        <apex:actionFunction name="updateWrapper" action="{!updateWrapper}"
+            reRender="temp" />
+        <c:ACETInteractionHighlightsPanel InteractionAtt="{!wrapper.Interaction}"
+            SubjectAtt="{!wrapper.Subject}"
+            AdditionalInfoAtt="{!wrapper.AdditionalInfo}" html-auto-doc="auto"></c:ACETInteractionHighlightsPanel>
+        <apex:sectionHeader title="Create PCP Referral" />
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveButton="true" attrShowMisdirectButton="true" 
+            attrSourceOriginator="{!wrapper.SourceOriginator}" attrInteractionId="{!wrapper.Interaction.Id}" attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="{!wrapper.caseobj.Topic__c}"/>
+        <apex:pageBlock >
+            <apex:pageBlockSection columns="1">
+                <apex:pageBlockSectionItem rendered="{!notResearchUser}">
+                    <input type="button" id="launchCirrusBtn" style="margin-left: 34%;"
+                        value="Launch Create PCP Referral" onClick="openCreatePCPReferral('{!baseURL}');"/>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem rendered="{!!notResearchUser}">
+                    <input type="button" id="launchCirrusBtn2" style="margin-left: 34%;"
+                        value="Launch Create PCP Referral"  disabled='{!notResearchUser}'/>
+                </apex:pageBlockSectionItem>
+            </apex:pageBlockSection>
+            <!-- Below component Added by Divya - US601640 -->
+            <c:ACETDynamicCallTypesDisplay attrCaseDataWrapper="{!wrapper}" 
+                                           attrCallTopic="{!wrapper.caseobj.Topic__c}"
+                                           attrShowPickListcallTypes="true"
+                                           attrShowCheckBoxCallTypes="false"
+                                           attrshowAccountType="false"
+                                           attrShowPickListLabel="PCP Referral"/> 
+            <apex:pageBlockSection columns="1" html-auto-doc="auto">
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="PCP Referral Number"></apex:outputLabel>
+                    <apex:inputText id="refnumber" value="{!refnumber}" />
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Comments"></apex:outputLabel>
+                    <apex:inputTextArea id="comments" cols="100" rows="5"
+                        value="{!wrapper.Comments}" />
+                </apex:pageBlockSectionItem>
+            </apex:pageBlockSection>
+                <apex:pageBlockButtons location="bottom">
+                    <apex:commandButton value="Clear" onclick="return resetForm()" />
+                </apex:pageBlockButtons>
+        </apex:pageBlock>
+        <c:ACETCaseActions attrCaseDataWrapper="{!wrapper}" attrShowSaveButton="true" attrShowMisdirectButton="true" 
+            attrSourceOriginator="{!wrapper.SourceOriginator}" attrInteractionId="{!wrapper.Interaction.Id}" attrSubjectId="{!wrapper.Subject.Id}" attrCallTopic="{!wrapper.caseobj.Topic__c}"
+            attrLocation="bottom" />
+    </apex:form>
+    <script>
+        $(document).ready(function() {                      
+            $("[id$='topic']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+            $("[id$='topic']").change(function(){
+                if($(this).val() == 'Created'){
+                    $("[id$='refnumber']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+                    $("[id$='refnumber']").removeAttr("disabled");
+                    $("[id$='comments']").parent().find(".errorMsg").remove();
+                    $("[id$='comments']").parent().find(".requiredBlock").remove();
+                    $("[id$='comments']").removeClass('error'); 
+                }
+                else{
+                    $("[id$='refnumber']").parent().find(".errorMsg").remove();
+                    $("[id$='refnumber']").parent().find(".requiredBlock").remove();
+                    $("[id$='refnumber']").removeClass('error');
+                    
+                    $("[id$='comments']").parent().find(".errorMsg").remove();
+                    $("[id$='comments']").parent().find(".requiredBlock").remove();
+                    $("[id$='comments']").removeClass('error'); 
+                    if($(this).val() == 'Not Created'){
+                        $("[id$='refnumber']").val("");
+                        $("[id$='refnumber']").attr("disabled","true");
+                        $("[id$='comments']").wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>'); 
+                    }
+                }
+            });
+          
+            
+            $("[id$='refnumber']").keypress(function(e){
+			    if ( e.which == 13 ) return false;
+			});                       
+        });
+        function validate(){
+            var $topic = $("[id$='topic']");
+            var $refnumber =  $("[id$='refnumber']");
+            var $comments =  $("[id$='comments']");
+            var retFlag = true;
+            $topic.removeClass("error").parent().find(".errorMsg").remove();
+            $refnumber.removeClass("error").parent().find(".errorMsg").remove();
+            
+            if(!$topic.val() ){
+               var errorMsg = "You must enter a value."; 
+               $topic.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+               retFlag = false;                  
+            }
+            if(!$refnumber.val() && $topic.val() == 'Created'){
+               var errorMsg = "You must enter a value."; 
+               $refnumber.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+               retFlag = false;                  
+            }
+            $comments.val($comments.val().trim());
+            if(!$comments.val() && $topic.val() == 'Not Created'){
+               var errorMsg = "You must enter a value."; 
+               $comments.addClass("error").parent().append('<div class="errorMsg"><strong>Error:</strong> ' + errorMsg + '</div>'); 
+               retFlag = false;                  
+            }
+            if(retFlag){
+                acet.autodoc.saveAutodoc();    
+            }    
+                              
+            return retFlag;                 
+        }
+        
+        function resetForm(){
+            var $topic = $("[id$='topic']");
+            var $comments =  $("[id$='comments']");
+            var $refnumber = $("[id$='refnumber']");
+
+            $topic.removeClass("error").parent().find(".errorMsg").remove();
+            $comments.removeClass("error").parent().find(".errorMsg").remove();
+            $comments.parent().find(".requiredBlock").remove();
+            $refnumber.removeClass("error").parent().find(".errorMsg").remove();
+            $refnumber.parent().find(".requiredBlock").remove();
+            $refnumber.removeAttr("disabled");
+            
+            $topic.val("");
+            $comments.val("");
+            $refnumber.val("");
+            if($sysUnavailable.prop("checked")){
+               	$topic.wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+	            if($topic.val() == 'Created' ){ 
+	                $refnumber.wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');
+	                $refnumber.removeAttr("disabled");     
+	            }
+	            if($topic.val() == 'Not Created' ){
+	                $refnumber.attr("disabled","true"); 
+	                $comments.wrap('<div class="requiredInput"></div>').parent().prepend('<div class="requiredBlock"></div>');     
+	            }
+	    		$sysUnavailable.prop("checked", false);
+    		}
+            return false;
+        }
+    function openCreatePCPReferral(baseLink){
+        console.log('baseLink'+baseLink);
+        window.open(baseLink,'_blank', 'location=yes,menubar=yes,titlebar=yes,toolbar=yes,width=1200, height=800 ,left=0 ,top=0 ,scrollbars=1 ,resizable=1');    
+    }
+    </script>
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+</apex:page>

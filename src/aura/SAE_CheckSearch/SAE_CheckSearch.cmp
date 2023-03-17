@@ -1,0 +1,100 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,lightning:isUrlAddressable"
+    controller="ACET_ViewPaymentController" access="global">
+
+    <!-- 20th Aug 2019 US1958806 ViewPayment UI - Payment Details Coming from topic : Sarma -->
+    <aura:attribute name="isShowCheckPaymentDetails" type="Boolean" default="false" />
+
+    <aura:attribute name="paymentSearchOptions" type="List" default="[
+                                                                        {'label': 'Check #', 'value': 'Check #'},
+                                                                        {'label': 'Remit #', 'value': 'Remit #'}
+                                                                        ]" />
+    <aura:attribute name="defaultPaymentOption" type="String" default="Check #" />
+    <aura:attribute name="paymentOption" type="String" />
+    <aura:registerEvent name="PaymentSearchEvent" type="c:SAEPaymentSearchEvent" />
+
+    <aura:attribute name="seriesDesignator" type="String" />
+    <aura:attribute name="checkNumber" type="String" />
+
+    <!-- US1994689 Errors -->
+    <aura:attribute name="errors" type="Object" />
+    <aura:attribute name="showErrorMessage" type="Boolean" default="false" />
+    <aura:attribute name="error" type="object" />
+    <aura:attribute name="fieldsToValidate" type="List" default="seriesDesignatorID,checkNumberID,taxId" />
+    <aura:attribute name="readCheckResp" type="ACET_SAECalloutResult" default="" access="public" />
+
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+
+    <!-- US3456351 - Kavinda -->
+    <aura:attribute name="checkSearchRespObj" type="ACET_ViewPaymentsCheckSearchWrapper[]" default="" access="public" />
+    <aura:attribute name="requestObject" type="ACET_ViewPaymentsRequest.PaymentDetailsParams" />
+    <aura:attribute name="isShowPaymentCheckDetails" type="Boolean" default="false" />
+    <aura:attribute name="providerDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="tadIdNum" type="String" default=""/>
+    <aura:attribute name="epayCodes" type="String[]" default=""/>
+    <aura:attribute name="isTINDisabled" type="Boolean" default="true" />
+    <aura:attribute name="isTINRequired" type="Boolean" default="false" />
+    <!-- US1958804 View Payments UI Changes -->
+    <lightning:card>
+        <lightning:spinner class="slds-hide" variant="brand" size="medium" aura:id="srncspinner"
+            alternativeText="Loading" />
+        <div class="slds-is-relative slds-card card_padding slds-p-bottom_medium">
+            <p class="component_title">Payment Search</p>
+            <span onkeypress="{! c.onClickOfEnter }" >
+            <lightning:layout class="slds-m-top_x-small">
+
+                    <aura:If isTrue="{! or(equals(v.defaultPaymentOption, 'Check #'), equals(v.paymentOption, 'Check #')) }">
+                    <lightning:layoutItem>
+                        <div class="slds-form-element">
+                            <span onkeypress="{! c.preventSpacesAndKeepAlphanumeric }"
+                                onpaste="{! c.preventSpacesAndKeepAlphanumeric }">
+                                <lightning:input type="text" name="seriesDesignator" aura:id="seriesDesignatorID"
+                                    label="Series Designator" minlength="2" maxlength="3" value="{!v.seriesDesignator}"
+                                                     required="true" onchange="{!c.checkEpay}"/>
+                            </span>
+                        </div>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem class="slds-m-left_large">
+                        <div class="slds-form-element">
+                            <span onkeypress="{! c.preventSpacesAndKeepAlphanumeric }"
+                                onpaste="{! c.preventSpacesAndKeepAlphanumeric }">
+                                <lightning:input type="text" name="checkNumber" aura:id="checkNumberID"
+                                    label="Check Number" minlength="8" value="{!v.checkNumber}" required="true" />
+                            </span>
+                        </div>
+                    </lightning:layoutItem>
+                </aura:If>
+                <lightning:layoutItem class="slds-m-left_large">
+                    <div class="slds-form-element">
+                        <label class="slds-form-element__label remitfield" for="remitnumber">Remit Number</label>
+                        <div class="slds-form-element__control">
+                            <input type="text" id="remitnumber" class="slds-input" disabled="true" />
+                        </div>
+                    </div>
+                </lightning:layoutItem>
+                    <lightning:layoutItem class="slds-m-left_large"><!--onchange="{!c.handleOnChange}" onblur="{!c.handleOnBlur}"-->
+                        <lightning:input aura:id="taxId" type="text" name="Tax ID" label="Tax ID"
+                                         value="{!v.tadIdNum}"
+                                         required="{!v.isTINRequired}"
+                                         disabled="{!v.isTINDisabled}" minlength="9" maxlength="9"
+                                         messageWhenTooShort="Enter nine digits."
+                                         pattern="^[0-9_ ]*" messageWhenPatternMismatch="Enter a numeric value." autocomplete="off" />
+                    </lightning:layoutItem>
+
+            </lightning:layout>
+            </span>
+            <lightning:layoutItem class="slds-m-top_small">
+                <lightning:button aura:id="searchButton" variant="brand" label="Search" onclick="{!c.fireValidations}" />&nbsp;&nbsp;
+                <lightning:button label="Clear" onclick="{! c.clearFields }" />
+            </lightning:layoutItem>
+
+            <aura:If isTrue="{!v.showErrorMessage}">
+                <div style="margin-left: 19%; margin-top: -4.5%;">
+                    <c:ACET_ErrorPopup aura:id="errorPopup" errorMessage="{!v.error.message}"
+                        topDescription="{!v.error.topDescription}" bottomDescription="{!v.error.bottomDescription}"
+                        descriptionList="{!v.error.descriptionList}" moveLeft="-17" isNubbinLeft="true" />
+                </div>
+            </aura:If>
+
+        </div>
+    </lightning:card>
+</aura:component>

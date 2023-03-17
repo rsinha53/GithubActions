@@ -1,0 +1,327 @@
+<aura:component controller="SNI_FL_RecordsController"
+  implements="forceCommunity:themeLayout,forceCommunity:availableForAllPageTypes,forceCommunity:layout,force:lightningQuickAction,force:appHostable" access="global"
+>
+  <ltng:require
+    styles="{!$Resource.SLDS +'/assets/styles/salesforce-lightning-design-system.css'}"
+  />
+  <aura:attribute name="displayedTab" type="String" default="documentsSec"/>
+  <aura:attribute name="selectedTab" type="String" default="familysec" />
+  <aura:attribute name="familyId" type="String" />
+  <aura:attribute name="buttonClicked" type="String" default="" />
+  <aura:attribute name="selectedContact" type="Object" />
+    <aura:attribute name="selectedRxMed" type="Object" />
+  <aura:attribute name="isMobileDevice" type="Boolean" default="false"/>
+  <aura:attribute name="contactWrapperList" type="SNI_FL_ContactsController.contactWrapper[]" />
+   <aura:attribute name="RxMedWrapperList" type="SNI_FL_RXMedsFL.RxMedWrapper[]" /> 
+   <aura:attribute name="isFamilySec" type="Boolean" default="true"/>
+   <aura:attribute name="familydocwrap" type="SNI_FL_DocumentsController.familyDocumentWrapper" /> 
+  <aura:attribute name="accept" type="List" default="['.jpg','.JPG','.jpeg','.JPEG','.PDF','.pdf','.csv','.CSV','.xlsx','.XLSX','.png','.PNG','.DOCX','.docx','.RTF','.rtf','.ODT','.odt','.DOC','.doc','.TXT','.txt','.WPF','.wpf','.WPD','.wpd','.PPT','.ppt','.PPTX','.pptx','.TIF','.tif','.TIFF','.tiff','.SVG','.svg','.GIF','.gif','.PNG','.png','.BMP','.bmp','.JFIF','.jfif','.ZIP','.zip','.XLSX','.xlsx','.XLS','.xls','.XLSM','.xlsm','.XLSB','.xlsb','.CSV','.csv','.MP4','.mp4','.MOV','.mov','.AVI','.avi']"/>  
+  <aura:attribute name="multiple" type="Boolean" default="true"/>
+  <aura:attribute name="recordId" type="string"/> 
+  <aura:attribute name="newDocModalOpen" type="Boolean" default="false"/> 
+  <aura:attribute name="options" type="List" default="[]"/> 
+  <aura:attribute name="isFileSec" type="Boolean" default="false"/>
+  <aura:attribute name="recursiveCheck" type="Boolean" default="true"/>
+  <aura:attribute name="recordName" type="String" />
+  <div class="slds-record-content-container">
+    <div class="record-top-nav">
+      <ul class="record-nav">
+        <li class ="{!if(v.displayedTab == 'documentsSec','active','inactive')}"><a href="javascript:void(0);" onclick="{!c.clickOnDocuments}" >Documents</a></li>
+        <li class= "{!if(v.displayedTab == 'contactsSec','active','inactive')}"><a href="javascript:void(0);" onclick="{!c.clickOnContacts}">Emergency Contacts</a></li>
+          <li class="{!if(v.displayedTab == 'rxMedSec','active','inactive')}"><a href="javascript:void(0);" onclick="{!c.clickOnRxMed}">Rx Meds</a></li>          
+      </ul>
+      <aura:if isTrue="{!if(v.displayedTab == 'documentsSec',true,false)}">
+      <lightning:button
+        class="slds-addcontact-box"
+        variant="Inverse"
+        label="+ New Document"
+        onclick="{!c.openNewRecord}"
+      />
+      </aura:if>
+       <aura:if isTrue="{!if(v.displayedTab == 'contactsSec',true,false)}">
+      <lightning:button
+        class="slds-addcontact-box"
+        variant="Inverse"
+        label="+ New Contact"
+        onclick="{!c.openNewRecord}"
+      />
+      </aura:if>
+       <aura:if isTrue="{!if(v.displayedTab == 'rxMedSec',true,false)}">
+      <lightning:button
+        class="slds-addcontact-box"
+        variant="Inverse"
+        label="+ add a medication"
+        onclick="{!c.openNewRecord}"
+      />
+      </aura:if>
+    </div>
+   <aura:if isTrue="{! if(v.displayedTab == 'documentsSec',true,false)}">  
+    <div class="record-top-nav">
+      	<ul class="tab-nav">
+            <li class ="{!if(v.selectedTab == 'familysec','active','inactive')}"><a href="javascript:void(0);" onclick="{!c.clickOnFamilysec}" id="familysecid">
+                    <aura:if isTrue="{! if(v.selectedTab == 'familysec',true,false)}">
+                        <img src="{!$Resource.SNI_FL_ListColorIcon}"  class="colorimgheight"/>
+                    <aura:set attribute="else">
+                        <img src="{!$Resource.SNI_FL_ListIcon}" class="imgheight"/>
+                    </aura:set>
+                  </aura:if> 
+                </a></li> 
+           <li class ="{!if(v.selectedTab == 'membsec','active','inactive')}"><a href="javascript:void(0);" onclick="{!c.clickOnMembsec}" id="membsecid">
+               	<aura:if isTrue="{! if(v.selectedTab == 'membsec',true,false)}">
+                        <img src="{!$Resource.SNI_FL_AvatarColorIcon}" class="colorimgheight"/>
+                    <aura:set attribute="else">
+                        <img src="{!$Resource.SNI_FL_AvatarIcon}" class="imgheight"/>
+                    </aura:set>
+                  </aura:if> 
+               </a></li> 
+        </ul>
+    </div>
+   </aura:if>
+    <div class="slds-record-content">
+      <aura:if isTrue="{!if(v.displayedTab == 'documentsSec',true,false)}">
+        <div aura:id="fldocuments" class="{!if(v.displayedTab == 'documentsSec','slds-show','slds-hide')}">
+          <div> 
+              <div> 
+                  <c:SNI_FL_Documents familyId="{!v.familyId}" isFamilySec="{!v.isFamilySec}" familydocwrap="{!v.familydocwrap}"/>
+              </div>
+            </div>
+        </div>
+      </aura:if>
+      <aura:if isTrue="{!if(v.displayedTab == 'contactsSec',true,false)}">
+          <div aura:id="fldocuments" class="{!if(v.displayedTab == 'contactsSec','slds-show','slds-hide')}">
+              <div> 
+                  <c:SNI_FL_Contacts familyId="{!v.familyId}" contactWrapperList="{!v.contactWrapperList}"/>
+              </div>
+          </div>
+      </aura:if>
+      <aura:if isTrue="{!if(v.buttonClicked == 'newContact',true,false)}">
+	        <div class="slds-modal slds-fade-in-open">
+	            <div class="slds-modal__container">
+                    <div class="slds-modal__content ">
+                        <h2 class="title modalTitle">Add Contact</h2>
+                        <!-- if additional fields are being added, please add a lightning Edit Form fields-->
+                        <aura:if isTrue="{!if(v.isMobileDevice == true,true,false)}">
+		                	<div class="modalBody">
+		                		<lightning:layout multipleRows="true" >
+		                            <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+		                                <span style="color:red">* </span>
+		                                <ui:outputText value="Name" class="modalLabels"></ui:outputText>
+		                                <lightning:input value="{!v.selectedContact.Name}" id="contactName" aura:id="contactName" variant="label-hidden" maxlength="80" placeholder="Name"/>
+		                            </lightning:layoutitem>
+		                            <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+		                                <ui:outputText value="Phone" class="modalLabels"/>
+		                                <lightning:input id="contactPhone" aura:id="contactPhone" value="{!v.selectedContact.Phone__c}" variant="label-hidden" maxlength="40" placeholder="Phone"/>
+		                            </lightning:layoutitem>
+		                            <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+		                                <ui:outputText value="Email" class="modalLabels"/>
+		                                <lightning:input type="email" value="{!v.selectedContact.Email__c}" id="contactEmail" aura:id="contactEmail" variant="label-hidden" placeholder="Email"/>
+		                            </lightning:layoutitem>
+		                            <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+		                                <ui:outputText value="Relationship" class="modalLabels"/>
+		                                <lightning:input value="{!v.selectedContact.Relationship__c}" id="contactRelationship" aura:id="contactRelationship" variant="label-hidden" maxlength="255" placeholder="Relationship"/>
+		                            </lightning:layoutitem>
+	                                <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+	                                    <ui:outputText value="Address" class="modalLabels"/>
+	                                    <lightning:input value="{!v.selectedContact.Address__c}" id="contactAddress" aura:id="contactAddress" variant="label-hidden" maxlength="255" placeholder="Enter a location"/>
+	                                </lightning:layoutitem>
+	                            </lightning:layout>
+                            </div>
+                            <div>
+	                            <lightning:button class="slds-savebutton-box" variant="Inverse" label="Save" onclick="{!c.saveContactRecord}"/>
+	                            <lightning:button class="slds-backbutton-box" variant="Inverse" label="Back" onclick="{!c.closeContactModal}"/>
+	                        </div>
+                        	<aura:set attribute="else">
+                        		<div class="modalBody">
+	      							<lightning:layout multipleRows="true" >
+		                                <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+		                                    <span style="color:red">* </span>
+		                                    <ui:outputText value="Name" class="modalLabels"></ui:outputText>
+		                                    <lightning:input value="{!v.selectedContact.Name}" id="contactName" aura:id="contactName" variant="label-hidden" maxlength="80" placeholder="Name"/>
+		                                </lightning:layoutitem>
+		                                <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+		                                    <ui:outputText value="Phone" class="modalLabels"/>
+		                                    <lightning:input id="contactPhone" aura:id="contactPhone" value="{!v.selectedContact.Phone__c}" variant="label-hidden" maxlength="40" placeholder="Phone"/>
+		                                </lightning:layoutitem>
+		                                <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+		                                    <ui:outputText value="Email" class="modalLabels"/>
+		                                    <lightning:input type="email" id="contactEmail" value="{!v.selectedContact.Email__c}" variant="label-hidden" placeholder="Email"/>
+		                                </lightning:layoutitem>
+		                                <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+		                                    <ui:outputText value="Relationship" class="modalLabels"/>
+		                                    <lightning:input id="contactRelationship" value="{!v.selectedContact.Relationship__c}" variant="label-hidden" maxlength="255" placeholder="Relationship"/>
+		                                </lightning:layoutitem>
+		                                <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+		                                    <ui:outputText value="Address" class="modalLabels"/>
+		                                    <lightning:input id="contactAddress" value="{!v.selectedContact.Address__c}" variant="label-hidden" maxlength="255" placeholder="Enter a location"/>
+		                                </lightning:layoutitem>
+		                            </lightning:layout>
+	                            </div>
+	                            <div>
+		                            <lightning:button class="slds-backbutton-box" variant="Inverse" label="Back" onclick="{!c.closeContactModal}"/>
+		                            <lightning:button class="slds-savebutton-box" variant="Inverse" label="Save" onclick="{!c.saveContactRecord}"/>
+		                        </div>
+							</aura:set>
+                        </aura:if>
+                        
+                    </div>
+	            </div>
+	        </div>
+          	<div class="backdrop"></div>
+        </aura:if>
+      <aura:if isTrue="{!if(v.displayedTab== 'rxMedSec',true,false)}">
+        <div aura:id="flrxmeds" class="{!if(v.displayedTab == 'rxMedSec','slds-show','slds-hide')}">
+          <div> 
+        
+                  <c:SNI_FL_RXMeds familyId="{!v.familyId}"  rxMedWrapperList= "{!v.RxMedWrapperList}"/>
+              
+            </div>
+        </div>
+      </aura:if>
+         <aura:if isTrue="{!if(v.buttonClicked == 'newRxMed',true,false)}">
+	        <div class="slds-modal slds-fade-in-open">
+	            <div class="slds-modal__container">
+                    <div class="slds-modal__content ">
+                        <h2 class="title modalTitle">Add Rx Med</h2>
+                        <!-- if additional fields are being added, please add a lightning Edit Form fields-->
+                        <aura:if isTrue="{!if(v.isMobileDevice == true,true,false)}">
+		                	<div class="modalBody">
+		                		<lightning:layout multipleRows="true" >
+		                            <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+		                                <span style="color:red">* </span>
+		                                <ui:outputText value="Name" class="modalLabels"></ui:outputText>
+		                                <lightning:input value="{!v.selectedRxMed.Name}" id="RxMedName" aura:id="RxMedName" variant="label-hidden" maxlength="80" placeholder="Name"/>
+		                            </lightning:layoutitem>
+		                            <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+		                                <ui:outputText value="Pill Size" class="modalLabels"/>
+		                                <lightning:input id="RxMedPillSize" aura:id="RxMedPillSize" value="{!v.selectedRxMed.Pill_Size__c}" variant="label-hidden" maxlength="255" placeholder="Pill Size"/>
+		                            </lightning:layoutitem>
+		                               <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+		                                <ui:outputText value="Directions" class="modalLabels"/>
+		                                <lightning:textarea  id="RxMedDirections" aura:id="RxMedDirections" value="{!v.selectedRxMed.Directions__c}" variant="label-hidden" maxlength="255" placeholder="Directions"/>
+		                            </lightning:layoutitem>
+                                      <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+		                                <ui:outputText value="Rx Number" class="modalLabels"/>
+		                                <lightning:input id="RxMedRxNumber" aura:id="RxMedRxNumber" value="{!v.selectedRxMed.Rx_Number__c}" variant="label-hidden" maxlength="255" placeholder="Rx Number"/>
+		                            </lightning:layoutitem>
+                                      <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+		                                <ui:outputText value="Refill Date" class="modalLabels"/>
+		                                <lightning:input id="RxMedRefillDate" flexibility="auto" type='date' dateStyle="short" aura:id="RxMedRefillDate" value="{!v.selectedRxMed.Refill_Date__c}" variant="label-hidden" maxlength="255" placeholder="Refill Date"/>
+		                            </lightning:layoutitem>
+                                      <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+		                                <ui:outputText value="Pharmacy" class="modalLabels"/>
+		                                <lightning:input id="RxMedPharmacy" aura:id="RxMedPharmacy" value="{!v.selectedRxMed.Pharmacy__c}" variant="label-hidden" maxlength="255" placeholder="Pharmacy"/>
+		                            </lightning:layoutitem>
+                                     <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+		                                <ui:outputText value="Pharmacy Phone" class="modalLabels"/>
+		                                <lightning:input id="RxMedPharmacyPhone" aura:id="RxMedPharmacyPhone" value="{!v.selectedRxMed.Pharmacy_Phone_Number__c}" variant="label-hidden" maxlength="40" placeholder="Pharmacy Phone Number"/>
+		                            </lightning:layoutitem>
+                                   
+	                            </lightning:layout>
+                            </div>
+                            <div>
+	                            <lightning:button class="slds-savebutton-box" variant="Inverse" label="Save" onclick="{!c.saveRxMedRecords}"/>
+	                            <lightning:button class="slds-backbutton-box" variant="Inverse" label="Back" onclick="{!c.closeRxMedModal}"/>
+	                        </div>
+                        	<aura:set attribute="else">
+                        		<div class="modalBody">
+	      							<lightning:layout multipleRows="true" >
+		                               <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+		                                <span style="color:red">* </span>
+		                                <ui:outputText value="Name" class="modalLabels"></ui:outputText>
+		                                <lightning:input value="{!v.selectedRxMed.Name}" id="RxMedName" aura:id="RxMedName" variant="label-hidden" maxlength="80" placeholder="Name"/>
+		                            </lightning:layoutitem>
+		                            <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+		                                <ui:outputText value="Pill Size" class="modalLabels"/>
+		                                <lightning:input id="RxMedPillSize" aura:id="RxMedPillSize" value="{!v.selectedRxMed.Pill_Size__c}" variant="label-hidden" maxlength="255" placeholder="Pill Size"/>
+		                            </lightning:layoutitem>
+		                              <lightning:layoutitem padding="around-small" flexibility="auto" size="12">
+		                                <ui:outputText value="Directions" class="modalLabels"/>
+		                                <lightning:textarea  id="RxMedDirections" aura:id="RxMedDirections" value="{!v.selectedRxMed.Directions__c}" variant="label-hidden" maxlength="255" placeholder="Directions"/>
+		                            </lightning:layoutitem>
+                                      <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+		                                <ui:outputText value="Rx Number" class="modalLabels"/>
+		                                <lightning:input id="RxMedRxNumber" aura:id="RxMedRxNumber" value="{!v.selectedRxMed.Rx_Number__c}" variant="label-hidden" maxlength="255" placeholder="Rx Number"/>
+		                            </lightning:layoutitem>
+                                      <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+		                                <ui:outputText value="Refill Date" class="modalLabels"/>
+		                                <lightning:input id="RxMedRefillDate" flexibility="auto" type='date' dateStyle="short" aura:id="RxMedRefillDate" value="{!v.selectedRxMed.Refill_Date__c}" variant="label-hidden" maxlength="255" placeholder="Refill Date"/>
+		                            </lightning:layoutitem>
+                                      <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+		                                <ui:outputText value="Pharmacy" class="modalLabels"/>
+		                                <lightning:input id="RxMedPharmacy" aura:id="RxMedPharmacy" value="{!v.selectedRxMed.Pharmacy__c}" variant="label-hidden" maxlength="255" placeholder="Pharmacy"/>
+		                            </lightning:layoutitem>
+                                     <lightning:layoutitem padding="around-small" flexibility="auto" size="6">
+		                                <ui:outputText value="Pharmacy Phone" class="modalLabels"/>
+		                                <lightning:input id="RxMedPharmacyPhone" aura:id="RxMedPharmacyPhone" value="{!v.selectedRxMed.Pharmacy_Phone_Number__c}" variant="label-hidden" maxlength="40" placeholder="Pharmacy Phone Number"/>
+		                            </lightning:layoutitem>
+                                   
+		                            </lightning:layout>
+	                            </div>
+	                           <div>
+	                            <lightning:button class="slds-savebutton-box" variant="Inverse" label="Save" onclick="{!c.saveRxMedRecords}"/>
+	                            <lightning:button class="slds-backbutton-box" variant="Inverse" label="Back" onclick="{!c.closeRxMedModal}"/>
+	                        </div>
+							</aura:set>
+                        </aura:if>
+                        
+                    </div>
+	            </div>
+	        </div>
+          	<div class="backdrop"></div>
+        </aura:if>
+        <aura:if isTrue="{!if(v.newDocModalOpen == true,true,false)}">
+	        <div class="slds-modal slds-fade-in-open">
+	            <div class="slds-modal__container slds-custom-size">
+                    <header class="slds-modal__header slds-modal__header_empty">
+                          <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeWarning}"
+                                              alternativeText="Close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close slds-change-color"/>   
+                        </header>
+                    <div class="slds-modal__content">                        
+                        <h2 class="title modalTitle">Add a Document</h2>
+                        <aura:if isTrue="{!if(v.isMobileDevice == true,true,false)}">
+		                	<div class="slds-custom-modalBody">
+                                <div class="slds-grid slds-theme_default">
+                                    <div class="slds-m-vertical_medium" style="width:100%">
+                                        <lightning:combobox aura:id="selectItem" name="general" label="About" value="new" placeholder="Choose User" options="{!v.options}" onchange="{!c.handleChange}" class="slds-custom-combo"/>
+                                        <aura:if isTrue="{!v.isFileSec}">
+                                           <center class="slds-custom-center">
+                                            <lightning:fileUpload label="" 
+                                                                  multiple="{!v.multiple}"   
+                                                                  accept="{!v.accept}" 
+                                                                  recordId="{!v.recordId}" onuploadfinished="{!c.handleUploadFinished}" class="slds-custom-fileupld"/>   
+							               </center>
+                                        </aura:if>
+                                    </div>  
+	                            </div>
+                            </div>
+                            
+                        	<aura:set attribute="else">
+                        		<div class="slds-custom-modalBody">
+								   <div class="slds-grid slds-theme_default"> 
+                                    <div class="slds-m-vertical_medium" style="width:100%">
+                                       <lightning:combobox aura:id="selectItem" name="general" label="About" value="new" placeholder="Choose User" options="{!v.options}" onchange="{!c.handleChange}" class="slds-custom-combo"/>
+                                        <aura:if isTrue="{!v.isFileSec}">
+                                        <center class="slds-custom-center">
+                                            <lightning:fileUpload label="" 
+                                                                  multiple="{!v.multiple}"   
+                                                                  accept="{!v.accept}" 
+                                                                  recordId="{!v.recordId}" onuploadfinished="{!c.handleUploadFinished}" class="slds-custom-fileupld"/>   
+                                        </center>
+                                        </aura:if>
+                                    </div>  
+	                            </div>
+                              </div>
+							</aura:set>
+                        </aura:if>
+                        
+                    </div>
+	            </div>
+	        </div>
+          	<div class="backdrop"></div>
+        </aura:if>
+    </div>
+  </div>
+</aura:component>

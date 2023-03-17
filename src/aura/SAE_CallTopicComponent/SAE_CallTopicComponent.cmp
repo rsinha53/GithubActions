@@ -1,0 +1,182 @@
+<aura:component controller="SAE_CallTopicController">
+   <lightning:workspaceAPI aura:id="workspace" />
+    
+     <!--declare attributes--> 
+    <aura:attribute name="lstSelectedRecords" type="sObject[]" default="[]" description="Use,for store SELECTED sObject Records"/>
+    <aura:attribute name="listOfSearchRecords" type="List" description="Use,for store the list of search records which returns from apex class"/>
+    <aura:attribute name="SearchKeyWord" type="string"/>
+    <aura:attribute name="objectAPIName" type="string" default=""/>
+    <aura:attribute name="IconName" type="string" default=""/>
+    <aura:attribute name="label" type="string" default=""/>
+    <aura:attribute name="detailPgName" type="string" default=""/>
+    <aura:attribute name="originatorName" type="string" default=""/>
+	 <aura:attribute name="providerNotFound" type="Boolean" default="false" />
+    <aura:attribute name="noMemberToSearch" type="Boolean" default="false" /> 
+    <aura:attribute name="mnf" type="Boolean" default="" />
+    <!-- Added by vinay for Alerts -->
+    <aura:attribute name="taxId" type="string" default=""/>
+    <aura:attribute name="providerId" type="string" default=""/>
+    <aura:attribute name="isProviderSearchDisabled" type="Boolean" default="false" />
+    <aura:attribute name="alertProviderId" type="String" access="public"/>
+    <aura:attribute name="alertMemberId" type="String" access="public" />
+    <aura:attribute name="alertGroupId" type="String" access="public"/>
+    <aura:attribute name="alertTaxId" type="String" access="public"/>
+	<aura:attribute name="isDisableTopic" type="Boolean" default="false"/>
+	<aura:handler name="SAE_DisableTopicWhenNoPolicies" event="c:SAE_DisableTopicWhenNoPolicies" action="{!c.disableTopic}"/>
+	<!--US2570805 - VCCD - Member Snapshot call topic Integration - Sravan - Start -->
+    <aura:attribute name="isVCCD" type="Boolean" default="false"/>
+
+    <aura:attribute name="topicPresent" type="Boolean" default="false"/>
+    <aura:attribute name="nonEligibleTopic" type="Boolean" default="false"/>
+    <aura:attribute name="nonEligibleCallTopic" type="String[]" default="[]"/>
+	<aura:attribute name="VCCDQuestionType" type="String" default=" "/>
+   <!-- US2789379 - Advocate can not add or search topic when he provided topic through VCC. - Sravan -->
+   <aura:attribute name="enableVCCD" type="Boolean" default="false"/>
+    <aura:handler event="c:ACET_PostVCCD" action="{!c.processVCCD}"/>
+
+    <!--US2570805 - VCCD - Member Snapshot call topic Integration - Sravan - Stop -->
+
+
+    <!--declare events hendlers-->
+    <aura:handler name="oSelectedRecordEvent" event="c:SAE_SelectedSobjectRecordEvent" action="{!c.handleComponentEvent}"/>
+    <aura:attribute name="Message" type="String" default=""/>
+
+ <!--Financial-->
+    <aura:registerEvent name="topicClick" type="c:SAE_TopicClickEvent" />
+
+    <!-- US1866429 - Sarma : Search Claim  Number UI : 15th Aug 2019-->
+    <aura:registerEvent name="openTopicBtnClick" type="c:SAE_openTopicBtnClick" />
+
+    <!-- US1958804- Bharat - View Payments Check Search UI Changes on 3rd sep2020 -->
+    <aura:registerEvent name="PaymentSearchEvent" type="c:SAEPaymentSearchEvent" />
+
+    <!--US2061713	Open Topic View Authorization - 9/12/2019 - Sarma -->
+    <aura:registerEvent name="OpenAuthorizationResultsClick" type="c:SAE_OpenAuthorizationResultsEvent" />
+
+    <!-- US1955585 -->
+    <aura:attribute name="callTopicOrder" type="Object" />
+
+    <!-- US2429199: MVP - Navigation of Multiple Topics on a Snapshot Page (Part 2) -->
+    <aura:attribute name="topicClicksCount" type="Integer" default="0"/>
+
+    <!-- US2465305: MVP - Navigation of Multiple Topics on a Snapshot Page (Part 3) -->
+    <aura:attribute name="tempSelection" type="String[]" default="[]"/>
+    <aura:attribute name="currentSelection" type="Object[]" default="[]"/>
+
+    <aura:attribute name="isNoPolicies" type="boolean" access="public"/>
+
+    <!-- US2491365   - Avish -->
+    <aura:attribute name="interactionOverviewTabId" type="String" />
+
+    <!-- US2931847 - TECH - Sanka -->
+        <aura:method name="lookuproute" action="{!c.openTopicFromEvent}"/>
+        <aura:registerEvent name="refreshData" type="c:ACET_RefreshDataFromHeaderEvt"/>
+
+    <!--ketki open member snapshot for claim-->
+    <aura:method name="selectTopic" action="{!c.selectTopic}">
+         <aura:attribute name="detailPgName" type="String" />
+         <aura:attribute name="originatorName" type="String" />
+         <aura:attribute name="topicName" type="String" />
+    </aura:method>
+    <aura:attribute name="preSelectedTopic" type="String" access="public" />
+     <!--ketki open member snapshot for claim end-->
+
+    <!-- DE380979 - Thanish - call topic spinner - 6th Nov 2020 -->
+    <aura:attribute name="policySpinner" type="Boolean"/>
+    <!-- US1738577 - Thanish (V1. 8th July 2019) - Removed card border and body top border to fit the ui mockup -->
+    <!-- US1738577 - Thanish (V2. 17th July 2019) - Removed card border and body top border to fit the ui mockup -->
+    <!-- US2045625 - Thanish - 1st Oct 2019 -->
+    <aura:attribute name="callTopicLstSelected" type="sObject[]"/>
+
+    <div onkeyup="{!c.onClickOfEnter}" aura:id="card" class="cardTitle card_padding" style="border-right: 1px solid rgb(221, 219, 218);"> <!-- US3536342 - Thanish - 3rd Jun 2021 -->
+        <!-- DE380979 - Thanish - call topic spinner - 6th Nov 2020 -->
+        <aura:if isTrue="{!v.policySpinner}">
+            <lightning:spinner variant="brand"/>
+        </aura:if>
+
+        <div class="card_bottom_margin">
+            <h2 class="component_title">Topic</h2>
+        </div>
+		<div>
+            <div onmouseleave="{!c.onblur}" aura:id="searchRes" class="slds-form-element slds-lookup slds-is-close" style="width: 67%;" >
+               <!-- <label class="slds-form-element__label">Topic</label> -->
+                <!--This part is for display search bar for lookup-->
+                <div class="slds-form-element__control">
+                    <div class="slds-lookup__search-input slds-input inputSize">
+                    <div class="slds-input-has-icon slds-input-has-icon--right">
+
+                    <aura:if isTrue="{!(v.isVCCD &amp;&amp; v.nonEligibleTopic)}"><!-- US2789379 - Sravan -->
+                                    <!--Non Eligible Call Topic - Start -->
+                                    <aura:iteration items="{!v.nonEligibleCallTopic}" var="nr">
+                                        <span class="slds-pill nonEligibleTopic">
+                                            <span class="slds-pill__label" >{!nr}</span>
+                                            <button class="slds-button slds-button--icon-bare"  onclick="{!c.clear}" style="transform: scale(0.75);">
+                                               <lightning:icon iconName="utility:close"  variant="inverse" size="small"/>
+                                                <span class="slds-assistive-text">Remove</span>
+                                            </button>
+                                        </span>
+                                    </aura:iteration>
+                                    <!--Non Eligible Call Topic - Stop -->
+                                 </aura:if>
+                     <aura:if isTrue="{! (v.isVCCD &amp;&amp; !v.nonEligibleTopic) || (!v.isVCCD)}"><!-- US2789379 - Sravan -->
+                                <div aura:id="lookup-pill" class="slds-pill-container" style="border:0px;">
+                                    <div aura:id="lookupField" class="slds-combobox__form slds-input-has-icon slds-input-has-icon_right"  style="width: 100%;">
+                                        <!--Selected Records Pills Section-->
+                                        <aura:iteration items="{!v.lstSelectedRecords}" var="sr">
+                                            <lightning:pill class="slds-m-around_xx-small" label="{!sr.Name}" name="{!sr.Id}" onremove="{! c.clear }">
+                                                <aura:set attribute="media">
+                                                    <lightning:icon iconName="{!v.IconName}" size="x-small" alternativeText="icon"/>
+                                                </aura:set>
+                                            </lightning:pill>
+                                        </aura:iteration>
+                                        <span>
+                                            <ui:inputText class="noborder" click="{!c.onfocus}"
+                                                updateOn="keyup"
+                                                keyup="{!c.keyPressController}"
+                                                aura:id="callTopicId"
+                                                value="{!v.SearchKeyWord}"
+                                                placeholder="{!v.lstSelectedRecords.length > 0 ? '':'Select Topic'}"
+                                                disabled = "{!v.isNoPolicies}"/>
+                                        </span>
+                                </div>
+                            </div>
+						</aura:if>
+
+
+
+
+
+                    </div>
+                </div>
+                </div>
+
+
+                <!--This part is for Display typehead lookup result List-->
+                <ul style="max-height:500px;margin-top:0px !important;overflow: auto;" class="slds-listbox slds-listbox_vertical slds-dropdown slds-dropdown_fluid slds-lookup__menu slds" role="listbox">
+                    <lightning:spinner class="slds-hide" variant="brand" size="small" aura:id="mySpinner"/>
+                    <center> {!v.Message}</center>
+                    <aura:iteration items="{!v.listOfSearchRecords}" var="singleRec">
+                        <!--Child Component-->
+                        <c:SAE_CallTopicCompoentBox oRecord="{!singleRec}" IconName="{!v.IconName}" selectedListRecords="{!v.lstSelectedRecords}"/>
+                    </aura:iteration>
+                </ul>
+
+            </div>
+            <div style="float: right; margin-top: -37px;">
+                <lightning:button label="Open Topic" class="brand_button"
+                                  variant="brand"
+								  iconName="utility:search"
+								  iconPosition="left"
+								  onclick="{!c.handleButtonClick}"
+								  disabled="{!or(v.isDisableTopic,v.isNoPolicies)}"/>
+            </div>
+            <!--US2570805 - VCCD - Member Snapshot call topic Integration - Sravan  - Start-->
+            <aura:if isTrue="{!v.nonEligibleTopic}">
+                <span class="warningText">Warning! You must go to ISET/FACETS to obtain claim information.</span>
+            </aura:if>
+            <!--US2570805 - VCCD - Member Snapshot call topic Integration - Sravan  - Stop-->
+        </div>
+    </div>
+    <!-- End of Code - US2045625 - Thanish - 1st Oct 2019 -->
+
+</aura:component>

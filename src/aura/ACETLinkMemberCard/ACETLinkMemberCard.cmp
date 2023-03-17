@@ -1,0 +1,339 @@
+<aura:component implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,forceCommunity:availableForAllPageTypes" access="global"
+                controller="ACETLinkMemberSearch">
+    <aura:attribute name="providerDetails" type="Object" />
+    <aura:attribute name="providerValidated" type="Boolean" default="false"/>
+    <aura:attribute name="providerNotFound" type="Boolean" default="false" />
+    <aura:attribute name="isProviderSearchDisabled" type="Boolean" default="false" />
+    <aura:attribute name="isMemSearchDisabledFromPrv" type="Boolean" default="false" />
+    <aura:attribute name="mnfCheckBoxHide" type="Boolean" default="false" />
+    <aura:attribute name="mnfCheckBoxShow" type="Boolean" default="false" />
+    <lightning:workspaceAPI aura:id="workspace" />
+    <ltng:require styles="{!$Resource.multilineToastCSS}" />
+    <aura:registerEvent name="householdEvent" type="c:ACETLinkHouseHoldDataEvent"/>
+    <aura:registerEvent name="ACETLinkSubjectCardAE" type="c:ACETLinkSubjectCardAE"/>
+    <aura:registerEvent name="ACETLinkGetProviderDetailsAE" type="c:ACETLinkGetProviderDetailsAE" />
+    <aura:handler event="c:ACETLinkSetProviderDetailsAE" action="{!c.setProviderDetails}" />
+    <aura:handler event="c:ACETLinkSearchedMembersAE" action="{!c.addSearchedMember}"/>
+    <aura:registerEvent name="ACETLinkProviderToMember" type="c:ACETLinkProvidertoMember"/>
+    <aura:handler event="c:ACETLinkProvidertoMember" action="{!c.enableContactName}"/>
+    <aura:attribute name="memberSearches" type="List" />
+
+    <aura:attribute name="selectedState" type="String" default="" />
+    <aura:handler event="c:ACETLinkStateValuesEvent" name="stateChangedEvent" action="{!c.handleSatetChange}" />
+    <aura:attribute name="display" type="Boolean" default="false" />
+    <aura:attribute name="today" type="Date" default="" />
+    <aura:attribute name="data" type="Object" />
+    <aura:attribute name="columns" type="List" />
+    <aura:handler name="init" value="{!this}" action="{!c.init}" />
+    <aura:attribute name="disableProviderSec" type="Boolean" default="false" />
+    <aura:attribute name="disableMemberSec" type="Boolean" default="false" />
+    <aura:attribute name="providerFieldsinMember" type="Boolean" default="false" />
+    <aura:attribute name="getContactVal" type="String" />
+    <aura:attribute name="memberContactNameVal" type="String" />
+    <aura:attribute name="providerContactNameVal" type="String" />
+    <aura:attribute name="setContactVal" type="String" default="" />
+    <aura:attribute name="input" type="String" default="" />
+    <aura:attribute name="memFirstName" type="String" default="" />
+    <aura:attribute name="memLastName" type="String" default="" />
+    <aura:attribute name="groupNumber" type="String" />
+    <aura:attribute name="memberData" type="Object" />
+    <aura:attribute name="responseData" type="Object[]" />
+    <aura:attribute name="searchBtnFlag" type="Boolean" />
+    <aura:attribute name="interactionCard" type="Object" />
+    <aura:attribute name="subjectCard" type="Object" default="null"/>
+    <aura:attribute name="commonErrorMessage" type="Boolean" default="false" />
+    <aura:attribute name="memPhoneNumber" type="string" />
+    <aura:attribute name="searchOptionVal" type="string" />
+    <aura:attribute name="mnf" type="string" />
+    <aura:attribute name="mnfCheckBox" type="Boolean" default="false"/>
+    <aura:attribute name="invalidResultFlag" type="Boolean"/>
+    <aura:attribute name="displayMNFFlag" type="Boolean" />
+    <aura:attribute name="interactionType" type="string" default="Incoming Call"/>
+
+    <aura:attribute name="noMemberCheckBox" type="String" />
+    <aura:attribute name="showServiceErrors" type="Boolean"/>
+    <aura:attribute name="serviceMessage" type="String"/>
+    <aura:attribute name="showHideMemAdvSearch" type="Boolean" default="false" /> <!---->
+    <aura:attribute name="profileCheck" type="Boolean"/>
+    <!--US1708392 - Malinda-->
+    <aura:attribute name="errorMessage" type="String"
+                    default="This search requires one of the following search combinations : (Member ID + DOB) or (Member ID or DOB and First Name + Last Name) or (First Name or List Name and Member ID + DOB)" />
+    <aura:attribute name="isMemIdRequired" type="Boolean" default="true" />
+    <aura:attribute name="isDobRequired" type="Boolean" default="true" />
+    <aura:attribute name="hasErrorMessage" type="Boolean" default="false" />
+    <!--US1708392 - Malinda End-->
+
+    <!--US1708392 - Sanka -->
+    <aura:attribute name="hasFirstNameError" type="Boolean" default="false" />
+    <aura:attribute name="hasLastNameError" type="Boolean" default="false" />
+    <aura:attribute name="FirstNameErrorMessage" type="String"
+                    default="Enter atleast 2 characters followed by an asterisk, and no character after the asterisk, in order to perform a wild card search on the First Name field (example: ab*)" />
+    <aura:attribute name="LastNameErrorMessage" type="String"
+                    default="Enter atleast 3 characters followed by an asterisk, and no character after the asterisk, in order to perform a wild card search on the Last Name field (example: abc*)" />
+    <!--US1708392 - END -->
+
+    <!--US1797978 - Malinda-->
+    <aura:attribute name="inputZip" type="String" default="" />
+    <aura:attribute name="inputPhone" type="String" default="" />
+
+    <aura:handler event="c:InteractionEvent" action="{!c.assignInteractionID}"/>
+    <aura:attribute name="interactionID" type="String"/>
+    <aura:attribute name="respStatusCode" type="String"/>
+
+    <!-- Added by Avish on 07/25/2019-->
+    <aura:attribute name="checkFlagmeberCard" type="Boolean" />
+	<aura:attribute name="mnfDetailsLst" type="Object[]" />
+    <aura:attribute name="tranId" type="String" access="public"/><!--Code Added By Chandan -->
+    <aura:attribute name="houseHoldData" type="Object[]"/><!--Code Added By Chandan -->
+    <aura:attribute name="concatAddress" type="String" access="public"/><!--Code Added By Chandan -->
+    <aura:attribute name="memberCardData" type="Object"/><!--Code Added By Chandan -->
+    <aura:attribute name="memberPolicies" type="ACETLinkCoveragesResult.CoverageLine[]"/><!--Code Added By Chandan -->
+    <aura:attribute name="showSpinner" type="Boolean" default="false" /> <!-- US2021959 :Code Added By Chandan  -->
+    <aura:handler name="setShowSpinner" event="c:AcetLinkShowSpinnerEvent" action="{!c.setShowSpinner}"/> <!-- US2021959 :Code Added By Chandan  -->
+	<div class="slds-p-left_medium slds-p-right_medium divWidth" style="background:white;">
+        <!-- US2021959 :Code Added By Chandan-Start -->
+        <aura:renderIf isTrue="{!v.showSpinner}">
+            <lightning:spinner class="slds-show" aura:id="global-spinner" 
+                               alternativeText="Loading.." title="Loading.." 
+                               variant="brand" size="medium"/>
+        </aura:renderIf>
+        <!-- US2021959 :Code Added By Chandan-End -->
+        <div class="slds-text-heading_medium boxHeadings"
+             style=" color: black;font-weight: bold;padding-top: 16px;">Member
+            <lightning:button variant="neutral" label="Clear" title="Neutral action"
+                              name="memClearName" class="clearBtn"
+                              onclick="{!c.onClickMemberClear}"
+                              disabled="{!v.disableMemberSec || v.isMemSearchDisabledFromPrv}" />
+        </div>
+        <div class="slds-p-left_medium">
+            <div class="slds-form-element slds-lookup" data-select="single">
+                <label for="memberName" style="color: #3e3e3c;
+                                               font-size: 12px;
+                                               font-family: Arial;">
+                    <div>
+                        <abbr title="required" class="slds-required">
+                            <aura:renderIf isTrue="{!v.isMemIdRequired}">*
+                            </aura:renderIf>
+                        </abbr>Member ID
+                        <lightning:helptext iconName="utility:info"
+                                            content="Options include the following: Alt ID, Member ID, SSN, EE ID, Medicare ID, Medicaid ID, HCIN ID, MBI ID"
+                                            style="margin-top: -3px;margin-left:7px;color:grey;" />
+                    </div>
+                </label>
+                <div class="slds-form-element__control">
+                    <div class="slds-input-has-icon slds-input-has-icon--left">
+                        <lightning:buttonIcon iconName="utility:search"
+                                              variant="bare" alternativeText="Search"
+                                              class="slds-input__icon memSearchIcon" />
+
+                        <span onkeyup="{!c.checkIfNotNumber}">
+                            <lightning:input aura:id="memberId"
+                                             required="{!v.isMemIdRequired}" id="memberName"
+                                             variant="label-hidden" type="String"
+                                             name="memberIdName" class="inputsMemID"
+                                             value="{!v.input}"
+                                             disabled="{!v.disableMemberSec || v.mnfCheckBox || v.isMemSearchDisabledFromPrv}"
+                                             onblur="{!c.memberIDfieldOnBlur}">
+                            </lightning:input>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <lightning:input aura:id="inputDOB" type="date" id="memberDob" label="DOB"
+                                 disabled="{!v.disableMemberSec || v.isMemSearchDisabledFromPrv}" class="dobErrorAllign"
+                                 required="{!or(v.isDobRequired,v.mnfCheckBox)}" dateStyle="short"
+                                 name="dobName"
+                                 pattern="/^([0-9]{4})\-([0-9]{2})\-([0-9]{2})$/"
+                                 messageWhenBadInput="Error: Invalid Date"
+                                 messageWhenPatternMismatch="Error: Invalid Date" />
+            </div>
+            <br />
+            
+                <!--lightning:input type="String" name="phoneNumberName" label="Caller ANI" class="inputs" value="{!v.setCallerVal}" style="margin-top:-18px;" disabled="{!v.disableMemberSec}"/-->
+                <lightning:input type="String" aura:id="memContactId" name="contactName"
+                                 label="Contact Name" class="{!v.profileCheck == true ? 'inputs' : 'chkClass1'}" style="margin-top:-5%"
+                                 value="{!v.memberContactNameVal}" required="true" 
+                                 pattern="^[a-zA-Z ]*$"
+                                 onchange="{!c.checkContactName}"
+                                 messageWhenPatternMismatch="Enter text only"/><br/><br/>
+            
+            <div class="slds-grid slds-gutters" style="margin-top: 0%;">
+                <div class="slds-col slds-size_1-of-2">
+                    <aura:renderIf isTrue="{!!v.showHideMemAdvSearch}">
+                        
+                        <a href="javascript:void(0)" onclick="{!c.hideMemAdvaceSearch}"
+                           class="aSearch" name="memAdvanceSearchName"
+                           disabled="{!v.disableMemberSec || v.isMemSearchDisabledFromPrv}">
+                            Show Advanced Search
+                        </a>
+                        <aura:set attribute="else">
+                            <a href="javascript:void(0)" class="aSearch"
+                               onclick="{!c.showMemAdvaceSearch}"
+                               name="memHideAdvaceName"
+                               disabled="{!v.disableMemberSec || v.isMemSearchDisabledFromPrv}">Hide Advanced
+                                Search</a>
+                        </aura:set>
+                    </aura:renderIf>
+                </div>
+                <div class="slds-col slds-size_1-of-2">
+                    <div class="slds-grid slds-grid_vertical">
+                        <div class="slds-col">
+                                                  
+                            <span>
+                                
+                                <!--<aura:if  isTrue="{!v.profileDetail}" >-->
+                                    <lightning:input type="checkbox" name="memNotFoundName"
+                                                     aura:id="noMemFoundId" label="No member to search"
+                                                     class="{!v.profileCheck == true ? 'chkClass' : 'chkClass1'}" value="{!v.noMemberCheckBox}"
+                                                     checked="{!v.disableMemberSec}" disabled="{!v.isMemSearchDisabledFromPrv}"/>
+                                <!--</aura:if> -->  
+                            </span>
+                             
+                        </div>
+                        <div class="slds-col">
+                            <span>
+                                <aura:renderIf isTrue="{!v.mnf == 'mnf'}">
+                                    <lightning:input type="checkbox" name="memNotFoundName"
+                                                     aura:id="memNotFoundID" label="Member not found"
+                                                     class="chkClass" style="margin-top:-19% !important"
+                                                     onchange="{!c.handleChangeMNF}" checked="{!v.mnfCheckBox}"
+                                                     disabled="{!v.isMemSearchDisabledFromPrv}"/>
+
+                                </aura:renderIf>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <!-- added to test the functionality not working in community -->
+           <aura:renderIf isTrue="{!v.showHideMemAdvSearch}">
+                <div class="{!v.profileCheck == true ? 'c-container container' : 'c-container containerITE'}">
+                    <lightning:layout class="x-large">
+
+                        <lightning:layoutItem flexibility="grow" class=""
+                                              size="12">
+
+                            <lightning:input label="First Name" class="" required="{!v.mnfCheckBox}"
+                                             name="memfirstName" aura:id="memFirstNameId"
+                                             disabled="{!v.disableMemberSec || v.isMemSearchDisabledFromPrv}"
+                                             value="{!v.memFirstName}" />
+
+                            <!--US1797978 - Malinda-->
+                            <div aura:id="msgTxtFname" class="slds-text-color_error slds-align_absolute-center slds-hide">
+                                {!v.FirstNameErrorMessage}
+                            </div>
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                    <lightning:layout class="x-large">
+                        <lightning:layoutItem flexibility="grow" class=""
+                                              size="12">
+                            <lightning:input label="Last Name" class="" required="{!v.mnfCheckBox}"
+                                             name="memLastName" aura:id="memLastNameId"
+                                             disabled="{!v.disableMemberSec || v.isMemSearchDisabledFromPrv}"
+                                             value="{!v.memLastName}" />
+
+                            <!--US1797978 - Malinda-->
+                            <div aura:id="msgTxtLname" class="slds-text-color_error slds-align_absolute-center slds-hide">
+                                {!v.LastNameErrorMessage}
+                            </div>
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                    <lightning:layout class="x-large">
+                        <lightning:layoutItem flexibility="grow" class=""
+                                              size="12">
+                            <lightning:input label="Group Number" class=""
+                                             name="memGroupNumber" aura:id="memGroupNumberId"
+                                             disabled="{!v.disableMemberSec || v.mnfCheckBox || v.isMemSearchDisabledFromPrv}"
+                                             value="{!v.groupNumber}"
+                                             onchange="{!c.checkGroupValidity}" />
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                    <lightning:layout class="x-large">
+                        <lightning:layoutItem flexibility="grow" class="{!v.profileCheck == true ? 'chkClass' : 'chkClass1'}"
+                                              size="12">
+
+                            <c:ACETLinkStateValues aura:id="stateMemId" requiredFlag="{!v.mnfCheckBox}" disabledFlag="{!v.disableMemberSec || v.isMemSearchDisabledFromPrv}" />
+							<!--Aligned till here Som -->
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                    <lightning:layout class="x-large">
+                        <lightning:layoutItem flexibility="grow" class=""
+                                              size="12">
+                            <!--US1797978 - Malinda - START-->
+                            <span onkeyup="{!c.checkIfNotNumberZip}">
+                                <lightning:input label="Zip Code" 
+                                                 name="memZipCodeName" aura:id="memZipCodeId" class="{!v.profileCheck == true ? 'chkClass' : 'chkClass1'}"
+                                                 disabled="{!v.disableMemberSec || v.mnfCheckBox || v.isMemSearchDisabledFromPrv}"
+                                                 value="{!v.inputZip}"
+                                                 maxlength="5"/>
+                                <!--US1797978 - Malinda-->
+                                <div aura:id="msgTxtZip"
+                                     class="slds-text-color_error slds-align_absolute-center slds-hide">
+                                    To search by Zip Code, Enter 5 digits
+                                </div>
+                            </span>
+                            <!--US1797978 - Malinda - END-->
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                    <lightning:layout class="x-large">
+                        <lightning:layoutItem flexibility="grow" class=""
+                                              size="12">
+
+                            <span onkeyup="{!c.checkIfNotNumberPhone}">
+                                <lightning:input label="Phone Number"
+                                                 required="{!v.mnfCheckBox}"
+                                                 value="{!v.inputPhone}"
+                                                 name="memPhoneNumberName"
+                                                 aura:id="memPhoneNumber"
+                                                 disabled="{!v.disableMemberSec || v.isMemSearchDisabledFromPrv}"
+                                                 maxlength="10"
+                                                 minlength="10"
+                                                 pattern="[0-9]*"
+                                                 class="{!v.profileCheck == true ? 'chkClass' : 'chkClass1'}"
+                                                 messageWhenTooShort="Enter 10 digits only"
+                                                 autocomplete="off"/>
+                            </span>
+                        </lightning:layoutItem>
+                    </lightning:layout>
+                </div><br />
+            </aura:renderIf>
+            <br/>
+            <aura:renderIf isTrue="{!!v.disableMemberSec}">
+                <div class="slds-grid slds-gutters">
+                    <div class="slds-col slds-size_3-of-12">
+                        <aura:renderIf isTrue="{!!v.mnfCheckBox}">
+                            <lightning:button variant="brand" label="Search"
+                                              title="Brand action" name="searchName"
+                                              class="{!v.profileCheck == true ? 'searchBtn' : 'searchBtn1'}" onclick="{!c.checkValidation}"
+                                              disabled="{!v.disableMemberSec || v.mnfCheckBox || v.isMemSearchDisabledFromPrv}" />
+                        </aura:renderIf>
+
+                        <aura:renderIf isTrue="{!v.mnfCheckBox}">
+                            <lightning:button variant="brand" label="Add Member"
+                                              title="Brand action" name="addMemberBtn"
+                                              class="searchBtn"
+                                              onclick="{!c.navigateToInteraction}"
+                                              disabled="{!v.isMemSearchDisabledFromPrv}"/>
+                        </aura:renderIf>
+                    </div>
+                    <div aura:id="msgtxt"
+                         class="slds-col slds-size_9-of-12 slds-hide"
+                         style="margin-top: -7%;
+                                margin-left: 0rem;
+                                padding-left: 2%;
+                                padding-right: 5%;">
+                        <p class="errorMsg">This search requires one of the
+                            following search combinations : (Member ID + DOB) or
+                            (Member ID or DOB and First Name + Last Name) or
+                            (First Name or Last Name and Member ID + DOB)</p>
+
+                    </div>
+                </div>
+            </aura:renderIf>
+        </div>
+        
+    </div>
+    <c:ACETLinkHouseHoldDate aura:id="house"/>
+</aura:component>

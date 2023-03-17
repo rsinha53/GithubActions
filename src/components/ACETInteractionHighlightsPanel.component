@@ -1,0 +1,1423 @@
+<apex:component controller="ACETInteractionHighlightsPanelController"
+    allowDML="true">
+    <apex:attribute type="Interaction__c" name="InteractionAtt"
+        description="Interaction record created for provider or member flow"
+        assignTo="{!Interaction}" required="false" />
+    <apex:attribute type="Contact" name="SubjectAtt"
+        description="subject record associated with the flow"
+        assignTo="{!Subject}" required="false" />
+    <apex:attribute type="Alert__c[]" name="TotalAlerts"
+        description="total  Alerts related to the Member"
+        assignTo="{!lstMemAlertOtherPage}" required="false" />
+    <apex:attribute type="Alert__c[]" name="TotalProviderAlerts"
+        description="total  Alerts related to the Provider"
+        assignTo="{!lstProviderAlertDetailPage}" required="false" />
+    <apex:attribute type="Alert__c[]" name="TotalProducerAlerts"
+        description="total  Alerts related to the Producer"
+        assignTo="{!lstProducerAlertDetailPage}" required="false" />
+    <apex:attribute type="Alert__c[]" name="TotalGroupAlerts"
+        description="total  Alerts related to the Group"
+        assignTo="{!lstGroupAlertDetailPage}" required="false" />
+    <apex:attribute type="ACETHighlightsPanelAdditionalInfo"
+        name="AdditionalInfoAtt"
+        description="other fields displayed in panel from oil"
+        assignTo="{!AdditionalInfo}" required="false" />
+    <apex:attribute type="String" name="SurrogateKey"
+        description="SurrogateKey of the Member" required="false" />
+    <apex:attribute type="ACETGroupDetail" name="GroupDetailAtt"
+        description="Group Details" assignTo="{!groupDetails}"
+        required="false" />
+    <apex:attribute type="Boolean" name="showALertAtt"
+        description="Show the Group Alert" assignTo="{!isshowALert}"
+        required="false" id="showgroupAlert" />
+    <apex:attribute type="String" name="selectedOriginator"
+            description="selected originator on member detail page"
+            required="false" id="seledtedOriginator" />        
+    <apex:attribute type="String" name="attrTopic"
+        description="topic" required="false" assignTo="{!topicName}"/>
+    
+    <style>
+        .highlights-panel-container {
+            width: 100%;
+            background: #FFF;
+            overflow: hidden;
+            border-bottom: 2px solid #dbdbdb;
+            position: relative;
+            min-height: 21px;
+        }
+        
+        .highlights-panel-collapsible {
+            min-height: 100px;
+        }
+        
+        .highlights-panel-container .panel-arrow-down {
+            position: absolute;
+            top: 0;
+            left: 45%;
+        }
+        
+        .highlights-panel-container .panel-arrow-up {
+            position: absolute;
+            bottom: 0;
+            left: 45%;
+        }
+        
+        .hide-arrow {
+            display: none;
+        }
+        
+        .show-arrow {
+            display: block;
+        }
+        
+        .outputLabelPanel {
+            font-weight: bold;
+            margin-right: 20px;
+
+        }
+        
+        .colStyle {
+            width: 27%;
+        }
+        
+        .custPopup {
+            background-color: white;
+            border-width: 2px;
+            border-style: solid;
+            z-index: 9999;
+            left: 20%;
+            padding: 10px;
+            position: absolute;
+            margin-left: -150px;
+            top: 70px;
+        }
+        
+        .popupBackground {
+            background-color: black;
+            opacity: 0.20;
+            filter: alpha(opacity = 20);
+            position: absolute;
+            width: 100%;
+            height: 1000%;
+            top: 0;
+            left: 0;
+            z-index: 9998;
+        }
+        
+        .custPopup_Group {
+            background-color: white;
+            border-width: 2px;
+            border-style: solid;
+            z-index: 9999;
+            left: 30%;
+            padding: 10px;
+            position: fixed;
+            margin-left: -150px;
+            top: 20%;
+        }
+        .onshore-indicator{
+            border-bottom: 1px dotted black;
+        }
+        
+        .tooltip-modal{
+        background-color: #f5f5f5;
+            z-index: 9999;
+            padding: 10px;
+            position: absolute;
+            display: none;
+            /* opacity: .5; */
+            width: 15%;
+            /* border-radius: 5px; */
+            box-shadow: 1px 1px 1px #bbbbbb;
+            border-style: ridge; 
+            border-width: 1px;  
+        }
+        
+    </style>
+    <script>
+        var alertModalWindow = $("[id$='alertModalWindow']");
+        var alertGroupModalWindow = $("[id$='alertGroupModalWindow']");
+        var toggleHighlightsPanel = function(){
+            $(".highlights-panel-collapsible").slideToggle(400, function(){
+                
+                if($(".panel-arrow-down").hasClass("show-arrow")){
+                    $(".panel-arrow-down").addClass("hide-arrow").removeClass("show-arrow");
+                    $(".panel-arrow-up").addClass("show-arrow").removeClass("hide-arrow");
+                    
+                    $(".highlights-panel-container").css({"border-bottom":"2px solid #ccc", "border-top":"none"});
+                }
+                else{
+                    $(".panel-arrow-down").removeClass("hide-arrow").addClass("show-arrow");
+                    $(".panel-arrow-up").removeClass("show-arrow").addClass("hide-arrow");
+                    
+                    $(".highlights-panel-container").css({"border-top":"2px solid #ccc", "border-bottom":"none"});
+                }
+            });
+        }; 
+    
+        $(document).ready(function() {
+
+        
+        
+             var alerproducerSize = "{!lstProducerAlertDetailPage.size}";
+             if(alerproducerSize == 0 || alerproducerSize == ''){
+                 console.log('inside the producer alert');
+                 //getProducerAlert();
+             }
+             $("[id$='interactionId']").on('click', function(){
+                console.log('Clicked Interaction...');       
+                sforce.console.getEnclosingPrimaryTabId(function(result) {
+                    sforce.console.openSubtab(result.id, '/'+'{!Interaction.Id}', true, '{!Interaction.Name}', null);
+                });
+                return false;
+            }); 
+            getAllAlerts(); 
+            console.log('renderHippaLabel '+ "{!selectedOriginator}");
+
+         }); 
+    
+        function renderHippaLabel(){
+        console.log('renderHippaLabel '+ "{!selectedOriginator}");
+        
+            //Bhanu Jain : For HIPPA Disclosure
+            if(("{!JSENCODE(selectedOriginator)}" == null || "{!JSENCODE(selectedOriginator)}" == "None" || "{!JSENCODE(selectedOriginator)}" == "")  && "{!JSENCODE(Interaction.Originator_Type__c)}" == "Member"){
+               $("[id$='hippaPanel']").css("display","none");
+            }else{
+            $("[id$='hippaPanel']").css("display","block");
+            }
+            //var outM= '<svg id = "svgout" style = "margin-bottom:-1%;fill:blue;" version="1.1" xmlns="http://www.w3.org/2000/svg" width="14" height="18" viewBox="0 0 24 28"><path d="M13.75 18.75v2.5c0 0.281-0.219 0.5-0.5 0.5h-2.5c-0.281 0-0.5-0.219-0.5-0.5v-2.5c0-0.281 0.219-0.5 0.5-0.5h2.5c0.281 0 0.5 0.219 0.5 0.5zM17.75 11c0 2.219-1.547 3.094-2.688 3.734-0.812 0.469-1.313 0.766-1.313 1.266v0.5c0 0.281-0.219 0.5-0.5 0.5h-2.5c-0.281 0-0.5-0.219-0.5-0.5v-1.062c0-1.922 1.375-2.531 2.484-3.031 0.938-0.438 1.516-0.734 1.516-1.437 0-0.906-1.141-1.578-2.172-1.578-0.547 0-1.125 0.172-1.484 0.422-0.344 0.234-0.672 0.578-1.25 1.297-0.094 0.125-0.234 0.187-0.391 0.187-0.109 0-0.219-0.031-0.297-0.094l-1.687-1.281c-0.203-0.156-0.25-0.453-0.109-0.672 1.281-2.016 3.078-3 5.453-3v0c2.562 0 5.437 2.031 5.437 4.75zM12 4c-5.516 0-10 4.484-10 10s4.484 10 10 10 10-4.484 10-10-4.484-10-10-10zM24 14c0 6.625-5.375 12-12 12s-12-5.375-12-12 5.375-12 12-12v0c6.625 0 12 5.375 12 12z"></path></svg>';
+            var onM= '<svg id = "svgon" style = "margin-bottom:-1%;fill:{!JSENCODE($Label.ACETHippaHelpIconColorCode)};" version="1.1" xmlns="http://www.w3.org/2000/svg" width="14" height="18" viewBox="0 0 24 28"><path d="M14 21.5v-3c0-0.281-0.219-0.5-0.5-0.5h-3c-0.281 0-0.5 0.219-0.5 0.5v3c0 0.281 0.219 0.5 0.5 0.5h3c0.281 0 0.5-0.219 0.5-0.5zM18 11c0-2.859-3-5-5.688-5-2.547 0-4.453 1.094-5.797 3.328-0.141 0.219-0.078 0.5 0.125 0.656l2.063 1.563c0.078 0.063 0.187 0.094 0.297 0.094 0.141 0 0.297-0.063 0.391-0.187 0.734-0.938 1.047-1.219 1.344-1.437 0.266-0.187 0.781-0.375 1.344-0.375 1 0 1.922 0.641 1.922 1.328 0 0.812-0.422 1.219-1.375 1.656-1.109 0.5-2.625 1.797-2.625 3.313v0.562c0 0.281 0.219 0.5 0.5 0.5h3c0.281 0 0.5-0.219 0.5-0.5v0c0-0.359 0.453-1.125 1.188-1.547 1.188-0.672 2.812-1.578 2.812-3.953zM24 14c0 6.625-5.375 12-12 12s-12-5.375-12-12 5.375-12 12-12 12 5.375 12 12z"></path></svg>';
+    console.log("running again");
+            //$("[id$='hippaLbl']").css("cursor","pointer");
+            $("[id$='hippaLbl']").find(".spanhippaIco").html(onM);
+           // $("[id$='hippaLbl']").css("cursor","pointer");
+           
+            $(".spanhippaIco").mouseover(function(){
+            console.log('display'+$("#hippaMsgBox").css("display"));
+              if($("#hippaMsgBox").css("display") == 'none'){
+                getCategory();//this action function is defined in the HIPPA Disclosure Component
+                $(".spanhippaIco").html(onM);
+                $("#hippaMsgBox").css("display","block");
+              }
+
+            });
+            //Bhanu Jain : For HIPPA Disclosure ends 
+           /* 
+            $(".onshore-indicator").mousemove(function(){
+                var tooltip = $(this).parent().find(".tooltip-modal");
+                $(tooltip).css("display","block");
+                var posX = event.clientX + 'px';
+                var posY = event.clientY + 'px';
+                $(tooltip).css("top",posY);                
+                $(tooltip).css("left",posX);                                
+            
+            });
+            $(".onshore-indicator").mouseout(function(){
+                var tooltip = $(this).parent().find(".tooltip-modal");
+                $(tooltip).css("display","none");
+            
+            });*/
+                                  
+         }     
+    function openCirrusWindow(CIRRUSURL) {
+            console.log('CIRRUSURL::'+CIRRUSURL);
+            window.open(CIRRUSURL, 'CIRRUS', 'toolbars=0,width=1200,height=800,left=0,top=0,scrollbars=1,resizable=1'); 
+            
+        }
+            
+        function getGroupAlertjs(){
+             var alertGroupSize = "{!lstGroupAlertDetailPage.size}";
+             alert('lstGroupAlertDetailPage'+lstGroupAlertDetailPage);
+             if(alertGroupSize == 0 || alertGroupSize == ''){
+                 getGroupAlert();
+             }    
+        }
+        
+        function getMemberAlertjs(){
+             var alertListSize = "{!lstMemAlertOtherPage.size}";
+             if(alertListSize == 0 || alertListSize == ''){
+                 getMemberAlert();
+             }    
+        
+        }
+        
+        function getProviderALertjs(){
+             var alertProviderSize = "{!lstProviderAlertDetailPage.size}";
+             if(alertProviderSize  == 0 || alertProviderSize == ''){
+                 getProviderAlert();
+             }    
+        } 
+        
+        function closealertModalWindow(){
+            console.log($("[id$='alertModalWindow']"));
+            $("[id$='alertModalWindow']").css("display","none");
+            $("[id$='alertProviderModalWindow']").css("display","none");
+            $("[id$='alertProducerModalWindow']").css("display","none");
+            $("[id$='alertGroupModalWindow']").css("display","none");
+            rerenderalertModalWindow();
+        }  
+    </script> 
+    <script>
+        function showMaskHLP(){
+            $(".popupBackground").css("display","block");
+        }
+        function hideMaskHLP(){
+           $(".popupBackground").css("display","none");
+        }
+        function resetTable(){
+              $("[id$='originalDrilldowns']").find("tr.pleaseHideMe").hide();
+              $("[id$='originalDrilldowns']").find("tr:first-child").show();
+              
+              $("[id$='originalDrilldowns']").find("tr.odd").click(function()  
+              {
+                 $(this).next("tr").toggle();
+                 $(this).find(".arrow").toggleClass("up");
+              });
+             mesgeRefHLP(); 
+         }
+         function closeHoldCodeAlertHLP()    {
+                    $("[id$='alertHoldCodeHLP']").css("display","none");
+                    hideHoldCodeHLP();
+                    return false;
+                }
+    </script>
+    <style type="text/css">
+         #originalDrilldowns { border-collapse:collapse;}
+         #originalDrilldowns h4 { margin:0px; padding:0px;}
+         #originalDrilldowns img { float:right;}
+         #originalDrilldowns ul { margin:10px 0 10px 40px; padding:0px;}  
+         #originalDrilldowns th { repeat-x scroll center left; padding:7px 15px; text-align:left;}
+         #originalDrilldowns div.arrow { background:transparent url({!URLFOR($Resource.ACETJExpand, '/jExpand/RightArrow.jpg')}) no-repeat scroll 0px 0px; width:21px; height:23px; display:block;}
+         #originalDrilldowns div.up { background:transparent url({!URLFOR($Resource.ACETJExpand, '/jExpand/DownArrow.jpg')}) no-repeat scroll 0px 0px; width:21px; height:23px; display:block;}
+     </style>
+     <style>
+        .pbHeader .pbTitle h2 {
+    width: 175%;
+}
+     </style>
+   <script type="text/javascript" src="{!ACETDynatraceDetails.srcURL}" data-dtconfig="{!ACETDynatraceDetails.dtConfig}|reportUrl={!ACETDynatraceDetails.reportURL}|tp=500,50,0,1" crossorigin="anonymous"></script> 
+    <apex:actionStatus id="HoldStatusHLP">
+        <apex:facet name="start">
+            <p style="text-align: center;">
+                <img src="/img/loading.gif" />&nbsp;<b>Loading...</b>
+            </p>
+        </apex:facet>
+    </apex:actionStatus>
+    <apex:actionFunction name="rerenderalertModalWindow" action="{!btnHideWindowAlertWinodw}" rerender="temp" />
+    <!--- added by Harish on 03/24/2017 for User Story - US554987---->
+    <apex:actionFunction name="getProducerAlert" action="{!getProducerAlert}" reRender="theGridProducerGroup,theGridProducerEmployeGroup"
+        onComplete="console.log('starting getGroupAlertjs');getGroupAlertjs();" />
+    <apex:actionFunction name="getMemberAlert" action="{!getMemberAlert}" reRender="theGridMem,membAlert,membAlertPro"
+        onComplete="console.log('starting getProviderAlertjs'); getProviderALertjs()" />
+    <apex:actionFunction name="getGroupAlert" action="{!getGroupAlert}" reRender="theGroupPanel,groupIdLink,theGridProducerEmployeGroup"
+        onComplete="console.log('starting getMemberAlertjs'); getMemberAlertjs();" />
+    <apex:actionFunction name="getProviderAlert" action="{!getProviderAlert}"
+        reRender="theGridPro,theGroupPanel,groupIdLink,theGridProducerEmployeGroup,theGridMem,membAlert,membAlertPro" />
+    <apex:actionFunction name="setshowGroupALertAF" action="{!clickGroupAlert}" reRender="alertGroupModalWindow"
+        oncomplete="$('[id$=isshowGroupALertID]').show();" />
+    <apex:actionFunction name="getAllAlerts" action="{!getAllAlerts}" reRender="ProviderId,theGridPro,theGridProducerGroup,theGridProducerEmployeGroup,theGridMem,membAlert,membAlertPro,theGroupPanel,groupIdLink,theGridProducerEmployeGroup" onComplete=" renderHippaLabel();" />
+    <apex:actionFunction name="getCirrusUrl" action="{!fetchCirrusSSOURL}" rerender="null" oncomplete="openCirrusWindow('{!CIRRUSURL}'); return false;" >
+           <apex:param name="memId" value=""/>
+           <apex:param name="grpId" value=""/>
+           <apex:param name="subjType" value=""/>
+    </apex:actionFunction>
+    <apex:actionFunction name="showHoldCodeHLP" action="{!showHoldCodeHLP}" reRender="alertHoldCodeHLP,holdLoading" oncomplete="showMaskHLP();resetTable();" status="HoldStatusHLP"/>
+    <apex:actionFunction name="hideHoldCodeHLP" action="{!hideHoldCodeHLP}" reRender="alertHoldCodeHLP,holdLoading" oncomplete="hideMaskHLP()"/>
+    <apex:actionFunction name="mesgeRefHLP" action="{!showHoldErrorMsgsHLP}" reRender="pgmsgHoldHLP" status="HoldErrorHLP"/>
+            
+ 
+    <!--- added by Vishakha on 11/02/2016 for User Story - US:405397,405471---->
+    <div class="highlights-panel-container">
+        <div class="highlights-panel-collapsible">
+            <apex:panelGrid columns="3" width="100%" columnClasses="colStyle" cellspacing="10px" id="theGridPro"
+                            rendered="{!(AdditionalInfo.providertype != null || Interaction.Originator_Type__c == 'Provider')}">
+                <apex:panelGroup >
+                    <apex:outputLabel value="Contact Name" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.contactName}" />
+                </apex:panelGroup>
+                <apex:panelGroup id="ProviderId" rendered="{!Interaction.Originator_Type__c == 'Provider'}">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:commandLink action="{!clickProviderAlert}" styleClass="outputLabelPanel" reRender="alertProviderModalWindow"
+                        value="Provider Alerts ({!if(lstProviderAlertDetailPage.size == null,providerAlertCount,lstProviderAlertDetailPage.size)})" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!Interaction.Originator_Type__c != 'Provider'}">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Interaction ID" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outputlink value="/{!Interaction.id}">{!Interaction.Name}</apex:outputlink>
+                </apex:panelGroup>
+                <!-- US759850 starts -->
+                <apex:panelGroup style="padding:0rem;display:{!(Interaction.Third_Party__c != null || Interaction.Originator_Type__c == 'Provider') && Interaction.Originator_Type__c != 'Member' && NOT(Interaction.Originator_Type__c == 'Group/Employer' ||  Interaction.Originator_Type__c == 'Broker' || Interaction.Originator_Type__c == 'UHG' ||  Interaction.Originator_Type__c == 'General Agent' || Interaction.Originator_Type__c == 'Producer' || Interaction.Originator_Type__c == 'Third Party')},'block','none')}">
+                    <apex:outputLabel value="Provider Name" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outputtext value="{!IF(( Interaction.Originator_Type__c == 'Provider') ,Interaction.Originator__r.Name, IF(Interaction.Originator_Type__c == 'Other' || (Interaction.Third_Party__c != null ) , Interaction.Third_Party__r.FullName__c , Interaction.Originator__r.Account.Name))}" escape="false"/>
+                </apex:panelGroup>
+                <!-- US759850 ends  -->
+                <apex:panelGroup rendered="{!(NOT(ISNULL(AdditionalInfo.providerType)) && AdditionalInfo.MemberId != null)}" id="ProMemberID">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:commandLink action="{!clickMemberAlert}" styleClass="outputLabelPanel" reRender="alertModalWindow"
+                        value="Member Alerts ({!if(lstMemAlertOtherPage.size == null,memberAlertCount,lstMemAlertOtherPage.size)})" />
+                </apex:panelGroup>
+
+                <apex:panelGroup rendered="{! AdditionalInfo.MemberId == null && Interaction.Originator_Type__c != 'Other'}">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outputText value="" />
+                </apex:panelGroup>               
+                <apex:panelGroup style="padding:0rem;display:{!(Interaction.Third_Party__c != null || Interaction.Originator_Type__c == 'Provider') && Interaction.Originator_Type__c != 'Member' && NOT(Interaction.Originator_Type__c == 'Group/Employer' ||  Interaction.Originator_Type__c == 'Broker' || Interaction.Originator_Type__c == 'UHG' ||  Interaction.Originator_Type__c == 'General Agent' || Interaction.Originator_Type__c == 'Producer' || Interaction.Originator_Type__c == 'Third Party')},'block','none')}">
+                    <apex:outputLabel value="Tax ID" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outPutText value="{!IF(Interaction.Originator_Type__c == 'Other' && (Interaction.Third_Party__c != null || Interaction.Originator_Type__c == 'Provider'), Interaction.Third_Party__r.Tax_ID__c, Interaction.Originator__r.Tax_ID__c)}" />
+                </apex:panelGroup>
+                <!-- US759850 starts -->
+                <apex:panelGroup style="padding:0rem;display:{!(Interaction.Third_Party__c != null || Interaction.Originator_Type__c == 'Provider') && Interaction.Originator_Type__c != 'Member' && NOT(Interaction.Originator_Type__c == 'Group/Employer' ||  Interaction.Originator_Type__c == 'Broker' || Interaction.Originator_Type__c == 'UHG' ||  Interaction.Originator_Type__c == 'General Agent' || Interaction.Originator_Type__c == 'Producer' || Interaction.Originator_Type__c == 'Third Party')},'block','none')}">
+                    <apex:outputLabel value="Phone Number" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outputtext value="{!AdditionalInfo.providerPhoneNumber}" escape="false"/>
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{! AdditionalInfo.MemberId == null && Interaction.Originator_Type__c != 'Other'}">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outputText value="" />
+                </apex:panelGroup> 
+                <!-- <apex:panelGroup style="padding:0rem;display:{!IF((Interaction.Originator_Type__c != 'Other'),'block','none')}">
+                    <apex:outputLabel value="Platinum Provider" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outPutText value="{!AdditionalInfo.platinumProvider}" />
+                </apex:panelGroup> -->
+                <apex:panelGroup style="padding:0rem;display:{!IF((Interaction.Originator_Type__c != 'Other'),'block','none')};margin-left:{!IF((AdditionalInfo.MemberId != null),'20px','')}">
+                    <apex:outputLabel value="Provider ID" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outPutText value="{!AdditionalInfo.providerId}" />
+                </apex:panelGroup>
+                <apex:panelGroup style="padding:0rem;display:{!IF((Interaction.Originator_Type__c != 'Other'),'block','none')}">
+                    <apex:outputLabel value="Primary Specialty" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outPutText value="{!AdditionalInfo.primarySpecialty}" escape="false"/>
+                </apex:panelGroup>
+                <!-- US759850 ends -->
+                 <apex:panelGroup rendered="{! AdditionalInfo.MemberId == null && Interaction.Originator_Type__c != 'Other'}">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outputText value="" />
+                </apex:panelGroup>  
+                <apex:panelGroup rendered="{! (AdditionalInfo.MemberId == null && Interaction.Originator_Type__c != 'Other') || ((AdditionalInfo.MemberId == null) && (Interaction.Third_Party__c != null || Interaction.Originator_Type__c == 'Provider') && Interaction.Originator_Type__c != 'Member' && NOT(Interaction.Originator_Type__c == 'Group/Employer' ||  Interaction.Originator_Type__c == 'Broker' || Interaction.Originator_Type__c == 'UHG' ||  Interaction.Originator_Type__c == 'General Agent' || Interaction.Originator_Type__c == 'Producer' || Interaction.Originator_Type__c == 'Third Party')) }">
+                    <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','','Member'); return false;" value="Launch Cirrus"/>
+                </apex:panelGroup>    
+            </apex:panelGrid>
+            <!-- <apex:panelGrid columns="3" width="100%" columnClasses="colStyle" cellspacing="10px" id="theGridMemNotFou"
+                rendered="{!Interaction.Originator_Type__c == $Label.ACETProviderNotFoundOriginatorType && Interaction.Third_Party__c == null}" >
+                <apex:panelGroup >
+                    <apex:outputLabel value="Employer Name" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.EmployerName}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Group Number" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.GroupNumber}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Interaction ID" styleClass="outputLabelPanel" />
+                    <apex:outputlink value="/{!Interaction.id}">{!Interaction.Name}</apex:outputlink>
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Name" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.FirstName + ' ' + AdditionalInfo.LastName}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="DOB" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outPutText value="{!AdditionalInfo.DOB}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="State" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outPutText value="{!AdditionalInfo.State}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Zip" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outPutText value="{!AdditionalInfo.Zip}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Phone" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outPutText value="{!AdditionalInfo.PhoneNumber}" />
+                </apex:panelGroup>
+            </apex:panelGrid> -->
+            <apex:panelGrid columns="4" width="100%" columnClasses="colStyle" cellspacing="10px" id="theGridMem"
+                rendered="{!Interaction.Originator_Type__c == 'Member'}" >
+                <apex:panelGroup >
+                    <apex:outputLabel value="Originator Name" styleClass="outputLabelPanel" />
+                    <apex:outputText id="originatorNameId" rendered="{!IF(Interaction.Third_Party__c== '', false,true) }"
+                        value="{!Interaction.Third_Party__r.First_Name__c} {!Interaction.Third_Party__r.LastName__c}"></apex:outputText>
+                    <apex:outPutText rendered="{!IF(Interaction.Third_Party__c== '', true,false) }" value="{!Interaction.Originator__r.Name}" />
+                    <apex:outputText value=" - {!AdditionalInfo.OriginatorRelationship}" />
+                </apex:panelGroup>
+                <apex:panelGroup id="MemberId">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel" />
+                    <apex:commandLink action="{!clickMemberAlert}" styleClass="outputLabelPanel" reRender="alertModalWindow"
+                        value="Member Alerts ({!if(lstMemAlertOtherPage.size == null,memberAlertCount,lstMemAlertOtherPage.size)})" />
+                </apex:panelGroup>
+                 
+                <apex:panelGroup >
+                    <apex:outputLabel value=""   styleClass="outputLabelPanel"/>
+                    <apex:outputText value="" />
+                    
+                </apex:panelGroup>
+                 
+                <apex:panelGroup >
+                    <apex:outputLabel value="Interaction ID" styleClass="outputLabelPanel" />
+                    <apex:outputlink value="/{!Interaction.id}">{!Interaction.Name}</apex:outputlink>
+                </apex:panelGroup>
+            </apex:panelGrid>
+
+            <!-- **** Added By Abhinav -->
+            <apex:panelGrid columns="3" width="100%" columnClasses="colStyle" cellspacing="10px" id="theGroupPanel"
+                rendered="{!(Interaction.Originator_Type__c == 'Group/Employer' ||  Interaction.Originator_Type__c == 'Broker' || Interaction.Originator_Type__c == 'UHG' ||  Interaction.Originator_Type__c == 'General Agent' || Interaction.Originator_Type__c == 'Third Party')}" >
+                <apex:panelGroup >
+                    <apex:outputLabel value="Name" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outputText rendered="{!IF((AdditionalInfo.contactName  != Null && AdditionalInfo.contactName  != '' && Interaction.Third_Party__c != ''), true,false) }"
+                        value="{!AdditionalInfo.contactName } - {!AdditionalInfo.RelationshipType}"></apex:outputText>
+                    <apex:outPutText rendered="{!IF((AdditionalInfo.contactName  != Null && AdditionalInfo.contactName  != '' && Interaction.Third_Party__c== ''), true,false) }"
+                        value="{!AdditionalInfo.contactName} - {!AdditionalInfo.RelationshipType}" />
+                </apex:panelGroup>
+                <apex:panelGroup id="groupIdLink">                          
+                    <apex:commandLink onclick="setshowGroupALertAF();return false;" action="{!clickGroupAlert}"
+                        value="Group Alerts({!if(lstGroupAlertDetailPage.size == null,groupAlertCount,lstGroupAlertDetailPage.size)})"
+                        styleClass="outputLabelPanel" reRender="alertGroupModalWindow">
+                    </apex:commandLink>
+                </apex:panelGroup>
+                <apex:panelGroup id="groupId">
+                    <apex:outputLabel value="Interaction ID" styleClass="outputLabelPanel" />
+                    <apex:outputlink value="/{!Interaction.id}">{!Interaction.Name}</apex:outputlink>
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Originator" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outputText rendered="{!IF(Interaction.Third_Party__c== '', false,true) }"
+                        value="{!Interaction.Third_Party__r.First_Name__c} {!Interaction.Third_Party__r.LastName__c} - {!AdditionalInfo.RelationshipType}"></apex:outputText>
+                    <apex:outPutText rendered="{!IF(Interaction.Third_Party__c== '', true,false) }" value="{!Interaction.Originator__r.Name}" />
+                    <apex:outPutText rendered="{!IF(Interaction.Originator__r.Name != '', true,false) }" value=" - {!Interaction.Originator_Type__c}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Subject" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outputText rendered="{!IF((Subject == Null && groupDetails != Null && groupDetails.genGroupInfo != Null && groupDetails.genGroupInfo.groupName != Null), true,false) }"
+                        value="{!groupDetails.genGroupInfo.groupName}"></apex:outputText>
+                    <apex:outputText rendered="{!IF((Subject == Null && groupDetails == Null && groupDetails.genGroupInfo == Null), true,false) }"
+                        value="{!AdditionalInfo.groupSName}"></apex:outputText>
+                    <apex:outPutText rendered="{!IF(Subject != Null, true,false) }" value="{!Subject.FirstName} {!Subject.LastName}" />
+                    <apex:outputText rendered="{!IF(Subject != Null, true,false) }" value=" - {!AdditionalInfo.Relationship}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Effective Date" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outPutText value="{!AdditionalInfo.EffectiveStartDate}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Group Number" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.groupFlowGroupNumber}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Group Name" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.groupFlowGroupName}" />
+                </apex:panelGroup>
+                <!-- getemp V3 starts -->
+                <apex:panelGroup rendered="{!isViewBilling != 'ViewBilling'}">
+                    <apex:outputLabel value="Policy Number" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.selectedPolicyContract}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!isViewBilling == 'ViewBilling'}">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="" />
+                </apex:panelGroup>
+               <apex:panelGroup rendered="{! AdditionalInfo.MemberId == null}">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outputText value="" />
+                </apex:panelGroup> 
+                <apex:panelGroup rendered="{! AdditionalInfo.MemberId == null}">
+                    <apex:outputLabel value="Situs State" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outputText value="{!AdditionalInfo.situsState}" />
+                </apex:panelGroup>  
+                 <apex:panelGroup rendered="{! AdditionalInfo.MemberId == null}">
+                    <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','{!AdditionalInfo.groupFlowGroupNumber}','Group/Employer'); return false;" value="Launch Cirrus"/>
+                </apex:panelGroup>                
+                <!-- getemp V3 ends -->
+            </apex:panelGrid>
+            <!-- **** Added By Abhinav -->
+            <!-- **** Added By Avish -->
+            <apex:panelGrid columns="3" width="100%" columnClasses="colStyle" cellspacing="10px" id="theGridProducerGroup"
+                rendered="{!(Interaction.Originator_Type__c == 'Producer')&&(AdditionalInfo.GroupN == null)}">
+                <apex:panelGroup >
+                    <apex:outputLabel value="Name" styleClass="outputLabelPanel" />
+                    <apex:outPutText rendered="{!IF(Interaction.Third_Party__c== '', true,false) }" value="{!AdditionalInfo.producerName}" />
+                    <apex:outPutText value="" />
+                </apex:panelGroup>
+                <apex:panelGroup >                 
+                    <apex:commandLink action="{!clickProducerAlert}" styleClass="outputLabelPanel" reRender="alertProducerModalWindow"
+                        value="Producer Alerts ({!if(lstProducerAlertDetailPage.size == null,producerAlertCount,lstProducerAlertDetailPage.size)})"
+                        oncomplete="$('[id$=alertProducerModalWindow]').show();" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Interaction ID" styleClass="outputLabelPanel" />
+                    <apex:outputlink value="/{!Interaction.id}">{!Interaction.Name}</apex:outputlink>
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Originator" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outPutText rendered="{!IF(Interaction.Third_Party__c== '', true,false) }" value="{!Interaction.Originator__r.Name}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId == null ), true,false) }">
+                    <apex:outputLabel value="Subject" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outPutText rendered="{!IF(Interaction.Third_Party__c== '', true,false) }"
+                        value="{!AdditionalInfo.producerSubject}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null && Interaction.Originator__r.EID__c != null), true,false) }">
+                    <apex:outputLabel value="Subject" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outPutText rendered="{!IF(AdditionalInfo.GroupN == Null, true,false) }"
+                        value="{!Subject.FirstName} {!Subject.LastName}" />
+                    <apex:outputText rendered="{!IF(AdditionalInfo.GroupN == Null, true,false) }"
+                        value=" - {!AdditionalInfo.Relationship}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Producer ID" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outPutText value="{!Interaction.Originator__r.EID__c}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.MemberId == null && Interaction.Originator__r.EID__c != null), true,false) }">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outputText value="" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Member ID" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.MemberId}" />
+                </apex:panelGroup>
+                <apex:panelGroup id="membAlertProducer" rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null && Interaction.Originator__r.EID__c != null), true,false) }">
+                    <apex:commandLink action="{!clickMemberAlert}" styleClass="outputLabelPanel" reRender="alertModalWindow"
+                        value="Member Alerts ({!if(lstMemAlertOtherPage.size == null,memberAlertCount,lstMemAlertOtherPage.size)})" />
+                </apex:panelGroup>
+                
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null && Interaction.Originator__r.EID__c != null), true,false) }" >
+                    <apex:outputLabel id="sit2Prod" value="Situs State" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.SitusState}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null && Interaction.Originator__r.EID__c != null), true,false) }" >
+                    <apex:outputLabel value="Date of Birth" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.DOB}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null && Interaction.Originator__r.EID__c != null), true,false) }">
+                    <apex:outputLabel value="Group Number" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.GroupNumber}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null && Interaction.Originator__r.EID__c != null), true,false) }">
+                    <apex:outputLabel value="Group Name" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.GroupName}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null && Interaction.Originator__r.EID__c != null), true,false) }" >
+                    <apex:outputLabel value="Age" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.Age}" />
+                </apex:panelGroup> 
+                 <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}" >
+                    <apex:outputLabel value="Member Status" styleClass="outputLabelPanel" />
+                    <apex:outputLink value="#" onclick="showMaskHLP();showHoldCodeHLP();" style="color:blue" rendered="{!AdditionalInfo.MemberStatus != null && AdditionalInfo.MemberStatus == 'PEND'}">{!AdditionalInfo.MemberStatus}</apex:outputLink>
+                    <apex:outPutText value="{!AdditionalInfo.MemberStatus}" rendered="{!AdditionalInfo.MemberStatus != null && AdditionalInfo.MemberStatus != 'PEND'}"/>
+                    <apex:outPutText value="" rendered="{!AdditionalInfo.MemberStatus == null || AdditionalInfo.MemberStatus == ''}"/>
+                </apex:panelGroup>
+                                <apex:panelGroup rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null && Interaction.Originator__r.EID__c != null), true,false) }" >
+                    <apex:outputLabel value="Network" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.Network}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null && Interaction.Originator__r.EID__c != null), true,false) }" >
+                    <apex:outputLabel value="Product" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.Product}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null && Interaction.Originator__r.EID__c != null), true,false) }" >
+                    <apex:outputLabel value="Benefit Plan ID" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.BenefitPlanId}" />
+                </apex:panelGroup>
+        <!--Added by Pavan for US923050-->
+        <apex:panelGroup rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null && Interaction.Originator__r.EID__c != null), true,false) }" >
+                    <apex:outputLabel value="Benefit Bundle Option ID" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.BenefitBundleOptionId}" />
+                </apex:panelGroup>                      
+                
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null && Interaction.Originator__r.EID__c != null), true,false) }" >
+                    <apex:outputLabel value="Effective Date" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.EffectiveDate}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null && Interaction.Originator__r.EID__c != null), true,false) }" >
+                    <apex:outputLabel value="End Date" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.EndDate}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null && Interaction.Originator__r.EID__c != null), true,false) }"> 
+                  <apex:outputLabel value="Gated Plan" styleClass="outputLabelPanel" />
+                    <apex:outputText value="{!AdditionalInfo.GatedPlan}"/>
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.MemberId != null), true,false) }" id="hp_hippaPanel">
+                    <apex:outputLabel id="hp_hippaLbl" value="HIPAA DISCLOSURE: " styleClass="outputLabelPanel">
+                        <span class= "spanhippaIco"></span>
+                    </apex:outputLabel>
+                </apex:panelGroup>        		
+        		<apex:panelGroup rendered="{!IF((AdditionalInfo.MemberId != null), true,false) }" id="sniEligibilityPanel2">
+        			<apex:outputLabel id="sniEligibility2" value="Special Needs Status " styleClass="outputLabelPanel"/>
+        			<apex:outputText id="secondsniEligibilityText" value="{!sniEligibility}"/>
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null && Interaction.Originator__r.EID__c != null), true,false) }"> 
+                  <apex:outputLabel value="COVID-19 Vaccine" styleClass="outputLabelPanel"/>
+        			 <apex:image value="/s.gif" styleclass="helpIcon"   title="{!$Label.ACETLGT_JohnsonTooltip}" />
+        				<apex:repeat value="{!AdditionalInfo.covidVaccineDosageList}" var="dose">
+        					<apex:outputText value="{!dose}"/>, &nbsp;
+                        </apex:repeat>
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.MemberId == null), true,false) }">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId == null ), true,false) }">
+                    <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','{!AdditionalInfo.groupFlowGroupNumber}','Group/Employer'); return false;"
+                              value="Launch Cirrus" /> 
+                </apex:panelGroup>   
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null && Interaction.Originator__r.EID__c != null), true,false) }">
+                    <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','','Member'); return false;" value="Launch Cirrus"/>
+                </apex:panelGroup>                
+            </apex:panelGrid>
+            <!-- **** Added By Avish -->
+
+            <!-- **** Added by Harish -->
+            <apex:panelGrid columns="4" width="100%" columnClasses="colStyle" cellspacing="10px" id="theGridProducerEmployeGroup"
+                rendered="{!(Interaction.Originator_Type__c == 'Producer')&&(AdditionalInfo.GroupN != null)}">
+                <apex:panelGroup >
+                    <apex:outputLabel value="Name" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outPutText rendered="{!IF(Interaction.Third_Party__c== '', true,false) }" value="{!AdditionalInfo.producerName}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:commandLink action="{!clickProducerAlert}"
+                        value="Producer Alerts ({!if(lstProducerAlertDetailPage.size == null,producerAlertCount,lstProducerAlertDetailPage.size)})"
+                        styleClass="outputLabelPanel" reRender="alertProducerModalWindow" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Interaction ID" styleClass="outputLabelPanel" />
+                    <apex:outputlink value="/{!Interaction.id}">{!Interaction.Name}</apex:outputlink>
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Originator" styleClass="outputLabelPanel" />
+                    <apex:outPutText rendered="{!IF(Interaction.Third_Party__c== '', true,false) }" value="{!Interaction.Originator__r.Name}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Subject" styleClass="outputLabelPanel" />
+                    <apex:outPutText rendered="{!IF((Interaction.Third_Party__c== '' && Subject == Null), true,false) }"
+                        value="{!AdditionalInfo.producerSubject}" />
+                    <apex:outPutText rendered="{!IF(Subject != Null, true,false) }" value="{!Subject.FirstName} {!Subject.LastName}" />
+                    <apex:outputText rendered="{!IF(Subject != Null, true,false) }" value=" - {!AdditionalInfo.Relationship}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Producer ID" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!Interaction.Originator__r.EID__c}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="" styleClass="outputLabelPanel" />
+                    <apex:outputText value="" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="" styleClass="outputLabelPanel" />
+                    <apex:outputText value="" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                   <apex:outputLabel value="Group Number" styleClass="outputLabelPanel" />
+                   <apex:outPutText value="{!AdditionalInfo.groupFlowGroupNumber}" />
+               </apex:panelGroup>
+               <apex:panelGroup >
+                   <apex:outputLabel value="Group Name" styleClass="outputLabelPanel" />
+                   <apex:outPutText value="{!AdditionalInfo.groupFlowGroupName}" />
+               </apex:panelGroup>
+
+                <apex:panelGroup >
+                    <apex:commandLink onclick="setshowGroupALertAF();return false;" action="{!clickGroupAlert}"
+                        value="Group Alerts({!if(lstGroupAlertDetailPage.size == null,groupAlertCount,lstGroupAlertDetailPage.size)})"
+                        styleClass="outputLabelPanel" reRender="alertGroupModalWindow">
+                    </apex:commandLink>
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Effective Date" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.EffectiveStartDate}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId == null}">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel" />
+                    <apex:outputText value="" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId == null}">
+       		    <apex:outputLabel value="Situs State" styleClass="outputLabelPanel"/>
+                    <apex:outputText value="{!AdditionalInfo.situsState}" />
+                </apex:panelGroup>
+                <!-- getemp V3 starts -->
+                <apex:panelGroup rendered="{!isViewBilling != 'ViewBilling'}">
+                    <apex:outputLabel value="Policy Number" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.selectedPolicyContract}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!isViewBilling == 'ViewBilling'}">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="" />
+                </apex:panelGroup>
+                <!-- getemp V3 ends -->
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel" />
+                    <apex:outputText value="" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel" />
+                    <apex:outputText value="" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel" />
+                    <apex:outputText value="" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Member ID" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.MemberId}" />
+                </apex:panelGroup>
+                <apex:panelGroup id="membAlertPro" rendered="{!IF((AdditionalInfo.GroupN != Null && AdditionalInfo.MemberId != null), true,false) }">
+                    <apex:commandLink action="{!clickMemberAlert}" styleClass="outputLabelPanel" reRender="alertModalWindow"
+                        value="Member Alerts ({!if(lstMemAlertOtherPage.size == null,memberAlertCount,lstMemAlertOtherPage.size)})" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel id="sit2" value="Situs State" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.SitusState}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Date of Birth" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.DOB}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Group Number" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.GroupNumber}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Group Name" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.GroupName}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Network" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.Network}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Age" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.Age}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}" >
+                    <apex:outputLabel value="Member Status" styleClass="outputLabelPanel" />
+                    <apex:outputLink value="#" onclick="showMaskHLP();showHoldCodeHLP();" style="color:blue" rendered="{!AdditionalInfo.MemberStatus != null && AdditionalInfo.MemberStatus == 'PEND'}">{!AdditionalInfo.MemberStatus}</apex:outputLink>
+                    <apex:outPutText value="{!AdditionalInfo.MemberStatus}" rendered="{!AdditionalInfo.MemberStatus != null && AdditionalInfo.MemberStatus != 'PEND'}"/>
+                    <apex:outPutText value="" rendered="{!AdditionalInfo.MemberStatus == null || AdditionalInfo.MemberStatus == ''}"/>
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Product" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.Product}" />
+                </apex:panelGroup>
+                <!--<apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Product Type" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.ProductType}" />
+                </apex:panelGroup> -->  
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Benefit Plan ID" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.BenefitPlanId}" />
+                </apex:panelGroup>
+        <!--Added by Pavan for US923050-->
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Benefit Bundle Option ID" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.BenefitBundleOptionId}" />
+                </apex:panelGroup>
+        
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Effective Date" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.EffectiveDate}" />
+                </apex:panelGroup>
+              <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="End Date" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.EndDate}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Gated Plan" styleClass="outputLabelPanel" />
+                    <apex:outputText value="{!AdditionalInfo.GatedPlan}"/>
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel" />
+                    <apex:outputText value=""/>
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}" id="hp1_hippaPanel">
+                    <apex:outputLabel id="hp1_hippaLbl" value="HIPAA DISCLOSURE: " styleClass="outputLabelPanel">
+                        <span class= "spanhippaIco"></span>
+                    </apex:outputLabel>
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.MemberId != null), true,false) }" id="sniEligibilityPanel3">
+        			<apex:outputLabel id="sniEligibility3" value="Special Needs Status " styleClass="outputLabelPanel"/>
+        			<apex:outputText id="threesniEligibilityText" value="{!sniEligibility}"/>
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel" />
+                    <apex:outputText value=""/>
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel" />
+                    <apex:outputText value=""/>
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId == null}">
+                    <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','{!AdditionalInfo.groupFlowGroupNumber}','Group/Employer'); return false;" value="Launch Cirrus"/>
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','','Member'); return false;" value="Launch Cirrus"/>
+                </apex:panelGroup>                
+            </apex:panelGrid>
+            <!-- **** Added end by Harish -->
+            <apex:panelGrid columns="4" width="100%" columnClasses="colStyle" cellspacing="10px"
+                rendered="{!NOT(ISNULL(Subject)) && NOT(Interaction.Originator_Type__c == 'Producer') }">
+                <!-- Added by Avish on 02/28/2017, rendered condition for not displaying this section for Producer. -->
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.GroupN == Null && AdditionalInfo.MemberId != null), true,false) }">
+                    <apex:outputLabel rendered="{!IF(AdditionalInfo.GroupN == Null, true,false) }"
+                                      value="Subject Name" styleClass="outputLabelPanel" />
+                    <apex:outPutText rendered="{!IF(AdditionalInfo.GroupN == Null, true,false) }"
+                        value="{!Subject.FirstName} {!Subject.LastName}" />
+                    <apex:outputText rendered="{!IF(AdditionalInfo.GroupN == Null, true,false) }"
+                        value=" - {!AdditionalInfo.Relationship}" />
+                </apex:panelGroup>
+                  <apex:panelGroup rendered="{!IF((AdditionalInfo.GroupN != Null && AdditionalInfo.MemberId != null&&AdditionalInfo.isProducerNotFound == '1'), true,false) }"> <!-- Added by Krishna for US1721250 -->
+                    <apex:outputLabel rendered="{!IF(AdditionalInfo.GroupN != Null, true,false) }"
+                                      value="Subject Name" styleClass="outputLabelPanel" />
+                    <apex:outPutText rendered="{!IF(AdditionalInfo.GroupN != Null, true,false) }"
+                        value="{!Subject.FirstName} {!Subject.LastName}" />
+                    <apex:outputText rendered="{!IF(AdditionalInfo.GroupN != Null, true,false) }"
+                        value=" - {!AdditionalInfo.Relationship}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Member ID" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.MemberId}" />
+                </apex:panelGroup>
+                <apex:panelGroup id="membAlert"
+                    rendered="{!IF(AdditionalInfo.GroupN != Null && AdditionalInfo.MemberId != null, true,false) }">
+                    <apex:commandLink action="{!clickMemberAlert}" styleClass="outputLabelPanel" reRender="alertModalWindow"
+                        value="Member Alerts ({!if(lstMemAlertOtherPage.size == null,memberAlertCount,lstMemAlertOtherPage.size)})" />
+                </apex:panelGroup>                 
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel id="sit1" value="Situs State" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.SitusState}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Date of Birth" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.DOB}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Group Number" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.GroupNumber}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Group Name" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.GroupName}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Product" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.Product}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Age" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.Age}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}" >
+                    <apex:outputLabel value="Member Status" styleClass="outputLabelPanel" />
+                    <apex:outputLink value="#" onclick="showMaskHLP();showHoldCodeHLP();" style="color:blue" rendered="{!AdditionalInfo.MemberStatus != null && AdditionalInfo.MemberStatus == 'PEND'}">{!AdditionalInfo.MemberStatus}</apex:outputLink>
+                    <apex:outPutText value="{!AdditionalInfo.MemberStatus}" rendered="{!AdditionalInfo.MemberStatus != null && AdditionalInfo.MemberStatus != 'PEND'}"/>
+                    <apex:outPutText value="" rendered="{!AdditionalInfo.MemberStatus == null || AdditionalInfo.MemberStatus == ''}"/>
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Network" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.Network}" />
+                </apex:panelGroup>
+                   
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Effective Date" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.EffectiveDate}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="End Date" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.EndDate}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Benefit Plan ID" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.BenefitPlanId}" />
+                </apex:panelGroup>
+        
+         <!-- member flow -->
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="Benefit Bundle Option ID" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.BenefitBundleOptionId}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null && AdditionalInfo.isProducerNotFound != '1'}">
+                    <apex:outputLabel value="Gated Plan" styleClass="outputLabelPanel" />
+                    <apex:outputText value="{!AdditionalInfo.GatedPlan}"/>
+                </apex:panelGroup>                
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null && AdditionalInfo.isProducerNotFound == '1' && AdditionalInfo.GroupN == Null}">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel" />
+                    <apex:outputText value=""/>
+                </apex:panelGroup>    
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:outputLabel value="" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="" />
+                </apex:panelGroup>   
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}" >
+                    <apex:outputLabel id="hp2_hippaLbl" value="HIPAA DISCLOSURE: " styleClass="outputLabelPanel">
+                        <span class= "spanhippaIco"></span>
+                    </apex:outputLabel>
+                </apex:panelGroup>  
+        		<apex:panelGroup rendered="{!IF((AdditionalInfo.MemberId != null), true,false) }" id="sniEligibilityPanel1">
+        			<apex:outputLabel id="sniEligibility1" value="Special Needs Status " styleClass="outputLabelPanel"/>
+        			<apex:outputText id="firstsniEligibilityText" value="{!sniEligibility}"/> 
+        		</apex:panelGroup>
+                <apex:panelGroup rendered="{!IF((AdditionalInfo.MemberId != null), true,false) }" >
+        		<apex:outputLabel id="covidVaccineLbl" value="COVID-19 Vaccine" styleClass="outputLabelPanel"/>
+        		    <apex:image value="/s.gif" styleclass="helpIcon"   title="{!$Label.ACETLGT_JohnsonTooltip}" />
+        			    <apex:repeat value="{!AdditionalInfo.covidVaccineDosageList}" var="dose">
+        					<apex:outputText value="{!dose}"/>, &nbsp;
+                        </apex:repeat>
+                </apex:panelGroup>              
+                <apex:panelGroup rendered="{!AdditionalInfo.MemberId != null}">
+                    <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','','Member'); return false;" value="Launch Cirrus"/>
+                </apex:panelGroup>
+             
+                                
+            </apex:panelGrid>
+            
+            <!-- Added by Abhinav Balla -->
+            <apex:panelGrid columns="3" width="100%" columnClasses="colStyle" cellspacing="10px" id="theGridMemNotFound"
+                rendered="{!additionalInfo.isMemNotFound == '1'}" >
+                <apex:panelGroup >
+                    <apex:outputLabel value="Employer Name" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.EmployerName}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Group Number" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.GroupNumber}" />
+                </apex:panelGroup>
+                <apex:panelGroup rendered="{!Interaction.Originator_Type__c == $Label.ACETProviderNotFoundOriginatorType && Interaction.Third_Party__c == null}">
+                    <apex:outputLabel value="Interaction ID" styleClass="outputLabelPanel" />
+                    <apex:outputlink value="/{!Interaction.id}">{!Interaction.Name}</apex:outputlink>
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Name" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.FirstName + ' ' + AdditionalInfo.LastName}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Member ID" styleClass="outputLabelPanel" />
+                    <apex:outPutText value="{!AdditionalInfo.MemberID}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="DOB" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outPutText value="{!AdditionalInfo.DOB}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="State" styleClass="outputLabelPanel"></apex:outputLabel>   
+                    <apex:outPutText value="{!AdditionalInfo.State}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Zip Code" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outPutText value="{!AdditionalInfo.Zip}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:outputLabel value="Phone Number" styleClass="outputLabelPanel"></apex:outputLabel>
+                    <apex:outPutText value="{!AdditionalInfo.PhoneNumber}" />
+                </apex:panelGroup>
+                <apex:panelGroup >
+                    <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','','Member'); return false;" value="Launch Cirrus"/>
+                </apex:panelGroup>
+            </apex:panelGrid>
+            
+            <!-- Added by Avish as a part of US813401 on 12082017 -->            
+            <apex:panelGrid columns="4" width="100%" columnClasses="colStyle" cellspacing="10px" id="theGridProducerNotFoundToMember"
+                rendered="{!AdditionalInfo.isProducerNotFound == '1' && AdditionalInfo.MemberId != null }" >
+                    <apex:panelGroup >
+                        <apex:outputLabel value="Producer ID" styleClass="outputLabelPanel" />
+                        <apex:outPutText value="{!AdditionalInfo.producerIDPNF}" />
+                    </apex:panelGroup>   
+                    <apex:panelGroup >
+                        <apex:outputLabel value="Producer Name" styleClass="outputLabelPanel" />
+                        <apex:outPutText value="{!AdditionalInfo.producerName}" />
+                    </apex:panelGroup>  
+                    <apex:panelGroup >
+                        <apex:outputLabel value="Phone Number" styleClass="outputLabelPanel" />
+                        <apex:outPutText value="{!AdditionalInfo.PhoneNumberPNF}" />
+                    </apex:panelGroup>  
+                    <apex:panelGroup >
+                        <apex:outputLabel value="" styleClass="outputLabelPanel" />
+                        <apex:outPutText value="" />
+                    </apex:panelGroup> 
+            </apex:panelGrid>        
+            <apex:panelGrid columns="3" width="100%" columnClasses="colStyle" cellspacing="10px" id="theGridProducerNotFound"
+                rendered="{!AdditionalInfo.isProducerNotFound == '1' && AdditionalInfo.MemberId == null}" >
+                    <apex:panelGroup >
+                        <apex:outputLabel value="Producer ID" styleClass="outputLabelPanel" />
+                        <apex:outPutText value="{!AdditionalInfo.producerIDPNF}" />
+                    </apex:panelGroup>   
+                    <apex:panelGroup >
+                        <apex:outputLabel value="Producer Name" styleClass="outputLabelPanel" />
+                        <apex:outPutText value="{!AdditionalInfo.producerName}" />
+                    </apex:panelGroup>  
+                    <apex:panelGroup >
+                        <apex:outputLabel value="Phone Number" styleClass="outputLabelPanel" />
+                        <apex:outPutText value="{!AdditionalInfo.PhoneNumberPNF}" />
+                    </apex:panelGroup>  
+                    <apex:panelGroup >
+                        <apex:outputLabel value="" styleClass="outputLabelPanel" />
+                        <apex:outPutText value="" />
+                    </apex:panelGroup> 
+                    <apex:panelGroup >
+                        <apex:outputLabel value="" styleClass="outputLabelPanel" />
+                        <apex:outPutText value="" />
+                    </apex:panelGroup> 
+                  <apex:panelGroup rendered="{!IF((Interaction.Third_Party__r.Employer_Name__c == '' || Interaction.Third_Party__r.Employer_Name__c == null) && AdditionalInfo.MemberId == null, true,false)}">
+                        <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','{!AdditionalInfo.groupFlowGroupNumber}','Group/Employer'); return false;"
+                              value="Launch Cirrus" /> 
+                    </apex:panelGroup>                                                               
+
+            </apex:panelGrid>         
+            <!-- End of Producer Not found flow -->
+
+            <!-- Added by Avish for Group Not found on 12082017 -->   
+            <apex:panelGrid columns="4" width="100%" columnClasses="colStyle" cellspacing="10px" id="theGridGroupNotFoundToMember"
+                rendered="{!IF((Interaction.Third_Party__r.LastName__c == '' || Interaction.Third_Party__r.LastName__c == null) && Interaction.Third_Party__r.Employer_Name__c != '' && Interaction.Third_Party__r.Employer_Name__c != null && AdditionalInfo.MemberId != null, true,false) }">
+                    <apex:panelGroup >
+                        <apex:outputLabel value="Employer Name" styleClass="outputLabelPanel" />
+                        <apex:outPutText value="{!AdditionalInfo.EmployerName}" />
+                    </apex:panelGroup>     
+                    <apex:panelGroup >
+                        <apex:outputLabel value="Group Number" styleClass="outputLabelPanel" />
+                        <apex:outPutText value="{!AdditionalInfo.GroupNumber}" />
+                    </apex:panelGroup>  
+                    <apex:panelGroup >
+                        <apex:outputLabel value="Zip Code" styleClass="outputLabelPanel" />
+                        <apex:outPutText value="{!AdditionalInfo.Zip}" />
+                    </apex:panelGroup>  
+                    <apex:panelGroup >
+                        <apex:outputLabel value="State" styleClass="outputLabelPanel" />
+                        <apex:outPutText value="{!AdditionalInfo.State}" />
+                    </apex:panelGroup>      
+                    <apex:panelGroup >
+                        <apex:outputLabel value="Phone Number" styleClass="outputLabelPanel" />
+                        <apex:outPutText value="{!AdditionalInfo.PhoneNumber}" />
+                    </apex:panelGroup> 
+                                                                                                                 
+            </apex:panelGrid>          
+            <apex:panelGrid columns="3" width="100%" columnClasses="colStyle" cellspacing="10px" id="theGridGroupNotFound"
+                rendered="{!IF((Interaction.Third_Party__r.LastName__c == '' || Interaction.Third_Party__r.LastName__c == null) && Interaction.Third_Party__r.Employer_Name__c != '' && Interaction.Third_Party__r.Employer_Name__c != null && AdditionalInfo.MemberId == null, true,false) }">
+                    <apex:panelGroup >
+                        <apex:outputLabel value="Employer Name" styleClass="outputLabelPanel" />
+                        <apex:outPutText value="{!AdditionalInfo.EmployerName}" />
+                    </apex:panelGroup>     
+                    <apex:panelGroup >
+                        <apex:outputLabel value="Group Number" styleClass="outputLabelPanel" />
+                        <apex:outPutText value="{!AdditionalInfo.GroupNumber}" />
+                    </apex:panelGroup>  
+                    <apex:panelGroup >
+                        <apex:outputLabel value="Zip Code" styleClass="outputLabelPanel" />
+                        <apex:outPutText value="{!AdditionalInfo.Zip}" />
+                    </apex:panelGroup>  
+                    <apex:panelGroup >
+                        <apex:outputLabel value="State" styleClass="outputLabelPanel" />
+                        <apex:outPutText value="{!AdditionalInfo.State}" />
+                    </apex:panelGroup>      
+                    <apex:panelGroup >
+                        <apex:outputLabel value="Phone Number" styleClass="outputLabelPanel" />
+                        <apex:outPutText value="{!AdditionalInfo.PhoneNumber}" />
+                     </apex:panelGroup> 
+                    <apex:panelGroup > 
+                        <apex:commandLink onclick="getCirrusUrl('{!AdditionalInfo.MemberId}','{!AdditionalInfo.GroupNumber}','Group/Employer'); return false;"
+                              value="Launch Cirrus"/> 
+                    </apex:panelGroup>                                                                                              
+            </apex:panelGrid>         
+            <!-- End of Group Not found flow    -->  
+                        
+        </div>
+        <div class="panel-arrow-down hide-arrow" onclick="toggleHighlightsPanel();" auto-doc-item="false">
+            <img class="arrow-down" src="{!URLFOR($Resource.highlightspanelarrows, '/hparrowdown.png')}" border="0" />
+        </div>
+        <div class="panel-arrow-up show-arrow" onclick="toggleHighlightsPanel();" auto-doc-item="false">
+            <img class="arrow-up" src="{!URLFOR($Resource.highlightspanelarrows, '/hparrowup.png')}" border="0" />
+        </div>
+    </div>
+    <!--- added by Vishakha on 11/02/2016 for User Story - US:405397,405471---->
+    
+<apex:outputPanel id="alertModalWindow" >
+    <div class ="slds-scope" style="background-color:white">
+        <apex:outputPanel style="display:{!IF(NOT(isShowALert),'','none')}" rendered="{!NOT(ISNULL(Subject))}"  >
+            <apex:outputPanel styleClass="popupBackground" layout="block" 
+                              rendered="{!if((lstMemAlertOtherPage != null && lstMemAlertOtherPage.size>0 ),True,isALertModal)}" />
+            <apex:outputPanel styleClass="custPopup" layout="block"
+                              rendered="{!if((lstMemAlertOtherPage!=null && lstMemAlertOtherPage.size>0 ),True,isALertModal)}">
+                <div style="overflow:auto;width:1000px;height:300px;">
+                    <div class="slds-panel" title="Member Alerts" style="width:100%;" >
+                        <div class="slds-modal__header">
+                            <h1 class="slds-text-heading--medium" style="font-weight:bold">MEMBER ALERTS</h1>
+                        </div>  
+                    </div>
+                    <apex:outputPanel style="width:100%">
+                        <div class=" slds-table slds-table_bordered slds-table_cell-buffer slds-text-title slds-table_fixed-layout" columns="1" >
+                            <apex:dataTable value="{!if(lstMemAlert==null,lstMemAlertOtherPage,lstMemAlert)}" var="mAl" rendered="{!lstMemAlert.size != 0}" style="width:100%;">
+                                <apex:column headerValue="TYPE" value="{!mAl.Type__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:10%;" />                              
+                                <apex:column headerValue="GROUP #"  value="{!mAl.Group_Number__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:11%;" />
+                                <apex:column headerValue="BBO ID"  value="{!mAl.Benefit_Bundle_Option_ID__c}" style="width:13%; vertical-align:Top; word-wrap: break-word;white-space: normal;" />
+                                <!--<apex:column headerclass="inBorder"> 
+                                <apex:facet name="header">BENEFIT BUNDLE <br/> OPTION ID</apex:facet>
+                                   <apex:outputText value="{!mAl.Benefit_Bundle_Option_ID__c}" style="vertical-align:text-top;word-wrap: break-word;white-space: normal;width:7%;" />
+                                </apex:column>    -->                        
+                                <apex:column headerValue="  ID #"   value="{!mAl.ID_Number__c}" style="vertical-align:Top;align:center; word-break: break-all;white-space: normal;width:14%;" />
+                                <apex:column headerValue="TITLE" value="{!mAl.Alert_Title__c }" style="vertical-align:text-top;word-wrap: break-word;white-space: normal;width:16%;" />
+                                <apex:column headerValue="COMMENTS" value="{!mAl.Alert_Comments__c}" style="vertical-align:Top;word-wrap: break-word;white-space: normal;width:36%;"/>
+                                <apex:column headerValue="EFFECTIVE" value="{!mAl.Effective_Date__c}" style="vertical-align:Top;word-wrap: break-word;white-space: normal;width:1%;" />
+                                <apex:column headerValue="END" value="{!mAl.End_Date__c}" style="vertical-align:Top;word-wrap: break-word;white-space: normal;width:1%;" />
+                            </apex:dataTable>
+                        
+                        </div>
+                    </apex:outputPanel>
+                    <apex:outputPanel rendered="{!lstMemAlert.size == 0}">
+                        <div class="slds-panel__section" columns="2">
+                            <apex:outputText value="Member does not have any active alerts." ></apex:outputText>                                                    
+                        </div> 
+                    </apex:outputPanel>
+                    <div class="slds-modal__footer slds-grid">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td align="right">
+                                        <apex:commandButton id="closeAlertBtnMemberId" value="Close Alerts" onclick="closealertModalWindow()" reRender="temp" style="float:right;height:2.5pc;width:9pc;margin-left:10px;background: rgb(0, 112, 210); padding: 4px;color:white;font-size:12px;" styleClass="slds-button slds-button--brand slds-not-selected">
+                                        </apex:commandButton>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </apex:outputPanel>
+        </apex:outputPanel>
+    </div>
+</apex:outputPanel>
+    <!-------End------------------------>
+    <!------ added by Vishakha on 11/15/2016 for User Story-US405472--->
+    <apex:outputPanel id="alertProviderModalWindow" style="display:{!IF(NOT(isShowALert),'','none')}">
+ <div class ="slds-scope" style="background-color:white">
+        <apex:outputPanel styleClass="popupBackground" layout="block"
+            rendered="{!if((lstProviderAlertDetailPage != null && lstProviderAlertDetailPage.size>0 ),True,isProviderALertModal)}" />
+        <apex:outputPanel styleClass="custPopup" layout="block"
+            rendered="{!if((lstProviderAlertDetailPage != null && lstProviderAlertDetailPage.size>0 ),True,isProviderALertModal)}">
+            <div style="overflow:auto;width:1000px;height:300px">
+                
+                 <div class="slds-panel" title="Provider Alerts" style="width:100%">
+                        <div class="slds-modal__header">
+                            <h1 class="slds-text-heading--medium" style="font-weight:bold">PROVIDER ALERTS</h1>
+                        </div>
+                    </div>
+                   <apex:outputPanel style="width:100%" >
+                        <div class="slds-panel__section slds-table slds-table_bordered slds-table_cell-buffer slds-text-title" columns="1">
+                    <apex:dataTable value="{!if(lstProviderAlert==null,lstProviderAlertDetailPage,lstProviderAlert)}" var="mAl"  rendered="{!lstProviderAlert.size != 0}" style="width:100%">
+                                <apex:column headerValue="TYPE" value="{!mAl.Type__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:10%;" />
+                                <apex:column headerValue="GROUP #" value="{!mAl.Group_Number__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:10%;"  />                               
+                                <apex:column headerValue="ID #" value="{!mAl.ID_Number__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:14%;"  />
+                                <apex:column headerValue="TITLE" value="{!mAl.Alert_Title__c }" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:20%;"  />
+                                <apex:column headerValue="COMMENTS" value="{!mAl.Alert_Comments__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:39%;" />
+                                <apex:column headerValue="EFFECTIVE" value="{!mAl.Effective_Date__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:3%;"  />
+                                <apex:column headerValue="END" value="{!mAl.End_Date__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:4%;"  />
+
+                   </apex:dataTable>
+                       </div>
+                    </apex:outputPanel>
+                    <apex:outputLabel styleClass="outputLabelPanel"
+                        Rendered="{!lstProviderAlert.size == 0}" value="Provider does not have any active alerts."/>
+                    
+                      <div class="slds-modal__footer slds-grid">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td align="right">
+                                        <apex:commandButton id="closeAlertBtnprovId" value="Close Alerts" onclick="closealertModalWindow()" reRender="temp" style="float:right;height:2.5pc;width:9pc;margin-left:10px;background: rgb(0, 112, 210); padding: 4px;color:white;font-size:12px;" styleClass="slds-button slds-button--brand slds-not-selected">
+                                        </apex:commandButton>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+             
+            </div>
+        </apex:outputPanel>
+     </div>
+    </apex:outputPanel>
+    <!----End---->
+  
+   <apex:outputPanel id="alertProducerModalWindow" >
+    <div class ="slds-scope" style="background-color:white">
+        <apex:outputPanel id="isshowProducerALertID" style="display:{!IF(NOT(isShowALert),'','none')}">
+            <apex:outputPanel styleClass="popupBackground" layout="block"
+                              rendered="{!if((lstProducerAlertDetailPage != null && lstProducerAlertDetailPage.size>0 ),True,isProducerALertModal)}" />
+            <apex:outputPanel styleClass="custPopup" layout="block"
+                              rendered="{!if((lstProducerAlertDetailPage != null && lstProducerAlertDetailPage.size>0 ),True,isProducerALertModal)}">
+                <div style="overflow:auto;width:1000px;height:300px">
+                    <div class="slds-panel" title="Producer Alerts" style="width:100%">
+                        <div class="slds-modal__header">
+                            <h1 class="slds-text-heading--medium" style="font-weight:bold">PRODUCER ALERTS</h1>
+                        </div>  
+                    </div>
+                    <apex:outputPanel style="width:100%">
+                        <div class="slds-panel__section slds-table slds-table_bordered slds-table_cell-buffer slds-text-title" columns="1">
+                            <apex:dataTable value="{!if(lstproducerAlert == null,lstProducerAlertDetailPage,lstproducerAlert)}" var="pAl" rendered="{!lstProviderAlert.size != 0}" style="width:100%">
+                                <apex:column headerValue="TYPE" value="{!pAl.Type__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:10%;" />
+                                <apex:column headerValue="ID #" value="{!pAl.ID_Number__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:10%;" />
+                                <apex:column headerValue="TITLE" value="{!pAl.Alert_Title__c }" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:20%;" />
+                                <apex:column headerValue="COMMENTS" value="{!pAl.Alert_Comments__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:50%;"/>
+                                <apex:column headerValue="EFFECTIVE" value="{!pAl.Effective_Date__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:5%;" />
+                                <apex:column headerValue="END" value="{!pAl.End_Date__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:5%;" />
+                            </apex:dataTable>
+                        </div>
+                    </apex:outputPanel>
+                    <apex:outputPanel rendered="{!lstproducerAlert.size == 0}">
+                        <div class="slds-panel__section" columns="2">
+                            <apex:outputText value="Producer does not have any active alerts." ></apex:outputText>                                                    
+                        </div> 
+                    </apex:outputPanel>
+                    <div class="slds-modal__footer slds-grid">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td align="right">
+                                        <apex:commandButton id="closeAlertBtnProducerId" value="Close Alerts" onclick="closealertModalWindow()" reRender="temp" style="float:right;height:2.5pc;width:9pc;margin-left:10px;background: rgb(0, 112, 210); padding: 4px;color:white;font-size:12px;" styleClass="slds-button slds-button--brand slds-not-selected">
+                                        </apex:commandButton>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </apex:outputPanel>
+        </apex:outputPanel>
+    </div>
+</apex:outputPanel>
+    <!-- Ended by Harish  -->
+    <!-- Added by Krishna for User Story US537162-->
+    <apex:outputPanel id="alertGroupModalWindow" >
+    
+    <div class ="slds-scope" style="background-color:white">
+        <apex:outputPanel id="isshowGroupALertID" style="display:{!IF(NOT(isShowALert),'','none')}">
+            <apex:outputPanel styleClass="popupBackground" layout="block"
+                              rendered="{!if((lstGroupAlertDetailPage!= null && lstGroupAlertDetailPage.size>0 ),True,isGroupALertModal)}" />
+            <apex:outputPanel styleClass="custPopup_Group" layout="block"
+                              rendered="{!if((lstGroupAlertDetailPage!= null && lstGroupAlertDetailPage.size>0 ),True,isGroupALertModal)}">
+                <div style="overflow:auto;width:1000px;height:320px">
+                    <div class="slds-panel" title="Group Alerts" style="width:100%" >
+                        <div class="slds-modal__header">
+                            <h1 class="slds-text-heading--medium" style="font-weight:bold">GROUP ALERTS</h1>                                
+                        </div>
+                    </div>
+                    <apex:outputPanel style="width:100%" >
+                        <div class="slds-panel__section slds-table slds-table_bordered slds-table_cell-buffer slds-text-title" columns="1">
+                            <apex:dataTable value="{!if(lstGroupAlert==null,lstGroupAlertDetailPage,lstGroupAlert)}" var="gAl" rendered="{!lstGroupAlert.size != 0}" style="width:100%;">
+                                <apex:column headerValue="TYPE" value="{!gAl.Type__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:10%;" />
+                                <apex:column headerValue="GROUP #" value="{!gAl.Group_Number__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:11%;"  />
+                                <apex:column headerValue="BBO ID" value="{!gAl.Benefit_Bundle_Option_ID__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:13%;"  />
+                                <apex:column headerValue=" ID #" value="{!gAl.ID_Number__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:14%;"  />
+                                <apex:column headerValue="TITLE" value="{!gAl.Alert_Title__c }" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:16%;"  />
+                                <apex:column headerValue="COMMENTS" value="{!gAl.Alert_Comments__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:36%;" />
+                                <apex:column headerValue="EFFECTIVE" value="{!gAl.Effective_Date__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:1%;"  />
+                                <apex:column headerValue="END" value="{!gAl.End_Date__c}" style="vertical-align:Top; word-wrap: break-word;white-space: normal;width:1%;"  />
+                            </apex:dataTable>
+                        </div>
+                    </apex:outputPanel>
+                    <apex:outputPanel rendered="{!lstGroupAlert.size == 0}">
+                        <div class="slds-panel__section" columns="2">
+                            <apex:outputText value="Group does not have any active alerts." ></apex:outputText>                                                    
+                        </div> 
+                    </apex:outputPanel>
+                    <div class="slds-modal__footer slds-grid">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td align="right">
+                                        <apex:commandButton id="closeAlertBtnGroupId" value="Close Alerts" onclick="closealertModalWindow()" reRender="temp" style="float:right;height:2.5pc;width:9pc;margin-left:10px;background: rgb(0, 112, 210); padding: 4px;color:white;font-size:12px;" styleClass="slds-button slds-button--brand slds-not-selected">
+                                        </apex:commandButton>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </apex:outputPanel>
+        </apex:outputPanel>
+    </div>
+    
+</apex:outputPanel>
+    <apex:outputPanel id="alertHoldCodeHLP" style="position:absolute;top:-50px !important;left:30%">
+                             
+            <div style="background-color:white">
+                <apex:outputPanel style="display:{!IF(holdCodeAlertHLP == true,'','none')}" rendered="{!holdCodeAlertHLP}">
+                    <apex:outputPanel styleClass="popupBackground" layout="block" />
+                    <apex:outputPanel styleClass="custPopup" layout="block" style="width:55pc !important">
+                        <apex:pageBlock title="The following holds have been placed on this Member.">
+                            <apex:pageBlockButtons location="top">
+                               <apex:commandButton id="closeAlertBtnMemberId" value="Close" onclick="closeHoldCodeAlertHLP(); return false;"  style="float:right;" />
+                            </apex:pageBlockButtons>
+                            <apex:outputPanel id="pgmsgHoldHLP">
+                                <apex:pageMessages />
+                            </apex:outputPanel>
+                        <apex:actionStatus id="HoldErrorHLP">
+                            <apex:facet name="start">
+                                <p style="text-align: center;">
+                                    <img src="/img/loading.gif" />&nbsp;<b>Loading...</b>
+                                </p>
+                            </apex:facet>
+                        </apex:actionStatus>
+                            <apex:outputpanel id="holdid">
+                               <table >
+                                   <tr>
+                                      <th style="width:50px;"></th>
+                                      <th style="width:110px;">Hold Code </th>
+                                      <th style="width:265px;">Description</th>
+                                      <th style="width:130px;">Hold Level</th>
+                                      <th style="width:115px;">Effective Date</th>
+                                      <th style="width:200px;">Expiration Date</th>
+                                  </tr>
+                               </table>
+                             </apex:outputPanel>
+                             <apex:outputPanel >
+                                <div style="overflow:auto;height:250px !important">
+                                <table id="originalDrilldowns" >
+                                   <apex:repeat value="{!AdditionalInfo.holdCodeList}" var="wrap">
+                                    <tr>
+                                        <td>&nbsp;</td>
+                                        <td>&nbsp;</td>
+                                        <td>&nbsp;</td>
+                                        <td>&nbsp;</td>
+                                        <td>&nbsp;</td>
+                                        <td>&nbsp;</td>
+                                     </tr>
+                                      <tr class="odd">
+                                         <td style="padding-left:1pc;width:25px;"><apex:outputPanel layout="none"><div class="arrow"></div></apex:outputPanel></td>
+                                         <td style="padding-left:1pc;width:100px;"><apex:outputText value="{!wrap.holdCode}"/></td>
+                                         <td style="padding-left:1pc;width:265px;"><apex:outputText value="{!wrap.holdDescription}" /></td>
+                                         <td style="padding-left:1pc;width:130px;"><apex:outputText value="{!wrap.holdLevel}" /></td>
+                                         <td style="padding-left:1pc;width:115px;"><apex:outputText value="{!wrap.effectiveDate}" /></td>
+                                         <td style="padding-left:1pc;width:200px;"><apex:outputText value="{!wrap.expirationDate}" /></td>
+                                     </tr>
+                                      <apex:outputPanel layout="none">
+                                         <tr class="pleaseHideMe">
+                                            <td colspan="8">   
+                                                <br/><h2 class="slds-text-heading--small" style="font-weight:bold;font-size:110%;padding-left:227px;">This hold impacts the following process(s)</h2><br/><br/>
+                                                <div>
+                                                   <div class="slds-form-element" style="display:flex;">
+                                                      <div style="padding-left:100px;width:300px">
+                                                            <apex:dataTable value="{!wrap.holdRestriction}" var="restrictions" style="border:hidden !important;border-style:none !important;">
+                                                                <apex:column style="border:hidden !important;border-style:none !important;">
+                                                                    <apex:outputText value="{!restrictions}" />
+                                                                </apex:column>
+                                                            </apex:dataTable>
+                                                       </div>
+                                                       <apex:outputLabel value="Hold Reason" style="padding-right:5px"/>
+                                                       <div style="width:300px">
+                                                            <apex:inputTextarea id="newDesc" value="{!wrap.holdNote}" style="height:75px;" disabled="true" cols="30" rows="3"/>
+                                                       </div>
+                                                   </div>
+                                                 </div>
+                                              </td>
+                                          </tr>
+                                      </apex:outputPanel>
+                                   </apex:repeat>
+                                </table>
+                                </div>
+                            </apex:outputpanel> 
+                        </apex:pageBlock>
+                    </apex:outputPanel>
+                </apex:outputPanel>
+            </div>
+        </apex:outputPanel>
+        <div id="holdLoading" style="display:{!IF(holdCodeAlertHLP == true,'','none')}" class = "popupBackground" >
+        </div>
+                                                                                                                                                                                              
+    <script>
+    $('[id$="sniEligibilityText"]').html(localStorage.getItem('{!AdditionalInfo.MemberId}'+'sniEligibility'));
+    </script>
+    <!------ End ------>
+</apex:component>

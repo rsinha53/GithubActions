@@ -1,0 +1,561 @@
+﻿<apex:page controller="ACETProviderLookUpDetailController" id="thePageId">
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <style>
+        .headerResultStyle {
+        font-size: 15px;
+        font-weight: Bold;
+        }    
+        
+        .apexp .bPageBlock.apexDefaultPageBlock .pbBody .pbSubheader {
+        border-top: 2px solid #cfeef8 !important;
+        color: #000;
+        }
+        
+        .homeTab .tertiaryPalette, .individualPalette .homeBlock .tertiaryPalette,
+        .layoutEdit .individualPalette .homeBlock 
+        
+        .tertiaryPalette {
+        background-color: white;
+        eady border-color: #cfeef8;
+        }
+        
+        body .bPageBlock, body #bodyCell .bResource .secondaryPalette, body .secondaryPalette.bPageBlock,
+        body .individualPalette 
+        
+        .secondaryPalette.bPageBlock, body .bodyDiv .genericTable, body .genericPageBlockTable,
+        body .bodyDiv .bSubBlock, body .bComponentBlock 
+        
+        .bPageBlock, body .bMyDashboard .bPageBlock, body.rlHoverFrame .bPageBlock,
+        body.subjectSelectionPopup div.choicesBox, body.lookupTab 
+        
+        .secondaryPalette.bPageBlock, body.popupTab .secondaryPalette.bPageBlock,
+        body.UserTagStatsPage .secondaryPalette.bPageBlock {
+        background-color: #fff;
+        border-bottom: none;
+        border-left: none;
+        border-right: none;
+        -moz-border-radius: 0px;
+        -webkit-border-radius: 0px;
+        border-radius: 0px;
+        }
+        
+        .homeTab .secondaryPalette, .individualPalette .homeBlock .secondaryPalette
+        {
+        background-color: #fff;
+        border-color: #cfeef8;
+        }
+        
+        .homeTab .listViewport .subNav .linkBar, .homeTab .mComponent .cHeader,
+        .homeTab .genericTable, .homeTab .bSubBlock, .homeTab 
+        
+        .bPageBlock {
+        border-top: none;
+        }
+        
+        .pbSubheader {
+        background-color: #fff;
+        font-weight: bold;
+        font-size: 91%;
+        padding: 2px 2px 2px 5px;
+        margin-top: 15px;
+        overflow: hidden;
+        margin-bottom: 2px;
+        }
+        
+        .bPageBlock .detailList .labelCol {
+        width: 20%;
+        }
+        
+        input {
+        padding-top: 0;
+        vertical-align: middle;
+        }
+        
+        .bPageBlock .detailList .dataCol {
+        width: 19%;
+        }
+        
+        .apexp .bPageBlock.apexDefaultPageBlock .pbBody .pbSubheader .showListButton{
+        background-position: 1px -1px;
+        }
+        
+        .apexp .bPageBlock.apexDefaultPageBlock .pbBody .pbSubheader .hideListButton{
+        background-position: 1px -11px;
+        }
+        
+        .apexp .bPageBlock.apexDefaultPageBlock .pbBody .pbSubheader{
+        border-top: 0;
+        color: #000;
+        }
+        
+        .bPageBlock .dataCol {
+        padding-top: 2px;
+        padding-right: 115px;
+        padding-bottom: 2px;
+        padding-left: 10px;
+        text-align: left;
+        }
+    </style>
+    <apex:form id="theFormId">
+        <apex:includeScript value="{!$Resource.JQuery}"></apex:includeScript>
+        <apex:includeScript value="/support/console/30.0/integration.js" />
+        <apex:includeScript value="{!$Resource.JqueryTableSorter}"></apex:includeScript>
+        <apex:stylesheet value="{!URLFOR($Resource.ACETResources, '/css/m/memberdetail.css')}" />
+        <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+        <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+        <apex:includeScript value="/soap/ajax/30.0/connection.js" />
+        <script type="text/javascript">
+        var RefreshAA = false;
+        var RefreshAffiliations = false;
+        function ToggleAdditionalAddress(pbSection) {
+            //alert('Is first time expanded: ' + RefreshAA);
+            console.log(pbSection);
+            var $img = document.getElementById("img_thePageId:theFormId:coveragesPageBlock:pbsAdditionalAddresses").className;
+            console.log($img);
+            if($img == 'hideListButton') {
+                if (!RefreshAA) {
+                    RefreshAA = true;
+                    GetAdditionalAddresses();
+                }
+            }
+        }
+        
+        function ToggleAffiliations(pbSection) {
+            console.log(pbSection);
+            var $img = document.getElementById("img_thePageId:theFormId:coveragesPageBlock:pbsAffiliations").className;
+            //alert($img);
+            //if(($(pbSection).find('.autodoc:eq(0)').is(":checked") == false) && $img == 'hideListButton') {
+            if($img == 'hideListButton') {
+                if (!RefreshAffiliations) {               
+                    RefreshAffiliations = true;
+                    GetAffiliations();
+                }
+            }
+        } 
+        var cmmentsTmp;   
+             
+        $(document).ready(function() {
+            
+            acet.autodoc.startAutodoc();
+            acet.autodoc.createCommentsbox();     
+            var subjectId = '{!conObj.Id}';
+            $("input:radio[name$='searchStatus']").filter('[value="Active"]').removeAttr('disabled');
+            sforce.console.addEventListener('RequestProviderDetail_'.concat(subjectId), function(r){ 
+                sforce.console.getEnclosingTabId(function(result){                                        
+                    var res = {};   
+                    res.subTabId = result.id;           
+                    res.doc = acet.autodoc.saveAutodoc();    
+                    sforce.console.fireEvent('ReceiveProviderDetail_'.concat(subjectId), JSON.stringify(res)); 
+                    
+                }); 
+                
+            });
+            $("[auto-doc-section-key]").each(function(){
+            if($(this).attr("auto-doc-section-key") =="pbsAdditionalAddresses"){
+                if($(this).find(".pbSubheader").find("input[type='checkbox'].autodoc").length>0){
+                    $(this).find(".pbSubheader").find("input").remove();    
+                }
+            }
+            if($(this).attr("auto-doc-section-key") =="pbsAffiliations"){
+                if($(this).find(".pbSubheader").find("input[type='checkbox'].autodoc").length>0){
+                    $(this).find(".pbSubheader").find("input").remove();    
+                }
+            }
+            if($(this).attr("auto-doc-section-key") =="coverages"){
+                if($(this).find(".pbSubheader").find("input[type='checkbox'].autodoc").length>0){
+                    $(this).find(".pbSubheader").find("input").remove();    
+                }
+            }
+            
+            });
+            //sync comments between claim search and claim details tabs
+            //only fire at last keyup
+            var timer;
+            $("#autodocComments").keyup(function(){
+                clearTimeout(timer);  
+              //  if(cmmentsTmp !=$("#autodocComments").val()){
+                    timer = setTimeout(function(){
+                        sforce.console.fireEvent('ProviderCommentsUpdated_'.concat(subjectId), $("#autodocComments").val()); 
+                    }, 500);   
+               // }
+               // cmmentsTmp = $("#autodocComments").val();
+            });   
+            
+            sforce.console.addEventListener('ProviderCommentsUpdated_'.concat(subjectId), function(r){
+            if(r.message != $("#autodocComments").val()){
+                $("#autodocComments").val(r.message);
+                }
+            });                      
+            
+            //sync comment from claim search when detail page is loaded
+            sforce.console.fireEvent('RequestProviderComments_'.concat(subjectId), subjectId);
+            
+            //close self when requested from claim page
+            sforce.console.addEventListener('CloseProviderDetailSubTab_'.concat(subjectId), function(r){
+                sforce.console.getEnclosingTabId(function(result){
+                    sforce.console.closeTab(result.id);        
+                });
+                
+            });
+            
+            afOnPageLoad();
+            
+            
+        
+        });
+        //function ContractNetwork_OnClick(NetworkName, effectivedt, canceldt, ProviderId, taxId, PTINTypeCode, addressId, 
+          //  addrTypeCode, contractDetailId, contractHeaderId, networkId, benefitPlanId, networkScheduleId,type) {
+           // var url;
+            //var hightlightPanelInfo = $("[id$='highlightPanelInfo']").val(); 
+            //var urlParam = 'interactionId={!JSENCODE(interaction.Id)}' +'&' + 'contactId={!JSENCODE(conObj.Id)}' + '&' + 'sourceOriginator={!sourceOriginator}' + '&' + 'additionalInfo=' + hightlightPanelInfo;
+               // urlParam += '&PID=' + ProviderId + '&TID=' + taxId + '&PTINTC=' + PTINTypeCode + '&AID=' + addressId + '&ATC=' + addrTypeCode;
+              //  urlParam += '&CNTRDID=' + contractDetailId + '&CNTRHID=' + contractHeaderId + '&NID=' + networkId + '&BPID=' + benefitPlanId + '&NSID=' + networkScheduleId+'&type='+type;
+           // url = '/apex/ACETContractDetails?'+urlParam; 
+           // sforce.console.getEnclosingPrimaryTabId(function(result) {
+               // sforce.console.openSubtab(result.id, url, true, NetworkName + ' '+ effectivedt + '-' + canceldt, null);// null, unique_ProvId_TaxId
+           // });
+           // return false;
+        //}
+       function processDatatable(row, data, dataIndex){
+            var url;
+            var hightlightPanelInfo = $("[id$='highlightPanelInfo']").val(); 
+            var netName = data["Network_Name"]; 
+            var provId = '{!JSENCODE(ProviderId)}';
+             //var provtype ='{!JSENCODE(providerDetail.generalInfo.providerType)}';
+            var provtype = '{!JSENCODE(providerType)}';
+             var status = data["Contract_Status"];
+            console.log('status' +status);
+            if(status == 'A') {
+                  console.log('status');
+                  console.log($(row));
+                  $(row).find(":nth-child(1)").html('<img src="{!URLFOR($Resource.ACETResources, '/img/m/active.jpg')}" style="max-width:50px;"></img>');
+              }
+           else if(status == 'I') {
+                 $(row).find(":nth-child(1)").html('<img src="{!URLFOR($Resource.ACETResources, '/img/m/inactive.jpg')}" style="max-width:50px;"></img>');
+               }
+           if(netName){              
+            $(row).find(":nth-child(3)").html('<a style="text-decoration: underline;cursor:pointer;">' + netName + '</a>');
+            $(row).find(":nth-child(3)").find("a").click(function(){
+                        var taxId = '{!JSENCODE(taxId)}';
+            var urlParam = 'interactionId={!JSENCODE(interaction.Id)}' +'&' + 'contactId={!JSENCODE(conObj.Id)}' + '&' + 'sourceOriginator={!sourceOriginator}' + '&' + 'additionalInfo=' + encodeURIComponent(hightlightPanelInfo);
+            urlParam += '&PID=' +provId+ '&TID=' +taxId+'&'+'PTINTC={!JSENCODE(providerTINTypeCodeParam)}'+'&'+ 'AID={!JSENCODE(addressIdParam)}'+'&'+ 'ATC={!JSENCODE(addressTypeCodeParam)}';
+            urlParam += '&CNTRDID=' + data.ContractDetailId+ '&CNTRHID=' + data.ContractHeaderId+ '&NID=' + data.Network_ID+ '&BPID=' + data.BenefitPlanId+ '&type='+provtype+'&NSID=' + data.NetworkSchedule+'&ContractEffective=' + data.Effective+'&ContractCancel=' + data.Cancel;
+            url = '/apex/ACETContractDetails?'+urlParam; 
+        
+        sforce.console.getEnclosingPrimaryTabId(function(result) {
+            sforce.console.openSubtab(result.id, url, true, data.Network_Name+ ' '+ data.Effective+ '-' + data.Cancel, null);// null, unique_ProvId_TaxId
+        });
+        
+        return false;
+                });
+            }
+         }
+         function initDataTables(dataTableName) {
+         if (!acet.datatables[dataTableName].dataTableInited) {
+            acet.datatables[dataTableName].initDatatable();
+            acet.datatables[dataTableName].processDatatable = function(row, data, dataIndex) {
+            var statusCode = data["addressStatusCode"];
+            var addressTypeCode = data["addressTypeCode"];
+            console.log('statusCode' +statusCode);
+            if(statusCode == 'A') {
+               console.log('status');
+               $(row).find(":nth-child(1)").html('<img src="{!URLFOR($Resource.ACETResources, '/img/m/active.jpg')}"></img>');
+              }
+            else {
+                $(row).find(":nth-child(1)").html('<img src="{!URLFOR($Resource.ACETResources, '/img/m/inactive.jpg')}"></img>');
+            }
+           };
+        }
+        }
+        function drawCallback(settings){                    
+             if(settings.sTableId == 'datatableAddress'){
+                acet.autodoc.startAutodoc('pbsAdditionalAddresses');    
+             }else if(settings.sTableId == 'datatableAffiliation'){                 
+                acet.autodoc.startAutodoc('pbsAffiliations');   
+             }  
+             else if(settings.sTableId == 'datatableContracts'){                 
+                    acet.autodoc.startAutodoc('coverages');   
+              }
+            $("[auto-doc-section-key]").each(function(){
+            if($(this).attr("auto-doc-section-key") =="pbsAdditionalAddresses"){
+                if($(this).find(".pbSubheader").find("input[type='checkbox'].autodoc").length>0){
+                    $(this).find(".pbSubheader").find("input").remove();    
+                }
+            }
+            if($(this).attr("auto-doc-section-key") =="pbsAffiliations"){
+                if($(this).find(".pbSubheader").find("input[type='checkbox'].autodoc").length>0){
+                    $(this).find(".pbSubheader").find("input").remove();    
+                }
+            }
+            if($(this).attr("auto-doc-section-key") =="coverages"){
+                if($(this).find(".pbSubheader").find("input[type='checkbox'].autodoc").length>0){
+                    $(this).find(".pbSubheader").find("input").remove();    
+                }
+            }
+            });
+            var contractStatus = $("[name$=searchStatus]:checked").val();
+            console.log('contractStatus' +contractStatus);
+            var totalActiveVisibleRows; 
+            $("[id$='coverages']").find(".auto-doc-list").find("tbody").find("tr").each(function(){
+                    if(contractStatus == 'Active') {
+                        console.log('entering');
+                        console.log('test' +$(this).find('td:eq(3)').text());
+                       if($(this).find('td:nth-child(2) img').length > 0 && $(this).find('td:nth-child(2) img').attr('src').indexOf('active.jpg') != 'undefined' && $(this).find('td:nth-child(2) img').attr('src').indexOf('active.jpg') > -1) {
+                             console.log('test');
+                             $(this).show();
+                       }
+                       if($(this).find('td:nth-child(2) img').length > 0 && $(this).find('td:nth-child(2) img').attr('src').indexOf('inactive.jpg') != 'undefined' && $(this).find('td:nth-child(2) img').attr('src').indexOf('inactive.jpg') > -1) {
+                         console.log('test');
+                         $(this).hide();
+                      }
+                      if ($(this).find('td.dataTables_empty').length > 0) {
+                         console.log('teste');
+                         totalActiveVisibleRows = 0;  
+                      }
+                      if ($(this).find('td.dataTables_empty').length == 0)  {
+                         console.log('testlength');
+                         totalActiveVisibleRows = $('#datatableContracts tbody tr:visible').length; 
+                      }  
+                  }else {
+                        $(this).show();
+                    }
+                });
+                if(contractStatus == 'Active') {
+                     console.log('totalDefatotalActiveVisibleRowsultRows' +totalActiveVisibleRows);
+                     $('#datatableContracts_info').html('Showing&nbsp;' +totalActiveVisibleRows+ '&nbsp;entries');
+                 }
+               var totalRows = $('#datatableContracts tbody tr').length;
+                console.log('totalRows' +totalRows);
+                var totalHiddenRows = $('#datatableContracts tbody tr:hidden').length;
+                console.log('totalHiddenRows' +totalHiddenRows);
+                if(totalRows == totalHiddenRows) {
+                    console.log('disablerows');
+                    var contractValue = $("input:radio[name$='searchStatus']");
+                    contractValue.filter('[value="All"]').prop("checked","true");
+                    $("input:radio[name$='searchStatus']").filter('[value="Active"]').attr("disabled","true");
+                    setTable(contractValue);
+                    }
+        }
+         function setTable(contractValue) {
+            console.log('contractValue' +contractValue);
+            var totalVisibleRows;
+            var totalAllRows;
+            if(contractValue != null && contractValue != '') {
+              $("[id$='coverages']").find(".auto-doc-list").find("tbody").find("tr").each(function(){
+                    if(contractValue == 'Active') {
+                       if($(this).find('td:nth-child(2) img').length > 0 && $(this).find('td:nth-child(2) img').attr('src').indexOf('active.jpg') != 'undefined' && $(this).find('td:nth-child(2) img').attr('src').indexOf('active.jpg') > -1) {
+                             console.log('testchange');
+                             $(this).show();
+                       }
+                       if($(this).find('td:nth-child(2) img').length > 0 && $(this).find('td:nth-child(2) img').attr('src').indexOf('inactive.jpg') != 'undefined' && $(this).find('td:nth-child(2) img').attr('src').indexOf('inactive.jpg') > -1) {
+                         console.log('testchangeinactive');
+                         $(this).hide();
+                      }
+                      if ($(this).find('td.dataTables_empty').length > 0) {
+                         console.log('teste');
+                         totalVisibleRows = 0;  
+                      }
+                      if ($(this).find('td.dataTables_empty').length == 0)  {
+                         console.log('testlength');
+                         totalVisibleRows = $('#datatableContracts tbody tr:visible').length; 
+                      }  
+                  }else {
+                        $(this).show();
+                        if ($(this).find('td.dataTables_empty').length > 0) {
+                         console.log('teste');
+                         totalAllRows = 0;  
+                      }
+                      if ($(this).find('td.dataTables_empty').length == 0)  {
+                         console.log('testlength');
+                         totalAllRows = $('#datatableContracts tbody tr:visible').length; 
+                      }
+                    } 
+                });
+                if(contractValue == 'Active') {
+                      console.log('totalVisibleRows' +totalVisibleRows);
+                     $('#datatableContracts_info').html('Showing&nbsp;' +totalVisibleRows+ '&nbsp;entries');
+                 }else {
+                    console.log('totalAllRows' +totalAllRows);
+                    $('#datatableContracts_info').html('Showing&nbsp;' +totalAllRows+ '&nbsp;entries');
+                 }
+             }
+        }
+            
+        
+        
+        
+        </script>
+        <apex:actionFunction name="afOnPageLoad" action="{!CallWSOnPageLoad1}" rerender="pbsGeneralInfo,coverages,pbsPracticeInfo,pgMsg" status="AjaxLoader" oncomplete="acet.autodoc.startAutodoc();GetAgreements();"/>
+        <apex:actionFunction name="GetAdditionalAddresses" action="{!CallFindMedicalProvider}" reRender="pbtAdditionalAddresses" status="AjaxLoader" oncomplete="initDataTables('datatableAddress');" />
+        <apex:actionFunction name="GetAffiliations" action="{!CallFindAffiliations}" reRender="pbtAffiliations" status="AjaxLoader" oncomplete="acet.datatables['datatableAffiliation'].initDatatable();"/>
+        <apex:actionFunction name="GetAgreements" action="{!CallFindAgreements}" reRender="pbtAgrmnts" status="AjaxLoader" onComplete="acet.datatables['datatableContracts'].initDatatable();"/>
+        <apex:outputPanel id="hlPanel">
+            <apex:inputHidden id="highlightPanelInfo" value="{!hpAdditionInfoStr}" />
+            <c:ACETInteractionHighlightsPanel InteractionAtt="{!interaction}" SubjectAtt="{!conObj}" AdditionalInfoAtt="{!additionalInfo}" selectedOriginator="{!Interaction.Originator_Name__c}"></c:ACETInteractionHighlightsPanel>
+            <apex:outputPanel id="hippapopupPanel">
+                <c:ACETHIPPADisclosure InteractionIdAtt="{!interaction.id}" subjectDOB="{!AdditionalInfo.DOB}" originatorDOB="{!AdditionalInfo.OriginatorDOB}"/>
+            </apex:outputPanel>
+        </apex:outputPanel>
+       <!-- <c:ACETInteractionHighlightsPanel InteractionAtt="{!interaction}" SubjectAtt="{!conObj}" AdditionalInfoAtt="{!additionalInfo}"></c:ACETInteractionHighlightsPanel>-->
+        <apex:pageMessages id="pgMsg"></apex:pageMessages>
+        <apex:sectionheader subTitle="Provider  Look Up Details" title="" />
+        <apex:pageBlock mode="maindetail" id="coveragesPageBlock">
+            <c:ACETRepeatCallViewRelatedCases CalltopicAtt="Provider Lookup" ExternalIDAtt="{!providerId}"/>
+            <apex:pageblocksection columns="1" rendered="{!!isProviderLookupDetailsResult}"
+                                   title="Provider Lookup Results" collapsible="false"
+                                   html-auto-doc="auto" html-auto-doc-case-items="true" id="pbProviderLookupDetails" html-auto-doc-section-key="pbProviderLookupDetails" html-auto-doc-section-column-indexes="0,1,2,3,4,5,6,7,8,9,10,11,12,13">
+                
+                <apex:pageblockTable value="{!lstProviderLookup}"
+                                     var="objProviderLookupResult"  >
+                    
+                    <apex:column value="{!objProviderLookupResult.providerId}"
+                                 headerValue="Provider ID" />
+                    <apex:column value="{!objProviderLookupResult.fullName}"
+                                 headerValue="Name" />
+                    <apex:column value="{!objProviderLookupResult.providerType}"
+                                 headerValue="Provider Type" />
+                    <apex:column value="{!objProviderLookupResult.taxId}"
+                                 headerValue="Tax ID" />
+                    <apex:column value="{!objProviderLookupResult.address}"
+                                 headerValue="Address" />
+                    <apex:column value="{!objProviderLookupResult.phoneNumber}"
+                                 headerValue="Phone Number" />
+                    <apex:column value="{!objProviderLookupResult.speciality}"
+                                 headerValue="Specialty" />
+                    <apex:column value="{!objProviderLookupResult.PCPRole}"
+                                 headerValue="PCP Role" />
+                    <apex:column value="{!objProviderLookupResult.gender}"
+                                 headerValue="Gender" />
+                    <apex:column value="{!objProviderLookupResult.uphd}"
+                                 headerValue="UnitedHealth Premium Program" />
+					<apex:column value="{!objProviderLookupResult.labTypeCode}"
+                                 headerValue="DDP Type" rendered="{!IF((additionalInfo.MemberId != null), true, false)}"/>
+                    <apex:column value="{!objProviderLookupResult.Platinum}"
+                        headerValue="Platinum" rendered="{!IF((additionalInfo.MemberId != null), false, true)}"/> 
+                    			 
+                    <apex:column value="{!objProviderLookupResult.Radious}"
+                                 headerValue="Radius" />
+                </apex:pageblockTable>
+            </apex:pageblocksection>
+            <apex:pageBlockSection title="General Information" columns="3"
+                                   collapsible="true" html-auto-doc="true" id="pbsGeneralInfo">
+                <apex:pageblocksectionitem >
+                    <apex:outputlabel value="Facility/Group Name" style="white-space: nowrap;">
+                    </apex:outputlabel>
+                    <apex:outputtext value="{!providerDetail.generalInfo.lastName}" style="white-space: nowrap;"/>
+                </apex:pageblocksectionItem>
+                <apex:pageblocksectionitem >
+                    <apex:outputlabel value="Tax ID"> 
+                    </apex:outputlabel>
+                    <apex:outputtext value="{!providerDetail.generalInfo.taxId}" />
+                </apex:pageblocksectionItem>
+                <apex:pageblocksectionitem >
+                    <apex:outputlabel value="Provider ID">                                            
+                    </apex:outputlabel>
+                    <apex:outputtext value="{!providerDetail.generalInfo.providerID}" />
+                </apex:pageblocksectionItem>
+                <apex:pageblocksectionitem >
+                    <apex:outputlabel value="Type">
+                    </apex:outputlabel>
+                    <apex:outputtext value="Facility"/>
+                </apex:pageblocksectionItem>
+                <apex:pageblocksectionitem >
+                    <apex:outputlabel value="Healthcare Organization TIN Owner" style="white-space: nowrap;"></apex:outputlabel>
+                    <apex:outputtext value="{!providerDetail.generalInfo.providerTINOwner}" style="white-space: nowrap;"/>
+                </apex:pageblocksectionItem>
+                <apex:pageblocksectionitem >
+                  <apex:outputLabel value="Healthcare Organization Type Code" style="white-space: nowrap;"></apex:outputLabel>
+                    <apex:outputtext value="{!providerDetail.generalInfo.hcoTypeCode}" style="white-space: nowrap;"/>
+                </apex:pageblocksectionItem>
+                
+               
+                <apex:pageblockSectionItem id="freeStandId" >         
+                    <apex:outputLabel value="Freestanding Facility" style="white-space: nowrap;"></apex:outputLabel>
+                     <apex:outputtext escape="false" value="{!providerDetail.generalInfo.PFS}" style="white-space: nowrap;" />
+                </apex:pageblockSectionItem>
+          
+                <apex:pageblocksectionitem >
+                    <apex:outputlabel value="NPI"></apex:outputLabel>                  
+                    <apex:outputtext escape="false" value="{!NPIList}"/> 
+                </apex:pageblocksectionItem>
+                <apex:pageblocksectionitem >
+                    <apex:outputlabel value="Patient Age Range"></apex:outputLabel>                  
+                    <apex:outputtext escape="false" value="{!providerDetail.generalInfo.patientAgeRange}" style="white-space: nowrap;"/> 
+                </apex:pageblocksectionItem>
+            </apex:pageBlockSection>
+            <apex:pageblockSection id="coverages" columns="1" title="Contracts" html-auto-doc="true" html-auto-doc-section-key="coverages" html-auto-doc-section-column-indexes="1,2,3,4,5,6,7,8,9">
+              <!--   <apex:pageblocktable value="{!agreements}" var="objContrcat" rendered="{!(NOT(ISNULL(agreements)) && agreements.size > 0)}">
+                    <apex:column headerValue="Plan Type">{!objContrcat.product}</apex:column>
+                    <apex:column headerValue="Network ID">{!objContrcat.Network_ID}</apex:column>
+                    <apex:column headerValue="Network Name"><apex:commandlink value="{!objContrcat.Network_Name}" onclick="return ContractNetwork_OnClick('{!objContrcat.Network_Name}', '{!objContrcat.effective}','{!objContrcat.cancel}', '{!ProviderId}', '{!taxId}', '{!providerTINTypeCodeParam}', '{!addressIdParam}', '{!addressTypeCodeParam}', '{!objContrcat.ContractDetailId}', '{!objContrcat.ContractHeaderId}', '{!objContrcat.Network_ID}', '{!objContrcat.BenefitPlanId}', '{!objContrcat.NetworkSchedule}','Facility');"/></apex:column>
+                    <apex:column headerValue="Network Schedule ID">{!objContrcat.NetworkSchedule }</apex:column>
+                    <apex:column headerValue="Benefit Plan ID">{!objContrcat.BenefitPlanId }</apex:column>
+                    <apex:column headerValue="Pricing Set ID">{!objContrcat.Pricing_Set_ID}</apex:column>
+                    <apex:column headerValue="Status">{!objContrcat.Contract_Status}</apex:column>
+                    <apex:column headerValue="Effective">{!objContrcat.effective}</apex:column>
+                    <apex:column headerValue="Cancel">{!objContrcat.cancel}</apex:column>                        
+                </apex:pageBlockTable>
+                <apex:pageBlockTable value="{!agreements}" var="r" rendered="{!(ISNULL(agreements) || agreements.size == 0)}" columnsWidth="1%">
+                    <apex:column style="width:50%" headerValue="{!FindAgreementsMessage}" styleClass="headerResultStyle"/>
+                </apex:pageBlockTable>   -->
+                <apex:outputPanel id="showStatus">
+                        <input type="radio" name="searchStatus" value="Active"
+                               checked="checked" style="top:-2px;position:relative;" onchange="setTable(this.value);"/><b>Active</b>&nbsp;&nbsp;
+                        <input type="radio" name="searchStatus"
+                               value="All" style="top:-2px;position:relative;" onchange="setTable(this.value);"/><b>All</b>
+                </apex:outputPanel>
+                <apex:outputPanel html-auto-doc-pagination="true" styleClass="enablePagination" html-auto-doc-section-combinedkey="coverages" >
+                <c:ACETDataTable id="pbtAgrmnts" attrDatatableWrapper="{!AgrmntsDTWrapper}" attrDataTableName="Contracts"/>   
+                </apex:outputPanel>            
+            </apex:pageblockSection>
+            <apex:pageBlockSection title="Additional Addresses" columns="1" html-auto-doc="true" html-auto-doc-section-key="pbsAdditionalAddresses" html-auto-doc-section-column-indexes="1,2,3,4,5,6" id="pbsAdditionalAddresses" onclick="ToggleAdditionalAddress(this);">
+            <apex:outputPanel html-auto-doc-pagination="true" styleClass="enablePagination" html-auto-doc-section-combinedkey="pbsAdditionalAddresses" html-auto-doc-section-tabid="">
+               <script>twistSection(document.getElementById("{!$Component.pbsAdditionalAddresses}").childNodes[0].childNodes[0]);</script>
+                <c:ACETDataTable id="pbtAdditionalAddresses" attrDatatableWrapper="{!AddrDTWrapper}" attrDataTableName="Address" />
+           </apex:outputpanel>
+           </apex:pageBlockSection>  
+                        
+            <apex:pageBlockSection title="Practice Information" columns="1"
+                                   html-auto-doc="true" id="pbsPracticeInfo">
+                <apex:pageblocktable value="{!providerDetail.specialities}"
+                                     var="objPratise">
+                    <apex:column headerValue="Active">
+                       <img src="{!URLFOR($Resource.ACETResources, '/img/m/' +objPratise.statusCode+'.jpg')}" style="max-width:50px;" />
+                    </apex:column>   
+                    <apex:column headerValue="Primary Specialty" style="width=50%;">{!objPratise.primarySpeciality}</apex:column>
+                    <apex:column headerValue="Specialty" style="width=50%;">{!objPratise.speciality}</apex:column>
+                    
+                </apex:pageblocktable>
+            </apex:pageBlockSection>
+            <apex:pageBlockSection title="Affilated Providers" columns="1" html-auto-doc="true" id="pbsAffiliations" onclick="ToggleAffiliations(this);" html-auto-doc-section-key="pbsAffiliations" html-auto-doc-section-column-indexes="1,2,3,4" >
+            <apex:outputPanel html-auto-doc-pagination="true" styleClass="enablePagination" html-auto-doc-section-combinedkey="pbsAffiliations" html-auto-doc-section-tabid="">
+                <script>twistSection(document.getElementById("{!$Component.pbsAffiliations}").childNodes[0].childNodes[0]);</script>
+                <c:ACETDataTable id="pbtAffiliations" attrDatatableWrapper="{!AffDTWrapper}" attrDataTableName="Affiliation"/>
+            </apex:outputpanel>    
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+        <apex:actionStatus id="AjaxLoader" onstart="ShowLoader()" onstop="HideLoader()"/>
+        <script>
+            function ShowLoader() {
+                $('.loader').fadeIn('fast');
+            }
+    
+            function HideLoader() {
+                $('.loader').fadeOut('fast');
+            }
+        </script>
+        <span class="loader" style=" display: none;">
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                &nbsp;
+            </div>
+            <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 1001; margin: 15% 50%">
+                <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                    <img src="/img/loading.gif" style="float: left; margin: 8px;"/>
+                    <span style="display: inline-block; padding: 10px 0px;">Loading...</span>
+                </div>
+            </div>
+        </span>
+    </apex:form>
+    
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+</apex:page>

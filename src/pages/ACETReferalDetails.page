@@ -1,0 +1,171 @@
+<apex:page controller="ACETReferralDetailsController" action="{!init}" sidebar="False" title="Referral Details">
+    <apex:includeScript value="{!$Resource.JQuery}" />
+    <apex:includeScript value="{!$Resource.JqueryTableSorter}"></apex:includeScript>
+    <apex:includeScript value="/support/console/30.0/integration.js" />
+    <apex:stylesheet value="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+    <apex:includeScript value="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></apex:includeScript>
+    <script type="text/javascript" src="{!$Label.ACETDynatraceJSURL}" data-dtconfig="{!$Label.ACETDynatrace_config}|reportUrl={!$Label.ACETDynatraceReportURL}|tp=500,50,0,1" crossorigin="anonymous"></script>
+    <style>
+
+        .bPageBlock .pbHeader {
+            background-color: #black; 
+        }
+
+        .bPageBlock .labelCol,
+            body .print .topics-label {
+            padding-top: 2px;
+            padding-right: 21px;
+            padding-bottom: 2px;
+            padding-left: 2px;
+            text-align: right;
+            font-size: 91%;
+            font-weight: bold;
+            color: #black;
+            }
+            
+            .bPageBlock .dataCol {
+            padding-top: 2px;
+            padding-right: 46px;
+            padding-bottom: 2px;
+            padding-left: 0px;
+            /*text-align: right;*/
+            }
+
+    </style>
+    <apex:form >
+        <c:ACETInteractionHighlightsPanel InteractionAtt="{!Interaction}" SubjectAtt="{!Subject}" AdditionalInfoAtt="{!AdditionalInfo}" selectedOriginator="{!wrapper.interaction.Originator_Name__c}"/>
+            <apex:outputPanel id="hippapopupPanel">
+                       <c:ACETHIPPADisclosure InteractionIdAtt="{!wrapper.interaction.id}" subjectDOB="{!wrapper.AdditionalInfo.DOB}" originatorDOB="{!wrapper.AdditionalInfo.OriginatorDOB}"/>
+            </apex:outputPanel>        
+
+        <script type="text/javascript">
+        var cmmentsTmp;
+        $(document).ready(function() {     
+            acet.autodoc.startAutodoc();
+            acet.autodoc.createCommentsbox();
+            
+            var primaryCalltopicTabId = '{!JSENCODE($CurrentPage.parameters.primaryCalltopicTabId)}';
+            
+            //send over referral detail autodoc to referral search when requested
+            var subjectId = '{!Subject.Id}';
+            sforce.console.addEventListener('RequestReferralDetail_'.concat(subjectId), function(r){ 
+                sforce.console.getEnclosingTabId(function(result){                                        
+                    var res = {};   
+                    res.subTabId = result.id;           
+                    res.doc = acet.autodoc.saveAutodoc(); 
+                                                                                       
+                    sforce.console.fireEvent('ReceiveReferralDetail_'.concat(subjectId), JSON.stringify(res)); 
+                }); 
+                                                       
+            });
+            
+            //send over referral detail autodoc to primary call topic page      
+            sforce.console.addEventListener('RequestSubTabAutodoc', function(r) {
+                sforce.console.getEnclosingTabId(function(result) {
+                    if(r.message == primaryCalltopicTabId){
+                        var res = {};
+                        res.primaryCalltopicTabId = primaryCalltopicTabId;
+                        res.subTabId = result.id;
+                        res.doc = acet.autodoc.saveAutodoc();
+                        sforce.console.fireEvent('ReceiveSubTabAutodoc', JSON.stringify(res));
+                    }
+                });
+            });
+            // Sysnc comments between search page and detail page 
+        sforce.console.fireEvent('RequestReferralComments_'.concat(subjectId), subjectId);
+            //sync comments between  search and  details tabs
+            var timer;
+        $("#autodocComments").keyup(function() {
+            clearTimeout(timer);
+            timer = setTimeout(function() {
+                sforce.console.fireEvent('ReferralCommentsUpdated_'.concat(subjectId), $("#autodocComments").val());
+            }, 500);
+        });
+            
+            sforce.console.addEventListener('ReferralCommentsUpdated_'.concat(subjectId), function(r){
+            if(r.message != $("#autodocComments").val()){
+                $("#autodocComments").val(r.message);
+                }
+            });
+      });
+ </script>
+        <apex:sectionHeader title="Referral" subtitle="{!referralID}" />
+    <c:ACETRepeatCallViewRelatedCases CalltopicAtt="View PCP Referrals" ExternalIDAtt="{!referralID}" attrCaseDataWrapper="{!wrapper}" />
+        <apex:pageBlock mode="maindetail" id="maindetailPageBlock">
+       
+            
+                <apex:pageBlockSection title="Referral Details" columns="1" html-auto-doc="auto" html-auto-doc-case-items="true" collapsible="true">
+                    <apex:pageBlockTable value="{!wrapperresults1}" var="w" id="results-table" style="border:none">
+                        <apex:column value="{!w.resultreferralExternalID}" headerValue="Referral Number" />
+                        <apex:column value="{!w.resultReferaltype}" headerValue="Referral Type" />
+                        <apex:column value="{!w.resultReferralStatus}" headerValue="Referral Status" />
+                        <apex:column value="{!w.resultStartdate}" headerValue="Start Date" />
+                        <apex:column value="{!w.resultEnddate}" headerValue="End Date" />
+                        <apex:column value="{!w.resultRequestingtin}" headerValue="Requesting TIN" />
+                        <apex:column value="{!w.resultRequestingprovider}" headerValue="Requesting Provider" />
+                        <apex:column value="{!w.resultServicingtin}" headerValue="Servicing TIN" />
+                        <apex:column value="{!w.resultServicingprovider}" headerValue="Servicing Provider" />
+                        <apex:column value="{!w.resultDxcode}" headerValue="Dx Code" />
+                        <apex:column value="{!w.resultDXDescription }" headerValue="Dx Description" />
+                    </apex:pageBlockTable>
+                </apex:pageBlockSection>            
+            
+            
+                <apex:pageblockSection title="Providers" columns="1" html-auto-doc="true" collapsible="true">
+                    <apex:pageBlockTable value="{!wrapperresults1.providerlst}" var="rd"
+                        title="Providers">
+                        <apex:column headerValue="Provider Role" value="{!rd.resultProviderRole}"/>
+                        <apex:column headerValue="Provider ID" value="{!rd.resultMPIN}" />
+                        <apex:column headerValue="Name" value="{!rd.resultName}" />
+                        <apex:column headerValue="TIN" value="{!rd.resultTIN}"/>
+                        <apex:column headerValue="Address" value="{!rd.resultAddress}" />
+                        <apex:column headerValue="City" value="{!rd.resultCity}"/>
+                        <apex:column headerValue="State" value="{!rd.resultState}" />
+                        <apex:column headerValue="Zip" value="{!rd.resultZip}"/>
+                        <apex:column headerValue="Specialty" value="{!rd.speciality}"/>
+                    </apex:pageBlockTable>
+                 </apex:pageblocksection>
+            
+            
+                <apex:pageblockSection title="Summary Information" columns="1" html-auto-doc="true" collapsible="true">
+                    <apex:pageBlockTable value="{!wrapperresults1}" var="si" title="Summary Information">
+                        <apex:column headerValue="Created Date/Time" value="{!si.resultCreatedDate}" />
+                        <apex:column headerValue="Referral Type" value="{!si.resultReferaltype}" />
+                        <apex:column headerValue="Number of Visits" value="{!si.numberofvisit}"/>
+                        <apex:column headerValue="Start Date" value="{!si.resultStartdate}"/>
+                        <apex:column headerValue="End Date" value="{!si.resultEnddate}"/>
+
+                    </apex:pageBlockTable>
+                </apex:pageblocksection>
+            
+
+            
+                <apex:pageblockSection title="Diagnosis" columns="1" html-auto-doc="true" collapsible="true">
+                    <apex:pageBlockTable value="{!wrapperresults1.diagnosisList}" var="dg" title="Diagnosis">
+                       <apex:column value="{!dg.resultdiagCode }" headerValue="Dx Code" />
+                       <apex:column value="{!dg.resultdiadDesc}" headerValue="Dx Description" />
+                    </apex:pageBlockTable>
+                    </apex:pageblocksection>
+            
+            
+                <apex:pageblockSection title="Procedure" columns="1" html-auto-doc="true" collapsible="true">
+                    <apex:pageBlockTable value="{!wrapperresults1.servicelst}" var="pt" title="Procedure">
+                        <apex:column headerValue="Procedure Type" value="{!pt.resultProcedureType}"/>
+                        <apex:column headerValue="Procedure Code" value="{!pt.resultProcedureCode}"/>
+                        <apex:column headerValue="Description" value="{!pt.resultDescription}"/>
+                    </apex:pageBlockTable>
+                    </apex:pageblocksection>
+            
+
+            
+                <apex:pageblockSection title="Notes" columns="1" html-auto-doc="true" collapsible="true">
+                    <apex:pageBlockTable value="{!wrapperresults1}" var="note" title="Notes">
+                        <apex:column headerValue="Notes" value="{!note.Notetext}"/>
+                    </apex:pageBlockTable>
+                    </apex:pageblocksection>
+            
+        </apex:pageBlock>
+    </apex:form>
+    <apex:includeScript value="{!URLFOR($Resource.ACETResources, '/js/main.js')}" />
+
+</apex:page>

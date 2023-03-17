@@ -1,0 +1,201 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,lightning:isUrlAddressable" 
+                access="global" controller="ACETLGT_DynamicCallTypesController">
+    
+    <aura:attribute type="String" name="attrCallTopic" access="public"/>
+    <aura:attribute type="Boolean" name="attrShowCheckBoxCallTypes" access="public"/>
+    <aura:attribute name="AutodocKey" type="string" access="public"/>
+    <aura:attribute type="Boolean" name="attrShowDropDownCallTypes" access="public"/>
+    <!--<apex:attribute type="String" name="attrShowPickListLabel" description="Show Picklist Label Name" />
+    <apex:attribute type="Boolean" name="attrshowAccountType" description="Show Account Type" required="false" />
+    <apex:attribute type="Boolean" name="attrShowPickListcallTypes" description="Show picklist values" />
+    <apex:attribute type="Boolean" name="attrViewBillingDisplay" description="show view billing display" /> -->
+    <aura:registerEvent name="DynamicCallTypesSupportEvt" type="c:ACETLGT_DynamicCallTypesSupportEvt"/>
+    <aura:attribute name="callTypes" type="Object" access="global" />
+    <aura:handler name="init" action="{!c.doInit}" value="{!this}" />
+
+    <aura:attribute name="dropDownSelectedValue" type="String" access="global" />
+
+    <!-- Logic for Save Button  -->
+    <aura:attribute name="isDropDownHasValue" type="String" access="global" />    
+    <aura:attribute name="isCommentsHasValue" type="String" access="global" />  
+    <aura:attribute name = "isHasValue" type= "boolean" access = "global"/>
+	<aura:attribute name ="spinner" type= "boolean" access = "global" default="true"/>
+
+    <!-- Errors Section -->
+    <aura:attribute name="errorDropDownMessage" type="String" access="global" default="Error : You must enter a value."/>
+    <aura:attribute name="errorCheckBoxMessage" type="String" access="global" default="Error : Select at least one Call Type."/> 
+    <aura:attribute name="errorAccountCheckBoxMessage" type="String" access="global" default="Error : Select at least one Account Type."/> 
+ 	<aura:attribute name = "isSetDropDownError" type= "boolean" access = "global"/>    
+    
+    <!-- Change Comments Box Color -->
+	<aura:handler name="change" value="{!v.isSetDropDownError}" action="{!c.handleDropDownChange}"/>     
+    
+    <!-- Table Value-->
+    <aura:attribute name="checkboxSelectedValue" type="String" access="global" />
+
+    <!-- Pharmacy : Checkbox Validation -->
+    <aura:attribute name="valList" type="String[]" access="global"/>
+	<aura:attribute name = "isPharmacyListEmptyError" type= "boolean" access = "public" /> 
+    
+
+    <!-- Consumer Accounts : Account Type Checkbox Validation -->
+    <aura:attribute name="accTypeList" type="String[]" access="public"/>     
+	<aura:attribute name = "isAccountListEmptyError" type= "boolean" access = "public" /> 
+
+    <!-- Account Types-->
+    <aura:attribute type="Boolean" name="isShowAccountTypes" access="public" default="false"/>
+    <aura:attribute name="accList" type="String[]" access="global"/>
+    
+	<aura:attribute name = "isCallChecked" type= "boolean" access = "public" default="false"/> 
+    <aura:attribute name = "isAccChecked" type= "boolean" access = "public" default="false"/> 
+
+    
+
+    <aura:method name="callChildForPharmacy" action="{!c.callChildMethod}" access="public" >
+    	<aura:attribute name="autodockey" type="String" />
+    </aura:method>
+	<aura:if isTrue="{!v.spinner}">
+    	<div class="exampleHolder">
+            <lightning:spinner alternativeText="Loading" size="medium" variant="brand" />
+        </div>
+  	</aura:if> 
+    
+      <div class="slds-box slds-theme--default slds-m-top_x-small " style="padding:0 ; border: none;">
+            <div>
+            <div>    
+            <aura:if isTrue="{!v.isShowAccountTypes}">
+                <lightning:card class="customCardClass ">
+                <div class="autodocTableView" data-auto-doc="true" data-auto-doc-case-items="false" data-auto-doc-feature="{!v.AutodocKey}" >   
+                    <table class="slds-table slds-table_bordered slds-no-row-hover slds-p-horizontal_small" role="grid">
+                    <thead>
+                        <tr  data-rolval="selectAllAccTypes" onclick="{! c.selectAllAccTypeCheckBox}" id="chkAccType" aria-checked="{!v.isAccChecked}" >
+                        <!--tr  data-rolval="selectAllAccTypes" onclick="{! c.ChangeAccCheckBox}"-->
+                            <!--<th class="slds-cell-shrink slds-size_1-of-5" >
+                                <ui:inputCheckbox/>
+                            </th>-->
+                            <th class="slds-cell-shrink slds-size_8-of-8">
+                                <div class="slds-truncate" ><label><abbr class="slds-required">*</abbr><b>Account Type</b></label></div>
+                            </th>
+                            <!--<th class="slds-cell-shrink slds-size_1-of-5">
+                                <div class="slds-truncate"><b><h1>Resolved</h1></b></div>
+                            </th>-->
+                        </tr>
+                    </thead>
+                    
+                    <tbody>
+                        <aura:iteration items="{!v.accList}" var="ct">
+                            <tr class="slds-hint-parent" data-rolval="{!ct}" onclick="{! c.ChangeAccCheckBox}">
+                                
+                                <!--<td data-label="" class="slds-size_1-of-5">
+                                    <lightning:input aura:id ="selcheckbox" type="checkbox" label="" 
+                                                     value="{!ct.Call_Type__c}" onblur="{! c.ChangeAccCheckBox}"/>
+                                </td>-->
+                                <td data-label="callType" class="slds-size_8-of-8">
+                                    <div id="calltypeval" class="slds-truncate" >{!ct}</div>
+                                </td>
+                                <!--<td data-label="Resolved" class="slds-size_1-of-5">
+                                    <lightning:input type="checkbox" label=""/>
+                                </td> -->
+                                
+                            </tr>
+                        </aura:iteration>
+    
+                    </tbody>
+                </table>
+                
+                </div>    
+                <div class="{!v.isAccountListEmptyError? 'slds-show': 'slds-hide'}" style="padding-top:10px ; padding-bottom:5px;  padding-left:21px;">
+                    <label class="slds-text-color_error">{!v.errorAccountCheckBoxMessage}</label>
+                </div>    
+    
+                </lightning:card>    
+            </aura:if>
+            </div>
+                
+            </div>
+            </div>
+
+      
+    <div class="slds-box slds-theme--default slds-m-top_x-small " style="padding:0 ; border: none;">
+        <div>
+        <div>    
+        <aura:if isTrue="{!v.attrShowCheckBoxCallTypes}">
+            <lightning:card class="customCardClass ">
+            <div class="autodocTableView" data-auto-doc="true" data-auto-doc-case-items="true" data-auto-doc-feature="{!v.AutodocKey}" >   
+                <table class="slds-table slds-table_bordered slds-no-row-hover slds-p-horizontal_small" role="grid">
+                <thead>
+                    <tr  data-rolval="selectAllCallTypes" onclick="{! c.selectAllCallTypeCheckBox}" id="chkCallType" aria-checked="{!v.isCallChecked}" >
+                        <!--<th class="slds-cell-shrink slds-size_1-of-5" >
+                            <ui:inputCheckbox/>
+                        </th>-->
+                        <th class="slds-cell-shrink slds-size_7-of-8">
+                            <div class="slds-truncate" ><label><abbr class="slds-required">*</abbr><b>Call Type</b></label></div>
+                        </th>
+                        <!--<th class="slds-cell-shrink slds-size_1-of-5">
+                            <div class="slds-truncate"><b><h1>Resolved</h1></b></div>
+                        </th>-->
+                    </tr>
+                </thead>
+                
+                <tbody>
+                    <aura:iteration items="{!v.callTypes}" var="ct">
+                        <tr class="slds-hint-parent" data-rolval="{!ct.Call_Type__c}" onclick="{! c.selectCallTypeCheckBox}">
+                            
+                            <!--<td data-label="" class="slds-size_1-of-5">
+                                <lightning:input aura:id ="selcheckbox" type="checkbox" label="" 
+                                                 value="{!ct.Call_Type__c}" onblur="{! c.ChangeCheckBox}"/>
+                            </td>-->
+                            <td data-label="callType" class="slds-size_7-of-8">
+                                <div id="calltypeval" class="slds-truncate" >{!ct.Call_Type__c}</div>
+                            </td>
+                            <!--<td data-label="Resolved" class="slds-size_1-of-5">
+                                <lightning:input type="checkbox" label=""/>
+                            </td>-->
+                            
+                        </tr>
+                    </aura:iteration>
+
+                </tbody>
+            </table>
+            
+            </div>    
+            <div class="{!v.isPharmacyListEmptyError? 'slds-show': 'slds-hide'}" style="padding-top:10px ; padding-bottom:5px;  padding-left:21px;">
+            	<label class="slds-text-color_error">{!v.errorCheckBoxMessage}</label>
+            </div>    
+
+            </lightning:card>    
+        </aura:if>
+        </div>
+         </div>
+        <div data-auto-doc="true" data-auto-doc-case-items="true" data-auto-doc-feature="memOtherEnquiry" > 
+        <!-- If Value is of Type Dropdown List -->  
+        <aura:if isTrue="{!v.attrShowDropDownCallTypes}">
+            <!--lightning:select  aura:id="select" label = "Inquiry Type" Class="slds-form-element__label"  required="true" onchange="{! c.onChange }" 
+                              messageWhenValueMissing="Error : You must enter a value"-->
+            <div class="slds-form-element__label"><abbr class="slds-required" title="required">*</abbr><span>Inquiry Type</span></div>
+            <div class="slds-form-element__control slds-grow" >
+               <div class="slds-select_container" >
+                  <select id="{!v.AutodocKey+'select'}" class="slds-select" value="{!v.dropDownSelectedValue}" onchange="{! c.onChange}" onblur="{!c.onDropDownBlur}">
+                     <option value="None" >None</option>
+                     <aura:iteration items="{!v.callTypes}" var="ct">
+                         <option value="{!ct.Call_Type__c}">{!ct.Call_Type__c}</option>
+                     </aura:iteration>
+                  </select>
+               </div>
+            </div>
+            <!--<lightning:select  aura:id="select" required = "true" label = "Inquiry Type" value="{!v.dropDownSelectedValue}" onchange="{! c.onChange}"
+                               onblur="{!c.onDropDownBlur}"  
+                              >            
+                		<option value='None'>None</option>
+                        <aura:iteration items="{!v.callTypes}" var="ct">
+                                    <option value="{!ct.Call_Type__c}">{!ct.Call_Type__c}</option>
+                        </aura:iteration>
+           </lightning:select> -->
+        </aura:if>
+        </div>        
+        <div class="{!v.isSetDropDownError? 'slds-show': 'slds-hide'}">
+             	<label class="slds-text-color_error">{!v.errorDropDownMessage}</label>
+        </div>
+    </div>
+    
+</aura:component>

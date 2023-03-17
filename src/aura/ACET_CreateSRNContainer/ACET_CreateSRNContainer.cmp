@@ -1,0 +1,290 @@
+<aura:component
+    implements="force:appHostable,flexipage:availableForAllPageTypes,lightning:isUrlAddressable,force:hasRecordId"
+    access="global" controller="ACET_CreateSRNContainerCtrl">
+
+    <aura:handler name="init" value="{!this}" action="{!c.init}" />
+
+    <ltng:require styles="{!$Resource.ACETLink_MasterStyle}" />
+    <!-- US2954656	TECH - Submit the Authorization Summary & Confirmation Page: Provider Details - Integration - Sarma - 13/10/2010 -->
+    <ltng:require scripts="{!$Resource.ACET_SAESessionData}" />
+
+    <aura:attribute name="memberTabId" type="String" />
+    <aura:attribute name="lstYesNo" type="List" default="[
+    {'label': 'Yes', 'value': 'Yes'},
+    {'label': 'No', 'value': 'No'}
+    ]" />
+    <aura:attribute name="IsNewBorn" type="String" />
+    <aura:handler name="change" value="{!v.IsNewBorn}" action="{!c.changelstYesNo}" />
+
+    <aura:attribute name="lstSRNType" type="List" default="[
+    {'label': 'Inpatient', 'value': 'Inpatient'},
+    {'label': 'Outpatient', 'value': 'Outpatient'},
+    {'label': 'Outpatient Facility', 'value': 'Outpatient Facility'}
+    ]" />
+    <aura:attribute name="type" type="String" default="Outpatient" />
+    <aura:handler name="change" value="{!v.type}" action="{!c.changeType}" />
+
+    <aura:registerEvent name="ACET_CreateSRNAppEvent" type="c:ACET_CreateSRNAppEvent" />
+
+    <!-- US2816912	Build UI for Create SRN for Add New Provider with Provider Look-up - 2/9/2020 - Sarma -->
+    <!-- Attributes for Provider lookup funtionality in Create SRN Tab -->
+    <aura:attribute name="interactionRec" type="Interaction__c" />
+    <aura:attribute name="contactUniqueId" type="string" access="public" />
+    <aura:attribute name="noMemberToSearch" type="Boolean" default="false" />
+    <aura:attribute name="memberCardSnap" type="Object" access="public" />
+    <aura:attribute name="policyDetails" type="SAEPolicyDetailsResult" />
+    <aura:attribute name="memberPolicies" type="SAEMemberProviderSearchCoveragesResult.CoverageLine[]" />
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0" />
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+    <aura:attribute name="AutodocPageFeatureMemberDtl" type="String" />
+    <aura:attribute name="AutodocKeyMemberDtl" type="String" />
+    <aura:attribute name="providerSearchResultsADMultiplePages" type="boolean" default="false" />
+    <aura:attribute name="componentId" type="String" access="global" />
+    <aura:attribute name="hipaaEndpointUrl" type="String" default="" />
+    <aura:attribute name="isHippaInvokedInProviderSnapShot" type="Boolean" default="false" />
+    <aura:attribute name="caseNotSavedTopics" type="String[]" />
+    <aura:attribute name="providerDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="memberCardData" type="Object" />
+    <aura:attribute name="interactionCard" type="Object" access="public" />
+    <aura:attribute name="contactName" type="string" access="public" />
+    <aura:attribute name="selectedTabType" type="String" access="public" />
+    <aura:attribute name="isShowProviderLookup" type="Boolean" default="false" />
+
+    <aura:attribute name="originatorType" type="string" access="public" />
+
+    <aura:attribute name="srnProviderDetailList" type="Object[]" />
+    <aura:handler name="addProviderCardToAuthEvent" event="c:ACET_AddProviderCardToAuthEvent"
+        action="{!c.handleAddProviderEvent}" />
+    <aura:attribute name="interactionOverviewTabId" type="String" />
+    <aura:handler name="change" value="{!v.interactionOverviewTabId}" action="{!c.addPrimaryProvider}" />
+
+    <!-- Validations -->
+    <aura:attribute name="SRNData" type="Object" />
+
+    <!-- Errors -->
+    <aura:attribute name="errors" type="Object" />
+
+    <aura:attribute name="policy" type="SAEPolicyDetailsResult" access="public" />
+
+    <aura:attribute name="uniqueId" type="String" />
+
+    <!-- US3499742- Genetic Testing Link for E&I and M&R -->
+    <aura:attribute name="isGeneticTesting" type="String" />
+    <aura:attribute name="isGeneticTestingTeam" type="String" />
+    <aura:attribute name="paanLink" type="String" default="https://acd.uhc.com/conductor/advocatelogin.uhg" />
+
+    <!-- US2971523 -->
+    <aura:attribute name="providerRoleDetails" type="Object" /> 
+    <aura:handler name="CreateSRNProviderRoleActionEvent" event="c:ACET_CreateSRNProviderRoleActionEvent" action="{!c.providerRoleChanges}" />
+    
+    <!-- US3094699 -->
+    <aura:attribute name="srnTabId" type="String" />
+    <!-- US3586024 -->
+    <aura:attribute name="delegationValue" type="String" default=" "/>
+    <aura:attribute name="patientInfo" type="Object" access="public"/>
+    <aura:attribute name="isNaviHealthNo" type="Boolean" default="false" />
+    <aura:attribute name="isNaviHealthNoQn" type="Boolean" default="false" />
+    <aura:attribute name="showExistingProcess" type="Boolean" default="false"/>
+    <aura:attribute name="showDelegatedToIntake" type="Boolean" default="false"/>
+
+    <aura:attribute name="isProSelected" type="Boolean" default="true" />
+    <aura:attribute name="sampleVis" type="Boolean" default="false" />
+    <aura:attribute name="refeorProceWhere" type="String" default="" />
+    <aura:attribute name="authEntryGrid" type="Map" />
+    <aura:attribute name="oldValue" type="String" default="" />
+    <aura:attribute name="sourceType" type="String" default="" />
+    <aura:attribute name="postAcuteCareValue" type="String" default=" " access="public"/>
+    <aura:attribute name="ispostAcuteNo" type="Boolean" default="true" />
+    <aura:handler name="change" value="{!v.postAcuteCareValue}" action="{!c.postActValueChange}" />
+    <aura:handler name="ACET_CreateAuthGridValChange" event="c:ACET_CreateAuthGridValChange" action="{!c.listValueChange}" />
+
+    <div class="slds-card slds-var-p-around_medium" style="background: rgb(243, 242, 242);">
+        <div class="slds-grid slds-p-vertical_small">
+            <div class="slds-col slds-has-flexi-truncate">
+                <div class="slds-media slds-no-space slds-grow slds-m-left_small">
+                    <div class="slds-media__figure">
+                        <span class="slds-icon_container slds-icon-standard-contact_list" title="Interaction_Overview">
+                            <lightning:icon iconName="standard:feed" class="feedColor"
+                                alternativeText="Interaction Overview" />
+                        </span>
+                    </div>
+                    <div class="slds-media__body">
+                        <div class="slds-page-header__name">
+                            <div class="slds-page-header__name-title slds-m-top_x-small">
+                                <h1
+                                    class="page_header_label slds-m-right_small  component_title slds-text-heading_small">
+                                    Create Authorization
+                                </h1>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <lightning:buttonGroup>
+                <c:ACET_HippaGuidelines hipaaEndpointUrl="{!v.hipaaEndpointUrl}" showButton="true" /><!--DE409252 - Sravan-->
+                <lightning:button variant="neutral" label="Misdirect " name="misdirect" class="misdirect_button" />
+                <lightning:button variant="neutral" label="Alerts (2)" name="alerts_btn" class="misdirect_button" />
+            </lightning:buttonGroup>
+        </div>
+    </div>
+
+    <lightning:layout class="slds-card slds-p-around_medium" multipleRows="true">
+        <lightning:layoutItem size="12">
+            <lightning:layout multipleRows="true">
+                <lightning:layoutItem size="4">
+            <h3 class="component_title slds-text-heading_small">Select Case</h3>
+        </lightning:layoutItem>
+                <lightning:layoutItem size="8">
+                    <!-- <div style="color: red;" class="{! (v.policy.resultWrapper.policyRes.sourceCode == 'CO' &amp;&amp; v.delegationValue != 'No') ? ' slds-show ' :  ' slds-hide ' }" > -->
+                    <aura:if isTrue="{!v.showDelegatedToIntake}">
+                        <div style="color: red;">
+                        Delegated for Intake, misdirect the call appropriately
+                    </div>
+                    </aura:if>
+                    <!-- </div> -->
+                </lightning:layoutItem>
+            </lightning:layout>
+        </lightning:layoutItem>
+        <lightning:layoutItem size="12">
+            <lightning:layout multipleRows="true">
+                <div class="{! (v.policy.resultWrapper.policyRes.sourceCode == 'CS' || v.policy.resultWrapper.policyRes.sourceCode == 'AP') ? ' slds-show ' :  ' slds-hide ' }" >
+                    <lightning:layoutitem padding="" size="12">
+                        <div class="slds-form-element slds-m-top_xx-small">
+                            Is this for Genetic/Molecular Testing?
+                            <lightning:radioGroup class="slds-m-top_xx-small customRadioCls slds-m-left_medium"
+                                name="{! 'radioGenetic' + v.uniqueId }" label="Is this for Genetic/Molecular Testing?"
+                                options="{! v.lstYesNo }" value="{! v.isGeneticTesting }" type="radio" variant="label-hidden" onchange="{! c.handleGeneticRadioChange }"/>
+                        </div>
+                    </lightning:layoutitem>
+                    <lightning:layoutitem padding="" size="12">
+                        <div class="{! ( v.isGeneticTesting == 'Yes' ? ' slds-show ' :  ' slds-hide ') + 'slds-form-element slds-m-top_xx-small' }">
+                            Are you part of the dedicated Genetic/Molecular Testing team?
+                            <lightning:radioGroup class="slds-m-top_xx-small customRadioCls slds-m-left_medium"
+                                name="{! 'radioGeneticTeam' + v.uniqueId }" label="Are you part of the dedicated Genetic/Molecular Testing team?"
+                                options="{! v.lstYesNo }" value="{! v.isGeneticTestingTeam }" type="radio" variant="label-hidden" />
+                        </div>
+                    </lightning:layoutitem>
+                    <lightning:layoutitem padding="" size="12">
+                        <div class="{! ( v.isGeneticTestingTeam == 'Yes' ? ' slds-show ' :  ' slds-hide ') + 'slds-form-element slds-m-top_small' }">
+                            Please access <a href="{! v.paanLink }" onclick="{!c.callDoc}" target="_blank" > Provider Advocate PAAN </a>
+                        </div>
+                    </lightning:layoutitem>
+                    <lightning:layoutitem padding="" size="12">
+                        <div class="{! ( v.isGeneticTestingTeam == 'No' ? ' slds-show ' :  ' slds-hide ') + 'slds-form-element slds-m-top_small' }">
+                            Advise caller to submit online at uhcprovider.com or contact 800-377-8809.
+                        </div>
+                    </lightning:layoutitem>
+                </div>
+                <aura:if isTrue="{!v.isNaviHealthNo}">
+                    
+                <lightning:layoutitem padding="" size="12">
+
+                            <c:ACET_PostAcuteCareServices paCheckTabId="{!v.srnTabId}"  autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"
+                                                          cardDetails="{!v.cardDetails}"
+                                                          delegationValue="{!v.delegationValue}"
+                                                          patientInfo="{!v.patientInfo}"
+                                                          showExistingProcess="{!v.showExistingProcess}"
+                                                          showStatements="false"
+                                                          postAcuteCareValue="{!v.postAcuteCareValue}"/>
+
+                        </lightning:layoutitem>
+                    
+                </aura:if>
+                <lightning:layoutitem padding="" size="12">
+                    <div class="{! (( v.isNaviHealthNoQn || v.showExistingProcess || v.isGeneticTesting == 'No') ? ' slds-show ' :  ' slds-hide ')}">
+                    <div class="{! ( (v.isGeneticTesting == 'No' || (v.policy.resultWrapper.policyRes.sourceCode != 'CS' &amp;&amp; v.policy.resultWrapper.policyRes.sourceCode != 'AP')) ? ' slds-show ' :  ' slds-hide ') + 'slds-form-element slds-m-top_xx-small' }">
+                        Is this a newborn, pre-determination or gap request?
+                        <lightning:radioGroup class="slds-m-top_xx-small customRadioCls slds-m-left_medium"
+                            name="{! 'radiorequest' + v.uniqueId }" label="Is this a newborn, pre-determination or gap request?"
+                                                  options="{! v.lstYesNo }" value="{! v.IsNewBorn }" type="radio" variant="label-hidden"
+                                                  disabled="{!v.isNaviHealthNoQn}"/>
+                        </div>
+                    </div>
+                </lightning:layoutitem>
+                <lightning:layoutitem padding="" size="12">
+                    <div class="{! ( (v.isGeneticTesting == 'No' || (v.policy.resultWrapper.policyRes.sourceCode != 'CS' &amp;&amp; v.policy.resultWrapper.policyRes.sourceCode != 'AP')) ? ' slds-show ' :  ' slds-hide ') + 'slds-form-element slds-m-top_xx-small' }">
+                        <div
+                            class="{!( (v.IsNewBorn == 'Yes' || empty(v.IsNewBorn)) ? ' slds-hide ' :  ' slds-show ' ) }">
+                            <!--lightning:radioGroup class="slds-m-top_x-small customRadioCls customRadioCls2"
+                                name="{! 'radionewborn' + v.uniqueId }" label="Is this a newborn or gap request?"
+                                options="{! v.lstSRNType }" value="{! v.type }" type="radio" variant="label-hidden" /-->
+                            <aura:if isTrue="{! not(or((v.IsNewBorn == 'Yes'),empty(v.IsNewBorn))) }">
+                            <lightning:layoutItem class="marginLeft" padding="around-small" size="3">
+                                <c:ComboboxField aura:id="referOrProcid" fieldName="Reference/Procedure"
+                                    objectName="Spire_Auth_Entry_Grid__mdt" searchFieldName="Reference_or_Procedure__c"
+                                    whereCondition="{!v.refeorProceWhere}" orderBy="Reference_or_Procedure__c"
+                                    selectedRecord="{!v.SRNData.RequiredInfo.Reference_or_Procedure}"
+                                    searchKeyword="{!v.SRNData.RequiredInfo.Reference_or_Procedure}"
+                                    isValueSelected="{!v.isProSelected}" />
+                            </lightning:layoutItem>
+                           </aura:if>
+                        </div>
+                    </div>
+                </lightning:layoutitem>
+            </lightning:layout>
+        </lightning:layoutItem>
+    </lightning:layout>
+
+    <aura:if isTrue="{!v.sampleVis}">
+    <div class="{!( (v.IsNewBorn == 'Yes' || empty(v.IsNewBorn)) ? ' slds-hide ' :  ' slds-show ' ) }">
+
+        <c:ACET_CreateSRN_Communication_Contact type="{! v.type }" errors="{! v.errors }"
+            SRNData="{!v.SRNData}" uniqueId="{!v.uniqueId}" srnTabId="{!v.srnTabId}" /> <!-- US3094699 -->
+
+        <c:ACET_CreateSRN_SpecialAccountIntro RequiredInfo="{! v.SRNData.RequiredInfo }" uniqueId="{!v.uniqueId}" />
+            <c:ACET_CreateSRN_Case_Build_Adtil_Info RequiredInfo="{! v.SRNData.RequiredInfo}" uniqueId="{!v.uniqueId}" />
+        <c:ACET_CreateSRN_RequiredInformation type="{! v.type }" SRNData="{! v.SRNData }" policy="{!v.policy}"
+            errorsRI="{! v.errors.errorsRI }" uniqueId="{!v.uniqueId}" srnTabId="{!v.srnTabId}"
+            memberPolicies="{!v.memberPolicies}" policySelectedIndex="{!v.policySelectedIndex}"/> <!-- US3094699 US3674191 -->
+
+        <!-- <c:ACET_CreateSRN_ProviderCard interactionCard="{!v.interactionCard}" contactName="{!v.contactName}"
+        providerStatus="{!v.selectedTabType}"  isShowProviderLookup = "{!v.isShowProviderLookup}"/> -->
+
+        <div class="slds-m-top_x-small">
+            <aura:iteration items="{!v.srnProviderDetailList}" var="data" indexVar="index">
+                <!-- US3026437 -->
+                <c:ACET_CreateSRN_ProviderCard srnProviderDetailList="{!v.srnProviderDetailList}"
+                    srnProviderDetailObject="{!data}" isShowProviderLookup="{!v.isShowProviderLookup}" 
+                     providerRoleDetails="{! v.providerRoleDetails }" index="{! index }" SRNData="{!v.SRNData}" srnTabId="{!v.srnTabId}" /> <!-- US3094699 -->
+                     <!-- US2971523 -->
+            </aura:iteration>
+        </div>
+
+        <aura:if isTrue="{!v.isShowProviderLookup}">
+            <div aura:id="providerLookup">
+                <lightning:layout multipleRows="true" class="slds-p-top_small">
+                    <lightning:layoutItem size="12">
+                        <!--US2543703 Passing caseWrapperMNF wrapper to ProviderLookup Component Venkat April 2020-->
+                        <c:SAE_ProviderLookup isProviderSnapshot="false" interactionRec="{!v.interactionRec}"
+                            contactUniqueId="{!v.contactUniqueId}" noMemberToSearch="{!v.noMemberToSearch}"
+                            caseWrapper="{!v.caseWrapper}" caseWrapperMNF="{!v.caseWrapperMNF}"
+                            memberDetails="{!v.memberCardSnap}" policyDetails="{!v.policyDetails}"
+                            policyList="{!v.memberPolicies}" policySelectedIndex="{!v.policySelectedIndex}"
+                            autodocPageFeature="{!v.AutodocPageFeature}" AutodocKey="{!v.AutodocKey}"
+                            providerSearchResultsADMultiplePages="{!v.providerSearchResultsADMultiplePages}"
+                            AutodocPageFeatureMemberDtl="{!v.AutodocPageFeatureMemberDtl}"
+                            AutodocKeyMemberDtl="{!v.AutodocKeyMemberDtl}" componentId="{!v.componentId}"
+                            isHippaInvokedInProviderSnapShot="{!v.isHippaInvokedInProviderSnapShot}"
+                            hipaaEndpointUrl="{!v.hipaaEndpointUrl}" caseNotSavedTopics="{!v.caseNotSavedTopics}"
+                            providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen}"
+                            flowDetailsForRoutingScreen="{!v.flowDetailsForRoutingScreen}"
+                            memberCardData="{!v.memberCardData}" isCreateSrnComponent="true"
+                            memberTabId="{!v.memberTabId}" interactionOverviewTabId="{!v.interactionOverviewTabId}" />
+                        <!-- US2696849 - Thanish - 22nd Jul 2020 -->
+                    </lightning:layoutItem>
+                </lightning:layout>
+            </div>
+        </aura:if>
+
+        <!-- US3026437 -->
+        <c:ACET_CreateSRN_Submit memberCardSnap="{!v.memberCardSnap }"
+            providerDetailsForRoutingScreen="{!v.providerDetailsForRoutingScreen }" type="{! v.type }"
+            errors="{! v.errors }" SRNData="{!v.SRNData}" srnProviderDetailList="{!v.srnProviderDetailList}"
+            uniqueId="{!v.uniqueId}" memberTabId="{!v.memberTabId}" srnTabId="{!v.srnTabId}" /> <!-- US3094699 -->
+
+        <br />
+
+    </div>
+    </aura:if>
+</aura:component>

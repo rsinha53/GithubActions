@@ -1,0 +1,99 @@
+<aura:component
+    implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes,lightning:isUrlAddressable"
+    access="global" controller="SAE_PCPHistoryWebService">
+
+    <!-- SCRIPTS -->
+    <ltng:require styles="{!$Resource.ACET_MasterStyle}" />
+
+    <!-- ATTRIBUTES -->
+    <lightning:workspaceAPI aura:id="workspace" />
+    <aura:attribute name="isShowPCPHistory" type="boolean" default="false" />
+    <aura:attribute name="transId" type="string" access="public" default="" />
+    <aura:attribute name="pcpHistoryData" type="List" access="public" />
+    <aura:attribute name="isFireSpinner" type="Boolean" default="false" />
+    <aura:attribute name="transactionId" type="String" />
+    <aura:attribute name="memberTabId" type="String" /> <!-- DE333920 -->
+    <aura:attribute name="extendedCoverage" type="SAEPolicyDetailsResult" /> <!-- Sanka -->
+    <!-- US2833876 - Thanish - 8th Sep 2020 - new autodoc framework -->
+    <aura:attribute name="tableList" type="Object[]" />
+    <aura:attribute name="autodocUniqueId" type="String" default="policySnapshot" />
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0" />
+    <aura:attribute name="rcedResultWrapper" type="Object" />
+    <aura:attribute name="memberGrpN" type="string" access="public" />
+    <!-- US3691233: Add missing fields/components to autodoc reporting - Krish - 11th Aug 2021 -->
+    <aura:attribute name="memberCardData" type="Object" />
+    <!-- HANDLERS -->
+    <aura:handler name="change" value="{!v.policySelectedIndex}" action="{!c.extendedCoverageChange}" />
+    <aura:handler name="change" value="{!v.extendedCoverage}" action="{!c.extendedCoverageChange}" />
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:handler event="c:ACET_AutoDocRefreshEvent" action="{!c.handleAutodocRefresh}" />
+
+    <!-- EVENTS -->
+    <aura:registerEvent name="SAE_PCPHistoryEvent" type="c:SAE_PCPHistoryEvent" />
+
+    <div class="slds-card card_top_padding card_bottom_padding" style="height: 100%;">
+
+        <lightning:spinner class="slds-show" aura:id="pcp-history-spinner" alternativeText="Loading.." title="Loading.."
+            variant="brand" size="large" />
+
+        <div class="slds-grid slds-wrap card_bottom_margin card_left_padding card_right_padding">
+            <div class="slds-col" style="float:left;">
+                <p class="component_title">Primary Care Provider History (PCP)
+                </p>
+            </div>
+
+            <div style="float:right">
+                <lightning:buttonIcon class="closeBtn" iconName="utility:close" variant="border-inverse"
+                    alternativeText="close" onclick="{!c.closePCPTable}" />
+            </div>
+        </div>
+
+        <div style="overflow: auto;">
+            <aura:iteration items="{!v.tableList}" var="table">
+                <aura:if isTrue="{!table}">
+                    <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-no-row-hover">
+                        <thead>
+                            <tr class="slds-line-height_reset">
+                                <th scope="col">
+                                    <lightning:input type="checkbox" name="Primary Care Provider History (PCP)"
+                                        checked="{!table.allChecked}" variant="label-hidden"
+                                        onchange="{!c.selectAll}" />
+                                </th>
+                                <aura:iteration items="{!table.tableHeaders}" var="header">
+                                    <th class="table_column_header" scope="col">
+                                        <span class="slds-truncate">{!header}</span>
+                                    </th>
+                                </aura:iteration>
+                            </tr>
+                        </thead>
+                        <!-- DE373966 - Thanish - 8th Oct 2020 -->
+                        <tbody>
+                            <aura:iteration items="{!table.tableBody}" var="row" indexVar="index">
+                                <tr class="slds-hint-parent">
+                                    <td style="width: 1px;">
+                                        <div class="slds-truncate">
+                                            <lightning:input type="checkbox" name="{!index}" checked="{!row.checked}"
+                                                variant="label-hidden" onchange="{!c.selectRow}" />
+                                        </div>
+                                    </td>
+                                    <aura:iteration items="{!row.rowColumnData}" var="data">
+                                        <aura:if isTrue="{!data.isOutputText}">
+                                            <td> {!data.fieldValue} </td>
+                                        </aura:if>
+
+                                        <aura:if isTrue="{!data.isNoRecords}">
+                                            <td colspan="{!table.tableHeaders.length}">
+                                                <div style="text-align: center;">{!data.fieldValue}</div>
+                                            </td>
+                                        </aura:if>
+                                    </aura:iteration>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </aura:if>
+            </aura:iteration>
+        </div>
+
+    </div>
+</aura:component>

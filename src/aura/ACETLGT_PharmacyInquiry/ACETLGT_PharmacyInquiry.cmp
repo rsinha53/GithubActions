@@ -1,0 +1,281 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction,lightning:isUrlAddressable" 
+                access="global"
+                controller="ACETLGT_PharmacyInquiryController">
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+    <!-- table records are stored on the data attribute -->
+    <aura:attribute name="data" type="String[]" access="global" />
+    <!-- init method loads the data attribute values -->
+    <aura:handler name="init" action="{!c.doInit}" value="{!this}" />
+    <!-- isCSRFVisible triggers "Document the CSRF Number" -->
+    <aura:attribute name="isCSRFVisible" type="boolean" access="global" />
+    <!--<aura:attribute name="isCSRFVisible" type="String" access="global" />-->
+    <aura:attribute name="callTypes" type="Object" access="global" />
+    <aura:attribute name="cseTopic" type="String" access="global" default="{!$Label.c.ACETCallTopicPharmacyInquiry}"/>
+    <aura:attribute name="srk" type="String" access="global" />
+    <aura:attribute name="int" type="Interaction__c" access="global" />
+    <aura:attribute name="intId" type="String" access="global" />
+    <aura:attribute name="memId" type="String" access="public"/>
+    <aura:attribute name="grpNum" type="String" access="public"/>
+    <aura:attribute name="bookOfBusinessTypeCode" type="String" />
+    <aura:attribute name="csrfurl" type="String" access="global" />
+    <aura:attribute name="iseturl" type="String" access="global" default=""/>
+    <aura:attribute name="comments" type="String" access="global" />
+    <aura:attribute name="Ismnf" type="boolean" default="false"/>
+    <aura:attribute name="memberGender" type="string"/>
+    <aura:attribute name="memberFirstName" type="string"/>
+    <aura:attribute name="memberLastName" type="string"/>
+    <aura:attribute name="memberDOB" type="string"/>
+    <aura:attribute name="coverageInfoBenefits" type="sObject" />
+    <aura:attribute name="carrierId" type="String" />
+    <aura:attribute name="guid" type="string"/>
+    <aura:attribute name="customerPurchaseId" type="string"/>
+    <aura:attribute name="COStartDate" type="string"/>
+    <aura:attribute name="COEndDate" type="string"/>
+    <!-- Validate input to CSRF number -->
+    <aura:attribute name="CSRF" type="string" default="" />
+    <!--{!v.cseTopic}{!v.int}{!v.int.Id}{!v.srk}-->
+        
+    <!-- Pharmacy Validation Variables -->
+    <aura:attribute name="PharmacyCommentsValue" type="String" access="global"/>
+    <aura:attribute name="PharmacyCSRFValue" type="integer" access="global"/>
+    
+    <!-- Yesy / No Variables -->
+	<aura:attribute name="PharmacyCSRFYes" type="boolean" access="global"/>
+    <aura:attribute name="PharmacyCSRFNo" type="boolean" access="global"/>    
+    
+    <!-- Errors Section -->
+    <aura:attribute name="errorMessage" type="String" access="global" default="{!$Label.c.ACETNoValueError}"/> 
+    <aura:attribute name="errorMessageCheckbox" type="String" access="global" default="{!$Label.c.ACETYesOrNoError}"/>
+    <aura:attribute name="errorShortValueMessage" type="String" access="global" default="{!$Label.c.ACETCSRFDigitError}"/>
+    
+    <aura:attribute name = "isPharCommentSetError" type= "boolean" access = "global" default = "false"/>
+    <aura:attribute name = "isPharCheckSetError" type= "boolean" access = "global" default = "false"/>
+    <aura:attribute name = "isPharCSRFSetError" type= "boolean" access = "global" default = "false"/>
+    <aura:attribute name = "isPharInvalidValueError" type= "boolean" access = "global" default = "false"/>   
+    
+    <!-- Change Comments Box Color -->
+	<aura:handler name="change" value="{!v.isPharCommentSetError}" action="{!c.handlePharCommentsChange}"/>    
+	<aura:handler name="change" value="{!v.isPharCSRFSetError}" action="{!c.handlePharCSRFChange}"/>   
+    
+    <!-- Pharmacy Inquiry ListDropDown -->
+    <aura:attribute name="valList" type="String[]" access = "public"/>
+    <aura:attribute name = "isPharmacyListEmptyError" type= "boolean" access = "global" default="false"/> 
+    
+    
+    <aura:attribute name="usInfo" type="user" access="public"/>    
+    <aura:attribute name="highlightPanel" type="ACETLGT_HighlightPanelInfo" access="global"/>  
+    <aura:attribute name="hgltPanelDataString" type="String" access="global"/>
+    <div id="{!v.AutodocKey+'PharmacyInquiry'}">
+    <c:ACETLGT_AutoDoc></c:ACETLGT_AutoDoc>
+    
+    
+    
+    
+    <lightning:card
+                    variant="Narrow"
+                    title="{!$Label.c.ACETCallTopicPharmacyInquiry}"
+                    iconName="standard:home"
+                    class="pharmacy-card"
+                    >
+  
+        <aura:set attribute="actions">
+            <div class="slds-grid slds-form-element slds-m-right_large" >
+                <lightning:buttonGroup>
+                    <c:ACETLGT_TTSModal 
+                                        aura:id = "cComp"
+                                        pagefeature="{!v.AutodocKey+'PharmacyInquiry'}" 
+                                        cseTopic="{!$Label.c.ACETCallTopicPharmacyInquiry}" 
+                                        int="{!v.int}" 
+                                        intId="{!v.intId}" 
+                                        srk="{!v.srk}" 
+                                        showCirrus="true" 
+                                        bookOfBusinessTypeCode="{!v.bookOfBusinessTypeCode}"
+                                        comments="{!v.comments}"
+                                        memberId="{!v.memId}"
+                                        groupId="{!v.grpNum}"
+                                        highlightPanel="{!v.highlightPanel}"
+                                        AutodocKey="{!v.AutodocKey+'PharmacyInquiry'}"
+                                        isPharmacyModal = "true"
+                                        PharmacyCommentsValue = "{!v.comments}"
+                                        PharmacyCSRFValue = "{!v.CSRF}"
+                                        PharmacyCSRFYes = "{!v.PharmacyCSRFYes}"
+                                        PharmacyCSRFNo = "{!v.PharmacyCSRFNo}"
+                                        
+                                        isPharCommentSetError="{!v.isPharCommentSetError}"
+                                        isPharCheckSetError="{!v.isPharCheckSetError}"
+                                        isPharCSRFSetError="{!v.isPharCSRFSetError}"
+                                        
+                                        valList="{!v.valList}"
+                                        isPharmacyListEmptyError="{!v.isPharmacyListEmptyError}"
+                                        isPharInvalidValueError = "{!v.isPharInvalidValueError}"
+                                        userInfo="{!v.usInfo}"
+                                        showMemAlerts="{!!v.Ismnf}"
+                                        />
+            		<lightning:button label="ISET" onclick="{!c.redirectToISET}" class="noLeftBorder" />
+                    <lightning:button label="CSRF" onclick="{!c.openCSRFWindow}" />
+                </lightning:buttonGroup>
+            </div>
+        </aura:set>
+        <p class="slds-p-horizontal_small">
+            <!--<lightning:card title=""><c:ACETLGT_HighlightPanel highlightPanelValues="{!v.highlightPanel}"/> </lightning:card>-->
+        </p>
+        
+        <c:ACETLGT_HighlightPanel highlightPanelValues="{!v.highlightPanel}" pageFeature="{!v.AutodocKey+'PharmacyInquiry'}" Ismnf="{!v.Ismnf}" ShowComments="false"></c:ACETLGT_HighlightPanel>
+        
+    </lightning:card>
+    <!--
+    <lightning:card >
+        
+        <c:ACETLGT_HighlightPanel highlightPanelValues="{!v.highlightPanel}"/>
+            
+    </lightning:card>
+    -->
+    
+    <div class="slds-grid slds-gutters_xxx-small">
+        <!--style="margin-left: -12px;margin-right: -10px;"-->
+        
+        <div class="slds-col slds-size_1-of-2">
+            <c:ACETLGT_DynamicCallTypes
+                                        aura:id="callChildPharmacyMethod" 
+                                        attrCallTopic="{!$Label.c.ACETCallTopicPharmacyInquiry}" 
+                                        attrShowCheckBoxCallTypes="true"
+                                        valList="{!v.valList}"
+                                        isPharmacyListEmptyError="{!v.isPharmacyListEmptyError}"
+                                        AutodocKey="{!v.AutodocKey+'PharmacyInquiry'}"
+                                        />
+            
+        </div>
+        
+        <div class="slds-col slds-size_3-of-6">
+            <!--style="margin-left:-17px;width:67.8%;"-->
+            <div class="slds-box slds-theme_default slds-m-top_x-small ">
+                <table class="slds-table slds-table_bordered slds-p-horizontal_small" role="grid">
+                    <thead>
+                        <tr>
+                            <td>
+                                <label><b><h1>Client Services Referral Form</h1></b></label>
+                            </td>
+                        </tr>
+                    </thead>
+                    <thead>
+                        <tr>
+                            <td class="slds-cell-shrink" scope="col">
+                                <label><abbr class="slds-required"><b>*</b></abbr><b>Was a CSRF created for this inquiry</b></label>
+                            </td>
+                            
+                            <td class="slds-cell-shrink" scope="col">
+                                <fieldset class="slds-form-element">
+                                    <div class="slds-form-element__control">
+                                        <input
+                                               required = "true"
+                                               type="radio"
+                                               id="radio-Yes"
+                                               value="radio-Yes"
+                                               name="options"
+                                               checked="false"
+                                               onchange="{!c.yesRadioButtonChanged}"
+                                               />
+                                        <label class="slds-radio__label" for="radio-Yes">
+                                            <span class="slds-radio_faux"></span>
+                                            <span class="slds-form-element__label">Yes</span>
+                                        </label>
+                                        
+                                        <input
+                                               required = "true"
+                                               type="radio"
+                                               id="radio-No"
+                                               value="radio-No"
+                                               name="options"
+                                               checked="false"
+                                               onchange="{!c.noRadioButtonChanged}"
+                                               />
+                                        <label class="slds-radio__label" for="radio-No">
+                                            <span class="slds-radio_faux"></span>
+                                            <span class="slds-form-element__label">No</span>
+                                        </label>
+                                    </div>
+                                </fieldset>
+                            </td>
+                        </tr>
+                    </thead>
+                </table>
+
+    			<div class="{!(v.isPharCheckSetError? 'slds-show': 'slds-hide')}">
+                <table>
+                	<thead>
+                        <tr>                  
+             				<label class="slds-text-color_error">{!v.errorMessageCheckbox}</label>
+                        </tr>
+                    </thead>
+                </table>
+                </div>
+                
+                <aura:if isTrue="{!v.isCSRFVisible}">
+                <div data-auto-doc="true" data-auto-doc-feature="{!v.AutodocKey+'PharmacyInquiry'}" >  
+                <div class="slds-grid slds-grid_vertical slds-form-element slds-m-top_x-small ">    
+                <div>
+                        <!--<label><b>Document the CSRF Number :  </b> 
+                                    </label>-->
+                        <span onkeypress="{!c.restrictCSRFCharacters}">
+                        <!-- <ui:inputText label="Document the CSRF Number : "
+                                          value="{!v.CSRF}"
+                                          aura:id="CSRF"
+                                          required="true"
+                                          maxlength="6"
+                                          
+                                          />
+						-->
+                        <div class="slds-truncate" ><label><abbr class="slds-required"><b>*</b></abbr>Document the CSRF Number : </label></div>    
+                        <div  class="slds-form-element__control slds-grow">
+                            <input id="csrf" value="{!v.CSRF}" type="text" maxlength="6" class="slds-input" onblur="{!c.onPharmacyCSRFBlur}" onFocus="{!c.onPharmacyCSRFFocus}" />
+                        </div>
+                           <!-- <lightning:input label=""
+                                          
+                                          value="{!v.CSRF}"
+                                          aura:id="CSRF"
+                                          maxlength="6"
+                                          variant="label-hidden"
+                                          onblur="{!c.onPharmacyCSRFBlur}"  
+                                          onFocus="{!c.onPharmacyCSRFFocus}" 
+                                          />  -->  
+                        </span>
+                </div>
+                </div>
+                    <!-- Swap variable -->
+    			<div class="{!v.isPharCSRFSetError? 'slds-show': 'slds-hide'}">
+             			<label class="slds-text-color_error">{!v.errorMessage}</label>
+                </div>
+                <div class="{!v.isPharInvalidValueError? 'slds-show': 'slds-hide'}">
+             			<label class="slds-text-color_error">{!v.errorShortValueMessage}</label>
+                </div>    
+                </div>
+                </aura:if>
+
+                <div class="slds-grid slds-grid_vertical slds-form-element slds-m-top_x-small">
+                    <div class="slds-col " style="padding:0 ; border: none;">
+                    <div class="slds-truncate" ><label><abbr class="slds-required"><b>*</b></abbr>Comments</label></div>
+                        <lightning:textarea
+                                          aura:id="comments"
+										  variant="label-hidden"
+                                          value="{!v.comments}"
+                                          rows="6"
+                                          cols="60"
+                                          Class="slds-form-element_label slds-form-element__control slds-text-body_small"
+                                          
+                                          onblur="{!c.onPharmacyCommentBlur}"  
+                                          onFocus="{!c.onPharmacyCommentsFocus}"  
+                                          />
+                    </div>
+
+    				<div class="{!v.isPharCommentSetError? 'slds-show': 'slds-hide'}">
+             			<label class="slds-text-color_error">{!v.errorMessage}</label>
+                	</div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+    </div>
+  
+    
+</aura:component>

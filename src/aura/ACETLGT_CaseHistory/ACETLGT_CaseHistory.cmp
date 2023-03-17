@@ -1,0 +1,187 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" controller="ACETLGT_caseHistory" >
+    
+    <aura:attribute name="srk" type="string"/>
+    <aura:attribute name="memName" type="string"/>
+    <aura:attribute name="caseHistory" type="string[]"/>
+    <aura:attribute name="caseColumns" type="string[]"/>
+    <aura:attribute name="caseList" type="case[]"/>    
+    <aura:attribute name="dataTblId" type="String"/>    
+     <aura:attribute name="totalPages" type="integer" />
+    <aura:attribute name="currentPageNumber" type="integer" />
+    <aura:attribute name="pageList" type="list" />
+   
+    <aura:attribute name="togglehover" type="String" default="" />
+    <!-- Spinner -->
+    <aura:attribute name="Spinner" type="boolean" default="false"/>
+    
+    <lightning:overlayLibrary aura:id="overlayLib"/>
+    
+    <lightning:workspaceAPI aura:id="workspace" />
+    
+    
+    <aura:handler name="init" value="{!this}" action="{!c.init}"/>
+    
+	
+    <!--use JQuery Data Table css,Js and jQUERY js file in lightning component by using ltng:require component-->
+    <ltng:require styles="{! $Resource.	datatable + '/DataTables-1.10.16/media/css/jquery.dataTables.min.css'}" 
+                  scripts="{!join(',', 
+                           $Resource.jquery224 , 
+                           $Resource.datatable + '/DataTables-1.10.16/media/js/jquery.dataTables.min.js')
+                           }" afterScriptsLoaded="{!c.Onloadjquery}"/>
+    
+    <lightning:card iconName="standard:case" >
+        <aura:set attribute="title" >
+            <div class="slds-text-heading_small slds-form-element__label"><b>Case History ( {!v.caseHistory.length} )</b>
+            	<c:ACETLGT_CaseCommentsHistoryReport SubjectId="{!v.srk}" SubjectName="{!v.memName}" SubjectType="Member"/>
+            </div>
+        </aura:set>
+        <div>
+                <div class="outer-div">
+            	<aura:if isTrue="{!v.Spinner}">
+          		<lightning:spinner alternativeText="Loading, Please Wait..." 
+               		title="Loading, Please Wait..." 
+               		variant="brand" size="medium"/>
+    			</aura:if>
+                </div>
+        </div>
+   <!-- <div data-auto-doc-section-key="pbSearchResults" data-auto-doc-section-column-indexes="1" >
+        <div data-auto-doc="true" data-auto-doc-case-items="true" data-auto-doc-pagination="true">
+            <span data-auto-doc-pagination="true" class="enablePagination" data-auto-doc-section-combinedkey="pbSearchResults" data-auto-doc-section-tabid="">-->
+    			<div class="slds-m-around_medium" width="100%" style="overflow: auto;">
+        <table id="{! v.dataTblId }" class="slds-no-row-hover slds-table_bordered slds-table_cell-buffer tblCase auto-doc-list" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th>Case Number</th>
+                    <th>Subject Name</th>
+                    <th>Contact Name</th>
+                    <th>Created By</th>
+                    <th>Created Date and Time</th> 
+                    <th>Topic</th>
+                    <th>Original Type</th>
+                    <th>Status</th>
+                    <th>Originator Type</th>
+                    <th>Interaction Type</th>
+                    <th>Parent Case</th>
+                    <th>Fulfillment</th>
+                    <!--th>Interaction ID</th-->
+                </tr>
+            </thead>
+            <tbody>
+                <aura:iteration items="{!v.caseHistory}" var="case" indexVar="index">
+                    <tr data-selected-Index="{!index}">
+                      
+                            
+                        <td class="slds-truncate" >
+                            <!--<div class="tooltip">
+                                        <a data-toggle="popover"
+                                                     data-index="{!index}" 
+                                                     data-recId="{!case.CaseNumber}"
+                                                     data-cId="{!case.Id}"
+                                                     data-recCreatedName="{!case.Created_By_name__c}"
+                                                     onmouseover="{!c.handleMouseOver}"
+                                                     onmouseout="{!c.handleMouseOut}"
+                                                     onclick="{!c.navigateToRecord}"
+                                                     >
+                            {!case.CaseNumber}</a>                      						
+                                        <c:ACETLGT_CaseHistoryNumberPopup caseNumber="{!case.CaseNumber}" caseName="{!case.Created_By_name__c}"/>
+							</div>-->
+                            <span class="spnDetails">
+                            	<a 	data-index="{!index}" 
+                               		data-recId="{!case.CaseNumber}"
+                               		data-cId="{!case.Id}"
+                               		data-recCreatedName="{!case.CreatedBy.Name}"
+                                    onmouseover="{!c.handleMouseOver}"
+                                   	onmouseout="{!c.handleMouseOut}"
+                                    onclick="{!c.navigateToRecord}">
+                                    {!case.CaseNumber}
+                                </a>
+                            </span>
+                            
+                            <aura:if isTrue="{!v.togglehover == case.CaseNumber}">
+                            <span class="spnTooltip">
+                                <c:ACETLGT_CaseHistoryNumberPopup caseId="{!case.Id}" 
+                                                                  caseNumber="{!case.CaseNumber}" 
+                                                                  originalType = "{!case.Original_Type__c}" 
+                                                                  caseName="{!case.Owner.Name}" 
+                                                                  originalSubType = "{!case.Original_Subtype__c}"/>
+                        	</span>
+                            </aura:if>
+                        	</td> 
+                        
+                        <td class="slds-truncate" data-index="{!index}" data-recName="{!case.Subject_Name__c}" 
+                            											data-recId="{!case.CaseNumber}">
+                            											{!case.Subject_Name__c}</td>
+                        <td class="slds-truncate">{!case.Caller__c}</td>
+                        <td class="slds-truncate">{!case.CreatedBy.Name}</td>
+                    	<td class="slds-truncate">{!case.CreatedDate}</td> 
+                    	<td class="slds-truncate">{!case.Topic__c}</td>
+                        <td class="slds-truncate">{!case.Original_Type__c}</td>
+                    	<td class="slds-truncate">{!case.Status}</td>
+                        <td class="slds-truncate">{!case.Originator_Type__c}</td>
+						<td class="slds-truncate">{!case.Interaction_Type__c}</td>
+                        <td class="slds-truncate">
+                        
+                            	<a 	data-index="{!index}" 
+                               		data-recId="{!case.CaseNumber}"
+                               		data-cId="{!case.Id}"
+                               		data-recCreatedName="{!case.CreatedBy.Name}"
+                               		onclick="{!c.navigateToRecord}">
+                                    {!case.ParentCaseNumber}
+                                </a>
+                        </td>
+                        
+                    	<td class="slds-truncate">{!case.fullfilment}</td>
+                    	<!--td>{!case.InteractionName}</td-->
+                    </tr>
+                </aura:iteration>  
+            </tbody>
+        </table>
+                     <div id="tableWrapper" class="table_container" >
+             <lightning:layout multipleRows="true" horizontalalign= "center" class="pagenation_container" >
+
+        <lightning:layoutItem padding="around-small" flexibility="auto"  >
+                </lightning:layoutItem>
+		<lightning:layoutItem padding="around-small" flexibility="auto"   class="lgt_dt_pagenation_container"  >
+			<lightning:button label="First" iconName="utility:left" iconPosition="left" 
+                                  onclick="{!c.onFirst}" disabled="{! v.currentPageNumber == 1}"/>
+			<lightning:button iconName="utility:chevronleft" iconPosition="left"
+                                  onclick="{!c.onPrev}" disabled="{! v.currentPageNumber == 1}"/>
+			<span class="slds-p-horizontal_x-small">
+				<a  name="1" 
+                       class="selected_page_cls">{!v.currentPageNumber}</a>
+			</span>
+			<span class="slds-p-horizontal_xxx-small">
+				<a>...</a>
+			</span>
+            
+			<aura:iteration items="{!v.pageList}" var="item">
+				<span class="slds-p-horizontal_x-small">
+					<a id ="selectpage" onclick="{!c.processMe}" name="{!item}"
+                           class="{! (v.currentPageNumber == item) ? 'selected' : ''}">{!item}</a>
+				</span>
+			</aura:iteration>
+			<aura:if isTrue="{!and(v.totalPages > '11',v.totalPages != v.currentPageNumber)}">
+			<span class="slds-p-horizontal_xxx-small">
+				<a>...</a>
+			</span>
+			<span class="slds-p-horizontal_x-small">
+				<a  name="1"  class=""  onclick="{!c.onLast}">{!v.totalPages}</a>
+			</span>
+            </aura:if>
+			<lightning:button iconName="utility:chevronright" iconPosition="right" 
+                                  disabled="{! v.currentPageNumber == v.totalPages}" onclick="{!c.onNext}"/>
+			<lightning:button label="Last" iconName="utility:right" iconPosition="right" 
+                                  disabled="{!v.currentPageNumber == v.totalPages}" onclick="{!c.onLast}"/>
+		</lightning:layoutItem>
+	</lightning:layout>
+
+        </div>
+                    
+    </div>
+            <!--</span>
+        </div>
+    </div>-->
+        
+    </lightning:card>
+
+</aura:component>

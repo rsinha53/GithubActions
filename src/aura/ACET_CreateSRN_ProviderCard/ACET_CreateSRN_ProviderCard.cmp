@@ -1,0 +1,162 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,lightning:isUrlAddressable"
+    access="global" controller="ACET_CreateSrnProviderCardController">
+
+    <aura:attribute name="isShowProviderLookup" type="Boolean" default="false" />
+    <aura:attribute name="srnProviderDetailList" type="Object[]" />
+    <aura:attribute name="srnProviderDetailObject" type="Object" />
+
+    <!-- US2954656	TECH - Submit the Authorization Summary & Confirmation Page: Provider Details - Integration - Sarma - 12/10/2020 -->
+    <aura:attribute name="isProviderFacility" type="Boolean" default="false" />
+    <aura:attribute name="isProviderAttending" type="Boolean" default="false" />
+    <aura:attribute name="isProviderRequesting" type="Boolean" default="false" />
+    <aura:attribute name="isProviderAdmitting" type="Boolean" default="false" />
+    <aura:attribute name="isProviderServicing" type="Boolean" default="false" />
+
+    <!-- US3002566	Bring Back Network Status for Provider - Sarma - 23/10/2020 -->
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:handler name="change" value="{!v.srnProviderDetailObject}" action="{!c.providerObjectOnchange}" />
+    <aura:attribute name="isNetworkStatusCalloutDone" type="Boolean" default="false" />
+    <aura:attribute name="showSpinner" type="Boolean" default="false" />
+
+    <!-- US2971523 -->
+    <aura:attribute name="providerRoleDetails" type="Object" />
+    <aura:attribute name="isProviderPCP" type="Boolean" default="false" />
+    <aura:attribute name="index" type="Integer" />
+    <aura:registerEvent name="CreateSRNProviderRoleActionEvent" type="c:ACET_CreateSRNProviderRoleActionEvent" />
+ 
+    <aura:handler event="c:ACET_CreateSRN_FireValidations" action="{!c.fireValidations}" />
+    <aura:attribute name="hasErrors" type="Boolean" default="false" />
+
+    <!-- US3026437 -->
+    <aura:attribute name="SRNData" type="Object" />
+
+    <!-- US3094699 -->
+    <aura:attribute name="srnTabId" type="String" />
+
+    <!-- US3507481 -->
+    <aura:attribute name="isServicingRequired" type="Boolean" default="false" />
+    <aura:attribute name="hasServicingError" type="Boolean" default="false" />
+
+    <div aura:id="card" class="slds-card card_padding">
+
+        <!-- SPINNER -->
+        <lightning:spinner class="slds-hide" aura:id="create-auth-provider-spinner" alternativeText="Loading.." title="Loading.."
+            variant="brand" size="medium" />
+        <!-- SPINNER -->
+
+        <aura:if isTrue="{!v.srnProviderDetailObject.isShowProviderDetails}">
+            <lightning:layout class="slds-card slds-m-top_x-small" multipleRows="true">
+                <lightning:layoutItem size="3">
+                    <h2 class="component_title">
+                        <aura:if isTrue="{!v.srnProviderDetailObject.hscProviderDetails.providerCategory =='H' }">
+                            {!'Provider: ' + v.srnProviderDetailObject.hscProviderDetails.businessName}
+                            <aura:set attribute="else">
+                                {!'Provider: ' + v.srnProviderDetailObject.hscProviderDetails.firstName + ' ' +
+                                v.srnProviderDetailObject.hscProviderDetails.lastName}
+                            </aura:set>
+                        </aura:if>
+                    </h2>
+                </lightning:layoutItem>
+                <lightning:layoutItem size="8">
+
+                    <div class="slds-grid checkBoxPadding slds-p-top_large">
+                        <!-- US2971523 -->
+                        <div class="slds-col slds-size_3-of-15 slds-p-left--x-small">
+                            <lightning:input type="checkbox" label="PCP"
+                                class="{! (v.hasErrors ? ' slds-has-error ' : '') }" aura:id="pcpId" name="pcpName"
+                                checked="{!v.isProviderPCP}" onchange="{!c.handleRoleCheckboxAction}" 
+                                disabled="{! and(!empty(v.providerRoleDetails.PCP), v.providerRoleDetails.PCP != v.index) }" /> 
+                        </div>
+                        <!-- US2971523 -->
+                        <div class="slds-col slds-size_3-of-15 slds-p-left--x-small">
+                            <lightning:input type="checkbox" label="Facility"
+                                class="{! (v.hasErrors ? ' slds-has-error ' : '') }" aura:id="acceptingId"
+                                name="acceptingName" checked="{!v.isProviderFacility}"
+                                onchange="{!c.handleRoleCheckboxAction}"
+                                disabled="{! and(!empty(v.providerRoleDetails.Facility), v.providerRoleDetails.Facility != v.index) }" />
+                        </div>
+                        <!-- US2971523 -->
+                        <div class="slds-col slds-size_3-of-15 slds-p-left--x-small">
+                            <!-- US3026437 -->
+                            <lightning:input type="checkbox" class="{! (v.hasErrors ? ' slds-has-error ' : '') }"
+                                label="Attending" aura:id="attendingId" name="attendingName"
+                                checked="{!v.isProviderAttending}" onchange="{!c.handleRoleCheckboxAction}"
+                                disabled="{! or(and(!empty(v.providerRoleDetails.Attending), v.providerRoleDetails.Attending != v.index), and(v.SRNData.RequiredInfo.ServiceSetting == 'Inpatient', v.srnProviderDetailObject.hscProviderDetails.providerCategory =='H')) }" />
+                        </div>
+                        <!-- US2971523 -->
+                        <div class="slds-col slds-size_3-of-15 slds-p-left--x-small">
+                            <lightning:input type="checkbox" label="Requesting"
+                                class="{! (v.hasErrors ? ' slds-has-error ' : '') }" aura:id="requestingId"
+                                name="requestingName" checked="{!v.isProviderRequesting}"
+                                onchange="{!c.handleRoleCheckboxAction}"
+                                disabled="{! and(!empty(v.providerRoleDetails.Requesting), v.providerRoleDetails.Requesting != v.index) }" />
+                        </div>
+                        <!-- US2971523 -->
+                        <div class="slds-col slds-size_3-of-15 slds-p-left--x-small">
+                            <lightning:input type="checkbox" label="Admitting"
+                                class="{! (v.hasErrors ? ' slds-has-error ' : '') }" aura:id="admittingId"
+                                name="admittingName" checked="{!v.isProviderAdmitting}"
+                                onchange="{!c.handleRoleCheckboxAction}"
+                                disabled="{! and(!empty(v.providerRoleDetails.Admitting), v.providerRoleDetails.Admitting != v.index) }" />
+                        </div>
+                        <!-- US2971523 -->
+                        <div class="slds-col slds-size_3-of-15 slds-p-left--x-small">
+                            <lightning:input type="checkbox" label="Servicing"
+                                class="{! ( (v.hasErrors || v.hasServicingError) ? ' slds-has-error ' : '') }" aura:id="servicingId"
+                                name="servicingName" checked="{!v.isProviderServicing}"
+                                onchange="{!c.handleRoleCheckboxAction}"
+                                disabled="{! and(!empty(v.providerRoleDetails.Servicing), v.providerRoleDetails.Servicing != v.index) }"
+                                required= "{! v.isServicingRequired }" /> <!-- US3507481 -->
+                        </div>
+                    </div>
+
+                </lightning:layoutItem>
+
+                <!-- US2816983	Populate Selected Provider from Provider Lookup on Create SRN Page - Sarma - 28/09/2020 -->
+                <lightning:layoutItem size="1">
+                    <!--US3077461	Validations Part 4 - Inpatient/Outpatient/Outpatient Facility - Ability to Remove Provider Card When Needed - Sarma - 18/11/2020
+                        Removing Aura if to add X btn for default card -->
+                    <!-- <aura:if isTrue="{!not(v.srnProviderDetailObject.isMainCard)}"> -->
+                        <div class="slds-float_right" style="text-align: right;">
+                            <div class="slds-float_right" style="padding-left: 4px;">
+                                <div title="Close Provider Card" class="slds-icon-action-close slds-icon_container"
+                                    style="padding:0; cursor: pointer;" onclick="{!c.closeProviderCard}">
+                                    <img src="{!$Resource.SLDS_Close_Icon+'/icons/close_60_black.png'}"
+                                        style="background: white;margin-top:-10px" class="slds-icon" />
+                                </div>
+                            </div>
+                        </div>
+                    <!-- </aura:if> -->
+                </lightning:layoutItem>
+            </lightning:layout>
+
+            <div>
+                <lightning:layout class="slds-m-top_medium" multipleRows="true">
+                    <lightning:layoutitem size="3">
+                        <p class="field_label field_label_padding">TAX ID</p>
+                        <p class="field_value">{!v.srnProviderDetailObject.createSrnNetworkStatusRequestParams.taxId ?
+                            v.srnProviderDetailObject.createSrnNetworkStatusRequestParams.taxId : '--'}</p>
+                    </lightning:layoutitem>
+                    <lightning:layoutitem size="3">
+                        <p class="field_label field_label_padding">NPI</p>
+                        <p class="field_value">{!v.srnProviderDetailObject.createSrnNetworkStatusRequestParams.npi ?
+                            v.srnProviderDetailObject.createSrnNetworkStatusRequestParams.npi : '--'}</p>
+                    </lightning:layoutitem>
+                    <lightning:layoutitem size="3">
+                        <p class="field_label field_label_padding">Status</p>
+                        <p class="field_value">{!v.srnProviderDetailObject.hscProviderDetails.networkStatusTypeDesc ?
+                            v.srnProviderDetailObject.hscProviderDetails.networkStatusTypeDesc : '--'}</p>
+                    </lightning:layoutitem>
+
+                </lightning:layout>
+            </div>
+        </aura:if>
+
+        <div class="slds-m-top_small">
+            <a href="javascript:void(0)" onclick="{!c.openProviderLookup}">Add New Provider</a>
+        </div>
+
+    </div>
+
+
+</aura:component>

@@ -1,0 +1,130 @@
+<aura:component controller="ADBMyUHCController" >
+    <aura:attribute name="firstName" type="String" /> 
+    <aura:attribute name="lastName" type="String" /> 
+    <aura:attribute name="callerDateofBirth" type="String" />
+    <aura:attribute name="decodedMemberId" type="String" />
+    <aura:attribute name="memberId" type="String" />
+    <aura:attribute name="policy" type="String"/>
+    <aura:attribute name="registeredStatus" type="String"/> 
+    <aura:attribute name="lastLogOnType" type="String" default=""/> 
+    <aura:attribute name="lastLogOnDate" type="String" />
+    <aura:attribute name="lastLogOnLocation" type="String" default=""/>
+    <aura:attribute name="openMyUhcPopup" type="boolean" default="false"/>
+    <aura:attribute name="myUhcFlagNotification" type="String" />
+    <aura:attribute name="togglehovertextbox" type="boolean" default="false"/>
+    <aura:attribute name="showSpinner" type="boolean" default="true"/>
+    <aura:handler name="change" value="{!v.decodedMemberId}" action="{!c.onInit}" />
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="isIntegrationUser" type="boolean" default="true"/>
+    
+    <aura:if isTrue="{!v.showSpinner}">
+       <div class="slds-p-horizontal--small slds-size--1-of-1">
+          <div class="slds-p-horizontal--small slds-size--1-of-1 isActivityLoading">
+            <lightning:spinner variant="brand" size="small"/>
+          </div>   
+       </div>
+    </aura:if>	  
+    
+      <aura:if isTrue="{!v.isIntegrationUser}">
+      <span class="slds-form-element__label">myUHC Registration</span>
+        </aura:if>
+        <div class="slds-form-element__control">
+            <div class="slds-grid slds-gutters">
+                <div class="slds-col slds-size_2-of-3"  style="{!v.isIntegrationUser ? '' : 'margin-left: 5px; margin-top: -15px;' }">
+				   <aura:if isTrue="{!or(equals(v.registeredStatus,'Locked Out'),equals(v.registeredStatus,'Not Registered'))}">
+                        <div class="slds-form-element__static"  ><span style="{!v.isIntegrationUser ? '' : 'background-color: yellow;'}">{!v.registeredStatus}</span></div>
+                        <aura:set attribute="else">
+                            <div class="slds-form-element__static" >{!v.registeredStatus}</div>                        
+                        </aura:set>
+                    </aura:if>		  
+                </div>
+                <aura:if isTrue="{!v.isIntegrationUser}">
+                <div class="slds-col slds-size_1-of-3">
+                    <div align="center"
+                         onmouseenter="{!c.handleMouseOverTextBox}" 
+                         onmouseleave="{!c.handleMouseOutTextBox}">
+                        <img src="{!$Resource.ADB_CallerProfileCardImages + '/ADB_CallerProfileCardImages/orangeflag.png'}"
+                             style="width:20px;height:20px;" onclick="{!c.flagButton}"/>
+                        <aura:if isTrue="{!v.togglehovertextbox}">
+                            <div style="padding-left:30rem;padding-top:1rem;position:absolute">
+                                <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left" role="tooltip" id="help" style="position:absolute;top:-90px;left:10px">
+                                    <div class="slds-popover__body popover-content">{!v.myUhcFlagNotification}</div>
+                                </div>
+                            </div>
+                        </aura:if>
+                    </div>
+                </div>
+                </aura:if>
+            </div>  
+            <div class="slds-form-element__control" style="{!v.isIntegrationUser ? '' : 'margin-left: -3px;' }">  
+                <div class="slds-form-element__static">
+                    <aura:if isTrue="{!v.lastLogOnDate == '12/31/1969'}">
+                        No Login History
+                        <aura:set attribute="else">
+                            {!v.lastLogOnDate}
+                        </aura:set>
+                    </aura:if>
+                </div>
+            </div>
+            <aura:if isTrue="{!v.registeredStatus == 'Locked Out'}">
+                <div class="{!v.isIntegrationUser ? 'slds-form-element__control' : 'slds-form-element__control slds-p-right_xx-large' }">
+                    <div class="slds-form-element__static">
+                        <aura:if isTrue="{!v.isIntegrationUser}">
+                        <p align="right"><a href="https://hsidadmintool.uhc.com/" target="_blank">Reset</a></p>
+                        <aura:set attribute="else">
+                            <p align="left"><a href="https://hsidadmintool.uhc.com/" target="_blank" title="https://hsidadmintool.uhc.com/">Reset</a></p>
+                            </aura:set>
+                            </aura:if>
+                    </div> 
+                </div>
+            </aura:if>
+        </div>
+    
+    <aura:if isTrue="{!v.openMyUhcPopup}">
+        <div class="slds-m-around--xx-small"> 
+            <div role="dialog" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">               
+                    <header class="slds-modal__header">
+                        <div class="slds-grid slds-gutters">
+                            <div class="slds-col slds-size_11-of-12">
+                                <span>
+                                    <h2  class="slds-text-heading_medium slds-hyphenate" align="center"><b>Advocate Action</b></h2> 
+                                </span>
+                            </div>
+                            <div class="slds-col slds-size_1-of-12">
+                                <span>
+                                    <!-- Close Button-->
+                                    <div class="close-button" align="right">
+                                        <img src="{!$Resource.ADB_CallerProfileCardImages + '/ADB_CallerProfileCardImages/closebutton.png'}" style="height: 17px; width: 17px;"
+                                             onclick="{! c.closeAdvocateActionBoxButton}"/>
+                                    </div>
+                                    <!-- / Close Button-->
+                                </span>
+                            </div>
+                        </div>
+                        <aura:if isTrue="{!v.registeredStatus == 'Registered'}">
+                            <br/> <br/> 
+                            <I>Is the member calling us about what they were reviewing on the portals?</I>
+                            <br/><br/> 
+                        </aura:if>
+                        <aura:if isTrue="{!v.registeredStatus == 'Locked Out'}">
+                            <br/><br/>
+                            <I>Offer to reset the members Health Safe ID.</I>
+                            <br/><br/>
+                            <b>Was the member receptive? </b>
+                            <br/><br/>
+                        </aura:if>
+                        <aura:if isTrue="{!v.registeredStatus == 'Not Registered'}">
+                            <br/><br/>
+                            <I>Promote portal registration and UHC Mobile App.</I>
+                            <br/><br/>
+                            <b>Was the member receptive? </b>
+                            <br/><br/>
+                        </aura:if>
+                    </header> 
+                </div>
+            </div>
+        </div>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+</aura:component>

@@ -1,0 +1,119 @@
+<aura:component access="global" controller="SNI_FL_HistoryMessageController">
+    <aura:attribute name="lstDirectMessages" type="List" default="abc"></aura:attribute>
+    <aura:attribute name="listname" type="string"/>
+    <aura:attribute name="listdatetime" type="DateTime"/>
+    <aura:attribute name="isProviderAff" type="Boolean"/>
+    <aura:attribute name="providerAffId" type="string"/>
+    <aura:attribute name="isChatView" type="Boolean"/>
+    <aura:attribute name="providerHeaderList" type="List"/>
+    <aura:attribute name="provCurrentPage" type="Integer" default="1"/>
+    <aura:attribute name="provLastPage" type="Integer" default="1"/>
+    <aura:attribute name="provCurrFirstThread" type="Integer" default="1"/>
+    <aura:attribute name="provCurrLastThread" type="Integer" default="1"/>
+    <aura:attribute name="provTotalMessages" type="Integer" default="1"/>
+    <aura:attribute name="providerHasNext" type="Boolean" default="false"/>
+    <aura:attribute name="scrollToAuthName" type="string" default=''/>
+    <aura:registerEvent name="SNI_FL_SendMemberAffiliationEvt" type="c:SNI_FL_SendMemberAffiliationEvt"/>
+    <aura:registerEvent name="SNI_FL_ProviderAffHandleSpinnerEvt" type="c:SNI_FL_ProviderAffHandleSpinnerEvt"/>
+    <aura:handler name="change" value="{!v.scrollToAuthName}" action="{!c.scrollIntoView}"/>
+    <!--loading spinner start-->
+    <lightning:spinner aura:id="mySpinner" class="slds-hide" alternativeText="Loading" size="medium" variant="brand"/>
+    <!-- Loading spinner end-->
+    <span>
+        <div class="scrollerContainer slds-scrollable " >
+            <div class="scroller  uiScroller scroller-wrapper scroll-vertical native " tabindex="-1" data-aura-rendered-by="63:437;a" data-aura-class="uiScroller">
+                <div class="scroller mobile">
+                    <aura:if isTrue="{!!v.isProviderAff}">
+                        <aura:iteration items="{!v.lstDirectMessages}" var="item" indexVar="index" >
+                            <li class="slds-vertical-tabs__nav-item border-class current" 
+                                aura:id="vertical-tab" role="presentation" >
+                                <a class="slds-vertical-tabs__link" href="javascript:void(0)" role="tab" tabindex="0" aria-selected="true" aria-controls="slds-vertical-tabs-0" 
+                                   id="slds-vertical-tabs-0__nav" style="text-decoration:none;">
+                                    <span class="slds-truncate " style="color: #333; margin-left: 0.2rem;">
+                                        <p>From: 
+                                            <span>{!v.listname}</span>
+                                        </p>
+                                        <p>
+                                            <a><lightning:formattedDateTime value="{!v.listdatetime}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="true" timeZone="GMT"/></a>
+                                        </p>
+                                    </span>
+                                </a>
+                            </li>
+                        </aura:iteration> 
+                        <aura:set attribute="else">
+                            <aura:iteration items="{!v.providerHeaderList}" var="provMsg" indexVar="index" >
+                                <li id="{!provMsg.ListauthorName}" class="slds-vertical-tabs__nav-item border-class current unselected" onclick="{!c.selectMessageThread}" data-memberAffid="{!provMsg.memberAffiliationId}" data-authorName="{!provMsg.ListauthorName}" data-messageTime="{!provMsg.ListDateTime}"
+                                    aura:id="vertical-tab" role="presentation">
+                                    <span  class="slds-truncate " style="color: #333; margin-left: 0.2rem;" data-memberAffid="{!provMsg.memberAffiliationId}" data-authorName="{!provMsg.ListauthorName}" data-messageTime="{!provMsg.ListDateTime}">
+                                        <p>Related To: 
+                                            <span data-memberAffid="{!provMsg.memberAffiliationId}" data-authorName="{!provMsg.ListauthorName}" data-messageTime="{!provMsg.ListDateTime}">{!provMsg.ListauthorName}</span>
+                                        </p>
+                                        <p>
+                                            <a data-memberAffid="{!provMsg.memberAffiliationId}" data-authorName="{!provMsg.ListauthorName}" data-messageTime="{!provMsg.ListDateTime}"><lightning:formattedDateTime value="{!provMsg.ListDateTime}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="true" timeZone="GMT"/></a>
+                                        </p>
+                                    </span>
+                                </li>
+                            </aura:iteration> 
+                        </aura:set>
+                    </aura:if>
+                </div>    
+            </div>
+        </div>
+        <aura:if isTrue="{!v.isProviderAff}">
+            <div>
+                <div class="mobileView slds-border-bottom slds-grid slds-wrap slds-m-top_xx-small paginationContainer" >
+                    <div class=" y slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 slds-list_horizontal" style="padding-left: 25% !important;"> 
+                        <div class=" slds-col slds-size_1-of-4 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-float_right">
+                            <span class="z slds-float_right"> <aura:if isTrue="{!v.provCurrentPage == 1}">
+                                <img src="{!$Resource.SNI_FL_ProviderMessageIcons + '/pagination_button_inactive_previous.svg'}" class="imgheight"/>
+                                <aura:set attribute="else">
+                                    <img src="{!$Resource.SNI_FL_ProviderMessageIcons + '/pagination_btn_active_previous.svg'}" class="imgheight" onclick="{!c.handlePrevious}"/>
+                                </aura:set>
+                                </aura:if>
+                            </span>
+                        </div>   
+                        <div class=" slds-col slds-size_2-of-4 slds-medium-size_8-of-12 slds-large-size_8-of-12 customLabel" style="font-size: 90%;width: 33%;">
+                            <p style="margin-top: 4px;" class="slds-text-align_center">
+                                Page {!v.provCurrentPage}
+                            </p>
+                        </div>
+                        <div class=" slds-col slds-size_1-of-4 slds-medium-size_2-of-12 slds-large-size_2-of-12" style="margin-top: 2px;">
+                            <aura:if isTrue="{!!v.providerHasNext}">
+                                <img src="{!$Resource.SNI_FL_ProviderMessageIcons + '/pagination_button_inactive_next.svg'}" class="imgheight" />
+                                <aura:set attribute="else">
+                                    <img src="{!$Resource.SNI_FL_ProviderMessageIcons + '/pagination_btn_active_next.svg'}" class="imgheight"  onclick="{!c.handleNext}"/>
+                                </aura:set>
+                            </aura:if>
+                        </div>
+                    </div>
+                </div>
+                <div class=" desktopView slds-border-bottom slds-grid slds-wrap slds-m-top_xx-small paginationContainer">
+                    <div class=" y slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 slds-list_horizontal" style="padding-left: 10% !important;"> 
+                        <div class=" slds-col slds-size_0.5-of-4 slds-medium-size_1-of-12 slds-large-size_1-of-12 slds-float_right">
+                            <span class="z slds-float_right"> <aura:if isTrue="{!v.provCurrentPage == 1}">
+                                <lightning:buttonIcon class="buttonStyling" iconName="utility:left" disabled="true" variant="brand"/>
+                                <aura:set attribute="else">
+                                    <lightning:buttonIcon class="buttonStyling" onclick="{!c.handlePrevious}" variant="brand" iconName="utility:left" />
+                                </aura:set>
+                                </aura:if>
+                            </span>
+                        </div>   
+                        <div class=" slds-col slds-size_3-of-4 slds-medium-size_10-of-12 slds-large-size_10-of-12 customLabel" style="font-size: 90%;width: 40%;">
+                            <p style="margin-top: 5px;" class="slds-text-align_center">
+                                Page {!v.provCurrentPage}
+                            </p>
+                        </div>
+                        <div class=" slds-col slds-size_0.5-of-4 slds-medium-size_1-of-12 slds-large-size_1-of-12">
+                            <aura:if isTrue="{!!v.providerHasNext}">
+                                <lightning:buttonIcon class="buttonStyling" iconName="utility:right" variant="brand" disabled="true" />
+                                <aura:set attribute="else">
+                                    <lightning:buttonIcon class="buttonStyling" onclick="{!c.handleNext}" variant="brand" iconName="utility:right" />
+                                </aura:set>
+                            </aura:if>
+                        </div>
+                    </div>
+                </div> 
+            </div>
+        </aura:if>
+    </span>
+</aura:component>

@@ -1,0 +1,242 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,lightning:isUrlAddressable" access="global" controller="ACET_ViewPCPReferrralsCtrl">
+    
+    <ltng:require scripts="{!$Resource.ACET_SAESessionData}" />
+    <!-- Handlers -->
+    <aura:handler name="init" value="{!this}" action="{!c.onLoad}"/>
+    <aura:attribute name="isOnlyActive" type="Boolean" default="false"/>
+    <ltng:require styles="{!$Resource.ACETLink_MasterStyle}" />
+    <aura:attribute name="isCommentsBox" type="Boolean" default="false"/>
+    <aura:attribute name="commentsValue" type="String" default=""/>
+    <aura:attribute name="disableCommentButton" type="String" default="false"/>
+    <aura:attribute name="success_icon" type="String"/>
+     <aura:attribute name="componentId" type="String"/>
+     <aura:attribute name="authNum" type="string" access="public" />
+      <!--Swapna-->
+     <aura:attribute name="autodocUniqueIdCmp" type="String" default=""/>
+    <aura:attribute name="isClaim" type="Boolean" default="false"/>
+     <aura:attribute name="currentIndexOfOpenedTabs" type="Integer"/>
+    <aura:attribute name="maxAutoDocComponents" type="Integer" default="20"/>
+     <!--Swapna-->
+    <!--US2856421-Creating a Case for View PCP Referrals for ACET- UI -->
+    <aura:attribute name="isModalOpen" type="boolean" default="false" />
+    <aura:attribute name="caseWrapper" type="SAETTSCaseWrapper" default="[]" />
+    <aura:handler name="closeModalBox" event="c:SAE_TtsModalCloseEvent" action="{!c.closeModal}" />
+     <aura:attribute name="policy" type="SAEPolicyDetailsResult" access="public" />
+    <!--US285583 -->
+    <aura:attribute name="lstofViewPCPReferrals" type="Object"/>
+    <aura:attribute name="inpRequest" type="object" access="public"/>
+    <aura:attribute name="memberFN" type="string" access="public" />
+    <aura:attribute name="memberDOB" type="string" access="public" />
+	<aura:attribute name="memberCardSnap" type="Object" access="public" />
+    <aura:attribute name="memberCardData" type="Object" access="public" />
+	<aura:attribute name="policyNumber" type="String" access="public"/>
+    <aura:attribute name="houseHoldMemberId" type="String" access="public" />
+    <aura:attribute name="memberPolicies" type="SAEMemberProviderSearchCoveragesResult.CoverageLine[]" access="public"/>
+    <aura:attribute name="policySelectedIndex" type="Integer" default="0" access="public"/>
+    <aura:attribute name="currentPayerId" type="String" access="public"/>
+    <aura:handler name="change" value="{!v.policy}" action="{!c.getNewReferrals}"/>
+    <aura:attribute name="policyChangeAlloffButton" type="boolean" default="false" />
+    <aura:attribute name="offCalloutDone" type="boolean" default="false"/>
+    <aura:attribute name="onCalloutDone" type="boolean" default="false"/>
+    <aura:attribute name="offlstofViewPCPReferrals" type="Object" />
+    <aura:attribute name="onlstofViewPCPReferrals" type="Object"/>
+    <aura:attribute name="isDependent" type="boolean" default="false" access="public"/>
+
+    <!-- New AutoDoc Changes -->
+    <aura:attribute name="autodocUniqueId" type="String" default="pcpReferrals" />
+    <aura:attribute name="referralsTableData" type="Object" />
+    <aura:attribute name="tableDetails_prev" type="Object" />
+    <aura:attribute name="memberautodocUniqueId" type="String" default="auto" />
+    <aura:attribute name="isPreviewOpen" type="boolean" default="false"/>
+    <aura:handler name="change" value="{!v.isOnlyActive}" action="{!c.activateAllReferrals}" />
+    <aura:attribute name="enableAutodocWarningMessage" type="boolean" default="true" />
+    <aura:attribute name="isSpinnerShow" type="boolean" default="true"/>
+    <!--US2573718 - Auto Doc When No Results Are Displayed - Sravan -->
+    <aura:attribute name="selectedRows" type="Object[]" />
+    <aura:attribute name="autoCheck" type="Boolean" default="false"/>
+    <aura:attribute name="showCreateNewCaseButton" type="Boolean" default="false"/>
+    <aura:attribute name="selectedSourceCode" type="String" access="public" default=""/>
+    <lightning:workspaceAPI aura:id="workspace" />
+
+    <!--US3068299 - Sravan-->
+    <aura:attribute name="autoDocToBeDeleted" type="Object"/>
+
+    <!--DE393490 - Sravan-->
+    <aura:attribute name="memberMap" type="Map" access="public"/>
+
+
+    <!--US3117073 - Multiple Policies -  Creating Multiple Unique ORS Records Check In ISET - Sravan-->
+    <aura:attribute name="memberPolicyNumberMap" type="Map" default=""/>
+
+      <!--chandra show Buttons for cliams-->
+     <aura:attribute name="showButtons" type="Boolean" default="true"/>
+      <aura:attribute name="serviceFromDate" type="string" />
+       <aura:attribute name="serviceToDate" type="string" />
+     <aura:attribute name="claimNo" type="String" default="" />
+    <aura:attribute name="autodoc" type="Boolean" default="true" />
+    <!--chandra End-->
+
+    <!--US3013127  Create Referral -->
+    <aura:attribute name="originatorType" type="string" access="public"/>
+    <aura:attribute name="interactionRec" type="Interaction__c" access="public"/>
+    <aura:attribute name="hipaaEndpointUrl" type="String" access="public" default=""/>
+    <aura:attribute name="isHippaInvokedInProviderSnapShot" type="Boolean" default="false"/>
+    <aura:handler event="c:ACET_CreateSRN_RecordCreatedEvent" action="{!c.afterCreateReferralRecord}"/>
+    <aura:attribute name="newReferralNumber" type="String" access="public" default=""/>
+    <aura:attribute name="policyWithNewReferralMap" type="Map" default="{}"/>
+    
+     <!--Attributes for Provider Lookup Jitendra-->
+    <aura:attribute name="contactUniqueId" type="string" access="public" />
+    <aura:attribute name="noMemberToSearch" type="Boolean" default="false" />
+    <aura:attribute name="AutodocPageFeature" type="String" />
+    <aura:attribute name="AutodocKey" type="string" access="public" />
+    <aura:attribute name="AutodocPageFeatureMemberDtl" type="String" />
+    <aura:attribute name="AutodocKeyMemberDtl" type="String" />
+    <aura:attribute name="caseNotSavedTopics" type="String[]"/>
+    <aura:attribute name="providerDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="flowDetailsForRoutingScreen" type="Object" access="public" />
+    <aura:attribute name="memberTabId" type="string" access="public" />
+    <aura:attribute name="interactionOverviewTabId" type="String" />
+    <aura:attribute name="providerSearchResultsADMultiplePages" type="boolean" default="false"/>
+    <aura:attribute name="interactionCard" type="Object" access="public"/>
+    <aura:attribute name="contactName" type="String" access="public" />
+    <aura:attribute name="selectedTabType" type="String" access="public"/>
+    <aura:attribute name="isReferralsEnabled" type="String" access="public" default="{!$Label.c.ACET_CreateReferralEngineTrigger}"/>
+    <aura:handler event="c:ACET_AutoDocRefreshEvent" action="{!c.handleAutodocRefresh}" />
+<aura:attribute name="getUniqueKey" type="String" />
+    <!-- US2917434, US3208169 -->
+    <aura:handler name="selectedRowLink" event="c:ACET_AutoDocSelectedRow" action="{!c.navigateToLookup}" />
+    <aura:registerEvent name="headerClick" type="c:ACET_ProviderHeaderClickEvt" />
+    <!-- End -->
+    <!-- Save Case Consolidation - US3424763 -->
+    <aura:handler name="selectedRowData" event="c:ACET_AutoDocSelectedRow" action="{!c.setCaseWrapper}" />
+
+    <aura:if isTrue="{!v.isCommentsBox}">
+        <div class="slds-card card_left_padding  card_right_padding slds-p-top_small slds-p-bottom_small">
+            <c:ACET_HoverPopup aura:id="commentsId" 
+                               moveRight="" 
+                               description="" 
+                               isNubbinLeft="true"
+                               descriptionList="[ 'Use the comments to include a brief','description of the issue, research performed,', 'and any attempts to resolve' ]" />
+            <p class="component_title slds-form-element__label field_label_padding" 
+               style="border-bottom:1px dashed;padding:0px"
+               data-popupId="commentsId"
+               onmouseover="{!c.togglePopup}" 
+               onmouseout="{!c.togglePopup}">
+                Comments: 
+            </p>
+            <b class="component_title slds-p-left_small">View Referrals - PCP</b>
+            <lightning:textarea name="commentsTextArea"
+                                value="{!v.commentsValue}" 
+                                label="Commets" 
+                                aura:id="commentsBoxId"
+                                variant="label-hidden" 
+                                class="slds-p-top_small"
+                                onkeyup="{!c.handleKeyup }"
+                                maxlength="2000"/>
+            <span class="floatToRight valueCls slds-form-element__static">Characters remaining: <lightning:formattedNumber value = "{!2000-v.commentsValue.length}" /> </span>
+        </div>
+    </aura:if>
+    <div class="slds-card">
+        <lightning:spinner class="{!v.isSpinnerShow == false ? 'slds-hide' : 'slds-show'}" aura:id="policy-spinner"
+                               alternativeText="Loading.." title="Loading.."
+                               variant="brand" size="large"/>
+        <div class="slds-grid slds-grid_align-spread card_left_padding card_top_padding card_right_padding">
+            <div class="slds-col component_title">Referral Results</div>
+            <div class="slds-col">
+                <div style="float: right;margin-bottom: 13px;" class="slds-p-left_medium">
+                 <!-- US3505126: Remove  Auto Doc Buttons: & Save Case - Krish - 19th May 2021 -->
+                    <!-- Save Case Consolidation - US3424763 -->
+                     <aura:if isTrue="{!v.showButtons}">
+                    <lightning:buttonGroup>
+                        <aura:if isTrue="{!v.isReferralsEnabled == 'TRUE' ? true : false}">
+                            <lightning:button class="slds-button slds-button_neutral neutral_button previewAuto"
+                                          variant="neutral" label="Create Referral" onclick="{!c.openCreateReferral}" disabled="{!!v.showCreateNewCaseButton}"/>
+                        </aura:if>
+                        <!-- US3505126: Remove  Auto Doc Buttons: & Save Case - Krish - 19th May 2021 -->
+                            <!-- <lightning:button class="slds-button slds-button_neutral neutral_button previewAuto"
+                                          variant="neutral" label="Autodoc" onclick="{!c.openPreview}"/>
+                        <aura:if isTrue="{!!v.isCommentsBox}">
+                            <lightning:button class="slds-button disableBtn slds-button_neutral neutral_button previewAuto"
+                                              variant="neutral" label="Add Comments" onclick="{!c.openCommentsBox}"
+                                              disabled="{!v.disableCommentButton}" aura:id="commentsBtn"/>
+                        </aura:if>
+                        <aura:if isTrue="{!v.isCommentsBox}">
+                            <lightning:button variant="brand" label="Add Comments" disabled="true"/>
+                        </aura:if>
+                        <lightning:button label="Save Case" name="viewReferallsCaseName" 
+                                          class="slds-button slds-button_brand brand_button" onclick="{!c.openModal}"/>-->
+                    </lightning:buttonGroup>
+
+                         <br/>
+                           </aura:if>
+                    <!-- Filters -->
+                    <div class="">
+                     
+                    </div>
+                    <!-- Fileters End -->
+                </div>
+            </div>
+           
+        </div>
+        <div style="width:100%" class="slds-is-relative slds-var-p-vertical_small slds-card card_padding">
+			<aura:if isTrue="{!v.isClaim== false}">									   
+            <div class="allButton" style="right: 275px;position: absolute;top: 20px;">
+                <div style="float: right;">
+                    <c:ACET_ToggleButton width="60" checked="{!v.isOnlyActive}" checkedText="On"
+                    uncheckedText="Off" />
+            </div>
+                <div style="float: right;margin-top: 4px;margin-right: 10px;">All</div>
+        </div>
+		</aura:if>			  
+            
+            <!-- New AutoDoc -->
+             <aura:if isTrue="{!v.isClaim== false}">
+            <div style="width: 100%">
+                <c:ACET_AutoDocDataTable enableSort="true" enableSearch="true"
+                autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueId + v.policySelectedIndex}"
+                enablePagination="false" tableDetails="{!v.referralsTableData}"
+                                         autoCheck="{!v.autoCheck}"
+                                         allowAutoCheck="true"
+                        selectedRows="{!v.selectedRows}" hasCaseItems="false"
+                        overrideDefaultBehaviour="true"/>
+                    <!--Added attributes as part of US2573718 - Sravan-->
+            </div>
+            </aura:if>
+              <!-- Swapna -->
+             <aura:if isTrue="{!v.isClaim== true}">
+                 <c:ACET_AutoDocDataTable enableSort="true" enableSearch="true"
+                autodocUniqueId="{!v.autodocUniqueId}" autodocUniqueIdCmp="{!v.autodocUniqueIdCmp}"
+                enablePagination="false" tableDetails="{!v.referralsTableData}"
+                                         autoCheck="{!v.autoCheck}"
+                                         allowAutoCheck="true"
+										 heightStyle="max-height: 250px;"
+                    selectedRows="{!v.selectedRows}" hasCaseItems="false" overrideDefaultBehaviour="true" defaultSearchVal = "{!v.authNum}"/>
+            </aura:if>
+            <!-- Swapna -->
+            <!-- End -->
+        </div>
+        <div>
+            <!-- US3505126: Remove  Auto Doc Buttons: & Save Case - Krish - 19th May 2021 -->
+            <!-- <aura:if isTrue="{!v.isModalOpen}"> -->
+            <aura:if isTrue="false">
+                <!--US2856421 -Creating a Case for View PCP Referrals for ACET- UI -->
+                <c:SAE_TtsModalCaseCreation  Topic="View PCP Referrals"
+                                            caseWrapper="{!v.caseWrapper}"
+                                            freeFormCommentsVal="{!v.commentsValue}"
+                                            enableAutodocWarningMessage="{!v.enableAutodocWarningMessage}"
+                                            autodocUniqueId="{!v.autodocUniqueId}"
+                                            memberMap ="{!v.memberMap}"
+                                            memberPolicyNumberMap="{!V.memberPolicyNumberMap}"/><!--US3117073 - Sravan--> <!--DE393490 - Sravan--> <!-- US2428601 -->
+            </aura:if>
+        </div>
+
+        <div>
+            <!-- US3505126: Remove  Auto Doc Buttons: & Save Case - Krish - 19th May 2021 -->
+            <!-- <aura:if isTrue="{!v.isPreviewOpen}"> -->
+            <aura:if isTrue="false">
+                <c:ACET_PreviewAutoDoc tableDetails_prev="{!v.tableDetails_prev}" isModalOpen="{!v.isPreviewOpen}" />
+            </aura:if>
+        </div>
+    </div>
+</aura:component>

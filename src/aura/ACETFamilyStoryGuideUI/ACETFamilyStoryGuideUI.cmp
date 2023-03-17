@@ -1,0 +1,200 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction" controller="ACETFamilyStoryGuideUIController" access="global" >
+        
+
+
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" /> 
+    <lightning:workspaceAPI aura:id="curworkspace"  />
+    
+    <aura:attribute name="picklistValues" type="List"/>   
+    <aura:attribute name="TopicQuestions" type="ACETFamilyStoryGuideUIController.wrapperQuestions[]" />
+    <!-- Attribute Declration For Pagination -->
+    <aura:attribute name="PaginationList" type="ACETFamilyStoryGuideUIController.wrapperQuestions[]"/>
+    <aura:attribute name="startPage" type="Integer" />
+    <aura:attribute name="endPage" type="Integer"/>
+    <aura:attribute name="totalRecords" type="Integer"/>
+    <aura:attribute name="pageSize" type="Integer" default="1"/>
+    <aura:attribute name="value" type="String" default="option1"/>
+    <aura:attribute name="disableNext" type ="boolean" default ="true"/>
+    <aura:attribute name ="answerList" type ="List" default ="[]"/>
+    <aura:attribute name="fsgId" type="String" />
+    <aura:attribute name="listAnswrs" type="List" default ="[]"/>
+    <aura:attribute name="selValue" type="String"  />
+    <aura:attribute name="actValue" type="String"  />
+    <aura:attribute name="oldFsgid" type="String"  />
+    <aura:attribute name="curTopic" type="String"  />
+    <aura:attribute name="lastTopic" type="String"  />
+    <aura:attribute name="curNotes" type="String"  />
+    <aura:attribute name="oldNotes" type="String"  />
+    <aura:attribute name="dispNotes" type="Boolean" default="true" />
+    <aura:attribute name="notesAnswers" type="object" />
+    <aura:attribute name="inteventions" type="List" />
+	<aura:attribute name="questioNumber" type="string" />
+    <aura:attribute name="shwChk" type="boolean" default="false" />
+    <aura:attribute name="prevQuestion" type="string" />
+    <!-- Attribute Declration For Pagination End-->
+    <div class="fsg-container">
+        <div>
+            
+             <div class="slds-grid slds-gutters">
+                 
+            <div class="slds-grid slds-gutters" aura:id="main">
+
+             <aura:iteration items="{!v.picklistValues}" var="item" indexVar="index">
+                   <div class="slds-col">
+  						<div class='box red fsg-border-line data-row' onclick="{!c.showQuestions}" id="{!item}">
+                           Section {!index+1}<br/>
+                            {!item}
+                       	</div>
+                        <div style='text-align:center;padding-top:1rem;padding-left:2rem;' class='hideText'>Completed</div>
+                   </div>
+                        
+                </aura:iteration>
+                </div>
+            
+            
+                 
+
+            </div>
+            
+            
+            <!--div class="fsg-topic" align="center" style="margin: auto !important;
+                                                         max-width: fit-content !important;" aura:id="main">
+                <aura:iteration items="{!v.picklistValues}" var="item" indexVar="index">
+                    <div class='box red fsg-border-line data-row' onclick="{!c.showQuestions}" id="{!item}">Section {!index+1}<br/>{!item}</div>
+                        
+                            completed
+                        
+                </aura:iteration>
+            </div-->
+            <div class='hideText' style="padding-top:25px;padding-left:25px;padding-bottom:20px" aura:id="completedText">
+                Thank you for helping us learn more about your family. Together we will use this information to help connect your family <br/> with benefits and services in the community that are important to you and that are available to meet your needs.
+            </div>
+            <aura:if isTrue="{! if(v.dispNotes == true, true, false)}">
+                
+                <div class="slds-m-top_medium" style="float: left !important;
+                                                      width: 50%;
+                                                      margin-left: 2% !important;
+                                                      overflow-wrap: break-word !important;
+                                                      margin-top: 5% !important;">
+                    <div style="border-right: 1px solid grey;">
+                        <aura:iteration items="{!v.PaginationList}" var="questionList" indexVar="index">
+                            {!questionList.QuestionNumber}. {!questionList.Question}
+                            <div style="margin-top: 2rem;">
+							 <aura:if isTrue="{! !v.shwChk }">
+                                <lightning:radioGroup name="{!'radioGroup'+ questionList.QuestionNumber}" 
+                                                      options="{! v.answerList}"
+                                                      onchange="{!c.changeOption}"
+                                                      value="{! v.selValue }"
+                                                      type="radio"/>
+                                 </aura:if>
+                                <aura:if isTrue="{! v.shwChk }">
+                             <lightning:checkboxGroup name="{!'radioGroup'+ questionList.QuestionNumber}"
+                             options="{! v.answerList }"
+                             onchange="{! c.changeOption }"
+                             value="{! v.selValue }" />
+                                    </aura:if>
+                                <!-- <aura:iteration items="{!questionList.answerOptions}" var="answerOptionList">
+                            <ui:inputRadio label="{!answerOptionList}" change="{!c.changeOption}" />
+                        </aura:iteration>-->
+                            </div>
+                            <div style="margin-top: 2rem;margin-right: 2%;">
+                                <lightning:textarea name="notesName" label="Notes" value="{!v.curNotes}"/>
+                            </div>
+                        </aura:iteration>
+                    </div>
+                    <div style="width: 100%;
+                                height: 20rem;
+                                margin-top: 5rem;">
+                        <lightning:buttonGroup >
+                            <lightning:button label="Previous" disabled="{!v.startPage == 0}" 
+                                              onclick="{!c.previous}" variant="brand"
+                                              iconName='utility:back'/>
+                            &nbsp; &nbsp; &nbsp;
+                            <lightning:button label="Next" disabled="{! v.disableNext}" 
+                                              onclick="{!c.next}" variant="brand"
+                                              iconName='utility:forward' iconPosition='right'/>
+                            
+                            
+                            
+                        </lightning:buttonGroup>
+                    </div>
+                </div>
+                <div style="float: left !important;
+                            margin-left: 2% !important;
+                            overflow-wrap: break-word !important;
+                            margin-top: 5% !important;
+                            width: 40%;">
+                    
+                    
+                    <aura:iteration items="{!v.PaginationList}" var="questionList">
+                        {!questionList.helpText}
+                    </aura:iteration>
+                </div>
+            </aura:if> 
+        </div>
+        <div     style="float: left;
+                        width: 96%;
+                        margin-left: 2rem;">
+            <aura:if isTrue="{! if(v.dispNotes == false, true, false)}">
+                <aura:iteration items="{!v.notesAnswers}"  var="mapKey" indexVar="key">  
+                    <strong><br/><p>{!mapKey.key}</p><br/></strong>
+                    <table class="slds-table slds-table--bordered slds-table--cell-buffer">
+                        <thead>
+                            <tr class="slds-line-height_reset" >
+                                <th class="slds-text-title_caps" scope="col" >
+                                    Number
+                                </th>
+                                <th class="slds-text-title_caps" scope="col" >
+                                    Question
+                                </th>
+                                <th class="slds-text-title_caps" scope="col" >
+                                    Answer
+                                </th>
+                                <th class="slds-text-title_caps" scope="col" >
+                                    Notes
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <aura:if isTrue="{!if(mapKey.value == null ,true,false)}">
+                                 <tr><td colspan="4" style="text-align:center">
+                                No answers to display.
+                                     </td>
+                              
+                                </tr>
+                            </aura:if>
+                            <aura:if isTrue="{!if(mapKey.value != null ,true,false)}">
+                           <aura:iteration items="{!mapKey.value}" var="mapValue">
+                                <tr class="slds-hint-parent" >
+                                    <td data-label="abc" scope="row" style="white-space: normal !important;width: 10%;">
+                                        {!mapValue.qsNumber}
+                                    </td>
+                                    <td data-label="anv" style="white-space: normal !important;width: 40%;">
+                                        {!mapValue.question}
+                                    </td>
+                                    <td data-label="abc" style="white-space: normal !important;width: 15%;">
+                                        {!mapValue.answer}
+                                    </td>
+                                    <td data-label="abc" style="white-space: normal !important;width: 35%;">
+                                        {!mapValue.notes}
+                                    </td>
+                                </tr>
+                            </aura:iteration>
+                            </aura:if>
+                        </tbody>
+                    </table>
+                </aura:iteration>
+                <strong><br/><p>Interventions</p></strong>
+                <div style="width: 75%;
+                            border: solid;
+                     		margin-top:2rem;padding-bottom: 1rem;">
+                    <aura:iteration items="{!v.inteventions}"  var="intervention">  
+                        <br/><p>• {!intervention}</p>
+                    </aura:iteration>
+                </div>
+            </aura:if>
+            
+        </div>
+    </div>
+    
+</aura:component>
