@@ -7,7 +7,7 @@ public class AccountContactHandler {
         // Assuming that accounts related to one contact will have the same account owner
         Map<Id, Id> cntAccId = new Map<Id, Id>();
         
-        // Get unique Account, Contact Ids
+      // Get unique Account, Contact Ids 
         for(AccountContactRelation acr: newMap.values()) 
             //accountIdSet.add(acr.AccountId);
             contactIdSet.add(acr.ContactId);
