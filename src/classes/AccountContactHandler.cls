@@ -12,7 +12,7 @@ public class AccountContactHandler {
             //accountIdSet.add(acr.AccountId);
             contactIdSet.add(acr.ContactId);
             
-            if(!contAccMap.containsKey(acr.ContactId)) {
+            if(!contAccMap.containsKey(acr.ContactId)) { 
                 contAccMap.put(acr.ContactId, new Set<Id>());
             }
             contAccMap.get(acr.ContactId).add(acr.AccountId);
