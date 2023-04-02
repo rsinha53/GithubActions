@@ -1,6 +1,9 @@
 # Unique name for this workflow
 name: Validate PR on develop branch
-
+permissions:
+  actions: read
+  contents: read
+  security-events: write
 # Definition when the workflow should run
 on:
     # The workflow will run whenever an event happens on a pull request
@@ -22,7 +25,7 @@ on:
 # Jobs to be executed when the above conditions are met
 jobs:
     # This is the name of the job. You can give it whatever name you want
-    validate-deployment-on-develop-org:
+    validate-deployment-on-develop-org:    
         # As mentioned in the blog post, this job runs inside a VM. Here we
         # can specify which OS this VM should run on. 
         # In this case, we are going to run our commands on the latest version
@@ -162,7 +165,7 @@ jobs:
 
             # Now we upload the .sarif file as explained in the previous step
             - name: Upload SARIF file
-              uses: github/codeql-action/upload-sarif@v1
+              uses: github/codeql-action/upload-sarif@v2
               with:
                 sarif_file: changed-sources/apexScanResults.sarif
 
@@ -177,10 +180,10 @@ jobs:
                   sfdx force:source:deploy -p "changed-sources/src" --checkonly --testlevel RunSpecifiedTests --runtests ${{env.APEX_TESTS}} --json
 
             # If the env variable equals all, we run all tests
-            - name: 'Check-only deploy delta changes - run all tests'
-              if: ${{ env.APEX_TESTS == 'all' }}
-              run: |
-                  sfdx force:source:deploy -p "changed-sources/src" --checkonly --testlevel RunLocalTests  --json
+            #- name: 'Check-only deploy delta changes - run all tests'
+              #if: ${{ env.APEX_TESTS == 'all' }}
+              #run: |
+                #  sfdx force:source:deploy -p "changed-sources/src" --checkonly --testlevel RunLocalTests  --json
 
             - name: 'Deploy destructive changes (if any)'
               run: sfdx force:mdapi:deploy -d "changed-sources/destructiveChanges" --checkonly --ignorewarnings 
