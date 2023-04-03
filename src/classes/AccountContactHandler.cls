@@ -8,7 +8,7 @@ public class AccountContactHandler {
         Map<Id, Id> cntAccId = new Map<Id, Id>();
         
       // Get unique Account, Contact Ids 
-        for(AccountContactRelation acr: newMap.values()) { //Hello Test
+        for(AccountContactRelation acr: newMap.values()) { //Hello Testing session
             //accountIdSet.add(acr.AccountId);
             contactIdSet.add(acr.ContactId);
             
