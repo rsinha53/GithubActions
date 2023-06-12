@@ -184,3 +184,75 @@ jobs:
 
             - name: 'Deploy destructive changes (if any)'
               run: sfdx force:mdapi:deploy -d "changed-sources/destructiveChanges" --checkonly --ignorewarnings 
+              
+      scratch-org-test:
+            runs-on: ubuntu-latest
+            if: ${{ github.actor != 'dependabot[bot]' }}
+            steps:
+                # Checkout the source code
+                - name: 'Checkout source code'
+                  uses: actions/checkout@v3
+
+                # Run PMD scan
+                - name: 'Run PMD scan'
+                  uses: pmd/pmd-github-action@v1.4.0
+                  id: pmd
+                  with:
+                      version: '6.55.0'
+                      sourcePath: 'force-app'
+                      rulesets: 'ruleset.xml'
+
+                # Check for PMD violations
+                - name: 'Check for PMD violations'
+                  if: steps.pmd.outputs.violations != 0
+                  run: exit 1
+
+                # Install Salesforce CLI
+                - name: 'Install Salesforce CLI'
+                  run: |
+                      npm install @salesforce/cli --location=global
+                      nodeInstallPath=$(npm config get prefix)
+                      echo "$nodeInstallPath/bin" >> $GITHUB_PATH
+                      sf --version
+
+                # Store secret for dev hub
+                - name: 'Populate auth file with SFDX_INTEGRATION_URL secret'
+                  shell: bash
+                  run: |
+                      echo ${{ secrets.SFDX_INTEGRATION_URL }} > ./SFDX_INTEGRATION_URL.txt
+                      secretFileSize=$(wc -c "./SFDX_INTEGRATION_URL.txt" | awk '{print $1}')
+                      if [ $secretFileSize == 1 ]; then
+                          echo "Missing SFDX_INTEGRATION_URL secret. Is this workflow running on a fork?";
+                          exit 1;
+                      fi
+
+                # Authenticate dev hub
+                - name: 'Authenticate Dev Hub'
+                  run: sf org login sfdx-url -f ./SFDX_INTEGRATION_URL.txt -a devhub -d
+
+                # Create scratch org
+                - name: 'Create scratch org'
+                  run: sf org create scratch -f config/project-scratch-def.json -a scratch-org -d -y 1
+
+                # Deploy source to scratch org
+                - name: 'Push source to scratch org'
+                  run: sf project deploy start     
+
+                # Run Apex tests in scratch org
+                - name: 'Run Apex tests'
+                  run: sf apex test run -c -r human -d ./tests/apex -w 20
+
+                # Upload code coverage data
+                - name: 'Upload code coverage for Apex to Codecov.io'
+                  uses: codecov/codecov-action@v3
+                  with:
+                      flags: Apex
+
+                # Housekeeping
+                - name: 'Delete scratch org'
+                  if: always()
+                  run: sf org delete scratch -p -o scratch-org
+
+
+
+
