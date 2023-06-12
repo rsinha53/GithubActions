@@ -1,5 +1,5 @@
 public class ACETARADataServiceParser {
-    public String patient_name;kd,d
+    public String patient_name;
     public String subscriber_nbr;
     public String policy_id;
     public String alt_id ;
